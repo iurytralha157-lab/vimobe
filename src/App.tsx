@@ -16,10 +16,12 @@ import { useForceRefreshListener } from "@/hooks/use-force-refresh";
 import { ScrollToTop } from "@/components/ScrollToTop";
 import { usePwaUpdate } from "@/hooks/use-pwa-update";
 import { useSystemBranding } from "@/hooks/use-system-branding";
-import { PublicSiteProvider } from "@/contexts/PublicSiteContext";
 import { SetupGuideDialog } from "@/components/setup-guide/SetupGuideDialog";
 import { MetricsPanel } from "@/components/MetricsPanel";
 import { IOSInstallGuide } from "@/components/IOSInstallGuide";
+
+// Public site root — separate bundle, no CRM providers
+const PublicAppRoot = lazy(() => import("./PublicAppRoot"));
 
 // Lazy imports - critical routes
 const Auth = lazy(() => import("./pages/Auth"));
@@ -81,18 +83,9 @@ const AdminOnboarding = lazy(() => import("./pages/admin/AdminOnboarding"));
 const Checkout = lazy(() => import("./pages/Checkout"));
 // Subscription page is now part of Settings tab
 
-// Public site pages
-const PublicSiteLayout = lazy(() => import("./pages/public/PublicSiteLayout"));
-const PublicHome = lazy(() => import("./pages/public/PublicHome"));
-const PublicProperties = lazy(() => import("./pages/public/PublicProperties"));
-const PublicPropertyDetail = lazy(() => import("./pages/public/PublicPropertyDetail"));
-const PublicAbout = lazy(() => import("./pages/public/PublicAbout"));
-const PublicContact = lazy(() => import("./pages/public/PublicContact"));
-const PublicFavorites = lazy(() => import("./pages/public/PublicFavorites"));
+// Public site preview (used inside CRM)
 const PreviewSiteWrapper = lazy(() => import("./pages/public/PreviewSiteWrapper"));
-const PublishedSiteWrapper = lazy(() => import("./pages/public/PublishedSiteWrapper"));
 
-const APIDocs = lazy(() => import("./pages/public/APIDocs"));
 
 // Trial expired modal
 const TrialExpiredModal = lazy(() => import("./components/admin/TrialExpiredModal").then(m => ({ default: m.TrialExpiredModal })));
@@ -104,19 +97,30 @@ function preloadCoreCrmPages() {
   void import("./pages/Conversations");
 }
 
-function isCustomDomain(): boolean {
+function getPublicSiteMode(): "custom-domain" | "slug" | null {
   const hostname = window.location.hostname;
   const pathname = window.location.pathname;
-  
-  if (pathname.startsWith('/sites/')) return false;
-  
-  return (
-    hostname !== 'localhost' &&
-    !hostname.includes('lovable.app') &&
-    !hostname.includes('lovable.dev') &&
-    !hostname.includes('lovableproject.com') &&
-    !hostname.includes('vettercompany.com.br')
-  );
+
+  // Slug-based published sites accessed on the main app domain
+  if (pathname.startsWith('/sites/')) return "slug";
+
+  // Lovable preview/dev hosts → CRM
+  if (
+    hostname === 'localhost' ||
+    hostname === '127.0.0.1' ||
+    hostname.endsWith('.lovable.dev') ||
+    hostname.endsWith('.lovableproject.com') ||
+    hostname === 'vimobe.lovable.app' ||
+    hostname.startsWith('id-preview--')
+  ) {
+    return null;
+  }
+
+  // Main CRM domain
+  if (hostname === 'vimob.vettercompany.com.br') return null;
+
+  // Anything else (custom domain or *.vimob.vettercompany.com.br) → public site
+  return "custom-domain";
 }
 
 const queryClient = new QueryClient({
@@ -155,9 +159,7 @@ function AppRoutes() {
   useForceRefreshListener();
 
   useEffect(() => {
-    // Only preload CRM pages if we are NOT on a custom domain and user is logged in
-    if (user && !loading && !isCustomDomain()) {
-      // Delay preloading slightly to prioritize current page render
+    if (user && !loading) {
       const timer = setTimeout(preloadCoreCrmPages, 3000);
       return () => clearTimeout(timer);
     }
@@ -273,43 +275,15 @@ function AppRoutes() {
             {/* Automations */}
             <Route path="/automations" element={<ProtectedRoute><PermissionGuard permission="automations_view"><Automations /></PermissionGuard></ProtectedRoute>} />
             
-            {/* Public Site Preview */}
+            {/* Public Site Preview (rendered inside CRM, with auth) */}
             <Route path="/site/preview/*" element={<PreviewSiteWrapper />} />
             <Route path="/site/previsualização/*" element={<PreviewSiteWrapper />} />
-            
-            {/* Published Sites */}
-            <Route path="/sites/:slug/*" element={<PublishedSiteWrapper />} />
-            
-            {/* Public API Documentation */}
-            <Route path="/docs/api" element={<APIDocs />} />
-            
+
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>
       </div>
     </>
-  );
-}
-
-function CustomDomainRoutes() {
-  return (
-    <PublicSiteProvider>
-      <ScrollToTop />
-      <Suspense fallback={<PageLoader />}>
-        <Routes>
-          <Route path="/" element={<PublicSiteLayout />}>
-            <Route index element={<PublicHome />} />
-            <Route path="imoveis" element={<PublicProperties />} />
-            <Route path="imoveis/:codigo" element={<PublicPropertyDetail />} />
-            <Route path="imovel/:code" element={<PublicPropertyDetail />} />
-            <Route path="sobre" element={<PublicAbout />} />
-            <Route path="contato" element={<PublicContact />} />
-            <Route path="favoritos" element={<PublicFavorites />} />
-          </Route>
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </Suspense>
-    </PublicSiteProvider>
   );
 }
 
@@ -320,8 +294,26 @@ const BrandingAndPwa = () => {
 };
 
 const App = () => {
-  const customDomain = isCustomDomain();
+  const publicMode = getPublicSiteMode();
 
+  // PUBLIC SITE MODE: completely separate from CRM (no AuthProvider, no CRM overlays)
+  if (publicMode) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
+          <TooltipProvider>
+            <BrowserRouter>
+              <Suspense fallback={null}>
+                <PublicAppRoot mode={publicMode} />
+              </Suspense>
+            </BrowserRouter>
+          </TooltipProvider>
+        </ThemeProvider>
+      </QueryClientProvider>
+    );
+  }
+
+  // CRM MODE
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
@@ -331,17 +323,11 @@ const App = () => {
           <Sonner />
           <IOSInstallGuide />
           <BrowserRouter>
-            {customDomain ? (
+            <AuthProvider>
               <LanguageProvider>
-                <CustomDomainRoutes />
+                <AppRoutes />
               </LanguageProvider>
-            ) : (
-              <AuthProvider>
-                <LanguageProvider>
-                  <AppRoutes />
-                </LanguageProvider>
-              </AuthProvider>
-            )}
+            </AuthProvider>
           </BrowserRouter>
         </TooltipProvider>
       </ThemeProvider>

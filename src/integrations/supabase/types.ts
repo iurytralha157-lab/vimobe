@@ -566,6 +566,8 @@ export type Database = {
           execution_data: Json | null
           id: string
           lead_id: string | null
+          lock_token: string | null
+          locked_at: string | null
           next_execution_at: string | null
           organization_id: string
           started_at: string | null
@@ -580,6 +582,8 @@ export type Database = {
           execution_data?: Json | null
           id?: string
           lead_id?: string | null
+          lock_token?: string | null
+          locked_at?: string | null
           next_execution_at?: string | null
           organization_id: string
           started_at?: string | null
@@ -594,6 +598,8 @@ export type Database = {
           execution_data?: Json | null
           id?: string
           lead_id?: string | null
+          lock_token?: string | null
+          locked_at?: string | null
           next_execution_at?: string | null
           organization_id?: string
           started_at?: string | null
@@ -626,6 +632,41 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      automation_message_dispatches: {
+        Row: {
+          attempt_key: string
+          created_at: string | null
+          execution_id: string
+          id: string
+          node_id: string
+          organization_id: string
+        }
+        Insert: {
+          attempt_key: string
+          created_at?: string | null
+          execution_id: string
+          id?: string
+          node_id: string
+          organization_id: string
+        }
+        Update: {
+          attempt_key?: string
+          created_at?: string | null
+          execution_id?: string
+          id?: string
+          node_id?: string
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_message_dispatches_execution_id_fkey"
+            columns: ["execution_id"]
+            isOneToOne: false
+            referencedRelation: "automation_executions"
             referencedColumns: ["id"]
           },
         ]
@@ -7062,6 +7103,10 @@ export type Database = {
         Args: { p_lead_id: string }
         Returns: string
       }
+      recover_stuck_executions: {
+        Args: { p_stale_minutes?: number }
+        Returns: number
+      }
       redistribute_lead_from_pool: {
         Args: { p_lead_id: string; p_reason?: string }
         Returns: Json
@@ -7082,6 +7127,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      release_execution_step_lock: {
+        Args: { p_execution_id: string; p_token: string }
+        Returns: undefined
+      }
       reorder_stages: { Args: { p_stages: Json }; Returns: undefined }
       resolve_site_domain: {
         Args: { p_domain: string }
@@ -7091,6 +7140,10 @@ export type Database = {
         }[]
       }
       sync_historical_commissions: { Args: never; Returns: Json }
+      try_acquire_execution_step_lock: {
+        Args: { p_execution_id: string; p_max_lock_age_seconds?: number }
+        Returns: string
+      }
       user_belongs_to_organization: {
         Args: { org_id: string }
         Returns: boolean
