@@ -96,7 +96,7 @@ export function SubscriptionTab() {
     try {
       const isCnpj = billingInfo.taxId.replace(/\D/g, '').length > 11;
       
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('organizations')
         .update({
           razao_social: billingInfo.name,
