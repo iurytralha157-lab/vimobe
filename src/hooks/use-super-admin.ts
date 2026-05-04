@@ -109,6 +109,10 @@ export function useSuperAdmin() {
       subscription_status?: string;
       max_users?: number;
       admin_notes?: string;
+      plan_id?: string | null;
+      subscription_value?: number | null;
+      billing_day?: number | null;
+      next_billing_date?: string | null;
     }) => {
       const { id, ...updates } = data;
       
