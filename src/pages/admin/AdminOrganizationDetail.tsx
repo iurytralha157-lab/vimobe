@@ -94,7 +94,11 @@ export default function AdminOrganizationDetail() {
     name: '',
     subscription_status: 'trial',
     max_users: 10,
-    admin_notes: ''
+    admin_notes: '',
+    plan_id: null as string | null,
+    subscription_value: 0,
+    billing_day: 1,
+    next_billing_date: '',
   });
 
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
