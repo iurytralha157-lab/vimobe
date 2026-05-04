@@ -154,25 +154,29 @@ export default function Dashboard() {
         <div className="hidden lg:grid lg:grid-cols-12 gap-2 md:gap-3 flex-1 min-h-0">
           {/* Left column (col 1-8): KPIs + Evolution Chart */}
           <div className="col-span-8 flex flex-col gap-3 min-h-0">
-            {/* KPIs back on top of evolution chart */}
-            <KPICardsGrid 
-              data={kpiData} 
-              isLoading={statsLoading} 
-              periodLabel={periodLabel} 
-              propertyCount={propertyCount}
-              siteVisits={siteVisits}
-              layout="top"
-            />
+            {/* KPIs on top */}
+            <div className="flex-shrink-0">
+              <KPICardsGrid 
+                data={kpiData} 
+                isLoading={statsLoading} 
+                periodLabel={periodLabel} 
+                propertyCount={propertyCount}
+                siteVisits={siteVisits}
+                layout="top"
+              />
+            </div>
             
-            {/* Evolution chart fills remaining height in left column */}
+            {/* Evolution chart - Fills ALL remaining height down to footer */}
             <div className="flex-1 min-h-0">
               <DealsEvolutionChart data={evolutionData} isLoading={evolutionLoading} />
             </div>
           </div>
 
           {/* Right column (col 9-12): Sales Funnel */}
-          <div className="col-span-4 min-h-0 overflow-hidden">
-            {funnelComponent}
+          <div className="col-span-4 min-h-0 flex flex-col">
+            <div className="flex-1 min-h-0 overflow-hidden">
+              {funnelComponent}
+            </div>
           </div>
         </div>
 
