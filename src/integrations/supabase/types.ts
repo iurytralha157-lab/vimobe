@@ -3616,6 +3616,56 @@ export type Database = {
           },
         ]
       }
+      organization_payments: {
+        Row: {
+          amount: number
+          asaas_id: string | null
+          created_at: string | null
+          due_date: string
+          id: string
+          invoice_url: string | null
+          organization_id: string | null
+          payment_date: string | null
+          payment_method: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          amount: number
+          asaas_id?: string | null
+          created_at?: string | null
+          due_date: string
+          id?: string
+          invoice_url?: string | null
+          organization_id?: string | null
+          payment_date?: string | null
+          payment_method?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          amount?: number
+          asaas_id?: string | null
+          created_at?: string | null
+          due_date?: string
+          id?: string
+          invoice_url?: string | null
+          organization_id?: string | null
+          payment_date?: string | null
+          payment_method?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_payments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_role_permissions: {
         Row: {
           created_at: string
@@ -3874,6 +3924,53 @@ export type Database = {
           },
         ]
       }
+      organization_subscriptions: {
+        Row: {
+          amount: number
+          created_at: string | null
+          due_date: string
+          id: string
+          invoice_url: string | null
+          organization_id: string | null
+          paid_at: string | null
+          payment_method: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          due_date: string
+          id?: string
+          invoice_url?: string | null
+          organization_id?: string | null
+          paid_at?: string | null
+          payment_method?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          due_date?: string
+          id?: string
+          invoice_url?: string | null
+          organization_id?: string | null
+          paid_at?: string | null
+          payment_method?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_subscriptions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organizations: {
         Row: {
           accent_color: string | null
@@ -3883,6 +3980,7 @@ export type Database = {
           asaas_payment_link_url: string | null
           asaas_subscription_id: string | null
           bairro: string | null
+          billing_day: number | null
           cep: string | null
           checkout_token: string | null
           cidade: string | null
@@ -3896,11 +3994,13 @@ export type Database = {
           id: string
           inscricao_estadual: string | null
           is_active: boolean
+          is_financial_module_enabled: boolean | null
           last_access_at: string | null
           logo_size: number | null
           logo_url: string | null
           max_users: number
           name: string
+          next_billing_date: string | null
           nome_fantasia: string | null
           numero: string | null
           plan_id: string | null
@@ -3908,6 +4008,7 @@ export type Database = {
           segment: string | null
           subscription_status: string
           subscription_type: string | null
+          subscription_value: number | null
           telefone: string | null
           theme_mode: string | null
           trial_ends_at: string | null
@@ -3924,6 +4025,7 @@ export type Database = {
           asaas_payment_link_url?: string | null
           asaas_subscription_id?: string | null
           bairro?: string | null
+          billing_day?: number | null
           cep?: string | null
           checkout_token?: string | null
           cidade?: string | null
@@ -3937,11 +4039,13 @@ export type Database = {
           id?: string
           inscricao_estadual?: string | null
           is_active?: boolean
+          is_financial_module_enabled?: boolean | null
           last_access_at?: string | null
           logo_size?: number | null
           logo_url?: string | null
           max_users?: number
           name: string
+          next_billing_date?: string | null
           nome_fantasia?: string | null
           numero?: string | null
           plan_id?: string | null
@@ -3949,6 +4053,7 @@ export type Database = {
           segment?: string | null
           subscription_status?: string
           subscription_type?: string | null
+          subscription_value?: number | null
           telefone?: string | null
           theme_mode?: string | null
           trial_ends_at?: string | null
@@ -3965,6 +4070,7 @@ export type Database = {
           asaas_payment_link_url?: string | null
           asaas_subscription_id?: string | null
           bairro?: string | null
+          billing_day?: number | null
           cep?: string | null
           checkout_token?: string | null
           cidade?: string | null
@@ -3978,11 +4084,13 @@ export type Database = {
           id?: string
           inscricao_estadual?: string | null
           is_active?: boolean
+          is_financial_module_enabled?: boolean | null
           last_access_at?: string | null
           logo_size?: number | null
           logo_url?: string | null
           max_users?: number
           name?: string
+          next_billing_date?: string | null
           nome_fantasia?: string | null
           numero?: string | null
           plan_id?: string | null
@@ -3990,6 +4098,7 @@ export type Database = {
           segment?: string | null
           subscription_status?: string
           subscription_type?: string | null
+          subscription_value?: number | null
           telefone?: string | null
           theme_mode?: string | null
           trial_ends_at?: string | null
@@ -5478,6 +5587,41 @@ export type Database = {
             columns: ["pipeline_id"]
             isOneToOne: false
             referencedRelation: "pipelines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscription_logs: {
+        Row: {
+          created_at: string | null
+          event_type: string
+          id: string
+          metadata: Json | null
+          organization_id: string | null
+          status: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          event_type: string
+          id?: string
+          metadata?: Json | null
+          organization_id?: string | null
+          status?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+          organization_id?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_logs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
