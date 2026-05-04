@@ -34,7 +34,7 @@ Deno.serve(async (req) => {
 
     const body = await req.json();
     const {
-      organization_id, checkout_token, billing_type, // PIX | CREDIT_CARD
+      organization_id, checkout_token, billing_type, // PIX | CREDIT_CARD | BOLETO
       // Card data (required for CREDIT_CARD)
       holder_name, card_number, expiry_month, expiry_year, ccv,
       // Holder info
@@ -42,8 +42,8 @@ Deno.serve(async (req) => {
       remote_ip,
     } = body;
 
-    if (!billing_type || !['PIX', 'CREDIT_CARD'].includes(billing_type)) {
-      return new Response(JSON.stringify({ error: 'billing_type must be PIX or CREDIT_CARD' }), {
+    if (!billing_type || !['PIX', 'CREDIT_CARD', 'BOLETO'].includes(billing_type)) {
+      return new Response(JSON.stringify({ error: 'billing_type must be PIX, CREDIT_CARD or BOLETO' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -88,29 +88,42 @@ Deno.serve(async (req) => {
 
     let result: any;
 
-    if (billing_type === 'PIX') {
-      // One-time PIX charge (renew monthly via new link)
+    if (billing_type === 'PIX' || billing_type === 'BOLETO') {
+      // One-time charge
       const payment = await asaasFetch('/payments', {
         method: 'POST',
         body: JSON.stringify({
           customer: asaasCustomerId,
-          billingType: 'PIX',
+          billingType: billing_type,
           value,
           dueDate,
           description: `Vimob - ${plan.name}`,
           externalReference: org.id,
         }),
       });
-      const qr = await asaasFetch(`/payments/${payment.id}/pixQrCode`);
-      result = {
-        type: 'PIX',
-        payment_id: payment.id,
-        invoice_url: payment.invoiceUrl,
-        qr_code: qr.encodedImage, // base64 png
-        qr_payload: qr.payload,
-        expires_at: qr.expirationDate,
-        value,
-      };
+
+      if (billing_type === 'PIX') {
+        const qr = await asaasFetch(`/payments/${payment.id}/pixQrCode`);
+        result = {
+          type: 'PIX',
+          payment_id: payment.id,
+          invoice_url: payment.invoiceUrl,
+          qr_code: qr.encodedImage, // base64 png
+          qr_payload: qr.payload,
+          expires_at: qr.expirationDate,
+          value,
+        };
+      } else {
+        result = {
+          type: 'BOLETO',
+          payment_id: payment.id,
+          invoice_url: payment.invoiceUrl,
+          bank_slip_url: payment.bankSlipUrl,
+          identification_field: payment.identificationField,
+          nosso_numero: payment.nossoNumero,
+          value,
+        };
+      }
     } else {
       // CREDIT_CARD recurring subscription
       if (!card_number || !holder_name || !expiry_month || !expiry_year || !ccv) {

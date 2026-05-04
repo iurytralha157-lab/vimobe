@@ -17,6 +17,12 @@ export interface OrganizationWithStats {
   last_access_at: string | null;
   user_count?: number;
   lead_count?: number;
+  plan_id?: string | null;
+  subscription_value?: number | null;
+  billing_day?: number | null;
+  next_billing_date?: string | null;
+  asaas_customer_id?: string | null;
+  asaas_subscription_id?: string | null;
 }
 
 export function useSuperAdmin() {
@@ -103,6 +109,10 @@ export function useSuperAdmin() {
       subscription_status?: string;
       max_users?: number;
       admin_notes?: string;
+      plan_id?: string | null;
+      subscription_value?: number | null;
+      billing_day?: number | null;
+      next_billing_date?: string | null;
     }) => {
       const { id, ...updates } = data;
       

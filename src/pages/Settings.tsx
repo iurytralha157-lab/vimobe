@@ -80,8 +80,8 @@ export default function Settings() {
       tabs.push({ value: 'team', label: 'Usuários', icon: Users,
         renderIcon: () => <AnimatedIcon icon={AVATAR_JSON} size={18} trigger="hover" /> });
       
-      // Assinatura only for non-trial organizations and admins
-      if (organization?.subscription_status && organization.subscription_status !== 'trial') {
+      // Assinatura only for admins and not for organizations in trial
+      if (organization?.subscription_status !== 'trial' && organization?.subscription_status !== 'trialing') {
         tabs.push({ value: 'subscription', label: 'Assinatura', icon: CreditCard });
       }
     }

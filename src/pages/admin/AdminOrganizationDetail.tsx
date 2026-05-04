@@ -17,6 +17,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { useSuperAdmin } from '@/hooks/use-super-admin';
 import { useAdminInvitations } from '@/hooks/use-admin-invitations';
+import { useAdminPlans } from '@/hooks/use-admin-plans';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -80,6 +81,7 @@ export default function AdminOrganizationDetail() {
   const navigate = useNavigate();
   const { organizations, updateOrganization, updateModuleAccess } = useSuperAdmin();
   const { startImpersonate } = useAuth();
+  const { plans } = useAdminPlans();
   const {
     invitations,
     isLoading: loadingInvitations,
@@ -94,7 +96,11 @@ export default function AdminOrganizationDetail() {
     name: '',
     subscription_status: 'trial',
     max_users: 10,
-    admin_notes: ''
+    admin_notes: '',
+    plan_id: null as string | null,
+    subscription_value: 0,
+    billing_day: 1,
+    next_billing_date: '',
   });
 
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
@@ -137,7 +143,11 @@ export default function AdminOrganizationDetail() {
         name: org.name,
         subscription_status: org.subscription_status,
         max_users: org.max_users,
-        admin_notes: org.admin_notes || ''
+        admin_notes: org.admin_notes || '',
+        plan_id: org.plan_id || null,
+        subscription_value: org.subscription_value || 0,
+        billing_day: org.billing_day || 1,
+        next_billing_date: org.next_billing_date || '',
       });
     }
   }, [org]);
@@ -157,6 +167,15 @@ export default function AdminOrganizationDetail() {
       id: org.id,
       ...formData
     });
+  };
+
+  const handlePlanChange = (planId: string) => {
+    const selectedPlan = plans?.find(p => p.id === planId);
+    setFormData(prev => ({
+      ...prev,
+      plan_id: planId === 'none' ? null : planId,
+      subscription_value: selectedPlan ? selectedPlan.price : prev.subscription_value
+    }));
   };
 
   const handleImpersonate = () => {
@@ -270,7 +289,53 @@ export default function AdminOrganizationDetail() {
                     <Input
                       value={new Date(org.created_at).toLocaleDateString('pt-BR')}
                       disabled />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Plano</Label>
+                    <Select 
+                      value={formData.plan_id || 'none'} 
+                      onValueChange={handlePlanChange}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecionar Plano" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Nenhum</SelectItem>
+                        {plans?.map(p => (
+                          <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
+                  <div className="space-y-2">
+                    <Label>Valor da Assinatura (R$)</Label>
+                    <Input 
+                      type="number" 
+                      value={formData.subscription_value} 
+                      onChange={e => setFormData({...formData, subscription_value: Number(e.target.value)})} 
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Dia do Vencimento</Label>
+                    <Input 
+                      type="number" 
+                      min={1} 
+                      max={28} 
+                      value={formData.billing_day} 
+                      onChange={e => setFormData({...formData, billing_day: Number(e.target.value)})} 
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Próximo Vencimento</Label>
+                    <Input 
+                      type="date" 
+                      value={formData.next_billing_date} 
+                      onChange={e => setFormData({...formData, next_billing_date: e.target.value})} 
+                    />
                   </div>
                 </div>
                 <div className="space-y-2">
