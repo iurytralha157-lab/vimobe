@@ -109,6 +109,22 @@ export default function AdminOrganizationDetail() {
     role: 'user' as 'admin' | 'user'
   });
 
+  // Fetch organization data directly to include all commercial fields
+  const { data: orgDetails, refetch: refetchOrg } = useQuery({
+    queryKey: ['org-details', id],
+    queryFn: async () => {
+      if (!id) return null;
+      const { data, error } = await supabase
+        .from('organizations')
+        .select('*')
+        .eq('id', id)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!id
+  });
+
   // Fetch organization modules
   const { data: modules, refetch: refetchModules } = useQuery({
     queryKey: ['org-modules', id],
