@@ -304,7 +304,7 @@ export function MetaIntegrationSettings() {
                 className="h-8 text-xs px-2"
                 onClick={() => handleConnect(true)}
                 disabled={isConnecting || getAuthUrl.isPending}
-                title="Conexão independente — exige app Instagram Business configurado no painel Meta"
+                title="Conexão com Instagram — exige conta Business vinculada"
               >
                 <Instagram className="h-3.5 w-3.5 text-pink-600" />
                 <span className="hidden sm:inline ml-1">Instagram</span>
