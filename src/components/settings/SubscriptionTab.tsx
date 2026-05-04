@@ -6,7 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { CreditCard, Calendar, History, Building2, User, Loader2, AlertCircle, CheckCircle2, Receipt, QrCode, FileText, Copy, Download, ExternalLink } from 'lucide-react';
+import { CreditCard, Calendar, History, Building2, User, Loader2, AlertCircle, CheckCircle2, Receipt, QrCode, FileText, Copy, Download, ExternalLink, Shield } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
