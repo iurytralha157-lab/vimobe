@@ -238,8 +238,8 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    const payload: ExecutionPayload = await req.json();
-    const { execution_id } = payload;
+    const payload: ExecutionPayload & { override_node?: any } = await req.json();
+    const { execution_id, override_node } = payload;
     console.log(`📥 Executor invoked for execution_id=${execution_id}`);
 
     if (!execution_id) {
@@ -310,8 +310,18 @@ Deno.serve(async (req) => {
       let processedCount = 0;
       let scheduledLater = false;
 
-      while (currentNodeId && processedCount < MAX_CHAIN_NODES) {
-        const currentNode = automation.nodes?.find((n: { id: string }) => n.id === currentNodeId);
+      while ((currentNodeId || override_node) && processedCount < MAX_CHAIN_NODES) {
+        let currentNode = automation.nodes?.find((n: { id: string }) => n.id === currentNodeId);
+        
+        // If an override node is provided, process it first
+        if (processedCount === 0 && override_node) {
+          currentNode = {
+            ...override_node,
+            id: override_node.id || `override-${crypto.randomUUID()}`
+          };
+          console.log(`⚡ Processing OVERRIDE node: ${currentNode.node_type}`);
+        }
+
         if (!currentNode) {
           console.error(`Node ${currentNodeId} not found in automation ${automation.id}`);
           await markFailed(supabase, execution_id, `Node not found: ${currentNodeId}`);
@@ -319,9 +329,9 @@ Deno.serve(async (req) => {
           break;
         }
 
-        console.log(`▶️ [${processedCount + 1}/${MAX_CHAIN_NODES}] Processing ${currentNode.node_type} (${currentNode.action_type || "n/a"}) — ${currentNodeId}`);
+        console.log(`▶️ [${processedCount + 1}/${MAX_CHAIN_NODES}] Processing ${currentNode.node_type} (${currentNode.action_type || "n/a"}) — ${currentNode.id}`);
 
-        let nextNodeId: string | null = null;
+        let nextNodeId: string | null = (processedCount === 0 && override_node) ? currentNodeId : null;
 
         try {
           switch (currentNode.node_type) {

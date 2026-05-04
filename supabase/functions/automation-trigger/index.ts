@@ -95,6 +95,117 @@ Deno.serve(async (req) => {
 
     console.log(`Resolved organization_id: ${organizationId}`);
 
+    // ========= NOVO: Acordar automações em espera =========
+    if (event_type === "message_received" && data.lead_id) {
+      console.log(`Checking for waiting executions to wake up for lead ${data.lead_id}`);
+      const { data: waitingExecutions } = await supabaseAdmin
+        .from("automation_executions")
+        .select(`
+          *,
+          automation:automations(
+            *,
+            nodes:automation_nodes(*),
+            connections:automation_connections(*)
+          )
+        `)
+        .eq("lead_id", data.lead_id)
+        .eq("status", "waiting")
+        .order("started_at", { ascending: false });
+
+      if (waitingExecutions && waitingExecutions.length > 0) {
+        console.log(`Found ${waitingExecutions.length} waiting execution(s) to check`);
+        for (const exec of waitingExecutions) {
+          // O nó atual da execução é o que ela vai processar ao acordar.
+          // Mas precisamos olhar as regras do nó ANTERIOR (o nó de Delay/Wait)
+          // que colocou ela em espera.
+          const automation = exec.automation;
+          const connToCurrent = automation.connections?.find((c: any) => c.target_node_id === exec.current_node_id);
+          const previousNode = automation.nodes?.find((n: any) => n.id === connToCurrent?.source_node_id);
+
+          if (previousNode && (previousNode.node_type === "delay" || previousNode.node_type === "wait")) {
+            const nodeConfig = previousNode.node_config || previousNode.config || {};
+            
+            console.log(`Waking up execution ${exec.id} via node ${previousNode.id}`);
+            
+            // 1. Mover etapa se configurado
+            const targetStageId = nodeConfig.on_reply_move_to_stage_id || nodeConfig.on_reply_stage_id;
+            if (targetStageId) {
+              console.log(`Moving lead ${data.lead_id} to stage ${targetStageId} on reply`);
+              await supabaseAdmin.from("leads").update({ 
+                stage_id: targetStageId,
+                stage_entered_at: new Date().toISOString()
+              }).eq("id", data.lead_id);
+            }
+
+            // 2. Enviar mensagem de resposta se configurada
+            if (nodeConfig.on_reply_message) {
+              console.log(`Sending auto-reply on node ${previousNode.id}`);
+              // Usamos o executor para enviar a mensagem para aproveitar a lógica de variáveis
+              // Criamos um nó temporário de ação para o executor processar
+              await fetch(`${SUPABASE_URL}/functions/v1/automation-executor`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+                },
+                body: JSON.stringify({
+                  execution_id: exec.id,
+                  override_node: {
+                    node_type: "action",
+                    action_type: "send_whatsapp",
+                    node_config: {
+                      message: nodeConfig.on_reply_message,
+                      session_id: data.session_id
+                    }
+                  }
+                }),
+              });
+            }
+
+            // 3. Verificar se deve parar a automação
+            if (nodeConfig.stop_on_reply === true) {
+              console.log(`Stopping execution ${exec.id} due to stop_on_reply`);
+              await supabaseAdmin.from("automation_executions").update({
+                status: "completed",
+                completed_at: new Date().toISOString()
+              }).eq("id", exec.id);
+              continue;
+            }
+
+            // 4. Se houver uma conexão específica para "Respondido", seguir por ela
+            const replyConn = automation.connections?.find(
+              (c: any) => c.source_node_id === previousNode.id && (c.source_handle === "reply" || c.source_handle === "respondido")
+            );
+
+            if (replyConn) {
+              console.log(`Following 'reply' branch to node ${replyConn.target_node_id}`);
+              await supabaseAdmin.from("automation_executions").update({
+                current_node_id: replyConn.target_node_id,
+                status: "running",
+                next_execution_at: null
+              }).eq("id", exec.id);
+            } else {
+              // Caso contrário, apenas continua o fluxo normal (pula o tempo de espera)
+              await supabaseAdmin.from("automation_executions").update({
+                status: "running",
+                next_execution_at: null
+              }).eq("id", exec.id);
+            }
+
+            // Trigger executor para continuar
+            await fetch(`${SUPABASE_URL}/functions/v1/automation-executor`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+              },
+              body: JSON.stringify({ execution_id: exec.id }),
+            });
+          }
+        }
+      }
+    }
+
     // Map event types to trigger types (mapeamento de eventos para tipos de trigger)
     // O frontend usa 'lead_stage_changed' mas o banco salva como 'lead_stage_changed'
     const triggerTypeMap: Record<string, string[]> = {
