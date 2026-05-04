@@ -71,13 +71,19 @@ Deno.serve(async (req) => {
       updated_at: new Date().toISOString(),
     }, { onConflict: 'asaas_payment_id' });
 
-    // Activate org on confirmation
+    // Activate org on confirmation and update next billing date
     if (event.event === 'PAYMENT_CONFIRMED' || event.event === 'PAYMENT_RECEIVED') {
+      const nextBillingDate = new Date();
+      nextBillingDate.setMonth(nextBillingDate.getMonth() + 1);
+      const nextBillingDateStr = nextBillingDate.toISOString().split('T')[0];
+
       await supabase.from('organizations').update({
         subscription_status: 'active',
         is_active: true,
+        next_billing_date: nextBillingDateStr
       }).eq('id', org.id);
-      console.log('Activated org', org.id);
+      
+      console.log('Activated org and updated next billing to', nextBillingDateStr, 'for org', org.id);
 
       // Notify admin
       if (EVOLUTION_API_URL && EVOLUTION_API_KEY) {
