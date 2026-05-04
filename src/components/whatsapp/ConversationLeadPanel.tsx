@@ -205,7 +205,7 @@ export function ConversationLeadPanel({ leadId, onClose, className, contactPictu
     meta?.campaign_name || meta?.ad_name || meta?.form_name || meta?.utm_source || meta?.utm_campaign;
 
   return (
-    <div className={cn("flex flex-col h-full bg-card rounded-2xl overflow-hidden", className)}>
+    <div className={cn("flex flex-col h-full bg-card overflow-hidden", className)}>
       {/* Header */}
       <div className="p-4 border-b">
         <div className="flex items-start justify-between">
