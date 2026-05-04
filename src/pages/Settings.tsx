@@ -29,6 +29,7 @@ import { NotificationsTab } from '@/components/settings/NotificationsTab';
 import { useOrganizationModules } from '@/hooks/use-organization-modules';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { AnimatedTabNav, AnimatedTabItem } from '@/components/ui/animated-tab-nav';
+import { SubscriptionTab } from '@/components/settings/SubscriptionTab';
 
 export default function Settings() {
   const { profile, isSuperAdmin } = useAuth();
