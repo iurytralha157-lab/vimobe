@@ -294,8 +294,26 @@ const BrandingAndPwa = () => {
 };
 
 const App = () => {
-  const customDomain = isCustomDomain();
+  const publicMode = getPublicSiteMode();
 
+  // PUBLIC SITE MODE: completely separate from CRM (no AuthProvider, no CRM overlays)
+  if (publicMode) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
+          <TooltipProvider>
+            <BrowserRouter>
+              <Suspense fallback={null}>
+                <PublicAppRoot mode={publicMode} />
+              </Suspense>
+            </BrowserRouter>
+          </TooltipProvider>
+        </ThemeProvider>
+      </QueryClientProvider>
+    );
+  }
+
+  // CRM MODE
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
@@ -305,17 +323,11 @@ const App = () => {
           <Sonner />
           <IOSInstallGuide />
           <BrowserRouter>
-            {customDomain ? (
+            <AuthProvider>
               <LanguageProvider>
-                <CustomDomainRoutes />
+                <AppRoutes />
               </LanguageProvider>
-            ) : (
-              <AuthProvider>
-                <LanguageProvider>
-                  <AppRoutes />
-                </LanguageProvider>
-              </AuthProvider>
-            )}
+            </AuthProvider>
           </BrowserRouter>
         </TooltipProvider>
       </ThemeProvider>
