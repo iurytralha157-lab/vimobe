@@ -159,9 +159,7 @@ function AppRoutes() {
   useForceRefreshListener();
 
   useEffect(() => {
-    // Only preload CRM pages if we are NOT on a custom domain and user is logged in
-    if (user && !loading && !isCustomDomain()) {
-      // Delay preloading slightly to prioritize current page render
+    if (user && !loading) {
       const timer = setTimeout(preloadCoreCrmPages, 3000);
       return () => clearTimeout(timer);
     }
