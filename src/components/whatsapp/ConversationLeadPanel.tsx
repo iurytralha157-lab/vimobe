@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { LeadTimeline } from "@/components/leads/LeadTimeline";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDealStatusChange } from "@/hooks/use-deal-status-change";
 import { LostReasonDialog } from "@/components/leads/LostReasonDialog";
