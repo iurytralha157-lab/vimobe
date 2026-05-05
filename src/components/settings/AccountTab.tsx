@@ -161,13 +161,6 @@ export function AccountTab() {
           phone: profileForm.phone || null,
           whatsapp: profileForm.whatsapp || null,
           cpf: profileForm.cpf || null,
-          cep: profileForm.cep || null,
-          endereco: profileForm.endereco || null,
-          numero: profileForm.numero || null,
-          complemento: profileForm.complemento || null,
-          bairro: profileForm.bairro || null,
-          cidade: profileForm.cidade || null,
-          uf: profileForm.uf || null,
         })
         .eq('id', profile.id);
 
