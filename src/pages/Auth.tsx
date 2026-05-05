@@ -265,29 +265,26 @@ export default function Auth() {
   return (
     <div className="min-h-screen flex flex-col lg:flex-row bg-background relative overflow-x-hidden">
       {/* Mobile background: optimized WebP image with crop if available */}
-      <div className="lg:hidden absolute inset-0 w-full h-[100px] overflow-hidden pointer-events-none">
+      {/* Mobile background: full screen background on mobile */}
+      <div className="lg:hidden absolute inset-0 w-full h-full overflow-hidden pointer-events-none">
         {loginBgUrl ? (
           <div className="relative w-full h-full">
             <img 
-              src={loginBgUrl.includes('supabase.co') ? `${loginBgUrl}?width=400&quality=50&format=webp` : loginBgUrl}
+              src={loginBgUrl.includes('supabase.co') ? `${loginBgUrl}?width=800&quality=60&format=webp` : loginBgUrl}
               alt=""
-              className={`w-full h-full object-cover transition-opacity duration-700 ${bgLoaded ? 'opacity-40' : 'opacity-0'} blur-[2px]`}
+              className={`w-full h-full object-cover object-center transition-opacity duration-700 ${bgLoaded ? 'opacity-50' : 'opacity-0'}`}
               loading="eager"
             />
-            <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-background/40 to-background" />
+            <div className="absolute inset-0 bg-background/20" />
+            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/10 to-transparent" />
           </div>
         ) : (
-          <div className="w-full h-full bg-gradient-to-br from-primary/30 via-primary/10 to-background">
-            <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/5 to-background" />
-          </div>
+          <div className="w-full h-full bg-gradient-to-br from-primary/10 via-background to-background" />
         )}
       </div>
 
-      {/* Mobile spacer to push form below image */}
-      <div className="lg:hidden h-[100px] flex-shrink-0" />
-
       {/* Login form container */}
-      <div className="w-full lg:w-[420px] xl:w-[460px] flex flex-col items-center justify-start lg:justify-center px-8 py-8 lg:py-10 flex-shrink-0 mx-auto lg:ml-[100px] xl:ml-[100px] flex-1 lg:flex-none relative z-10 -mt-16 lg:mt-0">
+      <div className="w-full lg:w-[420px] xl:w-[460px] flex flex-col items-center justify-center px-8 py-8 lg:py-10 flex-shrink-0 mx-auto lg:ml-[100px] xl:ml-[100px] flex-1 lg:flex-none relative z-10">
         <div className="w-full max-w-sm">
           <div className="flex flex-col items-center mb-2 min-h-[56px] justify-center">
             {settingsLoading ? (
