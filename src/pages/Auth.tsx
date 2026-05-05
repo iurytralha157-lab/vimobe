@@ -485,7 +485,7 @@ export default function Auth() {
           />
         )}
         {/* Horizontal gradient to blend form background with image */}
-        <div className="absolute inset-y-0 left-0 w-72 bg-gradient-to-r from-background via-background/80 to-transparent pointer-events-none" />
+        <div className="absolute inset-y-0 left-0 w-[500px] xl:w-[800px] bg-gradient-to-r from-background via-background/80 to-transparent pointer-events-none" />
       </div>
     </div>
   );
