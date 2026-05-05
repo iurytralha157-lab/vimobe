@@ -33,6 +33,22 @@ interface Organization {
   is_active?: boolean;
   subscription_status?: string;
   segment?: 'imobiliario' | 'telecom' | 'servicos' | null;
+  cnpj?: string | null;
+  inscricao_estadual?: string | null;
+  razao_social?: string | null;
+  nome_fantasia?: string | null;
+  cep?: string | null;
+  endereco?: string | null;
+  numero?: string | null;
+  complemento?: string | null;
+  bairro?: string | null;
+  cidade?: string | null;
+  uf?: string | null;
+  telefone?: string | null;
+  whatsapp?: string | null;
+  email?: string | null;
+  website?: string | null;
+  default_commission_percentage?: number | null;
 }
 
 interface ImpersonateSession {
@@ -104,7 +120,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const [userResult, superAdmin] = await Promise.all([
           supabase
             .from('users')
-            .select('id, organization_id, name, email, role, avatar_url, is_active, language')
+            .select('id, organization_id, name, email, role, avatar_url, is_active, language, phone, whatsapp, cpf, cep, endereco, numero, complemento, bairro, cidade, uf')
             .eq('id', userId)
             .single(),
           checkSuperAdmin(userId)
@@ -138,7 +154,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             // Optimized: Select only required fields
             const { data: orgData } = await supabase
               .from('organizations')
-              .select('id, name, logo_url, theme_mode, accent_color, is_active')
+              .select('id, name, logo_url, theme_mode, accent_color, is_active, subscription_status, segment, cnpj, inscricao_estadual, razao_social, nome_fantasia, cep, endereco, numero, complemento, bairro, cidade, uf, telefone, whatsapp, email, website, default_commission_percentage')
               .eq('id', orgIdToFetch)
               .single();
 
