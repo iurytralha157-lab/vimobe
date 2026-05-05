@@ -34,7 +34,7 @@ interface AboutTabProps {
   onImageChange?: (url: string | null) => void;
 }
 
-export function AboutTab({ formData, setFormData, site, isAdmin, handleFileUpload }: AboutTabProps) {
+export function AboutTab({ formData, setFormData, site, isAdmin, onImageChange }: AboutTabProps) {
   const updateStat = (index: number, field: keyof AboutStat, value: string) => {
     const newStats = [...formData.about_stats];
     newStats[index] = { ...newStats[index], [field]: value };
