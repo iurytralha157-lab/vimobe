@@ -824,7 +824,7 @@ export default function Pipelines() {
         {isMobile ? (
           <div className="flex flex-col gap-3 mb-3 w-full">
             {/* Pipelines List - Horizontal Scroll */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide px-0.5">
               {pipelines.map(pipeline => (
                 <Button
                   key={pipeline.id}
@@ -852,7 +852,7 @@ export default function Pipelines() {
             </div>
 
             {/* Toolbar row */}
-            <div className="flex items-center gap-1.5 w-full overflow-x-auto pb-1">
+            <div className="flex items-center gap-1.5 w-full overflow-x-auto pb-1 px-0.5">
               <div className="relative flex-1 min-w-[120px]">
                 <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
                 <Input
@@ -900,9 +900,145 @@ export default function Pipelines() {
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent align="end" className="w-64 p-3 max-h-[80vh] overflow-y-auto">
-...
-                  <div className="space-y-3">
-...
+                  <div className="space-y-4">
+                    <div className="pb-3 border-b border-border">
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className={cn(
+                              "h-9 w-full text-xs gap-1.5 justify-between",
+                              (filterCampaign !== 'all' || filterAdSet !== 'all' || filterAd !== 'all') && "border-[#1877F2] text-[#1877F2]"
+                            )}
+                          >
+                            <div className="flex items-center gap-1.5 truncate">
+                              <SlidersHorizontal className="h-3.5 w-3.5" />
+                              <span>Meta Ads</span>
+                            </div>
+                            {(filterCampaign !== 'all' || filterAdSet !== 'all' || filterAd !== 'all') && (
+                              <Badge className="h-4 min-w-4 p-0 px-1 text-[10px] bg-[#1877F2]">
+                                {[filterCampaign !== 'all', filterAdSet !== 'all', filterAd !== 'all'].filter(Boolean).length}
+                              </Badge>
+                            )}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent side="left" className="w-72 p-4 z-[100]">
+                          <div className="space-y-4">
+                            <h4 className="font-medium text-sm">Filtros Meta</h4>
+                            <div className="space-y-3">
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-bold uppercase text-muted-foreground">Campanha</label>
+                                <Select value={filterCampaign} onValueChange={setFilterCampaign}>
+                                  <SelectTrigger className="h-8 text-xs">
+                                    <SelectValue placeholder="Todas" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="all">Todas</SelectItem>
+                                    {metaFilters?.campaigns.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-bold uppercase text-muted-foreground">Conjunto</label>
+                                <Select value={filterAdSet} onValueChange={setFilterAdSet}>
+                                  <SelectTrigger className="h-8 text-xs">
+                                    <SelectValue placeholder="Todos" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="all">Todos</SelectItem>
+                                    {metaFilters?.adsets.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-bold uppercase text-muted-foreground">Criativo</label>
+                                <Select value={filterAd} onValueChange={setFilterAd}>
+                                  <SelectTrigger className="h-8 text-xs">
+                                    <SelectValue placeholder="Todos" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="all">Todos</SelectItem>
+                                    {metaFilters?.ads.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+
+                    {(isAdmin || hasLeadViewAll) && (
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold uppercase text-muted-foreground">Responsável</label>
+                        <Select value={filterUser} onValueChange={setFilterUser}>
+                          <SelectTrigger className={cn("h-9 w-full text-xs", filterUser && filterUser !== 'all' && "border-primary text-primary")}>
+                            <Filter className="h-3.5 w-3.5 mr-1.5 flex-shrink-0" />
+                            <SelectValue placeholder="Responsável" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Todos responsáveis</SelectItem>
+                            {users.map(user => (
+                              <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold uppercase text-muted-foreground">Etiqueta (Tag)</label>
+                      <Select value={filterTag} onValueChange={setFilterTag}>
+                        <SelectTrigger className={cn("h-9 w-full text-xs", filterTag && filterTag !== 'all' && "border-primary text-primary")}>
+                          <Tags className="h-3.5 w-3.5 mr-1.5 flex-shrink-0" />
+                          <SelectValue placeholder="Etiqueta" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todas etiquetas</SelectItem>
+                          {allTags.map(tag => (
+                            <SelectItem key={tag.id} value={tag.id}>{tag.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold uppercase text-muted-foreground">Status do Negócio</label>
+                      <Select value={filterDealStatus} onValueChange={setFilterDealStatus}>
+                        <SelectTrigger className={cn("h-9 w-full text-xs", filterDealStatus && filterDealStatus !== 'all' && "border-primary text-primary")}>
+                          <CircleDot className="h-3.5 w-3.5 mr-1.5 flex-shrink-0" />
+                          <SelectValue placeholder="Status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todos status</SelectItem>
+                          <SelectItem value="open">Aberto</SelectItem>
+                          <SelectItem value="won">Ganho</SelectItem>
+                          <SelectItem value="lost">Perdido</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {activeFiltersCount > 0 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full text-xs h-8 text-destructive hover:text-destructive hover:bg-destructive/5"
+                        onClick={() => {
+                          setFilterUser(isAdmin || hasLeadViewAll ? 'all' : profile?.id);
+                          setFilterTag('all');
+                          setFilterDealStatus('all');
+                          setFilterCampaign('all');
+                          setFilterAdSet('all');
+                          setFilterAd('all');
+                          setSearchInput('');
+                          setSearchQuery('');
+                        }}
+                      >
+                        <XCircle className="h-3.5 w-3.5 mr-1.5" />
+                        Limpar filtros
+                      </Button>
+                    )}
                   </div>
                 </PopoverContent>
               </Popover>
