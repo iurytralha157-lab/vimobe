@@ -687,11 +687,22 @@ export default function Pipelines() {
     dateRange,
   });
   
-  // Filters are now applied server-side; only merge server search results client-side
+  // Filters are now applied server-side; we merge server results AND apply a local filter for instant feedback
   const filteredStages = useMemo(() => {
     return stages.map(stage => {
       let stageLeads = [...(stage.leads || [])];
       
+      // Local filtering for instant feedback while typing
+      if (searchInput) {
+        const lowerSearch = searchInput.toLowerCase();
+        stageLeads = stageLeads.filter((lead: any) => {
+          const nameMatch = lead.name?.toLowerCase().includes(lowerSearch);
+          const phoneMatch = lead.phone?.includes(lowerSearch);
+          const emailMatch = lead.email?.toLowerCase().includes(lowerSearch);
+          return nameMatch || phoneMatch || emailMatch;
+        });
+      }
+
       // If searching and we have server results, merge leads not already loaded
       if (deferredSearch && serverSearchResults.length > 0) {
         const loadedIds = new Set(stageLeads.map((l: any) => l.id));
@@ -706,7 +717,7 @@ export default function Pipelines() {
         leads: stageLeads,
       };
     });
-  }, [stages, deferredSearch, serverSearchResults]);
+  }, [stages, searchInput, deferredSearch, serverSearchResults]);
 
   // Compute VGV from filteredStages so badge always matches visible leads
   const stageVGVMap = useMemo(() => {
@@ -838,33 +849,24 @@ export default function Pipelines() {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {/* Search Button */}
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className={cn(
-                    "h-8 w-8 flex-shrink-0",
-                    searchQuery && "border-primary text-primary bg-primary/5"
-                  )}
-                >
-                  <Search className="h-3.5 w-3.5" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent align="start" className="w-[260px] p-2">
-                <div className="relative">
-                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                  <Input
-                    placeholder="Buscar lead..."
-                    value={searchInput}
-                    onChange={(e) => setSearchInput(e.target.value)}
-                    className="h-9 w-full pl-8 text-sm bg-muted/20"
-                    autoFocus
-                  />
+            {/* Search Field (Mobile) */}
+            <div className="relative flex-shrink-0">
+              <Search className={cn(
+                "absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground transition-colors",
+                searchInput && "text-primary"
+              )} />
+              <Input
+                placeholder="Buscar..."
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                className="h-8 w-[110px] pl-7 pr-2 text-[10px] bg-background border-border"
+              />
+              {leadsLoading && searchInput && (
+                <div className="absolute right-1.5 top-1/2 -translate-y-1/2">
+                  <Loader2 className="h-2.5 w-2.5 animate-spin text-muted-foreground" />
                 </div>
-              </PopoverContent>
-            </Popover>
+              )}
+            </div>
 
             {/* Sync Button */}
             <Button
@@ -1117,40 +1119,24 @@ export default function Pipelines() {
             </div>
 
             <div className="flex items-center gap-2.5">
-              {/* Search Button */}
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className={cn(
-                            "h-8 w-8 transition-colors",
-                            searchQuery && "text-primary border-primary bg-primary/5"
-                          )}
-                        >
-                          <Search className="h-4 w-4" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent align="center" className="w-80 p-3">
-                        <div className="relative">
-                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                          <Input
-                            placeholder="Buscar nome, telefone ou e-mail..."
-                            value={searchInput}
-                            onChange={(e) => setSearchInput(e.target.value)}
-                            className="h-10 pl-10 text-sm bg-muted/30 focus-visible:ring-primary/20"
-                            autoFocus
-                          />
-                        </div>
-                      </PopoverContent>
-                    </Popover>
-                  </TooltipTrigger>
-                  <TooltipContent>Buscar Lead</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              {/* Search Field */}
+              <div className="relative group">
+                <Search className={cn(
+                  "absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground transition-colors",
+                  searchInput && "text-primary"
+                )} />
+                <Input
+                  placeholder="Buscar lead..."
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  className="h-8 w-[180px] lg:w-[240px] pl-8 text-xs bg-background border-border hover:border-primary/50 focus-visible:ring-primary/20 transition-all"
+                />
+                {leadsLoading && searchInput && (
+                  <div className="absolute right-2.5 top-1/2 -translate-y-1/2">
+                    <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                  </div>
+                )}
+              </div>
 
               {/* Sync Button */}
               <TooltipProvider>
