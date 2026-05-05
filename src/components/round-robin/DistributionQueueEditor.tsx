@@ -108,7 +108,7 @@ interface QueueFormData {
   schedule: ScheduleDay[];
   conditions: RuleCondition[];
   members: QueueMember[];
-  ai_agent_id?: string | null;
+  // ai_agent_id removed per requirements
 }
 
 interface DistributionQueueEditorProps {
