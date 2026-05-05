@@ -272,11 +272,11 @@ export default function Auth() {
             <img 
               src={loginBgUrl.includes('supabase.co') ? `${loginBgUrl}?width=800&quality=60&format=webp` : loginBgUrl}
               alt=""
-              className={`w-full h-full object-cover object-center transition-opacity duration-700 ${bgLoaded ? 'opacity-50' : 'opacity-0'}`}
+              className={`w-full h-full object-cover object-top scale-75 transition-opacity duration-700 ${bgLoaded ? 'opacity-50' : 'opacity-0'}`}
               loading="eager"
             />
             <div className="absolute inset-0 bg-background/20" />
-            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/10 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-b from-background via-transparent to-background" />
           </div>
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-primary/10 via-background to-background" />
