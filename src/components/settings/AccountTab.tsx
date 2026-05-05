@@ -27,13 +27,6 @@ interface ProfileFormData {
   phone: string;
   whatsapp: string;
   cpf: string;
-  cep: string;
-  endereco: string;
-  numero: string;
-  complemento: string;
-  bairro: string;
-  cidade: string;
-  uf: string;
 }
 
 interface OrganizationFormData {
@@ -75,8 +68,6 @@ export function AccountTab() {
 
   const [profileForm, setProfileForm] = useState<ProfileFormData>({
     name: '', phone: '', whatsapp: '', cpf: '',
-    cep: '', endereco: '', numero: '', complemento: '',
-    bairro: '', cidade: '', uf: '',
   });
 
   const [orgForm, setOrgForm] = useState<OrganizationFormData>({
@@ -95,13 +86,6 @@ export function AccountTab() {
         phone: profile.phone || '',
         whatsapp: profile.whatsapp || '',
         cpf: profile.cpf || '',
-        cep: profile.cep || '',
-        endereco: profile.endereco || '',
-        numero: profile.numero || '',
-        complemento: profile.complemento || '',
-        bairro: profile.bairro || '',
-        cidade: profile.cidade || '',
-        uf: profile.uf || '',
       });
     }
   }, [profile]);
@@ -177,13 +161,6 @@ export function AccountTab() {
           phone: profileForm.phone || null,
           whatsapp: profileForm.whatsapp || null,
           cpf: profileForm.cpf || null,
-          cep: profileForm.cep || null,
-          endereco: profileForm.endereco || null,
-          numero: profileForm.numero || null,
-          complemento: profileForm.complemento || null,
-          bairro: profileForm.bairro || null,
-          cidade: profileForm.cidade || null,
-          uf: profileForm.uf || null,
         })
         .eq('id', profile.id);
 
@@ -400,61 +377,66 @@ export function AccountTab() {
               </div>
             </div>
 
-            {/* Address */}
+            {/* Password Change */}
             <div className="space-y-4 pt-4 border-t">
-              <h4 className="font-medium text-sm">{t.settings.profile.addressInfo}</h4>
-              <div className="grid grid-cols-3 gap-3">
+              <h4 className="font-medium text-sm flex items-center gap-2">
+                <KeyRound className="h-4 w-4" />
+                Alterar Senha
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label className="text-xs">{t.settings.profile.cep}</Label>
-                  <Input 
-                    placeholder="00000-000"
-                    value={profileForm.cep}
-                    onChange={(e) => setProfileForm(prev => ({ ...prev, cep: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-1.5 col-span-2">
-                  <Label className="text-xs">{t.settings.profile.street}</Label>
-                  <Input 
-                    value={profileForm.endereco}
-                    onChange={(e) => setProfileForm(prev => ({ ...prev, endereco: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs">{t.settings.profile.number}</Label>
-                  <Input 
-                    value={profileForm.numero}
-                    onChange={(e) => setProfileForm(prev => ({ ...prev, numero: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs">{t.settings.profile.complement}</Label>
-                  <Input 
-                    value={profileForm.complemento}
-                    onChange={(e) => setProfileForm(prev => ({ ...prev, complemento: e.target.value }))}
-                  />
+                  <Label className="text-xs">Nova senha</Label>
+                  <div className="relative">
+                    <Input 
+                      type={showNewPassword ? "text" : "password"}
+                      placeholder="••••••••"
+                      value={passwordData.newPassword}
+                      onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
+                      className="pr-10 h-9"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs">{t.settings.profile.neighborhood}</Label>
-                  <Input 
-                    value={profileForm.bairro}
-                    onChange={(e) => setProfileForm(prev => ({ ...prev, bairro: e.target.value }))}
-                  />
+                  <Label className="text-xs">Confirmar nova senha</Label>
+                  <div className="relative">
+                    <Input 
+                      type={showConfirmPassword ? "text" : "password"}
+                      placeholder="••••••••"
+                      value={passwordData.confirmPassword}
+                      onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                      className="pr-10 h-9"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
                 </div>
-                <div className="space-y-1.5 col-span-2">
-                  <Label className="text-xs">{t.settings.profile.city}</Label>
-                  <Input 
-                    value={profileForm.cidade}
-                    onChange={(e) => setProfileForm(prev => ({ ...prev, cidade: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs">{t.settings.profile.state}</Label>
-                  <Input 
-                    maxLength={2}
-                    value={profileForm.uf}
-                    onChange={(e) => setProfileForm(prev => ({ ...prev, uf: e.target.value.toUpperCase() }))}
-                  />
-                </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] text-muted-foreground">
+                  Mínimo 6 caracteres
+                </p>
+                <Button 
+                  size="sm"
+                  variant="outline"
+                  onClick={handleChangePassword} 
+                  disabled={changingPassword || !passwordData.newPassword || !passwordData.confirmPassword}
+                  className="h-8"
+                >
+                  {changingPassword && <Loader2 className="h-3 w-3 mr-2 animate-spin" />}
+                  Atualizar Senha
+                </Button>
               </div>
             </div>
 
@@ -689,72 +671,6 @@ export function AccountTab() {
         </Card>
       </div>
 
-      {/* Password Change Card - Full Width */}
-      <Card>
-        <CardHeader className="px-4 md:px-5 pt-5 pb-2">
-          <CardTitle className="flex items-center gap-2">
-            <KeyRound className="h-5 w-5" />
-            Alterar Senha
-          </CardTitle>
-          <CardDescription>
-            Atualize sua senha de acesso ao sistema
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4 px-4 md:px-5 pb-5">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Nova senha</Label>
-              <div className="relative">
-                <Input 
-                  type={showNewPassword ? "text" : "password"}
-                  placeholder="••••••••"
-                  value={passwordData.newPassword}
-                  onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
-                  className="pr-10"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowNewPassword(!showNewPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>Confirmar nova senha</Label>
-              <div className="relative">
-                <Input 
-                  type={showConfirmPassword ? "text" : "password"}
-                  placeholder="••••••••"
-                  value={passwordData.confirmPassword}
-                  onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
-                  className="pr-10"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
-            </div>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            A senha deve ter pelo menos 6 caracteres
-          </p>
-          <div className="flex justify-end">
-            <Button 
-              onClick={handleChangePassword} 
-              disabled={changingPassword || !passwordData.newPassword || !passwordData.confirmPassword}
-            >
-              {changingPassword && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Alterar Senha
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }
