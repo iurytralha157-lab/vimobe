@@ -1157,7 +1157,7 @@ export default function Pipelines() {
                     )}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent align="end" className="w-80 p-4 space-y-4 shadow-xl border-primary/10">
+                <PopoverContent align="end" className="w-80 p-4 space-y-4 border-border/50">
                   <div className="space-y-2">
                     <Label className="text-[11px] font-bold uppercase text-muted-foreground/70 tracking-wider">Busca</Label>
                     <div className="relative">
