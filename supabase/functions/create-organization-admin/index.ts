@@ -153,6 +153,7 @@ Deno.serve(async (req) => {
         is_active: true,
         whatsapp: phone || whatsapp || null,
         phone: phone || null,
+        cpf: cpf || null,
       })
       .eq('id', authData.user.id);
 
