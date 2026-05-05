@@ -599,7 +599,7 @@ export default function PublicSiteLayout() {
         <div className="lg:hidden fixed bottom-6 right-6 z-50">
           <ContactFormDialog
             organizationId={organizationId}
-            whatsappNumber={siteConfig.whatsapp}
+            whatsappNumber={siteConfig?.whatsapp}
             primaryColor={primaryColor}
             trigger={
               <button className="w-14 h-14 rounded-full bg-[#25D366] text-white shadow-lg flex items-center justify-center hover:bg-[#20BD5A] transition-colors" aria-label="Fale conosco pelo WhatsApp">
@@ -620,7 +620,9 @@ export default function PublicSiteLayout() {
             {/* Brand */}
             <div className="text-center md:text-left">
               <div className="flex justify-center md:justify-start">
-                {siteConfig.logo_url ? (
+                {isLoading && !siteConfig ? (
+                  <Skeleton className="h-10 w-32 bg-white/10 mb-4" />
+                ) : siteConfig?.logo_url ? (
                   <img 
                     src={siteConfig.logo_url} 
                     alt={siteConfig.site_title || 'Logo'} 
@@ -635,11 +637,15 @@ export default function PublicSiteLayout() {
                     className="w-auto object-contain mb-4"
                   />
                 ) : (
-                  <h3 className="text-xl font-semibold tracking-wider mb-4">{siteConfig.site_title}</h3>
+                  <h3 className="text-xl font-semibold tracking-wider mb-4">{siteConfig?.site_title}</h3>
                 )}
               </div>
               <p className="text-white/60 text-sm leading-relaxed mb-4 md:mb-6">
-                {siteConfig.site_description || `Encontre o imóvel dos seus sonhos com a ${siteConfig.organization_name}.`}
+                {isLoading && !siteConfig ? (
+                  <Skeleton className="h-4 w-full bg-white/10" />
+                ) : (
+                  siteConfig?.site_description || `Encontre o imóvel dos seus sonhos com a ${siteConfig?.organization_name || 'nossa imobiliária'}.`
+                )}
               </p>
             </div>
 
@@ -712,7 +718,13 @@ export default function PublicSiteLayout() {
                   Contato
                 </h4>
                 <ul className="space-y-2 md:space-y-3">
-                  {siteConfig.phone && (
+                  {isLoading && !siteConfig && (
+                    <>
+                      <Skeleton className="h-4 w-32 bg-white/10" />
+                      <Skeleton className="h-4 w-24 bg-white/10" />
+                    </>
+                  )}
+                  {siteConfig?.phone && (
                     <li>
                       <a 
                         href={`tel:${siteConfig.phone}`}
@@ -724,7 +736,7 @@ export default function PublicSiteLayout() {
                       </a>
                     </li>
                   )}
-                  {siteConfig.whatsapp && organizationId && (
+                  {siteConfig?.whatsapp && organizationId && (
                     <li className="flex justify-center md:justify-start">
                       <ContactFormDialog
                         organizationId={organizationId}
@@ -739,7 +751,7 @@ export default function PublicSiteLayout() {
                       />
                     </li>
                   )}
-                  {siteConfig.email && (
+                  {siteConfig?.email && (
                     <li>
                       <a 
                         href={`mailto:${siteConfig.email}`}
@@ -752,7 +764,7 @@ export default function PublicSiteLayout() {
                     </li>
                   )}
                 </ul>
-                {siteConfig.address && (
+                {siteConfig?.address && (
                   <div className="flex items-start justify-center md:justify-start gap-2 text-white/60 text-sm mt-3">
                     <MapPin className="w-4 h-4 flex-shrink-0 mt-0.5" />
                     <span>
@@ -774,7 +786,13 @@ export default function PublicSiteLayout() {
                 Redes Sociais
               </h4>
               <div className="flex gap-3 justify-center md:justify-start">
-                {siteConfig.instagram && (
+                {isLoading && !siteConfig && (
+                  <>
+                    <Skeleton className="w-10 h-10 rounded-full bg-white/10" />
+                    <Skeleton className="w-10 h-10 rounded-full bg-white/10" />
+                  </>
+                )}
+                {siteConfig?.instagram && (
                   <a 
                     href={siteConfig.instagram}
                     target="_blank"
@@ -787,7 +805,7 @@ export default function PublicSiteLayout() {
                     <Instagram className="w-5 h-5" />
                   </a>
                 )}
-                {siteConfig.facebook && (
+                {siteConfig?.facebook && (
                   <a 
                     href={siteConfig.facebook}
                     target="_blank"
@@ -800,7 +818,7 @@ export default function PublicSiteLayout() {
                     <Facebook className="w-5 h-5" />
                   </a>
                 )}
-                {siteConfig.youtube && (
+                {siteConfig?.youtube && (
                   <a 
                     href={siteConfig.youtube}
                     target="_blank"
@@ -813,7 +831,7 @@ export default function PublicSiteLayout() {
                     <Youtube className="w-5 h-5" />
                   </a>
                 )}
-                {siteConfig.linkedin && (
+                {siteConfig?.linkedin && (
                   <a 
                     href={siteConfig.linkedin}
                     target="_blank"
@@ -835,7 +853,7 @@ export default function PublicSiteLayout() {
         <div className="border-t border-white/10">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
             <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-white/40">
-              <p>© {new Date().getFullYear()} {siteConfig.organization_name}. Todos os direitos reservados.</p>
+              <p>© {new Date().getFullYear()} {siteConfig?.organization_name || 'nossa imobiliária'}. Todos os direitos reservados.</p>
               <p className="flex items-center gap-0.5">
                 Desenvolvido por{' '}
                 <a 
