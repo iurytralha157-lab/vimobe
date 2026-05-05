@@ -115,6 +115,48 @@ export function EventForm({ open, onOpenChange, event, leadId, leadName, default
     startTime.setHours(hours, minutes, 0, 0);
     const endTime = addMinutes(startTime, duration);
 
+    // Check user availability for the selected time
+    try {
+      const eventDay = startTime.getDay();
+      const eventTime = format(startTime, 'HH:mm:ss');
+      
+      const { data: teamMember } = await supabase
+        .from('team_members')
+        .select('id')
+        .eq('user_id', selectedUserId)
+        .maybeSingle();
+
+      if (teamMember) {
+        const { data: availability } = await supabase
+          .from('member_availability')
+          .select('*')
+          .eq('team_member_id', teamMember.id)
+          .eq('day_of_week', eventDay)
+          .eq('is_active', true)
+          .maybeSingle();
+
+        if (availability) {
+          const isOutsideSchedule = !availability.is_all_day && 
+            (eventTime < (availability.start_time || '00:00:00') || 
+             eventTime > (availability.end_time || '23:59:59'));
+
+          if (isOutsideSchedule) {
+            const confirmAssign = window.confirm(
+              `Conflito de escala: O usuário não está disponível no horário selecionado (${availability.start_time?.slice(0, 5)} - ${availability.end_time?.slice(0, 5)}). Deseja salvar mesmo assim?`
+            );
+            if (!confirmAssign) return;
+          }
+        } else {
+          const confirmAssign = window.confirm(
+            'Conflito de escala: O usuário não tem escala ativa para este dia. Deseja salvar mesmo assim?'
+          );
+          if (!confirmAssign) return;
+        }
+      }
+    } catch (err) {
+      console.error('Error checking availability:', err);
+    }
+
     const eventData = {
       title: title.trim(),
       description: description.trim() || undefined,
