@@ -130,6 +130,8 @@ Deno.serve(async (req) => {
         role: 'admin',
         organization_id: org.id,
         is_active: true,
+        whatsapp: phone || whatsapp || null,
+        phone: phone || null,
       })
       .eq('id', authData.user.id);
 
