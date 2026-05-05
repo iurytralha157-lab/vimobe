@@ -1,12 +1,18 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Copy, Terminal, Globe, Lock, Code2, Shield } from 'lucide-react';
+import { Copy, Terminal, Globe, Lock, Code2, Shield, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
+import { Link } from 'react-router-dom';
+import { useEffect } from 'react';
 
 const SUPABASE_URL = (import.meta as any).env?.VITE_SUPABASE_URL || 'https://iemalzlfnbouobyjwlwi.supabase.co';
 const BASE_URL = `${SUPABASE_URL}/functions/v1/public-api`;
 
 export default function APIDocs() {
+  useEffect(() => {
+    document.title = 'Documentação da API | CRM Imobiliário';
+  }, []);
+
   const copy = (text: string) => {
     navigator.clipboard.writeText(text);
     toast.success('Copiado!');
@@ -75,19 +81,30 @@ export default function APIDocs() {
   ];
 
   return (
-    <div className="min-h-screen bg-muted/30 py-12 px-4 sm:px-6 lg:px-8 font-sans">
+    <div className="min-h-screen bg-[#F8F9FA] py-12 px-4 sm:px-6 lg:px-8 font-sans">
       <div className="max-w-4xl mx-auto space-y-8">
-        <header className="space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-primary rounded-lg">
-              <Code2 className="h-8 w-8 text-primary-foreground" />
+        <header className="space-y-6 text-center sm:text-left">
+          <Link 
+            to="/" 
+            className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors mb-4 group"
+          >
+            <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
+            Voltar ao Início
+          </Link>
+
+          <div className="flex flex-col sm:flex-row items-center gap-4">
+            <div className="p-3 bg-primary rounded-2xl shadow-lg shadow-primary/20 animate-in fade-in zoom-in duration-500">
+              <Code2 className="h-10 w-10 text-primary-foreground" />
             </div>
-            <h1 className="text-3xl font-bold tracking-tight">API Pública de Imóveis</h1>
+            <div className="space-y-1">
+              <h1 className="text-4xl font-extrabold tracking-tight text-slate-900">
+                Documentação da <span className="text-primary">API Pública</span>
+              </h1>
+              <p className="text-lg text-muted-foreground max-w-2xl">
+                Integre os dados do seu CRM Imobiliário em qualquer plataforma, site ou sistema externo de forma simples e segura.
+              </p>
+            </div>
           </div>
-          <p className="text-lg text-muted-foreground">
-            Integre os imóveis cadastrados no seu CRM em qualquer site ou sistema externo.
-            A chave de API garante que apenas os imóveis da sua organização sejam retornados.
-          </p>
         </header>
 
         {/* Base URL */}
@@ -111,30 +128,33 @@ export default function APIDocs() {
         </Card>
 
         {/* Auth */}
-        <Card>
+        <Card className="border-l-4 border-l-primary shadow-sm">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-xl">
               <Lock className="h-5 w-5 text-primary" /> Autenticação
             </CardTitle>
-            <CardDescription>
-              Toda requisição precisa do header <code>Authorization</code> com sua chave de API.
+            <CardDescription className="text-base">
+              Toda requisição precisa do header <code className="bg-slate-100 px-1 rounded text-primary">Authorization</code> com sua chave de API.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="bg-slate-950 rounded-lg p-4 font-mono text-sm text-slate-200">
-              <code>Authorization: Bearer sk_live_…</code>
+            <div className="bg-slate-900 rounded-xl p-5 font-mono text-sm text-slate-200 border border-slate-800 shadow-inner">
+              <span className="text-slate-500"># Header de autorização</span><br />
+              <code className="text-primary-foreground">Authorization: Bearer <span className="text-orange-400">sk_live_...</span></code>
             </div>
-            <div className="flex items-start gap-2 text-sm bg-amber-500/10 border border-amber-500/30 p-3 rounded-md">
-              <Shield className="h-4 w-4 mt-0.5 text-amber-500 flex-shrink-0" />
-              <p>
-                <strong>Nunca</strong> exponha sua chave no frontend (HTML, JS do navegador,
-                repositórios públicos). Faça as chamadas a partir do seu backend e armazene
-                a chave em variáveis de ambiente.
-              </p>
+            <div className="flex items-start gap-3 text-sm bg-orange-50 border border-orange-200 p-4 rounded-xl">
+              <Shield className="h-5 w-5 mt-0.5 text-orange-600 flex-shrink-0" />
+              <div className="space-y-1">
+                <p className="font-semibold text-orange-900">Segurança em primeiro lugar</p>
+                <p className="text-orange-800 leading-relaxed">
+                  <strong>Nunca</strong> exponha sua chave no frontend (HTML, JavaScript cliente). 
+                  Faça as requisições a partir do seu servidor e utilize variáveis de ambiente.
+                </p>
+              </div>
             </div>
-            <p className="text-sm text-muted-foreground">
-              Gere sua chave em <strong>Configurações → API Pública</strong> dentro do CRM.
-              O super administrador precisa ter habilitado o módulo de API para a sua organização.
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Gere sua chave em <strong className="text-slate-900">Configurações → API Pública</strong> dentro do CRM. 
+              O acesso deve ser habilitado previamente pelo Super Administrador da conta.
             </p>
           </CardContent>
         </Card>
@@ -150,10 +170,10 @@ export default function APIDocs() {
             {endpoints.map((ep, i) => (
               <div key={i} className="space-y-4 pb-8 border-b last:border-0 last:pb-0">
                 <div className="flex items-center gap-3 flex-wrap">
-                  <Badge variant="default" className="font-mono">{ep.method}</Badge>
-                  <code className="text-lg font-bold break-all">{ep.path}</code>
+                  <Badge className="bg-primary hover:bg-primary/90 text-white font-mono px-3 py-1 text-xs uppercase tracking-wider">{ep.method}</Badge>
+                  <code className="text-xl font-bold text-slate-900 break-all">{ep.path}</code>
                 </div>
-                <p className="text-muted-foreground">{ep.description}</p>
+                <p className="text-slate-600 leading-relaxed font-medium">{ep.description}</p>
 
                 <div className="space-y-2">
                   <p className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">

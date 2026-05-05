@@ -85,6 +85,7 @@ const Checkout = lazy(() => import("./pages/Checkout"));
 
 // Public site preview (used inside CRM)
 const PreviewSiteWrapper = lazy(() => import("./pages/public/PreviewSiteWrapper"));
+const APIDocs = lazy(() => import("./pages/public/APIDocs"));
 
 
 // Trial expired modal
@@ -278,6 +279,8 @@ function AppRoutes() {
             {/* Public Site Preview (rendered inside CRM, with auth) */}
             <Route path="/site/preview/*" element={<PreviewSiteWrapper />} />
             <Route path="/site/previsualização/*" element={<PreviewSiteWrapper />} />
+            <Route path="/docs/api" element={<Suspense fallback={<PageLoader />}><APIDocs /></Suspense>} />
+
 
             <Route path="*" element={<NotFound />} />
           </Routes>
