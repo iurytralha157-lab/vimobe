@@ -5,6 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Upload, Plus, Trash2, GripVertical } from "lucide-react";
+import { ImageUpload } from "@/components/ui/image-upload";
 
 interface AboutStat {
   value: string;
