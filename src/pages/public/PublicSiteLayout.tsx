@@ -764,7 +764,7 @@ export default function PublicSiteLayout() {
                     </li>
                   )}
                 </ul>
-                {siteConfig.address && (
+                {siteConfig?.address && (
                   <div className="flex items-start justify-center md:justify-start gap-2 text-white/60 text-sm mt-3">
                     <MapPin className="w-4 h-4 flex-shrink-0 mt-0.5" />
                     <span>
@@ -786,7 +786,13 @@ export default function PublicSiteLayout() {
                 Redes Sociais
               </h4>
               <div className="flex gap-3 justify-center md:justify-start">
-                {siteConfig.instagram && (
+                {isLoading && !siteConfig && (
+                  <>
+                    <Skeleton className="w-10 h-10 rounded-full bg-white/10" />
+                    <Skeleton className="w-10 h-10 rounded-full bg-white/10" />
+                  </>
+                )}
+                {siteConfig?.instagram && (
                   <a 
                     href={siteConfig.instagram}
                     target="_blank"
@@ -799,7 +805,7 @@ export default function PublicSiteLayout() {
                     <Instagram className="w-5 h-5" />
                   </a>
                 )}
-                {siteConfig.facebook && (
+                {siteConfig?.facebook && (
                   <a 
                     href={siteConfig.facebook}
                     target="_blank"
@@ -812,7 +818,7 @@ export default function PublicSiteLayout() {
                     <Facebook className="w-5 h-5" />
                   </a>
                 )}
-                {siteConfig.youtube && (
+                {siteConfig?.youtube && (
                   <a 
                     href={siteConfig.youtube}
                     target="_blank"
@@ -825,7 +831,7 @@ export default function PublicSiteLayout() {
                     <Youtube className="w-5 h-5" />
                   </a>
                 )}
-                {siteConfig.linkedin && (
+                {siteConfig?.linkedin && (
                   <a 
                     href={siteConfig.linkedin}
                     target="_blank"
@@ -847,7 +853,7 @@ export default function PublicSiteLayout() {
         <div className="border-t border-white/10">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
             <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-white/40">
-              <p>© {new Date().getFullYear()} {siteConfig.organization_name}. Todos os direitos reservados.</p>
+              <p>© {new Date().getFullYear()} {siteConfig?.organization_name || 'nossa imobiliária'}. Todos os direitos reservados.</p>
               <p className="flex items-center gap-0.5">
                 Desenvolvido por{' '}
                 <a 
