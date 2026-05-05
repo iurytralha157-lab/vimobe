@@ -973,70 +973,35 @@ ${getWorkerCode()}`;
                 </CardHeader>
                 <CardContent className="px-4 md:px-6 pb-5 space-y-4">
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* Hero Image */}
-                    <div className="space-y-3">
-                      <Label>Imagem do Hero (Tela Inicial)</Label>
-                      {site?.hero_image_url ? (
-                        <div className="border rounded-lg p-4 bg-muted">
-                          <img src={site.hero_image_url} alt="Hero" className="h-32 w-full object-cover rounded" />
-                        </div>
-                      ) : (
-                        <div className="border rounded-lg p-4 bg-muted text-center text-muted-foreground h-32 flex items-center justify-center">
-                          Nenhuma imagem do hero enviada
-                        </div>
-                      )}
-                      <div>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => handleFileUpload(e, 'hero')}
-                          className="hidden"
-                          id="hero-upload"
-                          disabled={!isAdmin}
-                        />
-                        <label htmlFor="hero-upload">
-                          <Button variant="outline" size="sm" asChild disabled={!isAdmin}>
-                            <span>
-                              <Upload className="w-4 h-4 mr-2" />
-                              Enviar Imagem Hero
-                            </span>
-                          </Button>
-                        </label>
-                      </div>
-                    </div>
+                    <ImageUpload
+                      label="Imagem do Hero (Tela Inicial)"
+                      description="PNG, JPG ou WEBP até 10MB"
+                      value={site?.hero_image_url}
+                      onChange={async (url) => {
+                        await updateSite.mutateAsync({ hero_image_url: url });
+                      }}
+                      bucket="logos"
+                      path="sites"
+                      maxSizeInMB={10}
+                      aspectRatio="video"
+                      disabled={!isAdmin}
+                    />
 
-                    {/* Banner Image */}
-                    <div className="space-y-3">
-                      <Label>Banner das Páginas Internas</Label>
-                      {site?.page_banner_url ? (
-                        <div className="border rounded-lg p-4 bg-muted">
-                          <img src={site.page_banner_url} alt="Banner" className="h-32 w-full object-cover rounded" />
-                        </div>
-                      ) : (
-                        <div className="border rounded-lg p-4 bg-muted text-center text-muted-foreground h-32 flex items-center justify-center">
-                          Nenhum banner enviado
-                        </div>
-                      )}
-                      <div>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => handleFileUpload(e, 'banner')}
-                          className="hidden"
-                          id="banner-upload"
-                          disabled={!isAdmin}
-                        />
-                        <label htmlFor="banner-upload">
-                          <Button variant="outline" size="sm" asChild disabled={!isAdmin}>
-                            <span>
-                              <Upload className="w-4 h-4 mr-2" />
-                              Enviar Banner
-                            </span>
-                          </Button>
-                        </label>
-                      </div>
-                    </div>
+                    <ImageUpload
+                      label="Banner das Páginas Internas"
+                      description="Exibido no topo das páginas de listagem e contato"
+                      value={site?.page_banner_url}
+                      onChange={async (url) => {
+                        await updateSite.mutateAsync({ page_banner_url: url });
+                      }}
+                      bucket="logos"
+                      path="sites"
+                      maxSizeInMB={10}
+                      aspectRatio="banner"
+                      disabled={!isAdmin}
+                    />
                   </div>
+
 
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     <div className="space-y-2">
