@@ -842,16 +842,28 @@ export default function Pipelines() {
             <Button
               variant="outline"
               size="icon"
-              className={cn("h-8 w-8 flex-shrink-0", isRefreshing && "text-primary")}
+              className={cn(
+                "h-8 w-8 flex-shrink-0 transition-colors", 
+                isRefreshing && "text-primary border-primary bg-primary/5"
+              )}
               onClick={handleManualRefresh}
               disabled={isRefreshing}
             >
               <RefreshCw className={cn("h-3.5 w-3.5", isRefreshing && "animate-spin")} />
             </Button>
 
+            {/* New Lead Button (Mobile) */}
+            <Button
+              size="icon"
+              className="h-8 w-8 flex-shrink-0 bg-primary hover:bg-primary/90 text-primary-foreground border-none shadow-none"
+              onClick={() => openNewLeadDialog()}
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+
             {canEditPipeline && (
               <Button
-                variant="ghost"
+                variant="outline"
                 size="icon"
                 className="h-8 w-8 flex-shrink-0"
                 onClick={() => setStagesEditorOpen(true)}
