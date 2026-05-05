@@ -149,12 +149,7 @@ const WEBSITE_CATEGORY_OPTIONS = [
   { value: 'lancamento', label: 'Lançamento' },
 ];
 
-const defaultSchedule: ScheduleDay[] = DAYS_OF_WEEK.map(d => ({
-  day: d.value,
-  enabled: d.value >= 1 && d.value <= 5, // seg-sex enabled by default
-  start: '08:00',
-  end: '18:00',
-}));
+// defaultSchedule removed per requirements
 
 export function DistributionQueueEditor({ 
   open, 
