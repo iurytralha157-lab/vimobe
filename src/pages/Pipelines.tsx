@@ -136,6 +136,8 @@ export default function Pipelines() {
   const [datePreset, setDatePreset] = useState<DatePreset>('last7days');
   const [customDateRange, setCustomDateRange] = useState<{ from: Date; to: Date } | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [tempPipelineId, setTempPipelineId] = useState<string | null>(null);
+  const [funnelPopoverOpen, setFunnelPopoverOpen] = useState(false);
   
   // Ref para bloquear refetch durante drag-and-drop (evita race condition)
   const isDraggingRef = useRef(false);
