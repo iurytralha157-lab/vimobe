@@ -265,7 +265,7 @@ export default function Auth() {
   return (
     <div className="min-h-screen flex flex-col lg:flex-row bg-background relative overflow-x-hidden">
       {/* Mobile background: optimized WebP image with crop if available */}
-      <div className="lg:hidden absolute inset-0 w-full h-[50vh] overflow-hidden pointer-events-none">
+      <div className="lg:hidden absolute inset-0 w-full h-[100px] overflow-hidden pointer-events-none">
         {loginBgUrl ? (
           <div className="relative w-full h-full">
             <img 
@@ -283,8 +283,8 @@ export default function Auth() {
         )}
       </div>
 
-      {/* Mobile spacer to push form below image - reduced to allow move the form up */}
-      <div className="lg:hidden h-[25vh] min-h-[150px] flex-shrink-0" />
+      {/* Mobile spacer to push form below image */}
+      <div className="lg:hidden h-[100px] flex-shrink-0" />
 
       {/* Login form container */}
       <div className="w-full lg:w-[420px] xl:w-[460px] flex flex-col items-center justify-start lg:justify-center px-8 py-8 lg:py-10 flex-shrink-0 mx-auto lg:ml-[160px] xl:ml-[240px] flex-1 lg:flex-none relative z-10 -mt-16 lg:mt-0">
@@ -485,7 +485,7 @@ export default function Auth() {
           />
         )}
         {/* Horizontal gradient to blend form background with image */}
-        <div className="absolute inset-y-0 left-0 w-[600px] xl:w-[1000px] bg-gradient-to-r from-background via-background/95 to-transparent pointer-events-none" />
+        <div className="absolute inset-y-0 left-0 w-[400px] xl:w-[500px] bg-gradient-to-r from-background via-background/80 to-transparent pointer-events-none" />
       </div>
     </div>
   );
