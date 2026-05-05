@@ -182,22 +182,8 @@ export function DistributionQueueTab() {
       const newOrder = arrayMove(localItems, oldIndex, newIndex);
       setLocalItems(newOrder);
 
-      // Persist new order
-      try {
-        // Simple implementation: update all affected items with their new priority_index
-        // For performance in large queues, this should be an RPC
-        const updates = newOrder.map((item, index) => ({
-          id: item.id,
-          // reentry_count: index // use as proxy if needed
-        }));
-
-        for (const update of updates) {
-          await supabase.from('leads').update({ leads_priority_index: update.leads_priority_index }).eq('id', update.id);
-        }
-        toast.success('Ordem da fila atualizada');
-      } catch (err) {
-        toast.error('Erro ao salvar nova ordem');
-      }
+      // Order persisted in local state only (no priority column in DB yet)
+      toast.success('Ordem da fila atualizada (sessão atual)');
     }
   };
 
