@@ -640,7 +640,7 @@ ${getWorkerCode()}`;
                           await updateSite.mutateAsync({ logo_url: null });
                         }
                       }}
-                      bucket="logos"
+                      bucket="site-images"
                       path="sites"
                       disabled={!isAdmin}
                     />
@@ -656,7 +656,7 @@ ${getWorkerCode()}`;
                           await updateSite.mutateAsync({ favicon_url: null });
                         }
                       }}
-                      bucket="logos"
+                      bucket="site-images"
                       path="sites"
                       disabled={!isAdmin}
                     />
@@ -954,7 +954,7 @@ ${getWorkerCode()}`;
                       onChange={async (url) => {
                         await updateSite.mutateAsync({ hero_image_url: url });
                       }}
-                      bucket="logos"
+                      bucket="site-images"
                       path="sites"
                       maxSizeInMB={10}
                       aspectRatio="video"
@@ -968,7 +968,7 @@ ${getWorkerCode()}`;
                       onChange={async (url) => {
                         await updateSite.mutateAsync({ page_banner_url: url });
                       }}
-                      bucket="logos"
+                      bucket="site-images"
                       path="sites"
                       maxSizeInMB={10}
                       aspectRatio="banner"
@@ -1099,7 +1099,7 @@ ${getWorkerCode()}`;
                           onChange={async (url) => {
                             await updateSite.mutateAsync({ watermark_logo_url: url });
                           }}
-                          bucket="logos"
+                          bucket="site-images"
                           path="sites"
                           disabled={!isAdmin}
                         />
