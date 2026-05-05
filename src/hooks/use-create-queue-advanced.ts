@@ -396,50 +396,84 @@ export function useUpdateQueueAdvanced() {
           .insert(rulesToInsert);
       }
       
-      // Delete existing members and recreate
-      await supabase
+      // Smart sync for members
+      const { data: existingMembers, error: fetchMembersError } = await supabase
         .from('round_robin_members')
-        .delete()
+        .select('id, user_id, team_id, leads_count')
         .eq('round_robin_id', id);
       
-      if (input.members.length > 0) {
-        const membersToInsert: any[] = [];
-        
-        for (const member of input.members) {
-          if (member.type === 'user') {
+      if (fetchMembersError) throw fetchMembersError;
+
+      const membersToInsert: any[] = [];
+      const memberIdsToKeep = new Set<string>();
+      
+      let currentPosition = 0;
+      for (const member of input.members) {
+        if (member.type === 'user') {
+          const existing = existingMembers?.find(m => m.user_id === member.entityId && m.team_id === null);
+          if (existing) {
+            memberIdsToKeep.add(existing.id);
+            await supabase
+              .from('round_robin_members')
+              .update({ weight: member.weight, position: currentPosition })
+              .eq('id', existing.id);
+          } else {
             membersToInsert.push({
               round_robin_id: id,
               user_id: member.entityId,
               team_id: null,
               weight: member.weight,
-              position: membersToInsert.length,
+              position: currentPosition,
             });
-          } else if (member.type === 'team') {
-            // Get all users from the team
-            const { data: teamMembers } = await supabase
-              .from('team_members')
-              .select('user_id')
-              .eq('team_id', member.entityId);
-            
-            if (teamMembers && teamMembers.length > 0) {
-              for (const tm of teamMembers) {
+          }
+          currentPosition++;
+        } else if (member.type === 'team') {
+          const { data: teamMembers } = await supabase
+            .from('team_members')
+            .select('user_id')
+            .eq('team_id', member.entityId);
+          
+          if (teamMembers && teamMembers.length > 0) {
+            for (const tm of teamMembers) {
+              const existing = existingMembers?.find(m => m.user_id === tm.user_id && m.team_id === member.entityId);
+              if (existing) {
+                memberIdsToKeep.add(existing.id);
+                await supabase
+                  .from('round_robin_members')
+                  .update({ weight: member.weight, position: currentPosition })
+                  .eq('id', existing.id);
+              } else {
                 membersToInsert.push({
                   round_robin_id: id,
                   user_id: tm.user_id,
                   team_id: member.entityId,
                   weight: member.weight,
-                  position: membersToInsert.length,
+                  position: currentPosition,
                 });
               }
+              currentPosition++;
             }
           }
         }
-        
-        if (membersToInsert.length > 0) {
-          await supabase
-            .from('round_robin_members')
-            .insert(membersToInsert);
-        }
+      }
+
+      // Remove members that are no longer in the queue
+      const idsToRemove = existingMembers
+        ?.filter(m => !memberIdsToKeep.has(m.id))
+        .map(m => m.id) || [];
+
+      if (idsToRemove.length > 0) {
+        await supabase
+          .from('round_robin_members')
+          .delete()
+          .in('id', idsToRemove);
+      }
+      
+      // Insert new members
+      if (membersToInsert.length > 0) {
+        await supabase
+          .from('round_robin_members')
+          .insert(membersToInsert);
       }
       
       return { id };
