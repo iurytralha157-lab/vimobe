@@ -86,13 +86,6 @@ export function AccountTab() {
         phone: profile.phone || '',
         whatsapp: profile.whatsapp || '',
         cpf: profile.cpf || '',
-        cep: profile.cep || '',
-        endereco: profile.endereco || '',
-        numero: profile.numero || '',
-        complemento: profile.complemento || '',
-        bairro: profile.bairro || '',
-        cidade: profile.cidade || '',
-        uf: profile.uf || '',
       });
     }
   }, [profile]);
