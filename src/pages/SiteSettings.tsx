@@ -655,68 +655,39 @@ ${getWorkerCode()}`;
                 </CardHeader>
                 <CardContent className="px-4 md:px-6 pb-5 space-y-6">
                   <div className="grid sm:grid-cols-2 gap-6">
-                    <div className="space-y-3">
-                      <Label>Logo</Label>
-                      {site?.logo_url ? (
-                        <div className="border rounded-lg p-4 bg-muted">
-                          <img src={site.logo_url} alt="Logo" className="h-16 object-contain" />
-                        </div>
-                      ) : (
-                        <div className="border rounded-lg p-4 bg-muted text-center text-muted-foreground">
-                          Nenhuma logo enviada
-                        </div>
-                      )}
-                      <div>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => handleFileUpload(e, 'logo')}
-                          className="hidden"
-                          id="logo-upload"
-                          disabled={!isAdmin}
-                        />
-                        <label htmlFor="logo-upload">
-                          <Button variant="outline" size="sm" asChild disabled={!isAdmin}>
-                            <span>
-                              <Upload className="w-4 h-4 mr-2" />
-                              Enviar Logo
-                            </span>
-                          </Button>
-                        </label>
-                      </div>
-                    </div>
+                    <ImageUpload
+                      label="Logo"
+                      description="PNG ou JPG recomendado"
+                      value={site?.logo_url}
+                      onChange={async (url) => {
+                        if (url) {
+                          await updateSite.mutateAsync({ logo_url: url });
+                        } else {
+                          await updateSite.mutateAsync({ logo_url: null });
+                        }
+                      }}
+                      bucket="logos"
+                      path="sites"
+                      disabled={!isAdmin}
+                    />
 
-                    <div className="space-y-3">
-                      <Label>Favicon</Label>
-                      {site?.favicon_url ? (
-                        <div className="border rounded-lg p-4 bg-muted">
-                          <img src={site.favicon_url} alt="Favicon" className="h-8 object-contain" />
-                        </div>
-                      ) : (
-                        <div className="border rounded-lg p-4 bg-muted text-center text-muted-foreground">
-                          Nenhum favicon enviado
-                        </div>
-                      )}
-                      <div>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => handleFileUpload(e, 'favicon')}
-                          className="hidden"
-                          id="favicon-upload"
-                          disabled={!isAdmin}
-                        />
-                        <label htmlFor="favicon-upload">
-                          <Button variant="outline" size="sm" asChild disabled={!isAdmin}>
-                            <span>
-                              <Upload className="w-4 h-4 mr-2" />
-                              Enviar Favicon
-                            </span>
-                          </Button>
-                        </label>
-                      </div>
-                    </div>
+                    <ImageUpload
+                      label="Favicon"
+                      description="Ícone do navegador (ICO ou PNG)"
+                      value={site?.favicon_url}
+                      onChange={async (url) => {
+                        if (url) {
+                          await updateSite.mutateAsync({ favicon_url: url });
+                        } else {
+                          await updateSite.mutateAsync({ favicon_url: null });
+                        }
+                      }}
+                      bucket="logos"
+                      path="sites"
+                      disabled={!isAdmin}
+                    />
                   </div>
+
                 </CardContent>
               </Card>
 
