@@ -194,7 +194,6 @@ export const LeadCard = memo(function LeadCard({
 
 
 
-          {/* Nome do Lead + Avatar com foto do WhatsApp */}
           <div className="flex items-start justify-between mb-2">
             <div className="flex items-center gap-2 flex-1 min-w-0">
               <div className="relative shrink-0">
