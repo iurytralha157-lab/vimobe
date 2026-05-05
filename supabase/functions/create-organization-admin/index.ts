@@ -89,6 +89,7 @@ Deno.serve(async (req) => {
       .insert({
         name,
         segment,
+        whatsapp: whatsapp || null,
       })
       .select()
       .single();
