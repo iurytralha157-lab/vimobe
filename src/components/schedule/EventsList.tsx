@@ -99,10 +99,10 @@ export function EventsList({ events, onEditEvent, onAddEvent, showUser = true, s
         
         {onAddEvent && (
           <Button 
-            variant="outline" 
+            variant="default" 
             size="sm" 
             onClick={onAddEvent}
-            className="rounded-lg h-9 px-6 text-xs font-medium w-auto mx-auto border-primary/20 hover:border-primary/40 hover:bg-primary/5 transition-all"
+            className="rounded-lg h-9 px-6 text-xs font-medium w-auto mx-auto transition-all"
           >
             <Plus className="h-3.5 w-3.5 mr-2" />
             Novo agendamento

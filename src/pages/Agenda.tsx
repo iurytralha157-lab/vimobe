@@ -115,9 +115,9 @@ export default function Agenda() {
               </Button>
             </div>
 
-            <Button onClick={() => setEventFormOpen(true)}>
+            <Button variant="default" onClick={() => setEventFormOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
-              Nova atividade
+              Novo agendamento
             </Button>
           </div>
         </div>
