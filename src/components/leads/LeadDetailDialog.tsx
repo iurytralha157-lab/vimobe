@@ -467,7 +467,57 @@ export function LeadDetailDialog({
     }
   };
   const handleAssignUser = async (userId: string | null) => {
+    if (!userId) {
+      try {
+        await updateLead.mutateAsync({
+          id: lead.id,
+          assigned_user_id: null
+        });
+        setAssigneePopoverOpen(false);
+        refetchStages();
+      } catch (error) {}
+      return;
+    }
+
     try {
+      // Check user availability before assigning
+      const currentDay = new Date().getDay();
+      const currentTime = format(new Date(), 'HH:mm:ss');
+      
+      const { data: teamMember } = await supabase
+        .from('team_members')
+        .select('id')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (teamMember) {
+        const { data: availability } = await supabase
+          .from('member_availability')
+          .select('*')
+          .eq('team_member_id', teamMember.id)
+          .eq('day_of_week', currentDay)
+          .eq('is_active', true)
+          .maybeSingle();
+
+        if (availability) {
+          const isOutsideSchedule = !availability.is_all_day && 
+            (currentTime < (availability.start_time || '00:00:00') || 
+             currentTime > (availability.end_time || '23:59:59'));
+
+          if (isOutsideSchedule) {
+            const confirmAssign = window.confirm(
+              `Atenção: Este usuário está fora do seu horário de escala (${availability.start_time?.slice(0, 5)} - ${availability.end_time?.slice(0, 5)}). Deseja atribuir mesmo assim?`
+            );
+            if (!confirmAssign) return;
+          }
+        } else {
+          const confirmAssign = window.confirm(
+            'Atenção: Este usuário não tem escala ativa para hoje. Deseja atribuir mesmo assim?'
+          );
+          if (!confirmAssign) return;
+        }
+      }
+
       await updateLead.mutateAsync({
         id: lead.id,
         assigned_user_id: userId
