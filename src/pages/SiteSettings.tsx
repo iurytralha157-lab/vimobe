@@ -21,6 +21,7 @@ import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DnsVerificationStatus } from "@/components/site/DnsVerificationStatus";
 import { AnimatedTabNav, AnimatedTabItem } from "@/components/ui/animated-tab-nav";
+import { ImageUpload } from "@/components/ui/image-upload";
 
 export default function SiteSettings() {
   const { profile, organization } = useAuth();
