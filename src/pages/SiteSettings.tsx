@@ -1118,47 +1118,18 @@ ${getWorkerCode()}`;
                           </div>
                         </div>
 
-                        <div className="space-y-3">
-                          <Label>Logo da marca d'água</Label>
-                          <p className="text-sm text-muted-foreground">
-                            Deixe em branco para usar a logo principal do site
-                          </p>
-                          {site?.watermark_logo_url ? (
-                            <div className="border rounded-lg p-4 bg-muted flex items-center justify-between">
-                              <img src={site.watermark_logo_url} alt="Watermark" className="h-10 object-contain" />
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                onClick={() => updateSite.mutate({ watermark_logo_url: null })}
-                                disabled={!isAdmin}
-                              >
-                                Remover
-                              </Button>
-                            </div>
-                          ) : (
-                            <div className="border rounded-lg p-4 bg-muted text-center text-muted-foreground text-sm">
-                              Usando logo principal: {site?.logo_url ? '✓ Configurada' : '⚠️ Não configurada'}
-                            </div>
-                          )}
-                          <div>
-                            <input
-                              type="file"
-                              accept="image/*"
-                              onChange={(e) => handleFileUpload(e, 'watermark')}
-                              className="hidden"
-                              id="watermark-upload"
-                              disabled={!isAdmin}
-                            />
-                            <label htmlFor="watermark-upload">
-                              <Button variant="outline" size="sm" asChild disabled={!isAdmin}>
-                                <span>
-                                  <Upload className="w-4 h-4 mr-2" />
-                                  Enviar Logo Alternativa
-                                </span>
-                              </Button>
-                            </label>
-                          </div>
-                        </div>
+                        <ImageUpload
+                          label="Logo da marca d'água"
+                          description="Deixe em branco para usar a logo principal do site"
+                          value={site?.watermark_logo_url}
+                          onChange={async (url) => {
+                            await updateSite.mutateAsync({ watermark_logo_url: url });
+                          }}
+                          bucket="logos"
+                          path="sites"
+                          disabled={!isAdmin}
+                        />
+
                       </div>
 
                       {/* Right: Preview */}
