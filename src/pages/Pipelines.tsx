@@ -792,11 +792,11 @@ export default function Pipelines() {
         {/* Pipeline Selector + Toolbar */}
         {/* Mobile: Single compact row */}
         {isMobile ? (
-          <div className="flex items-center gap-1 mb-3 w-full">
+          <div className="flex items-center gap-1.5 mb-3 w-full overflow-x-auto pb-1 no-scrollbar">
             {/* Pipeline Selector */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-8 px-2.5 gap-1 text-xs font-semibold flex-shrink-0">
+                <Button variant="outline" size="sm" className="h-8 px-2.5 gap-1 text-[11px] font-semibold flex-shrink-0">
                   {currentPipeline?.name || 'Pipeline'}
                   <ChevronDown className="h-3 w-3" />
                 </Button>
@@ -838,6 +838,17 @@ export default function Pipelines() {
               </DropdownMenuContent>
             </DropdownMenu>
 
+            {/* Sync Button */}
+            <Button
+              variant="outline"
+              size="icon"
+              className={cn("h-8 w-8 flex-shrink-0", isRefreshing && "text-primary")}
+              onClick={handleManualRefresh}
+              disabled={isRefreshing}
+            >
+              <RefreshCw className={cn("h-3.5 w-3.5", isRefreshing && "animate-spin")} />
+            </Button>
+
             {canEditPipeline && (
               <Button
                 variant="ghost"
@@ -850,7 +861,7 @@ export default function Pipelines() {
               </Button>
             )}
 
-            <div className="w-px h-5 bg-border flex-shrink-0" />
+            <div className="w-px h-5 bg-border flex-shrink-0 mx-0.5" />
 
             {/* Date Filter */}
             <DateFilterPopover
@@ -858,7 +869,7 @@ export default function Pipelines() {
               onDatePresetChange={setDatePreset}
               customDateRange={customDateRange}
               onCustomDateRangeChange={setCustomDateRange}
-              triggerClassName="h-8 px-2 text-xs justify-center flex-1 min-w-0"
+              triggerClassName="h-8 px-2 text-[11px] justify-center min-w-[100px] flex-shrink-0"
             />
 
             {/* Filters Popover */}
