@@ -105,6 +105,12 @@ Deno.serve(async (req) => {
         name,
         segment,
         whatsapp: whatsapp || null,
+        cnpj: cnpj || null,
+        endereco: address || null,
+        cidade: city || null,
+        bairro: neighborhood || null,
+        numero: number || null,
+        complemento: complement || null,
       })
       .select()
       .single();
