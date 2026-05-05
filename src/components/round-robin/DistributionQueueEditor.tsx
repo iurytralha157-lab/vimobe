@@ -100,10 +100,8 @@ interface QueueFormData {
   target_stage_id: string;
   is_active: boolean;
   settings: QueueSettings;
-  schedule: ScheduleDay[];
   conditions: RuleCondition[];
   members: QueueMember[];
-  // ai_agent_id removed per requirements
 }
 
 interface DistributionQueueEditorProps {
