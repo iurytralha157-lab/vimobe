@@ -84,6 +84,14 @@ export default function APIDocs() {
     <div className="min-h-screen bg-[#F8F9FA] py-12 px-4 sm:px-6 lg:px-8 font-sans">
       <div className="max-w-4xl mx-auto space-y-8">
         <header className="space-y-6 text-center sm:text-left">
+          <Link 
+            to="/" 
+            className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors mb-4 group"
+          >
+            <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
+            Voltar ao Início
+          </Link>
+
           <div className="flex flex-col sm:flex-row items-center gap-4">
             <div className="p-3 bg-primary rounded-2xl shadow-lg shadow-primary/20 animate-in fade-in zoom-in duration-500">
               <Code2 className="h-10 w-10 text-primary-foreground" />
