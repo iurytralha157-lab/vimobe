@@ -85,6 +85,7 @@ const Checkout = lazy(() => import("./pages/Checkout"));
 
 // Public site preview (used inside CRM)
 const PreviewSiteWrapper = lazy(() => import("./pages/public/PreviewSiteWrapper"));
+const APIDocs = lazy(() => import("./pages/public/APIDocs"));
 
 
 // Trial expired modal
