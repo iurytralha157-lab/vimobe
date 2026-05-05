@@ -1073,82 +1073,115 @@ export default function Pipelines() {
           /* Desktop: Two-row layout, but optimized for middle screens */
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-3">
             <div className="flex items-center justify-start gap-2">
-              {/* Pipeline Selector Group */}
-              <div className="flex items-center gap-2 border border-border rounded-lg px-3 py-1.5 bg-muted shrink-0">
-                <Settings className="h-4 w-4 text-foreground" />
-                <span className="text-xs text-foreground/90 font-medium hidden lg:inline">Pipeline</span>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-7 px-2 gap-1 font-bold text-foreground hover:bg-accent">
-                      {currentPipeline?.name || 'Selecionar'}
-                      <ChevronDown className="h-3 w-3" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="w-48">
-                    {pipelines.map(pipeline => (
-                      <DropdownMenuItem 
-                        key={pipeline.id}
-                        onClick={() => setSelectedPipelineId(pipeline.id)}
-                        className="flex items-center justify-between"
+              <Popover open={funnelPopoverOpen} onOpenChange={(open) => {
+                setFunnelPopoverOpen(open);
+                if (open) setTempPipelineId(selectedPipelineId);
+              }}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-8 gap-2 border-primary/20 hover:border-primary/40 hover:bg-primary/5">
+                    <Filter className="h-4 w-4 text-primary" />
+                    <span className="font-semibold text-primary">Funil</span>
+                    <ChevronDown className="h-3 w-3 text-primary/60" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="start" className="w-64 p-4 shadow-xl border-primary/10">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between border-b pb-2">
+                      <h4 className="font-bold text-sm text-foreground">Selecionar Funil</h4>
+                      {isAdmin && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-7 w-7 text-primary hover:bg-primary/10" 
+                                onClick={() => {
+                                  setFunnelPopoverOpen(false);
+                                  setNewPipelineDialogOpen(true);
+                                }}
+                              >
+                                <Plus className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Nova Pipeline</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                    </div>
+                    
+                    <ScrollArea className="h-[220px] pr-2">
+                      <RadioGroup 
+                        value={tempPipelineId || ''} 
+                        onValueChange={setTempPipelineId} 
+                        className="gap-1"
                       >
-                        <span className={cn(pipeline.id === selectedPipelineId && "font-semibold")}>
-                          {pipeline.name}
-                        </span>
-                        {isAdmin && pipeline.id !== selectedPipelineId && pipelines.length > 1 && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-5 w-5 opacity-50 hover:opacity-100"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeletePipeline(pipeline.id);
-                            }}
+                        {pipelines.map(pipeline => (
+                          <div 
+                            key={pipeline.id} 
+                            className={cn(
+                              "flex items-center justify-between p-2 rounded-md transition-colors group",
+                              tempPipelineId === pipeline.id ? "bg-primary/5" : "hover:bg-muted"
+                            )}
                           >
-                            <Trash2 className="h-3 w-3 text-destructive" />
-                          </Button>
-                        )}
-                      </DropdownMenuItem>
-                    ))}
-                    {isAdmin && (
-                      <>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => setNewPipelineDialogOpen(true)}>
-                          <Plus className="h-4 w-4 mr-2" />
-                          Nova Pipeline
-                        </DropdownMenuItem>
-                      </>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                {canEditPipeline && (
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
+                            <div className="flex items-center space-x-3 flex-1 cursor-pointer" onClick={() => setTempPipelineId(pipeline.id)}>
+                              <RadioGroupItem value={pipeline.id} id={`popover-${pipeline.id}`} />
+                              <Label 
+                                htmlFor={`popover-${pipeline.id}`} 
+                                className="flex-1 cursor-pointer font-medium text-sm"
+                              >
+                                {pipeline.name}
+                              </Label>
+                            </div>
+                            
+                            {isAdmin && pipelines.length > 1 && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:bg-destructive/10"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeletePipeline(pipeline.id);
+                                }}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            )}
+                          </div>
+                        ))}
+                      </RadioGroup>
+                    </ScrollArea>
+                    
+                    <div className="pt-2 border-t flex flex-col gap-2">
+                      <Button 
+                        size="sm"
+                        className="w-full font-semibold" 
+                        onClick={() => {
+                          setSelectedPipelineId(tempPipelineId);
+                          setFunnelPopoverOpen(false);
+                        }}
+                      >
+                        Aplicar Filtro
+                      </Button>
+                      
+                      {canEditPipeline && (
                         <Button
                           variant="ghost"
-                          size="icon"
-                          className="h-6 w-6"
-                          onClick={() => setStagesEditorOpen(true)}
-                          disabled={!selectedPipelineId}
+                          size="sm"
+                          className="w-full text-xs gap-2 text-muted-foreground"
+                          onClick={() => {
+                            setFunnelPopoverOpen(false);
+                            setStagesEditorOpen(true);
+                          }}
                         >
-                          <Settings className="h-4 w-4 text-foreground/80 hover:text-foreground" />
+                          <Settings className="h-3.5 w-3.5" />
+                          Gerenciar Pipeline
                         </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Gerenciar Pipeline</TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                )}
-                {isAdmin && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6"
-                    onClick={() => setNewPipelineDialogOpen(true)}
-                  >
-                    <Plus className="h-4 w-4 text-foreground" />
-                  </Button>
-                )}
-              </div>
+                      )}
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
             
             {/* Filters Row - Responsive (shows icons/collapsed on mid screens) */}
