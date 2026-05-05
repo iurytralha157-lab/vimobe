@@ -620,7 +620,9 @@ export default function PublicSiteLayout() {
             {/* Brand */}
             <div className="text-center md:text-left">
               <div className="flex justify-center md:justify-start">
-                {siteConfig.logo_url ? (
+                {isLoading && !siteConfig ? (
+                  <Skeleton className="h-10 w-32 bg-white/10 mb-4" />
+                ) : siteConfig?.logo_url ? (
                   <img 
                     src={siteConfig.logo_url} 
                     alt={siteConfig.site_title || 'Logo'} 
@@ -635,11 +637,15 @@ export default function PublicSiteLayout() {
                     className="w-auto object-contain mb-4"
                   />
                 ) : (
-                  <h3 className="text-xl font-semibold tracking-wider mb-4">{siteConfig.site_title}</h3>
+                  <h3 className="text-xl font-semibold tracking-wider mb-4">{siteConfig?.site_title}</h3>
                 )}
               </div>
               <p className="text-white/60 text-sm leading-relaxed mb-4 md:mb-6">
-                {siteConfig.site_description || `Encontre o imóvel dos seus sonhos com a ${siteConfig.organization_name}.`}
+                {isLoading && !siteConfig ? (
+                  <Skeleton className="h-4 w-full bg-white/10" />
+                ) : (
+                  siteConfig?.site_description || `Encontre o imóvel dos seus sonhos com a ${siteConfig?.organization_name || 'nossa imobiliária'}.`
+                )}
               </p>
             </div>
 
