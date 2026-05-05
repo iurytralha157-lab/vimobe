@@ -61,10 +61,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
-  RadioGroup,
-  RadioGroupItem,
-} from '@/components/ui/radio-group';
-import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -136,8 +132,6 @@ export default function Pipelines() {
   const [datePreset, setDatePreset] = useState<DatePreset>('last7days');
   const [customDateRange, setCustomDateRange] = useState<{ from: Date; to: Date } | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [tempPipelineId, setTempPipelineId] = useState<string | null>(null);
-  const [funnelPopoverOpen, setFunnelPopoverOpen] = useState(false);
   
   // Ref para bloquear refetch durante drag-and-drop (evita race condition)
   const isDraggingRef = useRef(false);
@@ -218,19 +212,9 @@ export default function Pipelines() {
   const canEditPipeline = useCanEditCadences();
   const { recordFirstResponse } = useRecordFirstResponseOnAction();
   const isMobile = useIsMobile();
-  // activeFiltersCount para o badge do botão de filtro
-  const activeFiltersCount = useMemo(() => {
-    let count = 0;
-    if (filterUser && filterUser !== 'all') count++;
-    if (filterTag && filterTag !== 'all') count++;
-    if (filterDealStatus && filterDealStatus !== 'all') count++;
-    if (filterCampaign && filterCampaign !== 'all') count++;
-    if (filterAdSet && filterAdSet !== 'all') count++;
-    if (filterAd && filterAd !== 'all') count++;
-    if (searchQuery && searchQuery.trim().length > 0) count++;
-    return count;
-  }, [filterUser, filterTag, filterDealStatus, filterCampaign, filterAdSet, filterAd, searchQuery]);
-
+  // Compute VGV directly from filteredStages so the badge always matches visible leads
+  // (This must be defined after filteredStages — see below)
+  
   const currentPipeline = pipelines.find(p => p.id === selectedPipelineId);
   const isLoading = pipelinesLoading || baseStagesLoading;
   const isInitialLeadsLoading = leadsLoading && stagesWithLeads.length === 0;
@@ -770,21 +754,7 @@ export default function Pipelines() {
 
   const handleCreatePipeline = async (e: React.FormEvent) => {
     e.preventDefault();
-    const trimmedName = newPipelineName.trim();
-    if (!trimmedName) {
-      toast.error('O nome da pipeline não pode estar vazio');
-      return;
-    }
-    if (trimmedName.length < 3) {
-      toast.error('O nome da pipeline deve ter pelo menos 3 caracteres');
-      return;
-    }
-    const invalidChars = /[<>:"\/\\|?*]/;
-    if (invalidChars.test(trimmedName)) {
-      toast.error('O nome da pipeline contém caracteres inválidos (< > : " / \\ | ? *)');
-      return;
-    }
-    
+    if (!newPipelineName.trim()) return;
     
     try {
       const pipeline = await createPipeline.mutateAsync({ name: newPipelineName.trim() });
@@ -819,49 +789,372 @@ export default function Pipelines() {
         "flex flex-col h-full overflow-hidden",
         isMobile && "pb-4"
       )}>
-        {/* Toolbar - Combined for Mobile and Desktop */}
-        <div className="flex flex-col gap-4 mb-4 px-1 mt-1">
-          {/* Top Row: Pipelines Selection */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
-            {pipelines.map(pipeline => (
-              <Button
-                key={pipeline.id}
-                variant={selectedPipelineId === pipeline.id ? "default" : "outline"}
-                size="sm"
-                className={cn(
-                  "h-8 px-4 text-xs font-semibold whitespace-nowrap rounded-full transition-all shrink-0",
-                  selectedPipelineId === pipeline.id 
-                    ? "bg-primary text-primary-foreground shadow-md ring-2 ring-primary/20" 
-                    : "border-primary/20 text-primary hover:bg-primary/5 hover:border-primary/40"
+        {/* Pipeline Selector + Toolbar */}
+        {/* Mobile: Single compact row */}
+        {isMobile ? (
+          <div className="flex items-center gap-1 mb-3 w-full">
+            {/* Pipeline Selector */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-8 px-2.5 gap-1 text-xs font-semibold flex-shrink-0">
+                  {currentPipeline?.name || 'Pipeline'}
+                  <ChevronDown className="h-3 w-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-48">
+                {pipelines.map(pipeline => (
+                  <DropdownMenuItem 
+                    key={pipeline.id}
+                    onClick={() => setSelectedPipelineId(pipeline.id)}
+                    className="flex items-center justify-between"
+                  >
+                    <span className={cn(pipeline.id === selectedPipelineId && "font-semibold")}>
+                      {pipeline.name}
+                    </span>
+                    {isAdmin && pipeline.id !== selectedPipelineId && pipelines.length > 1 && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-5 w-5 opacity-50 hover:opacity-100"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeletePipeline(pipeline.id);
+                        }}
+                      >
+                        <Trash2 className="h-3 w-3 text-destructive" />
+                      </Button>
+                    )}
+                  </DropdownMenuItem>
+                ))}
+                {isAdmin && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => setNewPipelineDialogOpen(true)}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Nova Pipeline
+                    </DropdownMenuItem>
+                  </>
                 )}
-                onClick={() => setSelectedPipelineId(pipeline.id)}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {canEditPipeline && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 flex-shrink-0"
+                onClick={() => setStagesEditorOpen(true)}
+                disabled={!selectedPipelineId}
               >
-                {pipeline.name}
-              </Button>
-            ))}
-            {isAdmin && (
-              <Button 
-                variant="outline" 
-                size="icon" 
-                className="h-8 w-8 shrink-0 rounded-full border-dashed border-primary/40 text-primary hover:bg-primary/5"
-                onClick={() => setNewPipelineDialogOpen(true)}
-              >
-                <Plus className="h-4 w-4" />
+                <Settings className="h-3.5 w-3.5" />
               </Button>
             )}
-          </div>
 
-          {/* Bottom Row: Actions & Filters */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-            <div className="flex flex-1 items-center gap-2 w-full sm:w-auto">
+            <div className="w-px h-5 bg-border flex-shrink-0" />
+
+            {/* Date Filter */}
+            <DateFilterPopover
+              datePreset={datePreset}
+              onDatePresetChange={setDatePreset}
+              customDateRange={customDateRange}
+              onCustomDateRangeChange={setCustomDateRange}
+              triggerClassName="h-8 px-2 text-xs justify-center flex-1 min-w-0"
+            />
+
+            {/* Filters Popover */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className={cn(
+                    "h-8 w-8 flex-shrink-0 relative",
+                    ((filterUser && filterUser !== 'all') || (filterTag && filterTag !== 'all') || (filterDealStatus && filterDealStatus !== 'all') || (filterCampaign && filterCampaign !== 'all') || (filterAdSet && filterAdSet !== 'all') || (filterAd && filterAd !== 'all') || searchQuery) && "border-primary text-primary"
+                  )}
+                >
+                  <SlidersHorizontal className="h-3.5 w-3.5" />
+                  {((filterUser && filterUser !== 'all') || (filterTag && filterTag !== 'all') || (filterDealStatus && filterDealStatus !== 'all') || (filterCampaign && filterCampaign !== 'all') || (filterAdSet && filterAdSet !== 'all') || (filterAd && filterAd !== 'all') || searchQuery) && (
+                    <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-primary" />
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-64 p-3 max-h-[80vh] overflow-y-auto">
+                <div className="space-y-4">
+                  <div className="space-y-1.5">
+                    <div className="relative">
+                      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                      <Input
+                        placeholder="Buscar lead..."
+                        value={searchInput}
+                        onChange={(e) => setSearchInput(e.target.value)}
+                        className="h-9 w-full pl-8 text-sm bg-muted/20"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="pb-3 border-b border-border">
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className={cn(
+                              "h-9 w-full text-xs gap-1.5 justify-between",
+                              (filterCampaign !== 'all' || filterAdSet !== 'all' || filterAd !== 'all') && "border-[#1877F2] text-[#1877F2]"
+                            )}
+                          >
+                            <div className="flex items-center gap-1.5 truncate">
+                              <SlidersHorizontal className="h-3.5 w-3.5" />
+                              <span>Meta Ads</span>
+                            </div>
+                            {(filterCampaign !== 'all' || filterAdSet !== 'all' || filterAd !== 'all') && (
+                              <Badge className="h-4 min-w-4 p-0 px-1 text-[10px] bg-[#1877F2]">
+                                {[filterCampaign !== 'all', filterAdSet !== 'all', filterAd !== 'all'].filter(Boolean).length}
+                              </Badge>
+                            )}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent side="left" className="w-72 p-4 z-[100]">
+                          <div className="space-y-4">
+                            <div className="space-y-3">
+                              <div className="space-y-1">
+                                <Select value={filterCampaign} onValueChange={setFilterCampaign}>
+                                  <SelectTrigger className="h-8 text-xs">
+                                    <SelectValue placeholder="Todas campanhas" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="all">Todas campanhas</SelectItem>
+                                    {metaFilters?.campaigns.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div className="space-y-1">
+                                <Select value={filterAdSet} onValueChange={setFilterAdSet}>
+                                  <SelectTrigger className="h-8 text-xs">
+                                    <SelectValue placeholder="Todos conjuntos" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="all">Todos conjuntos</SelectItem>
+                                    {metaFilters?.adsets.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div className="space-y-1">
+                                <Select value={filterAd} onValueChange={setFilterAd}>
+                                  <SelectTrigger className="h-8 text-xs">
+                                    <SelectValue placeholder="Todos criativos" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="all">Todos criativos</SelectItem>
+                                    {metaFilters?.ads.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+
+                    {(isAdmin || hasLeadViewAll) && (
+                      <Select value={filterUser} onValueChange={setFilterUser}>
+                        <SelectTrigger className={cn("h-9 w-full text-xs", filterUser && filterUser !== 'all' && "border-primary text-primary")}>
+                          <Filter className="h-3.5 w-3.5 mr-1.5 flex-shrink-0" />
+                          <SelectValue placeholder="Responsável" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todos responsáveis</SelectItem>
+                          {users.map(user => (
+                            <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className={cn(
+                            "h-9 w-full text-xs gap-1.5 justify-between",
+                            (filterCampaign !== 'all' || filterAdSet !== 'all' || filterAd !== 'all') && "border-[#1877F2] text-[#1877F2]"
+                          )}
+                        >
+                          <div className="flex items-center gap-1.5 truncate">
+                            <SlidersHorizontal className="h-3.5 w-3.5" />
+                            <span>Meta Ads</span>
+                          </div>
+                          {(filterCampaign !== 'all' || filterAdSet !== 'all' || filterAd !== 'all') && (
+                            <Badge className="h-4 min-w-4 p-0 px-1 text-[10px] bg-[#1877F2]">
+                              {[filterCampaign !== 'all', filterAdSet !== 'all', filterAd !== 'all'].filter(Boolean).length}
+                            </Badge>
+                          )}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent side="left" className="w-72 p-4 z-[100]">
+                        <div className="space-y-4">
+                          <h4 className="font-medium text-sm">Filtros Meta</h4>
+                          <div className="space-y-3">
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-bold uppercase text-muted-foreground">Campanha</label>
+                              <Select value={filterCampaign} onValueChange={setFilterCampaign}>
+                                <SelectTrigger className="h-8 text-xs">
+                                  <SelectValue placeholder="Todas" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="all">Todas</SelectItem>
+                                  {metaFilters?.campaigns.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-bold uppercase text-muted-foreground">Conjunto</label>
+                              <Select value={filterAdSet} onValueChange={setFilterAdSet}>
+                                <SelectTrigger className="h-8 text-xs">
+                                  <SelectValue placeholder="Todos" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="all">Todos</SelectItem>
+                                  {metaFilters?.adsets.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-bold uppercase text-muted-foreground">Criativo</label>
+                              <Select value={filterAd} onValueChange={setFilterAd}>
+                                <SelectTrigger className="h-8 text-xs">
+                                  <SelectValue placeholder="Todos" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="all">Todos</SelectItem>
+                                  {metaFilters?.ads.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                  {((filterUser && filterUser !== 'all') || (filterTag && filterTag !== 'all') || (filterDealStatus && filterDealStatus !== 'all') || (filterCampaign && filterCampaign !== 'all') || (filterAdSet && filterAdSet !== 'all') || (filterAd && filterAd !== 'all') || searchQuery) && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full text-xs h-8"
+                      onClick={() => {
+                        setFilterUser(isAdmin || hasLeadViewAll ? 'all' : profile?.id);
+                        setFilterTag('all');
+                        setFilterDealStatus('all');
+                        setFilterCampaign('all');
+                        setFilterAdSet('all');
+                        setFilterAd('all');
+                        setSearchInput('');
+                        setSearchQuery('');
+                      }}
+                    >
+                      <XCircle className="h-3.5 w-3.5 mr-1.5" />
+                      Limpar filtros
+                    </Button>
+                  )}
+                </div>
+              </PopoverContent>
+            </Popover>
+
+            {/* Refresh */}
+            {/* Botão de Refresh removido */}
+          </div>
+        ) : (
+          /* Desktop: Two-row layout, but optimized for middle screens */
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-3">
+            <div className="flex items-center justify-start gap-2">
+              {/* Pipeline Selector Group */}
+              <div className="flex items-center gap-2 border border-border rounded-lg px-3 py-1.5 bg-muted shrink-0">
+                <Settings className="h-4 w-4 text-foreground" />
+                <span className="text-xs text-foreground/90 font-medium hidden lg:inline">Pipeline</span>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-7 px-2 gap-1 font-bold text-foreground hover:bg-accent">
+                      {currentPipeline?.name || 'Selecionar'}
+                      <ChevronDown className="h-3 w-3" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-48">
+                    {pipelines.map(pipeline => (
+                      <DropdownMenuItem 
+                        key={pipeline.id}
+                        onClick={() => setSelectedPipelineId(pipeline.id)}
+                        className="flex items-center justify-between"
+                      >
+                        <span className={cn(pipeline.id === selectedPipelineId && "font-semibold")}>
+                          {pipeline.name}
+                        </span>
+                        {isAdmin && pipeline.id !== selectedPipelineId && pipelines.length > 1 && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-5 w-5 opacity-50 hover:opacity-100"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeletePipeline(pipeline.id);
+                            }}
+                          >
+                            <Trash2 className="h-3 w-3 text-destructive" />
+                          </Button>
+                        )}
+                      </DropdownMenuItem>
+                    ))}
+                    {isAdmin && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => setNewPipelineDialogOpen(true)}>
+                          <Plus className="h-4 w-4 mr-2" />
+                          Nova Pipeline
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                {canEditPipeline && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => setStagesEditorOpen(true)}
+                          disabled={!selectedPipelineId}
+                        >
+                          <Settings className="h-4 w-4 text-foreground/80 hover:text-foreground" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Gerenciar Colunas</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
+                {isAdmin && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={() => setNewPipelineDialogOpen(true)}
+                  >
+                    <Plus className="h-4 w-4 text-foreground" />
+                  </Button>
+                )}
+              </div>
+            </div>
+            
+            {/* Filters Row - Responsive (shows icons/collapsed on mid screens) */}
+            <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-0">
               {/* Search */}
-              <div className="relative flex-1 sm:max-w-[240px]">
+              <div className="relative flex-shrink-0">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                 <Input
                   placeholder="Buscar lead..."
                   value={searchInput}
                   onChange={(e) => setSearchInput(e.target.value)}
-                  className="h-9 pl-9 pr-3 text-sm bg-muted/30 border-none focus-visible:ring-1 focus-visible:ring-primary/20 shadow-sm"
+                  className="h-8 w-32 xl:w-48 pl-8 text-xs bg-muted/50 border focus-visible:ring-1 focus-visible:ring-primary/20"
                 />
               </div>
 
@@ -871,202 +1164,271 @@ export default function Pipelines() {
                 onDatePresetChange={setDatePreset}
                 customDateRange={customDateRange}
                 onCustomDateRangeChange={setCustomDateRange}
-                triggerClassName="h-9 px-3 text-xs justify-start min-w-[130px] border-primary/10 bg-background/50"
+                triggerClassName="h-8 w-auto min-w-[120px] xl:min-w-[140px] text-[10px] xl:text-xs justify-start flex-shrink-0"
               />
-            </div>
 
-            <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-              {/* Refresh Button - Icon only */}
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-9 w-9 shrink-0 border-primary/20 text-primary hover:bg-primary/5 shadow-sm"
-                      onClick={handleManualRefresh}
-                      disabled={isRefreshing}
-                    >
-                      <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
+              {/* Collapsed Filters for Middle Screens (Consolidated View) */}
+              <div className="flex xl:hidden">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm" className={cn("h-8 px-2 gap-1.5 text-[10px]", ((filterUser && filterUser !== 'all') || (filterTag && filterTag !== 'all') || (filterDealStatus && filterDealStatus !== 'all') || (filterCampaign !== 'all' || filterAdSet !== 'all' || filterAd !== 'all')) && "border-primary text-primary")}>
+                      <Filter className="h-3.5 w-3.5" />
+                      Filtros
                     </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Atualizar</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+                  </PopoverTrigger>
+                  <PopoverContent align="end" className="w-64 p-3 space-y-3 max-h-[80vh] overflow-y-auto">
+                    <div className="pb-3 border-b border-border">
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className={cn(
+                              "h-9 w-full text-xs gap-1.5 justify-between",
+                              (filterCampaign !== 'all' || filterAdSet !== 'all' || filterAd !== 'all') && "border-[#1877F2] text-[#1877F2]"
+                            )}
+                          >
+                            <div className="flex items-center gap-1.5 truncate">
+                              <SlidersHorizontal className="h-3.5 w-3.5" />
+                              <span>Meta Ads</span>
+                            </div>
+                            {(filterCampaign !== 'all' || filterAdSet !== 'all' || filterAd !== 'all') && (
+                              <Badge className="h-4 min-w-4 p-0 px-1 text-[10px] bg-[#1877F2]">
+                                {[filterCampaign !== 'all', filterAdSet !== 'all', filterAd !== 'all'].filter(Boolean).length}
+                              </Badge>
+                            )}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent side="left" className="w-72 p-4 z-[100]">
+                          <div className="space-y-4">
+                            <div className="space-y-3">
+                              <Select value={filterCampaign} onValueChange={setFilterCampaign}>
+                                <SelectTrigger className="h-8 text-xs">
+                                  <SelectValue placeholder="Todas campanhas" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="all">Todas campanhas</SelectItem>
+                                  {metaFilters?.campaigns.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                                </SelectContent>
+                              </Select>
+                              <Select value={filterAdSet} onValueChange={setFilterAdSet}>
+                                <SelectTrigger className="h-8 text-xs">
+                                  <SelectValue placeholder="Todos conjuntos" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="all">Todos conjuntos</SelectItem>
+                                  {metaFilters?.adsets.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
+                                </SelectContent>
+                              </Select>
+                              <Select value={filterAd} onValueChange={setFilterAd}>
+                                <SelectTrigger className="h-8 text-xs">
+                                  <SelectValue placeholder="Todos criativos" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="all">Todos criativos</SelectItem>
+                                  {metaFilters?.ads.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
 
-              {/* Filter Button with Counter */}
+                    {(isAdmin || hasLeadViewAll) && (
+                      <Select value={filterUser} onValueChange={setFilterUser}>
+                        <SelectTrigger className="h-9">
+                          <SelectValue placeholder="Responsável" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todos</SelectItem>
+                          {users.map(u => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    )}
+                    <Select value={filterTag} onValueChange={setFilterTag}>
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder="Tags" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todas</SelectItem>
+                        {allTags.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <Select value={filterDealStatus} onValueChange={setFilterDealStatus}>
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder="Status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos</SelectItem>
+                        <SelectItem value="open">Aberto</SelectItem>
+                        <SelectItem value="won">Ganho</SelectItem>
+                        <SelectItem value="lost">Perdido</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              {/* Full Filters Row - Only on XL screens */}
+              <div className="hidden xl:flex items-center gap-2">
+                {/* Responsible Filter */}
+                {(isAdmin || hasLeadViewAll) ? (
+                  <Select value={filterUser} onValueChange={setFilterUser}>
+                    <SelectTrigger className={cn(
+                      "h-8 w-auto min-w-[110px] text-xs flex-shrink-0",
+                      filterUser && filterUser !== 'all' && "border-primary text-primary"
+                    )}>
+                      <Filter className="h-3.5 w-3.5 mr-1 flex-shrink-0" />
+                      <SelectValue placeholder="Resp." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      {users.map(user => (
+                        <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <div className="flex items-center gap-1.5 border rounded-md px-2 py-1.5 bg-muted/50 h-8 flex-shrink-0">
+                    <Filter className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span className="text-xs truncate max-w-[60px]">{profile?.name}</span>
+                  </div>
+                )}
+
+                {/* Tag Filter */}
+                <Select value={filterTag} onValueChange={setFilterTag}>
+                  <SelectTrigger className={cn(
+                    "h-8 w-auto min-w-[100px] text-xs flex-shrink-0",
+                    filterTag && filterTag !== 'all' && "border-primary text-primary"
+                  )}>
+                    <Tags className="h-3.5 w-3.5 mr-1 flex-shrink-0" />
+                    <SelectValue placeholder="Tags" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas</SelectItem>
+                    {allTags.map(tag => (
+                      <SelectItem key={tag.id} value={tag.id}>
+                        <div className="flex items-center gap-2">
+                          <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: tag.color }} />
+                          {tag.name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                {/* Deal Status Filter */}
+                <Select value={filterDealStatus} onValueChange={setFilterDealStatus}>
+                  <SelectTrigger className={cn(
+                    "h-8 w-auto min-w-[100px] text-xs flex-shrink-0",
+                    filterDealStatus && filterDealStatus !== 'all' && "border-primary text-primary"
+                  )}>
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="open"><span className="flex items-center gap-2"><CircleDot className="h-3.5 w-3.5 text-muted-foreground" />Aberto</span></SelectItem>
+                    <SelectItem value="won"><span className="flex items-center gap-2"><Trophy className="h-3.5 w-3.5 text-emerald-600" />Ganho</span></SelectItem>
+                    <SelectItem value="lost"><span className="flex items-center gap-2"><XCircle className="h-3.5 w-3.5 text-red-600" />Perdido</span></SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Meta Filters Popover */}
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
                     className={cn(
-                      "h-9 gap-2 shrink-0 relative border-primary/20 text-primary hover:bg-primary/5 shadow-sm",
-                      activeFiltersCount > 0 && "border-primary text-primary bg-primary/5"
+                      "h-8 px-2.5 text-xs gap-1.5 flex-shrink-0",
+                      (filterCampaign !== 'all' || filterAdSet !== 'all' || filterAd !== 'all') && "border-[#1877F2] text-[#1877F2] hover:text-[#1877F2] hover:bg-[#1877F2]/10"
                     )}
                   >
-                    <SlidersHorizontal className="h-4 w-4" />
-                    <span className="hidden sm:inline font-medium text-xs">Filtros</span>
-                    {activeFiltersCount > 0 && (
-                      <Badge className="h-5 min-w-[20px] p-0 px-1 text-[10px] flex items-center justify-center bg-primary text-primary-foreground border-white border ml-0.5">
-                        {activeFiltersCount}
+                    <SlidersHorizontal className="h-3.5 w-3.5" />
+                    Meta Ads
+                    {(filterCampaign !== 'all' || filterAdSet !== 'all' || filterAd !== 'all') && (
+                      <Badge 
+                        variant="default" 
+                        className="h-4 min-w-4 p-0 px-1 flex items-center justify-center text-[10px] ml-0.5 bg-[#1877F2]"
+                      >
+                        {[filterCampaign !== 'all', filterAdSet !== 'all', filterAd !== 'all'].filter(Boolean).length}
                       </Badge>
                     )}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent align="end" className="w-72 p-4 max-h-[80vh] overflow-y-auto z-[100] shadow-xl border-primary/10">
+                <PopoverContent align="end" className="w-80 p-4">
                   <div className="space-y-4">
-                    <h4 className="font-bold text-sm">Filtros Avançados</h4>
-                    
-                    <div className="space-y-3">
-                      {/* Meta Ads Group */}
-                      <div className="p-3 bg-muted/30 rounded-lg space-y-3 border border-border/50">
-                        <div className="flex items-center gap-2 text-[#1877F2]">
-                          <SlidersHorizontal className="h-4 w-4" />
-                          <span className="text-[10px] font-bold uppercase tracking-wider">Meta Ads</span>
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <Select value={filterCampaign} onValueChange={setFilterCampaign}>
-                            <SelectTrigger className="h-8 text-xs bg-background">
-                              <SelectValue placeholder="Campanha" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="all">Todas campanhas</SelectItem>
-                              {metaFilters?.campaigns.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                            </SelectContent>
-                          </Select>
-
-                          <Select value={filterAdSet} onValueChange={setFilterAdSet}>
-                            <SelectTrigger className="h-8 text-xs bg-background">
-                              <SelectValue placeholder="Conjunto" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="all">Todos conjuntos</SelectItem>
-                              {metaFilters?.adsets.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
-                            </SelectContent>
-                          </Select>
-
-                          <Select value={filterAd} onValueChange={setFilterAd}>
-                            <SelectTrigger className="h-8 text-xs bg-background">
-                              <SelectValue placeholder="Criativo" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="all">Todos criativos</SelectItem>
-                              {metaFilters?.ads.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-
-                      {/* Responsible Filter */}
-                      {(isAdmin || hasLeadViewAll) && (
-                        <div className="space-y-1.5">
-                          <label className="text-[10px] font-bold uppercase text-muted-foreground ml-1">Responsável</label>
-                          <Select value={filterUser} onValueChange={setFilterUser}>
-                            <SelectTrigger className={cn("h-9 bg-muted/20 text-xs border-none", filterUser && filterUser !== 'all' && "ring-1 ring-primary/30")}>
-                              <Filter className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
-                              <SelectValue placeholder="Todos" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="all">Todos responsáveis</SelectItem>
-                              {users.map(user => (
-                                <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-medium text-sm">Filtros Meta Ads</h4>
+                      {(filterCampaign !== 'all' || filterAdSet !== 'all' || filterAd !== 'all') && (
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-7 px-2 text-[11px] text-muted-foreground hover:text-destructive"
+                          onClick={() => {
+                            setFilterCampaign('all');
+                            setFilterAdSet('all');
+                            setFilterAd('all');
+                          }}
+                        >
+                          Limpar
+                        </Button>
                       )}
-
-                      {/* Tag Filter */}
-                      <div className="space-y-1.5">
-                        <label className="text-[10px] font-bold uppercase text-muted-foreground ml-1">Etiqueta</label>
-                        <Select value={filterTag} onValueChange={setFilterTag}>
-                          <SelectTrigger className={cn("h-9 bg-muted/20 text-xs border-none", filterTag && filterTag !== 'all' && "ring-1 ring-primary/30")}>
-                            <Tags className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
-                            <SelectValue placeholder="Todas" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">Todas etiquetas</SelectItem>
-                            {allTags.map(tag => (
-                              <SelectItem key={tag.id} value={tag.id}>{tag.name}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      {/* Status Filter */}
-                      <div className="space-y-1.5">
-                        <label className="text-[10px] font-bold uppercase text-muted-foreground ml-1">Status</label>
-                        <Select value={filterDealStatus} onValueChange={setFilterDealStatus}>
-                          <SelectTrigger className={cn("h-9 bg-muted/20 text-xs border-none", filterDealStatus && filterDealStatus !== 'all' && "ring-1 ring-primary/30")}>
-                            <CircleDot className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
-                            <SelectValue placeholder="Todos" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">Todos status</SelectItem>
-                            <SelectItem value="open">Aberto</SelectItem>
-                            <SelectItem value="won">Ganho</SelectItem>
-                            <SelectItem value="lost">Perdido</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
                     </div>
 
-                    {activeFiltersCount > 0 && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="w-full text-xs h-9 text-destructive hover:text-destructive hover:bg-destructive/5 mt-2"
-                        onClick={() => {
-                          setFilterUser(isAdmin || hasLeadViewAll ? 'all' : profile?.id);
-                          setFilterTag('all');
-                          setFilterDealStatus('all');
-                          setFilterCampaign('all');
-                          setFilterAdSet('all');
-                          setFilterAd('all');
-                          setSearchInput('');
-                          setSearchQuery('');
-                        }}
-                      >
-                        <XCircle className="h-3.5 w-3.5 mr-2" />
-                        Limpar filtros
-                      </Button>
-                    )}
-                    
-                    {canEditPipeline && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full text-xs h-9 gap-2 text-muted-foreground"
-                        onClick={() => setStagesEditorOpen(true)}
-                      >
-                        <Settings className="h-3.5 w-3.5" />
-                        Gerenciar Pipeline
-                      </Button>
-                    )}
+                      <div className="space-y-3">
+                        <Select value={filterCampaign} onValueChange={setFilterCampaign}>
+                          <SelectTrigger className="h-9 text-xs">
+                            <SelectValue placeholder="Todas campanhas" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Todas campanhas</SelectItem>
+                            {metaFilters?.campaigns.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                        <Select value={filterAdSet} onValueChange={setFilterAdSet}>
+                          <SelectTrigger className="h-9 text-xs">
+                            <SelectValue placeholder="Todos conjuntos" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Todos conjuntos</SelectItem>
+                            {metaFilters?.adsets.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                        <Select value={filterAd} onValueChange={setFilterAd}>
+                          <SelectTrigger className="h-9 text-xs">
+                            <SelectValue placeholder="Todos criativos" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Todos criativos</SelectItem>
+                            {metaFilters?.ads.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
                   </div>
                 </PopoverContent>
               </Popover>
-
-              <Button 
-                size="sm" 
-                className="h-9 px-4 gap-2 font-bold shadow-lg bg-[#f97316] hover:bg-[#ea580c] text-white"
-                onClick={() => openNewLeadDialog()}
-              >
-                <Plus className="h-4 w-4" />
-                <span className="hidden xs:inline">{newButtonLabel}</span>
+            
+              {/* Botão de Refresh removido */}
+              
+              {/* Desktop New Button */}
+              <Button data-tour="pipeline-new-lead" size="sm" onClick={() => openNewLeadDialog()} className="flex-shrink-0 bg-[#f97316] hover:bg-[#ea580c]">
+                <Plus className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">{newButtonLabel}</span>
               </Button>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Empty State */}
-        {stages.length === 0 && !leadsLoading && (
-          <Card className="mx-1">
+        {stages.length === 0 && (
+          <Card>
             <CardContent className="py-12 text-center">
-              <h3 className="font-medium mb-2">Nenhuma etapa configurada</h3>
+              <h3 className="font-medium mb-2">Nenhum estágio configurado</h3>
               <p className="text-muted-foreground">
-                Configure as etapas do funil para visualizar seus leads.
+                Configure os estágios do pipeline nas configurações
               </p>
             </CardContent>
           </Card>
