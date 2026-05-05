@@ -327,7 +327,7 @@ export const LeadCard = memo(function LeadCard({
 
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <button onClick={handleWhatsAppClick} disabled={!hasPhone} className={cn("h-6 w-6 rounded-full flex items-center justify-center transition-colors", hasPhone ? iconColors.whatsapp : "bg-muted text-muted-foreground/50 cursor-not-allowed")}>
+                  <button onMouseDown={e => e.stopPropagation()} onClick={handleWhatsAppClick} disabled={!hasPhone} className={cn("h-6 w-6 rounded-full flex items-center justify-center transition-colors", hasPhone ? iconColors.whatsapp : "bg-muted text-muted-foreground/50 cursor-not-allowed")}>
                     <MessageCircle className="h-3 w-3" />
                   </button>
                 </TooltipTrigger>
