@@ -68,8 +68,6 @@ export function AccountTab() {
 
   const [profileForm, setProfileForm] = useState<ProfileFormData>({
     name: '', phone: '', whatsapp: '', cpf: '',
-    cep: '', endereco: '', numero: '', complemento: '',
-    bairro: '', cidade: '', uf: '',
   });
 
   const [orgForm, setOrgForm] = useState<OrganizationFormData>({
