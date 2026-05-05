@@ -287,7 +287,7 @@ export default function Auth() {
       <div className="lg:hidden h-[25vh] min-h-[150px] flex-shrink-0" />
 
       {/* Login form container */}
-      <div className="w-full lg:w-[420px] xl:w-[460px] flex flex-col items-center justify-start lg:justify-center px-8 py-8 lg:py-10 flex-shrink-0 mx-auto lg:ml-[120px] xl:ml-[180px] flex-1 lg:flex-none relative z-10 -mt-16 lg:mt-0">
+      <div className="w-full lg:w-[420px] xl:w-[460px] flex flex-col items-center justify-start lg:justify-center px-8 py-8 lg:py-10 flex-shrink-0 mx-auto lg:ml-[160px] xl:ml-[240px] flex-1 lg:flex-none relative z-10 -mt-16 lg:mt-0">
         <div className="w-full max-w-sm">
           <div className="flex flex-col items-center mb-2 min-h-[56px] justify-center">
             {settingsLoading ? (
