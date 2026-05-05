@@ -188,6 +188,7 @@ export default function PropertyForm() {
   const { id } = useParams();
   const isEditing = !!id;
   const isMobile = useIsMobile();
+  const { user, profile, isSuperAdmin } = useAuth();
 
   const [formData, setFormData] = useState<PropertyFormData>(() => {
     if (!id) {
@@ -215,7 +216,6 @@ export default function PropertyForm() {
   const { data: features = [], isLoading: loadingFeatures } = usePropertyFeatures();
   const { data: proximities = [], isLoading: loadingProximities } = usePropertyProximities();
   const { data: users = [] } = useUsers();
-  const { user, profile, isSuperAdmin } = useAuth();
   const createPropertyType = useCreatePropertyType();
   const createProperty = useCreateProperty();
   const updateProperty = useUpdateProperty();
