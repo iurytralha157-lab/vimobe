@@ -822,99 +822,102 @@ export default function Pipelines() {
         {/* Pipeline Selector + Toolbar */}
         {/* Mobile: Single compact row */}
         {isMobile ? (
-          <div className="flex items-center gap-1 mb-3 w-full">
-            {/* Pipeline Selector */}
-            <Popover open={funnelPopoverOpen} onOpenChange={(open) => {
-              setFunnelPopoverOpen(open);
-              if (open) setTempPipelineId(selectedPipelineId);
-            }}>
-              <PopoverTrigger asChild>
-                <Button variant="outline" size="sm" className="h-8 px-2 gap-1 text-[10px] font-bold text-primary border-primary/20">
-                  <Filter className="h-3 w-3" />
-                  Funil
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent align="start" className="w-[280px] p-4 z-[100]">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between border-b pb-2">
-                    <h4 className="font-bold text-sm">Selecionar Funil</h4>
-                    {isAdmin && (
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setFunnelPopoverOpen(false); setNewPipelineDialogOpen(true); }}>
-                        <Plus className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                  <ScrollArea className="h-[200px] pr-2">
-                    <RadioGroup value={tempPipelineId || ''} onValueChange={setTempPipelineId} className="gap-1">
-                      {pipelines.map(pipeline => (
-                        <div key={pipeline.id} className="flex items-center justify-between p-2 rounded-md hover:bg-muted group">
-                          <div className="flex items-center space-x-3 flex-1" onClick={() => setTempPipelineId(pipeline.id)}>
-                            <RadioGroupItem value={pipeline.id} id={`mobile-popover-${pipeline.id}`} />
-                            <Label htmlFor={`mobile-popover-${pipeline.id}`} className="flex-1 cursor-pointer text-sm font-medium">{pipeline.name}</Label>
-                          </div>
-                          {isAdmin && pipelines.length > 1 && (
-                            <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={(e) => { e.stopPropagation(); handleDeletePipeline(pipeline.id); }}>
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          )}
-                        </div>
-                      ))}
-                    </RadioGroup>
-                  </ScrollArea>
-                  <div className="pt-2 border-t flex flex-col gap-2">
-                    <Button className="w-full" onClick={() => { setSelectedPipelineId(tempPipelineId); setFunnelPopoverOpen(false); }}>
-                      Aplicar Filtro
-                    </Button>
-                    {canEditPipeline && (
-                      <Button variant="ghost" size="sm" className="w-full text-xs gap-2" onClick={() => { setFunnelPopoverOpen(false); setStagesEditorOpen(true); }}>
-                        <Settings className="h-3.5 w-3.5" />
-                        Gerenciar Pipeline
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </PopoverContent>
-            </Popover>
-
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-8 w-8 flex-shrink-0 border-primary/20 text-primary"
-              onClick={handleManualRefresh}
-              disabled={isRefreshing}
-            >
-              <RefreshCw className={cn("h-3.5 w-3.5", isRefreshing && "animate-spin")} />
-            </Button>
-
-            <div className="w-px h-5 bg-border flex-shrink-0 mx-0.5" />
-
-            {/* Date Filter */}
-            <DateFilterPopover
-              datePreset={datePreset}
-              onDatePresetChange={setDatePreset}
-              customDateRange={customDateRange}
-              onCustomDateRangeChange={setCustomDateRange}
-              triggerClassName="h-8 px-2 text-xs justify-center flex-1 min-w-0"
-            />
-
-            {/* Filters Popover */}
-            <Popover>
-              <PopoverTrigger asChild>
+          <div className="flex flex-col gap-3 mb-3 w-full">
+            {/* Pipelines List - Horizontal Scroll */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
+              {pipelines.map(pipeline => (
                 <Button
-                  variant="outline"
-                  size="icon"
+                  key={pipeline.id}
+                  variant={selectedPipelineId === pipeline.id ? "default" : "outline"}
+                  size="sm"
                   className={cn(
-                    "h-8 w-8 flex-shrink-0 relative",
-                    ((filterUser && filterUser !== 'all') || (filterTag && filterTag !== 'all') || (filterDealStatus && filterDealStatus !== 'all') || (filterCampaign && filterCampaign !== 'all') || (filterAdSet && filterAdSet !== 'all') || (filterAd && filterAd !== 'all') || searchQuery) && "border-primary text-primary"
+                    "h-8 px-3 text-xs font-semibold whitespace-nowrap rounded-full shrink-0",
+                    selectedPipelineId === pipeline.id ? "bg-primary text-primary-foreground shadow-sm" : "border-primary/20 text-primary hover:bg-primary/5"
                   )}
+                  onClick={() => setSelectedPipelineId(pipeline.id)}
                 >
-                  <SlidersHorizontal className="h-3.5 w-3.5" />
-                  {((filterUser && filterUser !== 'all') || (filterTag && filterTag !== 'all') || (filterDealStatus && filterDealStatus !== 'all') || (filterCampaign && filterCampaign !== 'all') || (filterAdSet && filterAdSet !== 'all') || (filterAd && filterAd !== 'all') || searchQuery) && (
-                    <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-primary" />
-                  )}
+                  {pipeline.name}
                 </Button>
-              </PopoverTrigger>
-              <PopoverContent align="end" className="w-64 p-3 max-h-[80vh] overflow-y-auto">
+              ))}
+              {isAdmin && (
+                <Button 
+                  variant="outline" 
+                  size="icon" 
+                  className="h-8 w-8 shrink-0 rounded-full border-dashed border-primary/40 text-primary hover:bg-primary/5"
+                  onClick={() => setNewPipelineDialogOpen(true)}
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+
+            {/* Toolbar row */}
+            <div className="flex items-center gap-1.5 w-full overflow-x-auto pb-1">
+              <div className="relative flex-1 min-w-[120px]">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar..."
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  className="h-8 pl-7 pr-2 text-xs bg-muted/30 border-none focus-visible:ring-1 focus-visible:ring-primary/20"
+                />
+              </div>
+
+              <DateFilterPopover
+                datePreset={datePreset}
+                onDatePresetChange={setDatePreset}
+                customDateRange={customDateRange}
+                onCustomDateRangeChange={setCustomDateRange}
+                triggerClassName="h-8 px-2 text-[10px] justify-center shrink-0 border-primary/10"
+              />
+
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8 shrink-0 border-primary/20 text-primary hover:bg-primary/5"
+                onClick={handleManualRefresh}
+                disabled={isRefreshing}
+              >
+                <RefreshCw className={cn("h-3.5 w-3.5", isRefreshing && "animate-spin")} />
+              </Button>
+
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className={cn(
+                      "h-8 w-8 shrink-0 relative border-primary/20 text-primary hover:bg-primary/5",
+                      activeFiltersCount > 0 && "border-primary text-primary bg-primary/5"
+                    )}
+                  >
+                    <SlidersHorizontal className="h-3.5 w-3.5" />
+                    {activeFiltersCount > 0 && (
+                      <Badge className="absolute -top-1 -right-1 h-3.5 min-w-[14px] p-0 px-0.5 text-[9px] flex items-center justify-center bg-primary text-white border-white border">
+                        {activeFiltersCount}
+                      </Badge>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-64 p-3 max-h-[80vh] overflow-y-auto">
+...
+                  <div className="space-y-3">
+...
+                  </div>
+                </PopoverContent>
+              </Popover>
+              
+              <Button 
+                size="sm" 
+                className="h-8 px-3 text-xs gap-1.5 font-bold shadow-md bg-primary hover:bg-primary/90 shrink-0"
+                onClick={() => openNewLeadDialog()}
+              >
+                <Plus className="h-3.5 w-3.5" />
+                {newButtonLabel}
+              </Button>
+            </div>
+          </div>
+        ) : (
                 <div className="space-y-4">
                   <div className="space-y-1.5">
                     <div className="relative">
