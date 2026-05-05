@@ -1,5 +1,5 @@
 import { AppLayout } from "@/components/layout/AppLayout";
-import { useOrganizationSite, useCreateOrganizationSite, useUpdateOrganizationSite, useUploadSiteAsset } from "@/hooks/use-organization-site";
+import { useOrganizationSite, useCreateOrganizationSite, useUpdateOrganizationSite } from "@/hooks/use-organization-site";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
