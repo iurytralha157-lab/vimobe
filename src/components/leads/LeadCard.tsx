@@ -316,7 +316,7 @@ export const LeadCard = memo(function LeadCard({
               {/* Ícones de ação */}
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <button onClick={handlePhoneClick} disabled={!hasPhone} className={cn("h-6 w-6 rounded-full flex items-center justify-center transition-colors", hasPhone ? iconColors.phone : "bg-muted text-muted-foreground/50 cursor-not-allowed")}>
+                  <button onMouseDown={e => e.stopPropagation()} onClick={handlePhoneClick} disabled={!hasPhone} className={cn("h-6 w-6 rounded-full flex items-center justify-center transition-colors", hasPhone ? iconColors.phone : "bg-muted text-muted-foreground/50 cursor-not-allowed")}>
                     <Phone className="h-3 w-3" />
                   </button>
                 </TooltipTrigger>
