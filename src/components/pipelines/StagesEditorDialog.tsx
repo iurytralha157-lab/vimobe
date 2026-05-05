@@ -56,15 +56,22 @@ export function StagesEditorDialog({
   const [isAdding, setIsAdding] = useState(false);
   const [newName, setNewName] = useState('');
   const [newColor, setNewColor] = useState('#6b7280');
+  const [currentPipelineName, setCurrentPipelineName] = useState(pipelineName);
+  const [isEditingPipelineName, setIsEditingPipelineName] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const updatePipeline = useUpdatePipeline();
 
-  // Initialize stages from props
+  // Initialize stages and pipeline name from props
   useEffect(() => {
-    if (open && initialStages.length > 0) {
-      setStages([...initialStages].sort((a, b) => a.position - b.position));
+    if (open) {
+      if (initialStages.length > 0) {
+        setStages([...initialStages].sort((a, b) => a.position - b.position));
+      }
+      setCurrentPipelineName(pipelineName);
       setHasChanges(false);
+      setIsEditingPipelineName(false);
     }
-  }, [open, initialStages]);
+  }, [open, initialStages, pipelineName]);
 
   const handleDragEnd = (result: DropResult) => {
     if (!result.destination) return;
