@@ -93,7 +93,7 @@ interface CreateQueueInput {
   target_stage_id: string;
   is_active: boolean;
   settings: QueueSettings;
-  schedule: ScheduleDay[];
+  schedule?: ScheduleDay[];
   conditions: RuleCondition[];
   members: QueueMember[];
   ai_agent_id?: string | null;
