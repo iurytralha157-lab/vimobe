@@ -842,16 +842,28 @@ export default function Pipelines() {
             <Button
               variant="outline"
               size="icon"
-              className={cn("h-8 w-8 flex-shrink-0", isRefreshing && "text-primary")}
+              className={cn(
+                "h-8 w-8 flex-shrink-0 transition-colors", 
+                isRefreshing && "text-primary border-primary bg-primary/5"
+              )}
               onClick={handleManualRefresh}
               disabled={isRefreshing}
             >
               <RefreshCw className={cn("h-3.5 w-3.5", isRefreshing && "animate-spin")} />
             </Button>
 
+            {/* New Lead Button (Mobile) */}
+            <Button
+              size="icon"
+              className="h-8 w-8 flex-shrink-0 bg-primary hover:bg-primary/90 text-primary-foreground border-none shadow-none"
+              onClick={() => openNewLeadDialog()}
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+
             {canEditPipeline && (
               <Button
-                variant="ghost"
+                variant="outline"
                 size="icon"
                 className="h-8 w-8 flex-shrink-0"
                 onClick={() => setStagesEditorOpen(true)}
@@ -1068,24 +1080,6 @@ export default function Pipelines() {
 
                 <div className="w-px h-4 bg-border mx-1" />
 
-                {/* Sync Button */}
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className={cn("h-7 w-7", isRefreshing && "text-primary")}
-                        onClick={handleManualRefresh}
-                        disabled={isRefreshing}
-                      >
-                        <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Sincronizar Atualizações</TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-
                 {canEditPipeline && (
                   <TooltipProvider>
                     <Tooltip>
@@ -1106,13 +1100,34 @@ export default function Pipelines() {
                 )}
               </div>
 
+              {/* Sync Button */}
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className={cn(
+                        "h-8 w-8 transition-colors",
+                        isRefreshing && "text-primary border-primary bg-primary/5"
+                      )}
+                      onClick={handleManualRefresh}
+                      disabled={isRefreshing}
+                    >
+                      <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Sincronizar Atualizações</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
               {/* Date Filter */}
               <DateFilterPopover
                 datePreset={datePreset}
                 onDatePresetChange={setDatePreset}
                 customDateRange={customDateRange}
                 onCustomDateRangeChange={setCustomDateRange}
-                triggerClassName="h-10 w-auto min-w-[150px] text-xs justify-start flex-shrink-0 bg-white"
+                triggerClassName="h-8 w-auto min-w-[140px] text-xs justify-start flex-shrink-0 bg-background"
               />
 
               {/* Consolidated Filters Button */}
@@ -1121,14 +1136,14 @@ export default function Pipelines() {
                   <Button 
                     variant="outline" 
                     className={cn(
-                      "h-10 px-4 gap-2 text-xs font-medium bg-white transition-all",
-                      ((filterUser && filterUser !== 'all') || (filterTag && filterTag !== 'all') || (filterDealStatus && filterDealStatus !== 'all') || (filterCampaign !== 'all' || filterAdSet !== 'all' || filterAd !== 'all') || searchQuery) && "border-primary/50 text-primary bg-primary/5 shadow-sm"
+                      "h-8 px-3 gap-2 text-xs font-medium bg-background transition-all",
+                      ((filterUser && filterUser !== 'all') || (filterTag && filterTag !== 'all') || (filterDealStatus && filterDealStatus !== 'all') || (filterCampaign !== 'all' || filterAdSet !== 'all' || filterAd !== 'all') || searchQuery) && "border-primary text-primary bg-primary/5"
                     )}
                   >
-                    <Filter className="h-4 w-4" />
+                    <Filter className="h-3.5 w-3.5" />
                     Filtros
                     {((filterUser && filterUser !== 'all') || (filterTag && filterTag !== 'all') || (filterDealStatus && filterDealStatus !== 'all') || (filterCampaign !== 'all' || filterAdSet !== 'all' || filterAd !== 'all') || searchQuery) && (
-                      <Badge variant="default" className="h-4.5 min-w-4.5 p-0 px-1 flex items-center justify-center text-[10px] bg-primary">
+                      <Badge variant="default" className="h-4 w-4 p-0 flex items-center justify-center text-[10px] bg-primary">
                         {[
                           filterUser && filterUser !== 'all',
                           filterTag && filterTag !== 'all',
@@ -1271,9 +1286,9 @@ export default function Pipelines() {
               {/* Desktop New Button */}
               <Button 
                 data-tour="pipeline-new-lead" 
-                size="default" 
+                size="sm" 
                 onClick={() => openNewLeadDialog()} 
-                className="h-10 px-5 bg-[#f97316] hover:bg-[#ea580c] shadow-md transition-all font-semibold gap-2"
+                className="h-8 px-4 bg-primary hover:bg-primary/90 transition-all font-semibold gap-2 border-none shadow-none"
               >
                 <Plus className="h-5 w-5" />
                 {newButtonLabel}
