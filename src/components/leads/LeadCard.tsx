@@ -217,11 +217,7 @@ export const LeadCard = memo(function LeadCard({
               </div>
             </div>
             
-            {!isDragDisabled && (
-              <div {...provided.dragHandleProps} className="p-1 -mr-1 text-muted-foreground/30 hover:text-muted-foreground transition-colors cursor-grab active:cursor-grabbing">
-                <GripVertical className="h-4 w-4" />
-              </div>
-            )}
+            {/* Arraste agora habilitado no card inteiro via dragHandleProps acima */}
           </div>
 
           {/* Source indicator: Meta campaign, Google campaign, or Website property */}
