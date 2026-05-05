@@ -197,32 +197,6 @@ export default function SiteSettings() {
     }
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'logo' | 'favicon' | 'about' | 'hero' | 'banner' | 'watermark') => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    try {
-      const url = await uploadAsset.mutateAsync({ file, type });
-      
-      if (type === 'logo') {
-        await updateSite.mutateAsync({ logo_url: url });
-      } else if (type === 'favicon') {
-        await updateSite.mutateAsync({ favicon_url: url });
-      } else if (type === 'about') {
-        await updateSite.mutateAsync({ about_image_url: url });
-      } else if (type === 'hero') {
-        await updateSite.mutateAsync({ hero_image_url: url });
-      } else if (type === 'banner') {
-        await updateSite.mutateAsync({ page_banner_url: url });
-      } else if (type === 'watermark') {
-        await updateSite.mutateAsync({ watermark_logo_url: url });
-      }
-      
-      toast.success('Imagem enviada com sucesso!');
-    } catch (error) {
-      toast.error('Erro ao enviar imagem');
-    }
-  };
 
   const getPublishedSiteUrl = () => {
     if (formData.custom_domain && site?.domain_verified) {
