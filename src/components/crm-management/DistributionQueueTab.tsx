@@ -141,12 +141,10 @@ export function DistributionQueueTab() {
         .from('leads')
         .select(`
           id, name, source, created_at, deal_status, 
-          stage:stages(name, color),
-          priority_index:leads_priority_index
+          stage:stages(name, color)
         `)
         .eq('organization_id', organization!.id)
         .is('assigned_user_id', null)
-        .order('leads_priority_index', { ascending: true, nullsFirst: false })
         .order('created_at', { ascending: true });
       
       if (error) throw error;
