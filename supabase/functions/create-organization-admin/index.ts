@@ -65,7 +65,22 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { name, segment = 'imobiliario', adminEmail, adminName, adminPassword } = await req.json();
+    const { 
+      name, 
+      segment = 'imobiliario', 
+      adminEmail, 
+      adminName, 
+      adminPassword, 
+      whatsapp, 
+      phone,
+      cnpj,
+      address,
+      city,
+      neighborhood,
+      number,
+      complement,
+      cpf
+    } = await req.json();
 
     if (!name || !adminEmail || !adminName || !adminPassword) {
       return new Response(JSON.stringify({ error: 'Missing required fields' }), {
@@ -89,6 +104,13 @@ Deno.serve(async (req) => {
       .insert({
         name,
         segment,
+        whatsapp: whatsapp || null,
+        cnpj: cnpj || null,
+        endereco: address || null,
+        cidade: city || null,
+        bairro: neighborhood || null,
+        numero: number || null,
+        complemento: complement || null,
       })
       .select()
       .single();
@@ -129,6 +151,9 @@ Deno.serve(async (req) => {
         role: 'admin',
         organization_id: org.id,
         is_active: true,
+        whatsapp: phone || whatsapp || null,
+        phone: phone || null,
+        cpf: cpf || null,
       })
       .eq('id', authData.user.id);
 
