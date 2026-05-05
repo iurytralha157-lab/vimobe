@@ -218,9 +218,19 @@ export default function Pipelines() {
   const canEditPipeline = useCanEditCadences();
   const { recordFirstResponse } = useRecordFirstResponseOnAction();
   const isMobile = useIsMobile();
-  // Compute VGV directly from filteredStages so the badge always matches visible leads
-  // (This must be defined after filteredStages — see below)
-  
+  // activeFiltersCount para o badge do botão de filtro
+  const activeFiltersCount = useMemo(() => {
+    let count = 0;
+    if (filterUser && filterUser !== 'all') count++;
+    if (filterTag && filterTag !== 'all') count++;
+    if (filterDealStatus && filterDealStatus !== 'all') count++;
+    if (filterCampaign && filterCampaign !== 'all') count++;
+    if (filterAdSet && filterAdSet !== 'all') count++;
+    if (filterAd && filterAd !== 'all') count++;
+    if (searchQuery && searchQuery.trim().length > 0) count++;
+    return count;
+  }, [filterUser, filterTag, filterDealStatus, filterCampaign, filterAdSet, filterAd, searchQuery]);
+
   const currentPipeline = pipelines.find(p => p.id === selectedPipelineId);
   const isLoading = pipelinesLoading || baseStagesLoading;
   const isInitialLeadsLoading = leadsLoading && stagesWithLeads.length === 0;
