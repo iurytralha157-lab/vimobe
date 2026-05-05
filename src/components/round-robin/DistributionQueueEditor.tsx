@@ -5,6 +5,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet';
+import { PropertyPickerDialog } from '@/components/properties/PropertyPickerDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -614,21 +615,11 @@ export function DistributionQueueEditor({
         );
       case 'interest_property':
         return (
-          <Select
-            value={condition.values[0] || ''}
-            onValueChange={v => updateCondition(condition.id, { values: [v] })}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Selecione um imóvel..." />
-            </SelectTrigger>
-            <SelectContent>
-              {properties.map(prop => (
-                <SelectItem key={prop.id} value={prop.id}>
-                  {prop.code} - {prop.title || prop.bairro || 'Imóvel'}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <PropertyPickerDialog
+            properties={properties}
+            selectedPropertyId={condition.values[0]}
+            onSelect={(prop) => updateCondition(condition.id, { values: [prop.id] })}
+          />
         );
       case 'interest_plan':
         return (
