@@ -8,6 +8,7 @@ import { GripVertical, Trash2, Loader2, Pencil, Check, X, Plus } from 'lucide-re
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { useUpdatePipeline } from '@/hooks/use-stages';
 import {
   AlertDialog,
   AlertDialogAction,
