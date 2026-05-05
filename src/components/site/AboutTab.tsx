@@ -128,19 +128,13 @@ export function AboutTab({ formData, setFormData, site, isAdmin, onImageChange }
               label="Imagem"
               description="PNG, JPG ou WEBP até 5MB"
               value={site?.about_image_url}
-              onChange={(url) => {
-                // We call the handler passed from parent, but adapt it to just the URL
-                // Since handleFileUpload in parent was (e, type), we might need to adjust or 
-                // handle it here if we want to be more direct.
-                // But SiteSettings.tsx has handleFileUpload which does the upload.
-                // Actually, let's look at how we used it in SiteSettings.tsx
-                // We'll just call updateSite directly if we have access, or pass a new prop.
-              }}
+              onChange={(url) => onImageChange?.(url)}
               bucket="logos"
               path="sites"
               aspectRatio="video"
               disabled={!isAdmin}
             />
+
 
           </div>
 
