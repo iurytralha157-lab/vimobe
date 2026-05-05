@@ -1075,7 +1075,7 @@ export function LeadDetailDialog({
           {/* Schedule Tab */}
           {activeTab === 'schedule' && <div className="space-y-4">
               {scheduleEvents.length > 0 && (
-                <Button onClick={() => setScheduleFormOpen(true)} className="w-full rounded-xl h-11">
+                <Button variant="default" onClick={() => setScheduleFormOpen(true)} className="w-full rounded-xl h-11">
                   <Plus className="h-4 w-4 mr-2" />
                   Novo agendamento
                 </Button>
@@ -1965,7 +1965,7 @@ export function LeadDetailDialog({
           <TabsContent value="schedule" className="p-6 mt-0">
             <div className="space-y-4">
               {scheduleEvents.length > 0 && (
-                <Button onClick={() => setScheduleFormOpen(true)} className="w-full rounded-xl h-11">
+                <Button variant="default" onClick={() => setScheduleFormOpen(true)} className="w-full rounded-xl h-11">
                   <Plus className="h-4 w-4 mr-2" />
                   Novo agendamento
                 </Button>
