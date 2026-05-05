@@ -1450,7 +1450,16 @@ export default function Pipelines() {
                 </PopoverContent>
               </Popover>
             
-              {/* Botão de Refresh removido */}
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleManualRefresh} 
+                disabled={isRefreshing}
+                className="h-8 gap-2 border-primary/20 hover:bg-primary/5 text-primary font-medium"
+              >
+                <RefreshCw className={cn("h-3.5 w-3.5", isRefreshing && "animate-spin")} />
+                <span className="hidden lg:inline">Atualizar</span>
+              </Button>
               
               {/* Desktop New Button */}
               <Button data-tour="pipeline-new-lead" size="sm" onClick={() => openNewLeadDialog()} className="flex-shrink-0 bg-[#f97316] hover:bg-[#ea580c]">
