@@ -140,7 +140,7 @@ export function SiteAnalyticsTab() {
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
               <Eye className="w-4 h-4 text-primary" />
-              Visitas
+              Visitas no site
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -239,7 +239,7 @@ export function SiteAnalyticsTab() {
                     <Line
                       type="monotone"
                       dataKey="views"
-                      name="Visitas"
+                      name="Visitas no site"
                       className="stroke-primary"
                       stroke="hsl(var(--primary))"
                       strokeWidth={2}
