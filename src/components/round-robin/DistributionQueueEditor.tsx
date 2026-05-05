@@ -184,10 +184,8 @@ export function DistributionQueueEditor({
       preserve_position: true,
       require_checkin: false,
     },
-    schedule: defaultSchedule,
     conditions: [],
     members: [],
-    ai_agent_id: null,
   });
 
   // Get stages for selected pipeline
