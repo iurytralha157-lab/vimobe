@@ -1,7 +1,9 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Copy, Terminal, Globe, Lock, Code2, Shield } from 'lucide-react';
+import { Copy, Terminal, Globe, Lock, Code2, Shield, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
+import { Link } from 'react-router-dom';
+import { useEffect } from 'react';
 
 const SUPABASE_URL = (import.meta as any).env?.VITE_SUPABASE_URL || 'https://iemalzlfnbouobyjwlwi.supabase.co';
 const BASE_URL = `${SUPABASE_URL}/functions/v1/public-api`;
