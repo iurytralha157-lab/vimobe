@@ -124,36 +124,24 @@ export function AboutTab({ formData, setFormData, site, isAdmin, handleFileUploa
             </div>
 
             {/* Right: Image */}
-            <div className="space-y-3 flex flex-col">
-              <Label>Imagem</Label>
-              {site?.about_image_url ? (
-                <div className="border rounded-lg p-4 bg-muted flex-1 flex items-center justify-center">
-                  <img src={site.about_image_url} alt="Sobre" className="max-h-48 object-cover rounded" />
-                </div>
-              ) : (
-                <div className="border rounded-lg p-4 bg-muted flex-1 flex items-center justify-center text-muted-foreground text-sm">
-                  Nenhuma imagem enviada
-                </div>
-              )}
-              <div>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => handleFileUpload(e, 'about')}
-                  className="hidden"
-                  id="about-upload"
-                  disabled={!isAdmin}
-                />
-                <label htmlFor="about-upload">
-                  <Button variant="outline" size="sm" asChild disabled={!isAdmin}>
-                    <span>
-                      <Upload className="w-4 h-4 mr-2" />
-                      Enviar Imagem
-                    </span>
-                  </Button>
-                </label>
-              </div>
-            </div>
+            <ImageUpload
+              label="Imagem"
+              description="PNG, JPG ou WEBP até 5MB"
+              value={site?.about_image_url}
+              onChange={(url) => {
+                // We call the handler passed from parent, but adapt it to just the URL
+                // Since handleFileUpload in parent was (e, type), we might need to adjust or 
+                // handle it here if we want to be more direct.
+                // But SiteSettings.tsx has handleFileUpload which does the upload.
+                // Actually, let's look at how we used it in SiteSettings.tsx
+                // We'll just call updateSite directly if we have access, or pass a new prop.
+              }}
+              bucket="logos"
+              path="sites"
+              aspectRatio="video"
+              disabled={!isAdmin}
+            />
+
           </div>
 
           <div className="flex items-center justify-between pt-2 border-t">
