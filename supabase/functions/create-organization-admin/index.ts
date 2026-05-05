@@ -65,7 +65,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { name, segment = 'imobiliario', adminEmail, adminName, adminPassword } = await req.json();
+    const { name, segment = 'imobiliario', adminEmail, adminName, adminPassword, whatsapp, phone } = await req.json();
 
     if (!name || !adminEmail || !adminName || !adminPassword) {
       return new Response(JSON.stringify({ error: 'Missing required fields' }), {
