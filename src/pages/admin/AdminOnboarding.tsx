@@ -142,6 +142,13 @@ export default function AdminOnboarding() {
         adminPassword: generatedPassword,
         whatsapp: selectedRequest.company_whatsapp,
         phone: selectedRequest.responsible_phone,
+        cnpj: selectedRequest.cnpj,
+        address: selectedRequest.company_address,
+        city: selectedRequest.company_city,
+        neighborhood: selectedRequest.company_neighborhood,
+        number: selectedRequest.company_number,
+        complement: selectedRequest.company_complement,
+        cpf: selectedRequest.responsible_cpf,
       });
 
       const newOrgId = orgResult?.organization?.id;
