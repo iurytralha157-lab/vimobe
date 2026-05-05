@@ -27,13 +27,6 @@ interface ProfileFormData {
   phone: string;
   whatsapp: string;
   cpf: string;
-  cep: string;
-  endereco: string;
-  numero: string;
-  complemento: string;
-  bairro: string;
-  cidade: string;
-  uf: string;
 }
 
 interface OrganizationFormData {
