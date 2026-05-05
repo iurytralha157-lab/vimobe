@@ -838,33 +838,24 @@ export default function Pipelines() {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {/* Search Button */}
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className={cn(
-                    "h-8 w-8 flex-shrink-0",
-                    searchQuery && "border-primary text-primary bg-primary/5"
-                  )}
-                >
-                  <Search className="h-3.5 w-3.5" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent align="start" className="w-[260px] p-2">
-                <div className="relative">
-                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                  <Input
-                    placeholder="Buscar lead..."
-                    value={searchInput}
-                    onChange={(e) => setSearchInput(e.target.value)}
-                    className="h-9 w-full pl-8 text-sm bg-muted/20"
-                    autoFocus
-                  />
+            {/* Search Field (Mobile) */}
+            <div className="relative flex-shrink-0">
+              <Search className={cn(
+                "absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground transition-colors",
+                searchInput && "text-primary"
+              )} />
+              <Input
+                placeholder="Buscar..."
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                className="h-8 w-[110px] pl-7 pr-2 text-[10px] bg-background border-border"
+              />
+              {leadsLoading && searchInput && (
+                <div className="absolute right-1.5 top-1/2 -translate-y-1/2">
+                  <Loader2 className="h-2.5 w-2.5 animate-spin text-muted-foreground" />
                 </div>
-              </PopoverContent>
-            </Popover>
+              )}
+            </div>
 
             {/* Sync Button */}
             <Button
