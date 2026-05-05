@@ -165,7 +165,7 @@ export const LeadCard = memo(function LeadCard({
   
   return <>
     <Draggable draggableId={lead.id} index={index} isDragDisabled={isDragDisabled}>
-      {(provided, snapshot) => <div ref={provided.innerRef} {...provided.draggableProps} className={cn("bg-card border-border rounded-lg p-3 transition-all duration-200 group hover:shadow-lg hover:shadow-primary/10 hover:border-primary/30 hover:-translate-y-0.5 border-0 relative", isDragDisabled ? "cursor-default" : "cursor-pointer", snapshot.isDragging && "shadow-xl rotate-1 scale-[1.02] border-primary", isLost && "bg-destructive/5 border-destructive/30 hover:bg-destructive/10", isWon && "bg-emerald-500/5 border-emerald-500/30")} onClick={onClick}>
+      {(provided, snapshot) => <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} className={cn("bg-card border-border rounded-lg p-3 transition-all duration-200 group hover:shadow-lg hover:shadow-primary/10 hover:border-primary/30 hover:-translate-y-0.5 border-0 relative", isDragDisabled ? "cursor-default" : "cursor-pointer", snapshot.isDragging && "shadow-xl rotate-1 scale-[1.02] border-primary", isLost && "bg-destructive/5 border-destructive/30 hover:bg-destructive/10", isWon && "bg-emerald-500/5 border-emerald-500/30")} onClick={onClick}>
           {/* Deal Status Badge + Tags */}
           <div className="flex items-center gap-1 mb-2 flex-wrap">
             {/* Deal Status Badge */}
@@ -217,11 +217,7 @@ export const LeadCard = memo(function LeadCard({
               </div>
             </div>
             
-            {!isDragDisabled && (
-              <div {...provided.dragHandleProps} className="p-1 -mr-1 text-muted-foreground/30 hover:text-muted-foreground transition-colors cursor-grab active:cursor-grabbing">
-                <GripVertical className="h-4 w-4" />
-              </div>
-            )}
+            {/* Arraste agora habilitado no card inteiro via dragHandleProps acima */}
           </div>
 
           {/* Source indicator: Meta campaign, Google campaign, or Website property */}
@@ -320,7 +316,7 @@ export const LeadCard = memo(function LeadCard({
               {/* Ícones de ação */}
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <button onClick={handlePhoneClick} disabled={!hasPhone} className={cn("h-6 w-6 rounded-full flex items-center justify-center transition-colors", hasPhone ? iconColors.phone : "bg-muted text-muted-foreground/50 cursor-not-allowed")}>
+                  <button onMouseDown={e => e.stopPropagation()} onClick={handlePhoneClick} disabled={!hasPhone} className={cn("h-6 w-6 rounded-full flex items-center justify-center transition-colors", hasPhone ? iconColors.phone : "bg-muted text-muted-foreground/50 cursor-not-allowed")}>
                     <Phone className="h-3 w-3" />
                   </button>
                 </TooltipTrigger>
@@ -331,7 +327,7 @@ export const LeadCard = memo(function LeadCard({
 
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <button onClick={handleWhatsAppClick} disabled={!hasPhone} className={cn("h-6 w-6 rounded-full flex items-center justify-center transition-colors", hasPhone ? iconColors.whatsapp : "bg-muted text-muted-foreground/50 cursor-not-allowed")}>
+                  <button onMouseDown={e => e.stopPropagation()} onClick={handleWhatsAppClick} disabled={!hasPhone} className={cn("h-6 w-6 rounded-full flex items-center justify-center transition-colors", hasPhone ? iconColors.whatsapp : "bg-muted text-muted-foreground/50 cursor-not-allowed")}>
                     <MessageCircle className="h-3 w-3" />
                   </button>
                 </TooltipTrigger>
@@ -342,7 +338,7 @@ export const LeadCard = memo(function LeadCard({
 
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <button onClick={handleEmailClick} disabled={!hasEmail} className={cn("h-6 w-6 rounded-full flex items-center justify-center transition-colors", hasEmail ? iconColors.email : "bg-muted text-muted-foreground/50 cursor-not-allowed")}>
+                  <button onMouseDown={e => e.stopPropagation()} onClick={handleEmailClick} disabled={!hasEmail} className={cn("h-6 w-6 rounded-full flex items-center justify-center transition-colors", hasEmail ? iconColors.email : "bg-muted text-muted-foreground/50 cursor-not-allowed")}>
                     <Mail className="h-3 w-3" />
                   </button>
                 </TooltipTrigger>
