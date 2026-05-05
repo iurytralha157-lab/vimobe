@@ -140,6 +140,8 @@ export default function AdminOnboarding() {
         adminEmail: selectedRequest.responsible_email,
         adminName: selectedRequest.responsible_name,
         adminPassword: generatedPassword,
+        whatsapp: selectedRequest.company_whatsapp,
+        phone: selectedRequest.responsible_phone,
       });
 
       const newOrgId = orgResult?.organization?.id;
