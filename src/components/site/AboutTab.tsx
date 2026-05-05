@@ -31,7 +31,7 @@ interface AboutTabProps {
   setFormData: (data: any) => void;
   site: any;
   isAdmin: boolean;
-  handleFileUpload: (e: React.ChangeEvent<HTMLInputElement>, type: string) => void;
+  onImageChange?: (url: string | null) => void;
 }
 
 export function AboutTab({ formData, setFormData, site, isAdmin, handleFileUpload }: AboutTabProps) {
