@@ -1088,7 +1088,7 @@ ${getWorkerCode()}`;
                   </div>
                 </CardContent>
               </Card>
-
+import { ImageUpload } from "@/components/ui/image-upload";
 
               <Card>
                 <CardHeader>
