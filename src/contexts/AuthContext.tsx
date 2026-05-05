@@ -138,7 +138,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             // Optimized: Select only required fields
             const { data: orgData } = await supabase
               .from('organizations')
-              .select('id, name, logo_url, theme_mode, accent_color, is_active')
+              .select('id, name, logo_url, theme_mode, accent_color, is_active, subscription_status, segment, cnpj, inscricao_estadual, razao_social, nome_fantasia, cep, endereco, numero, complemento, bairro, cidade, uf, telefone, whatsapp, email, website, default_commission_percentage')
               .eq('id', orgIdToFetch)
               .single();
 
