@@ -216,6 +216,12 @@ export const LeadCard = memo(function LeadCard({
                 {lead.phone && <p className="text-[11px] text-muted-foreground truncate">{formatPhoneForDisplay(lead.phone)}</p>}
               </div>
             </div>
+            
+            {!isDragDisabled && (
+              <div {...provided.dragHandleProps} className="p-1 -mr-1 text-muted-foreground/30 hover:text-muted-foreground transition-colors cursor-grab active:cursor-grabbing">
+                <GripVertical className="h-4 w-4" />
+              </div>
+            )}
           </div>
 
           {/* Source indicator: Meta campaign, Google campaign, or Website property */}
