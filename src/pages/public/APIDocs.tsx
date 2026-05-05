@@ -9,6 +9,10 @@ const SUPABASE_URL = (import.meta as any).env?.VITE_SUPABASE_URL || 'https://iem
 const BASE_URL = `${SUPABASE_URL}/functions/v1/public-api`;
 
 export default function APIDocs() {
+  useEffect(() => {
+    document.title = 'Documentação da API | CRM Imobiliário';
+  }, []);
+
   const copy = (text: string) => {
     navigator.clipboard.writeText(text);
     toast.success('Copiado!');
