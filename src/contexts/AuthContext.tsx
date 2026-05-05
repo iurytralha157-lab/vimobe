@@ -104,7 +104,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const [userResult, superAdmin] = await Promise.all([
           supabase
             .from('users')
-            .select('id, organization_id, name, email, role, avatar_url, is_active, language')
+            .select('id, organization_id, name, email, role, avatar_url, is_active, language, phone, whatsapp, cpf, cep, endereco, numero, complemento, bairro, cidade, uf')
             .eq('id', userId)
             .single(),
           checkSuperAdmin(userId)
