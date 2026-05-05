@@ -787,7 +787,7 @@ export default function Pipelines() {
     <AppLayout title="Pipeline" disableMainScroll>
       <div className={cn(
         "flex flex-col h-full overflow-hidden",
-        isMobile && "pb-24"
+        isMobile && "pb-4"
       )}>
         {/* Pipeline Selector + Toolbar */}
         {/* Mobile: Single compact row */}
@@ -1436,7 +1436,7 @@ export default function Pipelines() {
 
         {/* Kanban Board with Drag and Drop */}
         <DragDropContext onDragEnd={handleDragEnd}>
-          <div className={cn("flex-1 overflow-x-auto overflow-y-hidden min-h-0 scrollbar-thin", isMobile ? "pb-3" : "pb-2")}>
+          <div className={cn("flex-1 overflow-x-auto overflow-y-auto min-h-0 scrollbar-thin", isMobile ? "pb-3" : "pb-2")}>
             <div className="flex gap-3 h-full min-w-max px-1">
               {filteredStages.map((stage: any) => (
                 <div 

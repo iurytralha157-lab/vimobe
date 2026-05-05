@@ -1,7 +1,7 @@
 import { useState, memo } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Phone, Mail, MessageCircle, Clock, CheckCircle, User, Zap, Trophy, XCircle, Loader2 } from 'lucide-react';
+import { Phone, Mail, MessageCircle, Clock, CheckCircle, User, Zap, Trophy, XCircle, Loader2, GripVertical } from 'lucide-react';
 import { WhatsAppIcon } from '@/components/icons/WhatsAppIcon';
 import { cn } from '@/lib/utils';
 import { formatResponseTime } from '@/hooks/use-lead-timeline';
@@ -165,7 +165,7 @@ export const LeadCard = memo(function LeadCard({
   
   return <>
     <Draggable draggableId={lead.id} index={index} isDragDisabled={isDragDisabled}>
-      {(provided, snapshot) => <div ref={provided.innerRef} {...provided.draggableProps} {...(isDragDisabled ? {} : provided.dragHandleProps)} className={cn("bg-card border-border rounded-lg p-3 transition-all duration-200 group hover:shadow-lg hover:shadow-primary/10 hover:border-primary/30 hover:-translate-y-0.5 border-0", isDragDisabled ? "cursor-default" : "cursor-pointer", snapshot.isDragging && "shadow-xl rotate-1 scale-[1.02] border-primary", isLost && "bg-destructive/5 border-destructive/30 hover:bg-destructive/10", isWon && "bg-emerald-500/5 border-emerald-500/30")} onClick={onClick}>
+      {(provided, snapshot) => <div ref={provided.innerRef} {...provided.draggableProps} className={cn("bg-card border-border rounded-lg p-3 transition-all duration-200 group hover:shadow-lg hover:shadow-primary/10 hover:border-primary/30 hover:-translate-y-0.5 border-0 relative", isDragDisabled ? "cursor-default" : "cursor-pointer", snapshot.isDragging && "shadow-xl rotate-1 scale-[1.02] border-primary", isLost && "bg-destructive/5 border-destructive/30 hover:bg-destructive/10", isWon && "bg-emerald-500/5 border-emerald-500/30")} onClick={onClick}>
           {/* Deal Status Badge + Tags */}
           <div className="flex items-center gap-1 mb-2 flex-wrap">
             {/* Deal Status Badge */}
@@ -194,7 +194,6 @@ export const LeadCard = memo(function LeadCard({
 
 
 
-          {/* Nome do Lead + Avatar com foto do WhatsApp */}
           <div className="flex items-start justify-between mb-2">
             <div className="flex items-center gap-2 flex-1 min-w-0">
               <div className="relative shrink-0">
@@ -217,6 +216,12 @@ export const LeadCard = memo(function LeadCard({
                 {lead.phone && <p className="text-[11px] text-muted-foreground truncate">{formatPhoneForDisplay(lead.phone)}</p>}
               </div>
             </div>
+            
+            {!isDragDisabled && (
+              <div {...provided.dragHandleProps} className="p-1 -mr-1 text-muted-foreground/30 hover:text-muted-foreground transition-colors cursor-grab active:cursor-grabbing">
+                <GripVertical className="h-4 w-4" />
+              </div>
+            )}
           </div>
 
           {/* Source indicator: Meta campaign, Google campaign, or Website property */}
