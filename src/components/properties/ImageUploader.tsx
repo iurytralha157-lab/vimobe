@@ -31,6 +31,20 @@ export function ImageUploader({
   const [uploadingGallery, setUploadingGallery] = useState(false);
 
   const uploadFile = async (file: File): Promise<string | null> => {
+    // Robust validation
+    const maxSizeInMB = 10;
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    
+    if (!allowedTypes.includes(file.type)) {
+      toast.error(`${file.name}: Tipo de arquivo não permitido.`);
+      return null;
+    }
+    
+    if (file.size > maxSizeInMB * 1024 * 1024) {
+      toast.error(`${file.name}: Arquivo muito grande (limite 10MB).`);
+      return null;
+    }
+
     const fileExt = file.name.split('.').pop();
     
     let orgId = organizationId;
@@ -47,26 +61,32 @@ export function ImageUploader({
     }
     
     if (!orgId) {
-      console.error('Upload error: organization_id not found');
       toast.error('Erro: Organização não encontrada');
       return null;
     }
     
     const propFolder = propertyId || 'temp';
-    const fileName = `orgs/${orgId}/properties/${propFolder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
+    const fileName = `orgs/${orgId}/properties/${propFolder}/${Date.now()}-${Math.random().toString(36).slice(2, 9)}.${fileExt}`;
     
-    const { error: uploadError } = await supabase.storage
-      .from('properties')
-      .upload(fileName, file);
-    
-    if (uploadError) {
-      console.error('Upload error:', uploadError);
+    try {
+      const { error: uploadError } = await supabase.storage
+        .from('properties')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+      
+      if (uploadError) throw uploadError;
+      
+      const { data } = supabase.storage.from('properties').getPublicUrl(fileName);
+      return data.publicUrl;
+    } catch (error: any) {
+      console.error('Upload error:', error);
+      toast.error(`Falha no upload de ${file.name}: ${error.message}`);
       return null;
     }
-    
-    const { data } = supabase.storage.from('properties').getPublicUrl(fileName);
-    return data.publicUrl;
   };
+
 
   const handleMainImageUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

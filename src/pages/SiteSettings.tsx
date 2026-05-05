@@ -1,5 +1,5 @@
 import { AppLayout } from "@/components/layout/AppLayout";
-import { useOrganizationSite, useCreateOrganizationSite, useUpdateOrganizationSite, useUploadSiteAsset } from "@/hooks/use-organization-site";
+import { useOrganizationSite, useCreateOrganizationSite, useUpdateOrganizationSite } from "@/hooks/use-organization-site";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -21,13 +21,14 @@ import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DnsVerificationStatus } from "@/components/site/DnsVerificationStatus";
 import { AnimatedTabNav, AnimatedTabItem } from "@/components/ui/animated-tab-nav";
+import { ImageUpload } from "@/components/ui/image-upload";
 
 export default function SiteSettings() {
   const { profile, organization } = useAuth();
   const { data: site, isLoading } = useOrganizationSite();
   const createSite = useCreateOrganizationSite();
   const updateSite = useUpdateOrganizationSite();
-  const uploadAsset = useUploadSiteAsset();
+  
 
   const [formData, setFormData] = useState({
     is_active: false,
@@ -196,32 +197,6 @@ export default function SiteSettings() {
     }
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'logo' | 'favicon' | 'about' | 'hero' | 'banner' | 'watermark') => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    try {
-      const url = await uploadAsset.mutateAsync({ file, type });
-      
-      if (type === 'logo') {
-        await updateSite.mutateAsync({ logo_url: url });
-      } else if (type === 'favicon') {
-        await updateSite.mutateAsync({ favicon_url: url });
-      } else if (type === 'about') {
-        await updateSite.mutateAsync({ about_image_url: url });
-      } else if (type === 'hero') {
-        await updateSite.mutateAsync({ hero_image_url: url });
-      } else if (type === 'banner') {
-        await updateSite.mutateAsync({ page_banner_url: url });
-      } else if (type === 'watermark') {
-        await updateSite.mutateAsync({ watermark_logo_url: url });
-      }
-      
-      toast.success('Imagem enviada com sucesso!');
-    } catch (error) {
-      toast.error('Erro ao enviar imagem');
-    }
-  };
 
   const getPublishedSiteUrl = () => {
     if (formData.custom_domain && site?.domain_verified) {
@@ -654,68 +629,39 @@ ${getWorkerCode()}`;
                 </CardHeader>
                 <CardContent className="px-4 md:px-6 pb-5 space-y-6">
                   <div className="grid sm:grid-cols-2 gap-6">
-                    <div className="space-y-3">
-                      <Label>Logo</Label>
-                      {site?.logo_url ? (
-                        <div className="border rounded-lg p-4 bg-muted">
-                          <img src={site.logo_url} alt="Logo" className="h-16 object-contain" />
-                        </div>
-                      ) : (
-                        <div className="border rounded-lg p-4 bg-muted text-center text-muted-foreground">
-                          Nenhuma logo enviada
-                        </div>
-                      )}
-                      <div>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => handleFileUpload(e, 'logo')}
-                          className="hidden"
-                          id="logo-upload"
-                          disabled={!isAdmin}
-                        />
-                        <label htmlFor="logo-upload">
-                          <Button variant="outline" size="sm" asChild disabled={!isAdmin}>
-                            <span>
-                              <Upload className="w-4 h-4 mr-2" />
-                              Enviar Logo
-                            </span>
-                          </Button>
-                        </label>
-                      </div>
-                    </div>
+                    <ImageUpload
+                      label="Logo"
+                      description="PNG ou JPG recomendado"
+                      value={site?.logo_url}
+                      onChange={async (url) => {
+                        if (url) {
+                          await updateSite.mutateAsync({ logo_url: url });
+                        } else {
+                          await updateSite.mutateAsync({ logo_url: null });
+                        }
+                      }}
+                      bucket="logos"
+                      path="sites"
+                      disabled={!isAdmin}
+                    />
 
-                    <div className="space-y-3">
-                      <Label>Favicon</Label>
-                      {site?.favicon_url ? (
-                        <div className="border rounded-lg p-4 bg-muted">
-                          <img src={site.favicon_url} alt="Favicon" className="h-8 object-contain" />
-                        </div>
-                      ) : (
-                        <div className="border rounded-lg p-4 bg-muted text-center text-muted-foreground">
-                          Nenhum favicon enviado
-                        </div>
-                      )}
-                      <div>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => handleFileUpload(e, 'favicon')}
-                          className="hidden"
-                          id="favicon-upload"
-                          disabled={!isAdmin}
-                        />
-                        <label htmlFor="favicon-upload">
-                          <Button variant="outline" size="sm" asChild disabled={!isAdmin}>
-                            <span>
-                              <Upload className="w-4 h-4 mr-2" />
-                              Enviar Favicon
-                            </span>
-                          </Button>
-                        </label>
-                      </div>
-                    </div>
+                    <ImageUpload
+                      label="Favicon"
+                      description="Ícone do navegador (ICO ou PNG)"
+                      value={site?.favicon_url}
+                      onChange={async (url) => {
+                        if (url) {
+                          await updateSite.mutateAsync({ favicon_url: url });
+                        } else {
+                          await updateSite.mutateAsync({ favicon_url: null });
+                        }
+                      }}
+                      bucket="logos"
+                      path="sites"
+                      disabled={!isAdmin}
+                    />
                   </div>
+
                 </CardContent>
               </Card>
 
@@ -1001,70 +947,35 @@ ${getWorkerCode()}`;
                 </CardHeader>
                 <CardContent className="px-4 md:px-6 pb-5 space-y-4">
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* Hero Image */}
-                    <div className="space-y-3">
-                      <Label>Imagem do Hero (Tela Inicial)</Label>
-                      {site?.hero_image_url ? (
-                        <div className="border rounded-lg p-4 bg-muted">
-                          <img src={site.hero_image_url} alt="Hero" className="h-32 w-full object-cover rounded" />
-                        </div>
-                      ) : (
-                        <div className="border rounded-lg p-4 bg-muted text-center text-muted-foreground h-32 flex items-center justify-center">
-                          Nenhuma imagem do hero enviada
-                        </div>
-                      )}
-                      <div>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => handleFileUpload(e, 'hero')}
-                          className="hidden"
-                          id="hero-upload"
-                          disabled={!isAdmin}
-                        />
-                        <label htmlFor="hero-upload">
-                          <Button variant="outline" size="sm" asChild disabled={!isAdmin}>
-                            <span>
-                              <Upload className="w-4 h-4 mr-2" />
-                              Enviar Imagem Hero
-                            </span>
-                          </Button>
-                        </label>
-                      </div>
-                    </div>
+                    <ImageUpload
+                      label="Imagem do Hero (Tela Inicial)"
+                      description="PNG, JPG ou WEBP até 10MB"
+                      value={site?.hero_image_url}
+                      onChange={async (url) => {
+                        await updateSite.mutateAsync({ hero_image_url: url });
+                      }}
+                      bucket="logos"
+                      path="sites"
+                      maxSizeInMB={10}
+                      aspectRatio="video"
+                      disabled={!isAdmin}
+                    />
 
-                    {/* Banner Image */}
-                    <div className="space-y-3">
-                      <Label>Banner das Páginas Internas</Label>
-                      {site?.page_banner_url ? (
-                        <div className="border rounded-lg p-4 bg-muted">
-                          <img src={site.page_banner_url} alt="Banner" className="h-32 w-full object-cover rounded" />
-                        </div>
-                      ) : (
-                        <div className="border rounded-lg p-4 bg-muted text-center text-muted-foreground h-32 flex items-center justify-center">
-                          Nenhum banner enviado
-                        </div>
-                      )}
-                      <div>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => handleFileUpload(e, 'banner')}
-                          className="hidden"
-                          id="banner-upload"
-                          disabled={!isAdmin}
-                        />
-                        <label htmlFor="banner-upload">
-                          <Button variant="outline" size="sm" asChild disabled={!isAdmin}>
-                            <span>
-                              <Upload className="w-4 h-4 mr-2" />
-                              Enviar Banner
-                            </span>
-                          </Button>
-                        </label>
-                      </div>
-                    </div>
+                    <ImageUpload
+                      label="Banner das Páginas Internas"
+                      description="Exibido no topo das páginas de listagem e contato"
+                      value={site?.page_banner_url}
+                      onChange={async (url) => {
+                        await updateSite.mutateAsync({ page_banner_url: url });
+                      }}
+                      bucket="logos"
+                      path="sites"
+                      maxSizeInMB={10}
+                      aspectRatio="banner"
+                      disabled={!isAdmin}
+                    />
                   </div>
+
 
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     <div className="space-y-2">
@@ -1088,7 +999,6 @@ ${getWorkerCode()}`;
                   </div>
                 </CardContent>
               </Card>
-
 
               <Card>
                 <CardHeader>
@@ -1182,47 +1092,18 @@ ${getWorkerCode()}`;
                           </div>
                         </div>
 
-                        <div className="space-y-3">
-                          <Label>Logo da marca d'água</Label>
-                          <p className="text-sm text-muted-foreground">
-                            Deixe em branco para usar a logo principal do site
-                          </p>
-                          {site?.watermark_logo_url ? (
-                            <div className="border rounded-lg p-4 bg-muted flex items-center justify-between">
-                              <img src={site.watermark_logo_url} alt="Watermark" className="h-10 object-contain" />
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                onClick={() => updateSite.mutate({ watermark_logo_url: null })}
-                                disabled={!isAdmin}
-                              >
-                                Remover
-                              </Button>
-                            </div>
-                          ) : (
-                            <div className="border rounded-lg p-4 bg-muted text-center text-muted-foreground text-sm">
-                              Usando logo principal: {site?.logo_url ? '✓ Configurada' : '⚠️ Não configurada'}
-                            </div>
-                          )}
-                          <div>
-                            <input
-                              type="file"
-                              accept="image/*"
-                              onChange={(e) => handleFileUpload(e, 'watermark')}
-                              className="hidden"
-                              id="watermark-upload"
-                              disabled={!isAdmin}
-                            />
-                            <label htmlFor="watermark-upload">
-                              <Button variant="outline" size="sm" asChild disabled={!isAdmin}>
-                                <span>
-                                  <Upload className="w-4 h-4 mr-2" />
-                                  Enviar Logo Alternativa
-                                </span>
-                              </Button>
-                            </label>
-                          </div>
-                        </div>
+                        <ImageUpload
+                          label="Logo da marca d'água"
+                          description="Deixe em branco para usar a logo principal do site"
+                          value={site?.watermark_logo_url}
+                          onChange={async (url) => {
+                            await updateSite.mutateAsync({ watermark_logo_url: url });
+                          }}
+                          bucket="logos"
+                          path="sites"
+                          disabled={!isAdmin}
+                        />
+
                       </div>
 
                       {/* Right: Preview */}
@@ -1514,8 +1395,11 @@ ${getWorkerCode()}`;
                 setFormData={setFormData}
                 site={site}
                 isAdmin={isAdmin}
-                handleFileUpload={handleFileUpload}
+                onImageChange={async (url) => {
+                  await updateSite.mutateAsync({ about_image_url: url });
+                }}
               />
+
             </TabsContent>
 
             <TabsContent value="analytics" className="space-y-6">
