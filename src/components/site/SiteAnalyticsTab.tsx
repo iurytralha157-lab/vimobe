@@ -239,7 +239,7 @@ export function SiteAnalyticsTab() {
                     <Line
                       type="monotone"
                       dataKey="views"
-                      name="Visitas"
+                      name="Visitas no site"
                       className="stroke-primary"
                       stroke="hsl(var(--primary))"
                       strokeWidth={2}
