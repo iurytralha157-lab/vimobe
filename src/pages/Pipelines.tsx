@@ -838,6 +838,34 @@ export default function Pipelines() {
               </DropdownMenuContent>
             </DropdownMenu>
 
+            {/* Search Button */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className={cn(
+                    "h-8 w-8 flex-shrink-0",
+                    searchQuery && "border-primary text-primary bg-primary/5"
+                  )}
+                >
+                  <Search className="h-3.5 w-3.5" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="start" className="w-[260px] p-2">
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar lead..."
+                    value={searchInput}
+                    onChange={(e) => setSearchInput(e.target.value)}
+                    className="h-9 w-full pl-8 text-sm bg-muted/20"
+                    autoFocus
+                  />
+                </div>
+              </PopoverContent>
+            </Popover>
+
             {/* Sync Button */}
             <Button
               variant="outline"
@@ -902,19 +930,6 @@ export default function Pipelines() {
                 </Button>
               </PopoverTrigger>
               <PopoverContent align="end" className="w-[280px] p-4 max-h-[85vh] overflow-y-auto space-y-4">
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-bold uppercase text-muted-foreground/70 tracking-wider">Busca</Label>
-                  <div className="relative">
-                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                    <Input
-                      placeholder="Buscar lead..."
-                      value={searchInput}
-                      onChange={(e) => setSearchInput(e.target.value)}
-                      className="h-9 w-full pl-8 text-sm bg-muted/20"
-                    />
-                  </div>
-                </div>
-
                 <div className="space-y-3">
                   <div className="space-y-2">
                     <Label className="text-[10px] font-bold uppercase text-muted-foreground/70 tracking-wider">Responsável</Label>
@@ -1102,6 +1117,41 @@ export default function Pipelines() {
             </div>
 
             <div className="flex items-center gap-2.5">
+              {/* Search Button */}
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className={cn(
+                            "h-8 w-8 transition-colors",
+                            searchQuery && "text-primary border-primary bg-primary/5"
+                          )}
+                        >
+                          <Search className="h-4 w-4" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent align="center" className="w-80 p-3">
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            placeholder="Buscar nome, telefone ou e-mail..."
+                            value={searchInput}
+                            onChange={(e) => setSearchInput(e.target.value)}
+                            className="h-10 pl-10 text-sm bg-muted/30 focus-visible:ring-primary/20"
+                            autoFocus
+                          />
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  </TooltipTrigger>
+                  <TooltipContent>Buscar Lead</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
               {/* Sync Button */}
               <TooltipProvider>
                 <Tooltip>
@@ -1158,19 +1208,6 @@ export default function Pipelines() {
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent align="end" className="w-80 p-4 space-y-4 border-border/50">
-                  <div className="space-y-2">
-                    <Label className="text-[11px] font-bold uppercase text-muted-foreground/70 tracking-wider">Busca</Label>
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        placeholder="Nome, telefone ou e-mail..."
-                        value={searchInput}
-                        onChange={(e) => setSearchInput(e.target.value)}
-                        className="h-10 pl-10 text-sm bg-muted/30 focus-visible:ring-primary/20"
-                      />
-                    </div>
-                  </div>
-
                   <div className="grid grid-cols-1 gap-4">
                     <div className="space-y-2">
                       <Label className="text-[11px] font-bold uppercase text-muted-foreground/70 tracking-wider">Responsável</Label>
