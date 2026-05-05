@@ -1014,7 +1014,7 @@ export default function Pipelines() {
             </Popover>
 
             {/* Refresh */}
-            {/* Botão de Refresh removido */}
+            
           </div>
         ) : (
           <div className="flex items-center justify-between mb-4 gap-3">
