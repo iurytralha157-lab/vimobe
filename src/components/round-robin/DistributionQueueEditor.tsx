@@ -10,7 +10,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   Select,
@@ -40,19 +39,15 @@ import {
   Loader2, 
   Save,
   Settings2,
-  Clock,
   Users,
   Filter,
   AlertCircle,
   Building2,
   UsersRound,
-  MessageSquare,
   Globe,
   Webhook,
-  Phone,
-  Mail,
-  RefreshCw,
-  Bot,
+  MessageSquare,
+  GripVertical
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { usePipelines, useStages } from '@/hooks/use-stages';
@@ -65,8 +60,27 @@ import { useWebhooks } from '@/hooks/use-webhooks';
 import { useWhatsAppSessions } from '@/hooks/use-whatsapp-sessions';
 import { useMetaFormConfigs } from '@/hooks/use-meta-forms';
 import { useMetaIntegrations } from '@/hooks/use-meta-integration';
-import { useAIAgents } from '@/hooks/use-ai-agents';
 import { cn } from '@/lib/utils';
+
+// Drag and Drop imports
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
 
 interface QueueSettings {
   enable_redistribution?: boolean;
@@ -76,8 +90,6 @@ interface QueueSettings {
   require_checkin?: boolean;
   reentry_behavior?: 'redistribute' | 'keep_assignee';
 }
-
-// ScheduleDay removed per requirements
 
 interface RuleCondition {
   id: string;
@@ -111,16 +123,6 @@ interface DistributionQueueEditorProps {
   onSave: (data: QueueFormData) => Promise<void>;
 }
 
-const DAYS_OF_WEEK = [
-  { value: 0, label: 'Dom' },
-  { value: 1, label: 'Seg' },
-  { value: 2, label: 'Ter' },
-  { value: 3, label: 'Qua' },
-  { value: 4, label: 'Qui' },
-  { value: 5, label: 'Sex' },
-  { value: 6, label: 'Sáb' },
-];
-
 const SOURCE_OPTIONS = [
   { value: 'meta_ads', label: 'Meta Ads' },
   { value: 'facebook', label: 'Facebook' },
@@ -149,7 +151,102 @@ const WEBSITE_CATEGORY_OPTIONS = [
   { value: 'lancamento', label: 'Lançamento' },
 ];
 
-// defaultSchedule removed per requirements
+// Sortable Item Component for Members
+function SortableMemberRow({ 
+  member, 
+  idx, 
+  strategy, 
+  totalWeight, 
+  onUpdateWeight, 
+  onRemove 
+}: { 
+  member: QueueMember; 
+  idx: number; 
+  strategy: string; 
+  totalWeight: number; 
+  onUpdateWeight: (id: string, weight: number) => void;
+  onRemove: (id: string) => void;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: member.entityId });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 50 : undefined,
+    opacity: isDragging ? 0.5 : undefined,
+  };
+
+  const percentage = totalWeight > 0 
+    ? Math.round((member.weight / totalWeight) * 100) 
+    : 0;
+
+  return (
+    <TableRow ref={setNodeRef} style={style} className={cn(isDragging && "bg-muted")}>
+      <TableCell className="w-10">
+        <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1">
+          <GripVertical className="h-4 w-4 text-muted-foreground" />
+        </button>
+      </TableCell>
+      <TableCell>
+        <div className="flex items-center gap-2">
+          {member.type === 'team' ? (
+            <UsersRound className="h-4 w-4 text-muted-foreground" />
+          ) : (
+            <Avatar className="h-6 w-6">
+              <AvatarFallback className="text-xs bg-primary text-primary-foreground">
+                {member.name?.[0] || '?'}
+              </AvatarFallback>
+            </Avatar>
+          )}
+          <div>
+            <span className="font-medium text-sm">{member.name || 'Desconhecido'}</span>
+            {member.type === 'team' && (
+              <Badge variant="outline" className="ml-2 text-xs">Equipe</Badge>
+            )}
+          </div>
+        </div>
+      </TableCell>
+      <TableCell>
+        {strategy === 'weighted' ? (
+          <div className="flex items-center justify-center gap-2">
+            <Input
+              type="number"
+              value={member.weight}
+              onChange={e => onUpdateWeight(member.entityId, parseInt(e.target.value) || 1)}
+              className="w-16 text-center h-8"
+              min={1}
+              max={100}
+            />
+            <span className="text-xs text-muted-foreground w-10">
+              ({percentage}%)
+            </span>
+          </div>
+        ) : (
+          <div className="text-center text-muted-foreground text-sm">
+            #{idx + 1}
+          </div>
+        )}
+      </TableCell>
+      <TableCell className="text-right">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+          onClick={() => onRemove(member.entityId)}
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </TableCell>
+    </TableRow>
+  );
+}
 
 export function DistributionQueueEditor({ 
   open, 
@@ -168,7 +265,6 @@ export function DistributionQueueEditor({
   const { data: metaIntegrations = [] } = useMetaIntegrations();
   const activeMetaIntegration = metaIntegrations.find(i => i.is_connected);
   const { data: metaFormConfigs = [] } = useMetaFormConfigs(activeMetaIntegration?.id);
-  const { data: aiAgents = [] } = useAIAgents();
   
   const [saving, setSaving] = useState(false);
   const [openSections, setOpenSections] = useState<string[]>(['basic', 'rules', 'members']);
@@ -188,38 +284,33 @@ export function DistributionQueueEditor({
     members: [],
   });
 
+  // Sensors for DnD
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
   // Get stages for selected pipeline
   const { data: stages = [] } = useStages(formData.target_pipeline_id || undefined);
 
   // Initialize form when queue changes
   useEffect(() => {
     if (queue) {
-      // Parse existing queue data - rules
       const existingConditions: RuleCondition[] = (queue.rules || []).map((rule: any) => {
-        // Try to parse from match_type and match_value (stored format)
         const matchType = rule.match_type as RuleCondition['type'];
         const matchValueStr = rule.match_value || '';
-        
-        // Parse values based on type
         let values: string[] = [];
         if (matchValueStr) {
-          // Some values are comma-separated
           values = matchValueStr.split(',').map((v: string) => v.trim()).filter(Boolean);
         }
-        
-        return {
-          id: rule.id,
-          type: matchType,
-          values,
-        };
+        return { id: rule.id, type: matchType, values };
       });
 
-      // Parse existing members - group by team_id to avoid duplicates
       const membersMap = new Map<string, QueueMember>();
-      
       for (const m of (queue.members || [])) {
         if (m.team_id) {
-          // It's a team member - group by team_id
           const key = `team_${m.team_id}`;
           if (!membersMap.has(key)) {
             const team = teams.find(t => t.id === m.team_id);
@@ -232,7 +323,6 @@ export function DistributionQueueEditor({
             });
           }
         } else {
-          // Individual user
           const key = `user_${m.user_id}`;
           if (!membersMap.has(key)) {
             membersMap.set(key, {
@@ -259,7 +349,6 @@ export function DistributionQueueEditor({
         members: existingMembers,
       });
     } else {
-      // Reset for new queue
       setFormData({
         name: '',
         strategy: 'simple',
@@ -309,7 +398,6 @@ export function DistributionQueueEditor({
 
   const addMember = (type: 'user' | 'team', entityId: string, name: string) => {
     if (formData.members.some(m => m.type === type && m.entityId === entityId)) return;
-    
     setFormData(prev => ({
       ...prev,
       members: [...prev.members, { type, entityId, weight: 10, name }],
@@ -332,7 +420,19 @@ export function DistributionQueueEditor({
     }));
   };
 
-// updateScheduleDay removed per requirements
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      setFormData((prev) => {
+        const oldIndex = prev.members.findIndex((m) => m.entityId === active.id);
+        const newIndex = prev.members.findIndex((m) => m.entityId === over.id);
+        return {
+          ...prev,
+          members: arrayMove(prev.members, oldIndex, newIndex),
+        };
+      });
+    }
+  };
 
   const handleSave = async () => {
     if (!formData.name.trim()) {
@@ -340,11 +440,11 @@ export function DistributionQueueEditor({
       return;
     }
     if (!formData.target_pipeline_id) {
-      toast.error('Pipeline de destino é obrigatório para a distribuição funcionar');
+      toast.error('Pipeline de destino é obrigatório');
       return;
     }
     if (!formData.target_stage_id) {
-      toast.error('Estágio inicial é obrigatório para a distribuição funcionar');
+      toast.error('Estágio inicial é obrigatório');
       return;
     }
     
@@ -358,7 +458,6 @@ export function DistributionQueueEditor({
   };
 
   const totalWeight = formData.members.reduce((sum, m) => sum + m.weight, 0);
-  const is24_7 = formData.schedule.every(s => s.enabled && s.start === '00:00' && s.end === '23:59');
 
   const renderConditionValueSelector = (condition: RuleCondition) => {
     switch (condition.type) {
@@ -382,11 +481,10 @@ export function DistributionQueueEditor({
             ))}
           </div>
         );
-
       case 'webhook':
         return (
           <div className="space-y-2">
-            <p className="text-xs text-muted-foreground">Selecione os webhooks que ativarão esta fila:</p>
+            <p className="text-xs text-muted-foreground">Webhooks:</p>
             <div className="flex flex-wrap gap-1">
               {webhooks.filter(w => w.type === 'incoming').map(wh => (
                 <Badge
@@ -404,17 +502,13 @@ export function DistributionQueueEditor({
                   {wh.name}
                 </Badge>
               ))}
-              {webhooks.filter(w => w.type === 'incoming').length === 0 && (
-                <span className="text-sm text-muted-foreground italic">Nenhum webhook de entrada configurado</span>
-              )}
             </div>
           </div>
         );
-
       case 'whatsapp_session':
         return (
           <div className="space-y-2">
-            <p className="text-xs text-muted-foreground">Selecione as conexões WhatsApp:</p>
+            <p className="text-xs text-muted-foreground">Conexões WhatsApp:</p>
             <div className="flex flex-wrap gap-1">
               {whatsappSessions.filter(s => s.is_active).map(session => (
                 <Badge
@@ -432,89 +526,53 @@ export function DistributionQueueEditor({
                   {session.display_name || session.phone_number || session.instance_name}
                 </Badge>
               ))}
-              {whatsappSessions.filter(s => s.is_active).length === 0 && (
-                <span className="text-sm text-muted-foreground italic">Nenhuma conexão WhatsApp ativa</span>
-              )}
             </div>
           </div>
         );
-
       case 'meta_form':
         return (
           <div className="space-y-2">
-            <p className="text-xs text-muted-foreground">Selecione os formulários Meta (configurados ou não):</p>
+            <p className="text-xs text-muted-foreground">Formulários Meta:</p>
             <div className="flex flex-wrap gap-1">
-              {metaFormConfigs.map(form => {
-                const isConfigured = form.is_active;
-                return (
-                  <Badge
-                    key={form.form_id}
-                    variant={condition.values.includes(form.form_id) ? 'default' : 'outline'}
-                    className={cn(
-                      "cursor-pointer gap-1",
-                      !isConfigured && "border-dashed"
-                    )}
-                    onClick={() => {
-                      const newValues = condition.values.includes(form.form_id)
-                        ? condition.values.filter(v => v !== form.form_id)
-                        : [...condition.values, form.form_id];
-                      updateCondition(condition.id, { values: newValues });
-                    }}
-                  >
-                    {isConfigured ? '✓' : '⚠️'} {form.form_name || form.form_id}
-                  </Badge>
-                );
-              })}
-              {metaFormConfigs.length === 0 && (
-                <span className="text-sm text-muted-foreground italic">
-                  {activeMetaIntegration ? (
-                    <span>
-                      Nenhum formulário.{' '}
-                      <a href="/settings/integrations/meta" className="text-primary underline">Configurar Meta</a>
-                    </span>
-                  ) : (
-                    <span>
-                      Meta Ads não conectado.{' '}
-                      <a href="/settings/integrations/meta" className="text-primary underline">Conectar</a>
-                    </span>
-                  )}
-                </span>
-              )}
-            </div>
-            {metaFormConfigs.some(f => !f.is_active) && (
-              <p className="text-xs text-muted-foreground">
-                ⚠️ = Formulário sem mapeamento de campos.{' '}
-                <a href="/settings/integrations/meta" className="text-primary underline">Configurar</a>
-              </p>
-            )}
-          </div>
-        );
-
-      case 'website_category':
-        return (
-          <div className="space-y-2">
-            <p className="text-xs text-muted-foreground">Selecione as categorias de imóvel do site:</p>
-            <div className="flex flex-wrap gap-1">
-              {WEBSITE_CATEGORY_OPTIONS.map(opt => (
+              {metaFormConfigs.map(form => (
                 <Badge
-                  key={opt.value}
-                  variant={condition.values.includes(opt.value) ? 'default' : 'outline'}
+                  key={form.form_id}
+                  variant={condition.values.includes(form.form_id) ? 'default' : 'outline'}
                   className="cursor-pointer gap-1"
                   onClick={() => {
-                    const newValues = condition.values.includes(opt.value)
-                      ? condition.values.filter(v => v !== opt.value)
-                      : [...condition.values, opt.value];
+                    const newValues = condition.values.includes(form.form_id)
+                      ? condition.values.filter(v => v !== form.form_id)
+                      : [...condition.values, form.form_id];
                     updateCondition(condition.id, { values: newValues });
                   }}
                 >
-                  <Globe className="h-3 w-3" />
-                  {opt.label}
+                  {form.form_name || form.form_id}
                 </Badge>
               ))}
             </div>
           </div>
         );
-      
+      case 'website_category':
+        return (
+          <div className="flex flex-wrap gap-1">
+            {WEBSITE_CATEGORY_OPTIONS.map(opt => (
+              <Badge
+                key={opt.value}
+                variant={condition.values.includes(opt.value) ? 'default' : 'outline'}
+                className="cursor-pointer gap-1"
+                onClick={() => {
+                  const newValues = condition.values.includes(opt.value)
+                    ? condition.values.filter(v => v !== opt.value)
+                    : [...condition.values, opt.value];
+                  updateCondition(condition.id, { values: newValues });
+                }}
+              >
+                <Globe className="h-3 w-3" />
+                {opt.label}
+              </Badge>
+            ))}
+          </div>
+        );
       case 'campaign_contains':
         return (
           <Input
@@ -523,7 +581,6 @@ export function DistributionQueueEditor({
             onChange={e => updateCondition(condition.id, { values: [e.target.value] })}
           />
         );
-      
       case 'tag':
         return (
           <div className="flex flex-wrap gap-1">
@@ -545,7 +602,6 @@ export function DistributionQueueEditor({
             ))}
           </div>
         );
-      
       case 'city':
         return (
           <Input
@@ -556,7 +612,6 @@ export function DistributionQueueEditor({
             })}
           />
         );
-      
       case 'interest_property':
         return (
           <Select
@@ -575,7 +630,6 @@ export function DistributionQueueEditor({
             </SelectContent>
           </Select>
         );
-      
       case 'interest_plan':
         return (
           <Select
@@ -594,7 +648,6 @@ export function DistributionQueueEditor({
             </SelectContent>
           </Select>
         );
-      
       default:
         return null;
     }
@@ -610,7 +663,6 @@ export function DistributionQueueEditor({
         </SheetHeader>
 
         <div className="space-y-4 py-4">
-          {/* Section 1: Basic Info */}
           <Collapsible open={openSections.includes('basic')} onOpenChange={() => toggleSection('basic')}>
             <CollapsibleTrigger className="flex items-center justify-between w-full p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
               <div className="flex items-center gap-2">
@@ -666,212 +718,123 @@ export function DistributionQueueEditor({
                       ))}
                     </SelectContent>
                   </Select>
-                  {!formData.target_pipeline_id && (
-                    <p className="text-xs text-destructive">Pipeline obrigatório para distribuição funcionar</p>
-                  )}
                 </div>
                 <div className="space-y-2">
                   <Label>Estágio Inicial *</Label>
                   <Select 
                     value={formData.target_stage_id || ''} 
-                    onValueChange={v => setFormData(prev => ({ 
-                      ...prev, 
-                      target_stage_id: v 
-                    }))}
+                    onValueChange={v => setFormData(prev => ({ ...prev, target_stage_id: v }))}
                     disabled={!formData.target_pipeline_id}
                   >
-                    <SelectTrigger className={formData.target_pipeline_id && !formData.target_stage_id ? 'border-destructive' : ''}>
-                      <SelectValue placeholder={formData.target_pipeline_id ? "Selecione um estágio..." : "Selecione um pipeline primeiro"} />
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione um estágio..." />
                     </SelectTrigger>
                     <SelectContent>
                       {stages.map(s => (
                         <SelectItem key={s.id} value={s.id}>
                           <div className="flex items-center gap-2">
-                            <div 
-                              className="w-2 h-2 rounded-full" 
-                              style={{ backgroundColor: s.color }} 
-                            />
+                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color }} />
                             {s.name}
                           </div>
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                  {formData.target_pipeline_id && !formData.target_stage_id && (
-                    <p className="text-xs text-destructive">Estágio obrigatório para distribuição funcionar</p>
-                  )}
                 </div>
               </div>
             </CollapsibleContent>
           </Collapsible>
 
-          {/* Section 2: Entry Rules */}
           <Collapsible open={openSections.includes('rules')} onOpenChange={() => toggleSection('rules')}>
             <CollapsibleTrigger className="flex items-center justify-between w-full p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
               <div className="flex items-center gap-2">
                 <Filter className="h-4 w-4 text-primary" />
                 <span className="font-medium">Regras de Entrada</span>
-                {formData.conditions.length > 0 && (
-                  <Badge variant="secondary" className="text-xs">
-                    {formData.conditions.length}
-                  </Badge>
-                )}
+                {formData.conditions.length > 0 && <Badge variant="secondary" className="text-xs">{formData.conditions.length}</Badge>}
               </div>
               <ChevronDown className={cn("h-4 w-4 transition-transform", openSections.includes('rules') && "rotate-180")} />
             </CollapsibleTrigger>
             <CollapsibleContent className="pt-4 px-1 space-y-4">
-              {formData.conditions.length === 0 && (
-                <div className="flex items-start gap-2 p-3 rounded-lg bg-warning/10 border border-warning/20">
-                  <AlertCircle className="h-4 w-4 text-warning mt-0.5" />
-                  <p className="text-sm text-muted-foreground">
-                    Se nenhum critério for selecionado, qualquer lead poderá ser distribuído nesta fila!
-                  </p>
-                </div>
-              )}
-
               {formData.conditions.map((condition, idx) => (
                 <div key={condition.id} className="p-3 rounded-lg border space-y-3">
                   <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      {idx > 0 && (
-                        <Badge variant="outline" className="text-xs">E TAMBÉM</Badge>
-                      )}
-                      <Select
-                        value={condition.type}
-                        onValueChange={v => updateCondition(condition.id, { 
-                          type: v as RuleCondition['type'], 
-                          values: [] 
-                        })}
-                      >
-                        <SelectTrigger className="w-48">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {CONDITION_TYPES.map(ct => (
-                            <SelectItem key={ct.value} value={ct.value}>
-                              <span className="mr-2">{ct.icon}</span>
-                              {ct.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                      onClick={() => removeCondition(condition.id)}
+                    <Select
+                      value={condition.type}
+                      onValueChange={v => updateCondition(condition.id, { type: v as any, values: [] })}
                     >
+                      <SelectTrigger className="w-48">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {CONDITION_TYPES.map(ct => (
+                          <SelectItem key={ct.value} value={ct.value}>
+                            <span className="mr-2">{ct.icon}</span> {ct.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => removeCondition(condition.id)}>
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
                   {renderConditionValueSelector(condition)}
                 </div>
               ))}
-
-              <Button 
-                variant="outline" 
-                onClick={addCondition}
-                className="w-full gap-2"
-              >
-                <Plus className="h-4 w-4" />
-                Nova Condição
+              <Button variant="outline" onClick={addCondition} className="w-full gap-2">
+                <Plus className="h-4 w-4" /> Nova Condição
               </Button>
             </CollapsibleContent>
           </Collapsible>
 
-{/* Section 3: Schedule removed per requirements */}
-
-          {/* Section 4: Members */}
           <Collapsible open={openSections.includes('members')} onOpenChange={() => toggleSection('members')}>
             <CollapsibleTrigger className="flex items-center justify-between w-full p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
               <div className="flex items-center gap-2">
                 <Users className="h-4 w-4 text-primary" />
-                <span className="font-medium">Usuários Ativos na Fila</span>
-                {formData.members.length > 0 && (
-                  <Badge variant="secondary" className="text-xs">
-                    {formData.members.length}
-                  </Badge>
-                )}
+                <span className="font-medium">Ordem de Distribuição</span>
+                {formData.members.length > 0 && <Badge variant="secondary" className="text-xs">{formData.members.length}</Badge>}
               </div>
               <ChevronDown className={cn("h-4 w-4 transition-transform", openSections.includes('members') && "rotate-180")} />
             </CollapsibleTrigger>
             <CollapsibleContent className="pt-4 px-1 space-y-4">
               {formData.members.length > 0 && (
                 <div className="border rounded-lg overflow-hidden">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Participante</TableHead>
-                        <TableHead className="text-center w-32">
-                          {formData.strategy === 'weighted' ? 'Peso' : 'Ordem'}
-                        </TableHead>
-                        <TableHead className="w-12"></TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {formData.members.map((member, idx) => {
-                        const percentage = totalWeight > 0 
-                          ? Math.round((member.weight / totalWeight) * 100) 
-                          : 0;
-                        
-                        return (
-                          <TableRow key={member.entityId}>
-                            <TableCell>
-                              <div className="flex items-center gap-2">
-                                {member.type === 'team' ? (
-                                  <UsersRound className="h-4 w-4 text-muted-foreground" />
-                                ) : (
-                                  <Avatar className="h-6 w-6">
-                                    <AvatarFallback className="text-xs bg-primary text-primary-foreground">
-                                      {member.name?.[0] || '?'}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                )}
-                                <div>
-                                  <span className="font-medium text-sm">{member.name || 'Desconhecido'}</span>
-                                  {member.type === 'team' && (
-                                    <Badge variant="outline" className="ml-2 text-xs">Equipe</Badge>
-                                  )}
-                                </div>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              {formData.strategy === 'weighted' ? (
-                                <div className="flex items-center justify-center gap-2">
-                                  <Input
-                                    type="number"
-                                    value={member.weight}
-                                    onChange={e => updateMemberWeight(member.entityId, parseInt(e.target.value) || 1)}
-                                    className="w-16 text-center"
-                                    min={1}
-                                    max={100}
-                                  />
-                                  <span className="text-xs text-muted-foreground w-10">
-                                    ({percentage}%)
-                                  </span>
-                                </div>
-                              ) : (
-                                <div className="text-center text-muted-foreground">
-                                  #{idx + 1}
-                                </div>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                                onClick={() => removeMember(member.entityId)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
+                  <DndContext 
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleDragEnd}
+                    modifiers={[restrictToVerticalAxis]}
+                  >
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-10"></TableHead>
+                          <TableHead>Participante</TableHead>
+                          <TableHead className="text-center w-32">
+                            {formData.strategy === 'weighted' ? 'Peso' : 'Ordem'}
+                          </TableHead>
+                          <TableHead className="w-12"></TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        <SortableContext 
+                          items={formData.members.map(m => m.entityId)}
+                          strategy={verticalListSortingStrategy}
+                        >
+                          {formData.members.map((member, idx) => (
+                            <SortableMemberRow 
+                              key={member.entityId}
+                              member={member}
+                              idx={idx}
+                              strategy={formData.strategy}
+                              totalWeight={totalWeight}
+                              onUpdateWeight={updateMemberWeight}
+                              onRemove={removeMember}
+                            />
+                          ))}
+                        </SortableContext>
+                      </TableBody>
+                    </Table>
+                  </DndContext>
                 </div>
               )}
 
@@ -884,20 +847,11 @@ export function DistributionQueueEditor({
                     <SelectValue placeholder="Adicionar corretor..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {users
-                      .filter(u => !formData.members.some(m => m.type === 'user' && m.entityId === u.id))
-                      .map(user => (
-                        <SelectItem key={user.id} value={user.id}>
-                          <div className="flex items-center gap-2">
-                            <Users className="h-4 w-4" />
-                            {user.name}
-                          </div>
-                        </SelectItem>
-                      ))
-                    }
+                    {users.filter(u => !formData.members.some(m => m.type === 'user' && m.entityId === u.id)).map(user => (
+                      <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
-                
                 <Select onValueChange={v => {
                   const team = teams.find(t => t.id === v);
                   if (team) addMember('team', v, team.name);
@@ -906,239 +860,19 @@ export function DistributionQueueEditor({
                     <SelectValue placeholder="Adicionar equipe..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {teams
-                      .filter(t => !formData.members.some(m => m.type === 'team' && m.entityId === t.id))
-                      .map(team => (
-                        <SelectItem key={team.id} value={team.id}>
-                          <div className="flex items-center gap-2">
-                            <Building2 className="h-4 w-4" />
-                            {team.name}
-                          </div>
-                        </SelectItem>
-                      ))
-                    }
-                  </SelectContent>
-                </Select>
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
-
-          {/* Section 5: AI Agent */}
-          <Collapsible open={openSections.includes('ai_agent')} onOpenChange={() => toggleSection('ai_agent')}>
-            <CollapsibleTrigger className="flex items-center justify-between w-full p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
-              <div className="flex items-center gap-2">
-                <Bot className="h-4 w-4 text-primary" />
-                <span className="font-medium">Agente de IA</span>
-                {formData.ai_agent_id && (
-                  <Badge variant="default" className="text-xs">Ativo</Badge>
-                )}
-              </div>
-              <ChevronDown className={cn("h-4 w-4 transition-transform", openSections.includes('ai_agent') && "rotate-180")} />
-            </CollapsibleTrigger>
-            <CollapsibleContent className="pt-4 px-1 space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Selecione um agente de IA para atender automaticamente os leads distribuídos por esta fila via WhatsApp. O agente responderá até atingir o limite de mensagens ou detectar palavras-chave de transferência.
-              </p>
-              <div className="space-y-1.5">
-                <Label>Agente de IA</Label>
-                <Select
-                  value={formData.ai_agent_id || 'none'}
-                  onValueChange={v => setFormData(prev => ({ ...prev, ai_agent_id: v === 'none' ? null : v }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Sem agente de IA (atendimento manual)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Sem agente de IA (atendimento manual)</SelectItem>
-                    {aiAgents.filter(a => a.is_active).map(agent => (
-                      <SelectItem key={agent.id} value={agent.id}>
-                        <div className="flex items-center gap-2">
-                          <Bot className="h-4 w-4" />
-                          {agent.name}
-                          <Badge variant="outline" className="text-xs ml-1">
-                            {agent.ai_provider === 'openai' ? 'OpenAI' : 'Gemini'}
-                          </Badge>
-                        </div>
-                      </SelectItem>
+                    {teams.filter(t => !formData.members.some(m => m.type === 'team' && m.entityId === t.id)).map(team => (
+                      <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>
                     ))}
-                    {aiAgents.filter(a => a.is_active).length === 0 && (
-                      <SelectItem value="no-agents" disabled>
-                        Nenhum agente ativo. Configure em Configurações → Agente IA.
-                      </SelectItem>
-                    )}
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-muted-foreground">
-                  O agente só será ativado para leads recebidos via WhatsApp nesta fila. Configure os agentes em <span className="text-primary">Configurações → Agente IA</span>.
-                </p>
               </div>
             </CollapsibleContent>
           </Collapsible>
 
-          {/* Section 6: Advanced Settings */}
-          <Collapsible open={openSections.includes('advanced')} onOpenChange={() => toggleSection('advanced')}>
-            <CollapsibleTrigger className="flex items-center justify-between w-full p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
-              <div className="flex items-center gap-2">
-                <Settings2 className="h-4 w-4 text-primary" />
-                <span className="font-medium">Configurações Avançadas</span>
-              </div>
-              <ChevronDown className={cn("h-4 w-4 transition-transform", openSections.includes('advanced') && "rotate-180")} />
-            </CollapsibleTrigger>
-            <CollapsibleContent className="pt-4 px-1 space-y-4">
-              <div className="space-y-4">
-                <div className="flex items-start gap-3">
-                  <Switch
-                    checked={formData.settings.enable_redistribution || false}
-                    onCheckedChange={checked => setFormData(prev => ({
-                      ...prev,
-                      settings: { 
-                        ...prev.settings, 
-                        enable_redistribution: checked,
-                        redistribution_timeout_minutes: checked ? (prev.settings.redistribution_timeout_minutes || 10) : undefined,
-                        redistribution_max_attempts: checked ? (prev.settings.redistribution_max_attempts || 3) : undefined,
-                      },
-                    }))}
-                  />
-                  <div>
-                    <Label>Ativar redistribuição?</Label>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Se não houver contato dentro do tempo estipulado, o lead é redistribuído automaticamente para outro corretor.
-                    </p>
-                  </div>
-                </div>
-
-                {/* Redistribution settings — shown when enabled */}
-                {formData.settings.enable_redistribution && (
-                  <div className="ml-10 space-y-4 p-4 rounded-lg border bg-muted/30">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="space-y-1.5">
-                        <Label className="text-sm">Tempo para 1º contato (minutos)</Label>
-                        <Input
-                          type="number"
-                          min={1}
-                          max={120}
-                          value={formData.settings.redistribution_timeout_minutes ?? 10}
-                          onChange={e => setFormData(prev => ({
-                            ...prev,
-                            settings: {
-                              ...prev.settings,
-                              redistribution_timeout_minutes: Math.min(120, Math.max(1, parseInt(e.target.value) || 1)),
-                            },
-                          }))}
-                          placeholder="10"
-                        />
-                        <p className="text-xs text-muted-foreground">Entre 1 e 120 minutos</p>
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <Label className="text-sm">Tentativas máximas de redistribuição</Label>
-                        <Input
-                          type="number"
-                          min={1}
-                          max={10}
-                          value={formData.settings.redistribution_max_attempts ?? 3}
-                          onChange={e => setFormData(prev => ({
-                            ...prev,
-                            settings: {
-                              ...prev.settings,
-                              redistribution_max_attempts: Math.min(10, Math.max(1, parseInt(e.target.value) || 1)),
-                            },
-                          }))}
-                          placeholder="3"
-                        />
-                        <p className="text-xs text-muted-foreground">Entre 1 e 10 tentativas</p>
-                      </div>
-                    </div>
-
-                    {/* What counts as contact */}
-                    <div className="pt-2 border-t">
-                      <p className="text-xs font-medium text-muted-foreground mb-2">O que conta como "contato":</p>
-                      <div className="flex flex-wrap gap-3">
-                        <div className="flex items-center gap-1.5 text-xs text-foreground">
-                          <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center">
-                            <MessageSquare className="h-3.5 w-3.5 text-primary" />
-                          </div>
-                          <span>WhatsApp</span>
-                        </div>
-                        <div className="flex items-center gap-1.5 text-xs text-foreground">
-                          <div className="h-6 w-6 rounded-full bg-secondary flex items-center justify-center">
-                            <Phone className="h-3.5 w-3.5 text-secondary-foreground" />
-                          </div>
-                          <span>Telefone</span>
-                        </div>
-                        <div className="flex items-center gap-1.5 text-xs text-foreground">
-                          <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center">
-                            <Mail className="h-3.5 w-3.5 text-muted-foreground" />
-                          </div>
-                          <span>E-mail</span>
-                        </div>
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-2">
-                        O tempo de resposta é registrado quando o corretor faz qualquer um desses contatos. Se o tempo expirar sem registro, o lead é redistribuído.
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                <div className="flex items-start gap-3">
-                  <Switch
-                    checked={formData.settings.preserve_position || false}
-                    onCheckedChange={checked => setFormData(prev => ({
-                      ...prev,
-                      settings: { ...prev.settings, preserve_position: checked },
-                    }))}
-                  />
-                  <div>
-                    <Label>Preservar posição na fila?</Label>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Usuários temporariamente indisponíveis mantêm sua posição quando voltam.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="pt-3 border-t">
-                  <div className="flex items-start gap-3">
-                    <Switch
-                      checked={formData.settings.reentry_behavior === 'keep_assignee'}
-                      onCheckedChange={checked => setFormData(prev => ({
-                        ...prev,
-                        settings: { 
-                          ...prev.settings, 
-                          reentry_behavior: checked ? 'keep_assignee' : 'redistribute' 
-                        },
-                      }))}
-                    />
-                    <div>
-                      <Label>Manter responsável em reentradas?</Label>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {formData.settings.reentry_behavior === 'keep_assignee' 
-                          ? 'Quando um lead reentrar, ele continuará com o responsável anterior (sem redistribuição).'
-                          : 'Quando um lead reentrar, ele será redistribuído pela fila normalmente.'
-                        }
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
-
-          {/* Actions */}
           <div className="flex gap-2 pt-4 border-t">
-            <Button variant="outline" className="w-[40%] rounded-xl" onClick={() => onOpenChange(false)}>
-              Cancelar
-            </Button>
-            <Button 
-              className="w-[60%] rounded-xl"
-              onClick={handleSave} 
-              disabled={!formData.name.trim() || saving}
-            >
-              {saving ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Save className="h-4 w-4 mr-2" />
-              )}
-              Salvar
+            <Button variant="outline" className="w-[40%] rounded-xl" onClick={() => onOpenChange(false)}>Cancelar</Button>
+            <Button className="w-[60%] rounded-xl" onClick={handleSave} disabled={!formData.name.trim() || saving}>
+              {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />} Salvar
             </Button>
           </div>
         </div>
