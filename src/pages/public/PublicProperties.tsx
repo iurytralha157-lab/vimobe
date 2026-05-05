@@ -197,13 +197,13 @@ export default function PublicProperties() {
   }, []);
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: siteConfig.site_theme !== 'light' ? siteConfig.background_color : '#F9FAFB' }}>
+    <div className="min-h-screen" style={{ backgroundColor: siteConfig?.site_theme !== 'light' ? siteConfig?.background_color : '#F9FAFB' }}>
       {/* Header */}
       <div 
         className="py-16 md:py-20 relative overflow-hidden"
         style={{
           backgroundImage: siteConfig?.page_banner_url 
-            ? `url(${siteConfig.page_banner_url})` 
+            ? `url(${siteConfig?.page_banner_url})` 
             : undefined,
           backgroundColor: !siteConfig?.page_banner_url ? (secondaryColor || '#0D0D0D') : undefined,
           backgroundSize: 'cover',

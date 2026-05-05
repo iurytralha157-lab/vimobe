@@ -37,11 +37,11 @@ export default function PublicSiteLayout() {
     const originalFavicon = document.querySelector<HTMLLinkElement>('link[rel="icon"]')?.href;
 
     // Update title - handle potential double "Imóveis" or similar redundancy
-    let displayTitle = siteConfig.seo_title || siteConfig.site_title || 'Portal Imobiliário';
+    let displayTitle = siteConfig?.seo_title || siteConfig?.site_title || 'Portal Imobiliário';
     
     // Clean up title to avoid "Nexo Imóveis Imóveis" if it happens via concatenation or bad data
     // We check if the organization name is already in the title and clean it up if needed
-    if (siteConfig.organization_name && displayTitle.includes(siteConfig.organization_name)) {
+    if (siteConfig?.organization_name && displayTitle.includes(siteConfig?.organization_name)) {
       // If title is "Nexo Imóveis Imóveis" and org is "Nexo Imóveis", it might be better to just use one
       // But for now we trust the seo_title unless it's obviously broken.
     }
@@ -50,7 +50,7 @@ export default function PublicSiteLayout() {
 
     // Update meta description
     let metaDesc = document.querySelector<HTMLMetaElement>('meta[name="description"]');
-    const descContent = siteConfig.seo_description || siteConfig.site_description || '';
+    const descContent = siteConfig?.seo_description || siteConfig?.site_description || '';
     if (!metaDesc) {
       metaDesc = document.createElement('meta');
       metaDesc.name = 'description';
@@ -59,7 +59,7 @@ export default function PublicSiteLayout() {
     metaDesc.content = descContent;
 
     // Update favicon
-    const favUrl = siteConfig.favicon_url || siteConfig.logo_url;
+    const favUrl = siteConfig?.favicon_url || siteConfig?.logo_url;
     if (favUrl) {
       let faviconLink = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
       if (!faviconLink) {
@@ -71,13 +71,13 @@ export default function PublicSiteLayout() {
     }
 
     // Preload hero image for LCP optimization
-    if (siteConfig.hero_image_url) {
+    if (siteConfig?.hero_image_url) {
       const existingPreload = document.querySelector<HTMLLinkElement>('link[rel="preload"][as="image"][data-hero]');
       if (!existingPreload) {
         const preload = document.createElement('link');
         preload.rel = 'preload';
         preload.as = 'image';
-        preload.href = siteConfig.hero_image_url;
+        preload.href = siteConfig?.hero_image_url;
         preload.setAttribute('fetchpriority', 'high');
         preload.setAttribute('data-hero', 'true');
         document.head.appendChild(preload);
@@ -85,9 +85,9 @@ export default function PublicSiteLayout() {
     }
 
     // Update OG meta tags so shared links show client's info
-    const ogTitle = siteConfig.seo_title || siteConfig.site_title || '';
-    const ogDescription = siteConfig.seo_description || siteConfig.site_description || '';
-    const ogImage = siteConfig.logo_url || siteConfig.favicon_url || '';
+    const ogTitle = siteConfig?.seo_title || siteConfig?.site_title || '';
+    const ogDescription = siteConfig?.seo_description || siteConfig?.site_description || '';
+    const ogImage = siteConfig?.logo_url || siteConfig?.favicon_url || '';
 
     const metaUpdates: Record<string, string> = {
       'meta[property="og:title"]': ogTitle,
@@ -162,7 +162,7 @@ export default function PublicSiteLayout() {
       }
     };
 
-    const gtmId = siteConfig.gtm_id || (siteConfig as any).gtm_id;
+    const gtmId = siteConfig?.gtm_id || (siteConfig as any).gtm_id;
     if (gtmId) {
       const gtmScript = document.createElement('script');
       gtmScript.textContent = `(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','${gtmId}');`;
@@ -180,7 +180,7 @@ export default function PublicSiteLayout() {
       injectedElements.push(noscript);
     }
 
-    const pixelId = siteConfig.meta_pixel_id || (siteConfig as any).meta_pixel_id;
+    const pixelId = siteConfig?.meta_pixel_id || (siteConfig as any).meta_pixel_id;
     if (pixelId) {
       const pixelScript = document.createElement('script');
       pixelScript.textContent = `!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init','${pixelId}');fbq('track','PageView');`;
@@ -188,7 +188,7 @@ export default function PublicSiteLayout() {
       injectedElements.push(pixelScript);
     }
 
-    const gadsId = siteConfig.google_ads_id || (siteConfig as any).google_ads_id;
+    const gadsId = siteConfig?.google_ads_id || (siteConfig as any).google_ads_id;
     if (gadsId) {
       const gadsScript = document.createElement('script');
       gadsScript.async = true;
@@ -201,10 +201,10 @@ export default function PublicSiteLayout() {
       injectedElements.push(gadsInit);
     }
 
-    const headScripts = siteConfig.head_scripts || (siteConfig as any).head_scripts;
+    const headScripts = siteConfig?.head_scripts || (siteConfig as any).head_scripts;
     if (headScripts) injectScript(headScripts, 'head');
 
-    const bodyScripts = siteConfig.body_scripts || (siteConfig as any).body_scripts;
+    const bodyScripts = siteConfig?.body_scripts || (siteConfig as any).body_scripts;
     if (bodyScripts) injectScript(bodyScripts, 'body');
 
     return () => {
@@ -348,11 +348,11 @@ export default function PublicSiteLayout() {
                 ) : siteConfig?.logo_url ? (
                   <div className="flex items-center justify-start h-full max-w-[150px] md:max-w-[250px]">
                     <img 
-                      src={siteConfig.logo_url} 
-                      alt={siteConfig.site_title} 
+                      src={siteConfig?.logo_url} 
+                      alt={siteConfig?.site_title} 
                       className="w-auto h-auto max-h-[35px] md:max-h-[55px] object-contain"
                       style={{ 
-                        width: siteConfig.logo_width ? `${Math.min(siteConfig.logo_width, 250)}px` : 'auto',
+                        width: siteConfig?.logo_width ? `${Math.min(siteConfig?.logo_width, 250)}px` : 'auto',
                       }}
                     />
                   </div>
@@ -472,21 +472,21 @@ export default function PublicSiteLayout() {
                 <div className="flex flex-col h-full">
                   {/* Mobile Header */}
                   <div className="p-6 flex items-center justify-between" style={{ borderBottom: `1px solid ${isDarkTheme ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` }}>
-                    {siteConfig.logo_url ? (
+                    {siteConfig?.logo_url ? (
                      <img 
-                         src={siteConfig.logo_url} 
-                         alt={siteConfig.site_title} 
-                         width={Math.min(siteConfig.logo_width || 160, 200)}
-                         height={Math.min(siteConfig.logo_height || 50, 55)}
+                         src={siteConfig?.logo_url} 
+                         alt={siteConfig?.site_title} 
+                         width={Math.min(siteConfig?.logo_width || 160, 200)}
+                         height={Math.min(siteConfig?.logo_height || 50, 55)}
                          style={{ 
-                           maxWidth: Math.min(siteConfig.logo_width || 160, 200), 
-                           maxHeight: Math.min(siteConfig.logo_height || 50, 55) 
+                           maxWidth: Math.min(siteConfig?.logo_width || 160, 200), 
+                           maxHeight: Math.min(siteConfig?.logo_height || 50, 55) 
                          }}
                          className="w-auto object-contain"
                        />
                     ) : (
                       <span className="text-lg font-semibold tracking-wider" style={{ color: textColor }}>
-                        {siteConfig.site_title}
+                        {siteConfig?.site_title}
                       </span>
                     )}
                   </div>
@@ -568,10 +568,10 @@ export default function PublicSiteLayout() {
                   </nav>
 
                   {/* Mobile Footer */}
-                  {siteConfig.whatsapp && (
+                  {siteConfig?.whatsapp && (
                     <div className="p-4" style={{ borderTop: `1px solid ${isDarkTheme ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` }}>
                       <a
-                        href={`https://wa.me/${siteConfig.whatsapp.replace(/\D/g, '')}`}
+                        href={`https://wa.me/${siteConfig?.whatsapp.replace(/\D/g, '')}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="flex items-center justify-center gap-2 w-full py-3 bg-[#25D366] text-white font-medium rounded"
@@ -595,7 +595,7 @@ export default function PublicSiteLayout() {
       </main>
 
       {/* Floating WhatsApp Button - Mobile - Opens Contact Form */}
-      {siteConfig.whatsapp && organizationId && (
+      {siteConfig?.whatsapp && organizationId && (
         <div className="lg:hidden fixed bottom-6 right-6 z-50">
           <ContactFormDialog
             organizationId={organizationId}
@@ -624,15 +624,15 @@ export default function PublicSiteLayout() {
                   <Skeleton className="h-10 w-32 bg-white/10 mb-4" />
                 ) : siteConfig?.logo_url ? (
                   <img 
-                    src={siteConfig.logo_url} 
-                    alt={siteConfig.site_title || 'Logo'} 
+                    src={siteConfig?.logo_url} 
+                    alt={siteConfig?.site_title || 'Logo'} 
                     loading="lazy"
                     decoding="async"
-                    width={siteConfig.logo_width || 160}
-                    height={siteConfig.logo_height || 50}
+                    width={siteConfig?.logo_width || 160}
+                    height={siteConfig?.logo_height || 50}
                     style={{ 
-                      maxWidth: siteConfig.logo_width || 160, 
-                      maxHeight: siteConfig.logo_height || 50 
+                      maxWidth: siteConfig?.logo_width || 160, 
+                      maxHeight: siteConfig?.logo_height || 50 
                     }}
                     className="w-auto object-contain mb-4"
                   />
@@ -727,11 +727,11 @@ export default function PublicSiteLayout() {
                   {siteConfig?.phone && (
                     <li>
                       <a 
-                        href={`tel:${siteConfig.phone}`}
+                        href={`tel:${siteConfig?.phone}`}
                         className="flex items-center justify-center md:justify-start gap-2 md:gap-3 text-white/60 hover:text-white transition-colors text-sm"
                       >
                         <Phone className="w-4 h-4 flex-shrink-0" />
-                        <span className="hidden md:inline">{siteConfig.phone}</span>
+                        <span className="hidden md:inline">{siteConfig?.phone}</span>
                         <span className="md:hidden">Telefone</span>
                       </a>
                     </li>
@@ -740,7 +740,7 @@ export default function PublicSiteLayout() {
                     <li className="flex justify-center md:justify-start">
                       <ContactFormDialog
                         organizationId={organizationId}
-                        whatsappNumber={siteConfig.whatsapp}
+                        whatsappNumber={siteConfig?.whatsapp}
                         primaryColor={primaryColor}
                         trigger={
                           <button className="flex items-center gap-2 md:gap-3 text-white/60 hover:text-white transition-colors text-sm cursor-pointer">
@@ -754,11 +754,11 @@ export default function PublicSiteLayout() {
                   {siteConfig?.email && (
                     <li>
                       <a 
-                        href={`mailto:${siteConfig.email}`}
+                        href={`mailto:${siteConfig?.email}`}
                         className="flex items-center justify-center md:justify-start gap-2 md:gap-3 text-white/60 hover:text-white transition-colors text-sm"
                       >
                         <Mail className="w-4 h-4 flex-shrink-0" />
-                        <span className="hidden md:inline">{siteConfig.email}</span>
+                        <span className="hidden md:inline">{siteConfig?.email}</span>
                         <span className="md:hidden">E-mail</span>
                       </a>
                     </li>
@@ -768,9 +768,9 @@ export default function PublicSiteLayout() {
                   <div className="flex items-start justify-center md:justify-start gap-2 text-white/60 text-sm mt-3">
                     <MapPin className="w-4 h-4 flex-shrink-0 mt-0.5" />
                     <span>
-                      {siteConfig.address}
-                      {siteConfig.city && <><br />{siteConfig.city}</>}
-                      {siteConfig.state && ` - ${siteConfig.state}`}
+                      {siteConfig?.address}
+                      {siteConfig?.city && <><br />{siteConfig?.city}</>}
+                      {siteConfig?.state && ` - ${siteConfig?.state}`}
                     </span>
                   </div>
                 )}
@@ -794,7 +794,7 @@ export default function PublicSiteLayout() {
                 )}
                 {siteConfig?.instagram && (
                   <a 
-                    href={siteConfig.instagram}
+                    href={siteConfig?.instagram}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="w-10 h-10 rounded-full flex items-center justify-center transition-all border border-white/30 hover:scale-110"
@@ -807,7 +807,7 @@ export default function PublicSiteLayout() {
                 )}
                 {siteConfig?.facebook && (
                   <a 
-                    href={siteConfig.facebook}
+                    href={siteConfig?.facebook}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="w-10 h-10 rounded-full flex items-center justify-center transition-all border border-white/30 hover:scale-110"
@@ -820,7 +820,7 @@ export default function PublicSiteLayout() {
                 )}
                 {siteConfig?.youtube && (
                   <a 
-                    href={siteConfig.youtube}
+                    href={siteConfig?.youtube}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="w-10 h-10 rounded-full flex items-center justify-center transition-all border border-white/30 hover:scale-110"
@@ -833,7 +833,7 @@ export default function PublicSiteLayout() {
                 )}
                 {siteConfig?.linkedin && (
                   <a 
-                    href={siteConfig.linkedin}
+                    href={siteConfig?.linkedin}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="w-10 h-10 rounded-full flex items-center justify-center transition-all border border-white/30 hover:scale-110"

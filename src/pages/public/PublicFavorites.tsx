@@ -50,15 +50,15 @@ export default function PublicFavorites() {
   if (!siteConfig) return null;
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: siteConfig.site_theme !== 'light' ? siteConfig.background_color : '#F9FAFB' }}>
+    <div className="min-h-screen" style={{ backgroundColor: siteConfig?.site_theme !== 'light' ? siteConfig?.background_color : '#F9FAFB' }}>
       {/* Header */}
       <div
         className="py-16 md:py-20 relative overflow-hidden"
         style={{
-          backgroundImage: siteConfig.page_banner_url
-            ? `url(${siteConfig.page_banner_url})`
+          backgroundImage: siteConfig?.page_banner_url
+            ? `url(${siteConfig?.page_banner_url})`
             : undefined,
-          backgroundColor: !siteConfig.page_banner_url ? secondaryColor : undefined,
+          backgroundColor: !siteConfig?.page_banner_url ? secondaryColor : undefined,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
         }}

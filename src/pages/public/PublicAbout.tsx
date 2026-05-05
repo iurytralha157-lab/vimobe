@@ -50,13 +50,13 @@ export default function PublicAbout() {
     return null;
   }
 
-  const stats = siteConfig.about_stats?.length ? siteConfig.about_stats : defaultStats;
-  const checkmarks = siteConfig.about_checkmarks?.length ? siteConfig.about_checkmarks : defaultCheckmarks;
-  const features = (siteConfig.about_features?.length ? siteConfig.about_features : defaultFeatures).map(f => ({
+  const stats = siteConfig?.about_stats?.length ? siteConfig?.about_stats : defaultStats;
+  const checkmarks = siteConfig?.about_checkmarks?.length ? siteConfig?.about_checkmarks : defaultCheckmarks;
+  const features = (siteConfig?.about_features?.length ? siteConfig?.about_features : defaultFeatures).map(f => ({
     ...f,
     Icon: iconMap[f.icon] || Building,
   }));
-  const subtitle = siteConfig.about_subtitle || 'Transformando sonhos em realidade desde o início';
+  const subtitle = siteConfig?.about_subtitle || 'Transformando sonhos em realidade desde o início';
 
   return (
     <div className="min-h-screen">
@@ -64,10 +64,10 @@ export default function PublicAbout() {
       <section 
         className="py-16 md:py-20 relative overflow-hidden"
         style={{
-          backgroundImage: siteConfig.page_banner_url 
-            ? `url(${siteConfig.page_banner_url})` 
+          backgroundImage: siteConfig?.page_banner_url 
+            ? `url(${siteConfig?.page_banner_url})` 
             : undefined,
-          backgroundColor: !siteConfig.page_banner_url ? siteConfig.secondary_color : undefined,
+          backgroundColor: !siteConfig?.page_banner_url ? siteConfig?.secondary_color : undefined,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
         }}
@@ -75,24 +75,24 @@ export default function PublicAbout() {
         <div className="absolute inset-0 bg-black/60" />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-white pt-16 text-center">
           <h1 className="text-3xl md:text-4xl lg:text-5xl font-light">
-            {siteConfig.about_title || 'Sobre Nós'}
+            {siteConfig?.about_title || 'Sobre Nós'}
           </h1>
         </div>
       </section>
 
       {/* Stats */}
-      <section className="py-12 border-b" style={{ backgroundColor: siteConfig.site_theme !== 'light' ? siteConfig.background_color : '#FFFFFF', borderColor: siteConfig.site_theme !== 'light' ? 'rgba(255,255,255,0.1)' : undefined }}>
+      <section className="py-12 border-b" style={{ backgroundColor: siteConfig?.site_theme !== 'light' ? siteConfig?.background_color : '#FFFFFF', borderColor: siteConfig?.site_theme !== 'light' ? 'rgba(255,255,255,0.1)' : undefined }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             {stats.map((stat, index) => (
               <div key={index} className="text-center">
                 <p 
                   className="text-4xl md:text-5xl font-bold mb-2"
-                  style={{ color: siteConfig.primary_color }}
+                  style={{ color: siteConfig?.primary_color }}
                 >
                   {stat.value}
                 </p>
-                <p className="font-medium" style={{ color: siteConfig.site_theme !== 'light' ? `${siteConfig.text_color}99` : '#4B5563' }}>{stat.label}</p>
+                <p className="font-medium" style={{ color: siteConfig?.site_theme !== 'light' ? `${siteConfig?.text_color}99` : '#4B5563' }}>{stat.label}</p>
               </div>
             ))}
           </div>
@@ -100,31 +100,31 @@ export default function PublicAbout() {
       </section>
 
       {/* Content */}
-      <section className="py-20" style={{ backgroundColor: siteConfig.site_theme !== 'light' ? 'rgba(255,255,255,0.03)' : '#FFFFFF' }}>
+      <section className="py-20" style={{ backgroundColor: siteConfig?.site_theme !== 'light' ? 'rgba(255,255,255,0.03)' : '#FFFFFF' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             {/* Image */}
             <div className="order-2 lg:order-1">
-              {siteConfig.about_image_url ? (
+              {siteConfig?.about_image_url ? (
                 <img 
-                  src={siteConfig.about_image_url} 
+                  src={siteConfig?.about_image_url} 
                   alt="Sobre nós"
                   className="rounded-3xl shadow-2xl w-full h-auto"
                 />
               ) : (
                 <div 
                   className="rounded-3xl h-[400px] md:h-[500px] flex items-center justify-center relative overflow-hidden"
-                  style={{ backgroundColor: `${siteConfig.primary_color}10` }}
+                  style={{ backgroundColor: `${siteConfig?.primary_color}10` }}
                 >
                   <div 
                     className="absolute inset-0 opacity-20"
                     style={{ 
-                      backgroundImage: `linear-gradient(135deg, ${siteConfig.primary_color} 0%, transparent 50%)` 
+                      backgroundImage: `linear-gradient(135deg, ${siteConfig?.primary_color} 0%, transparent 50%)` 
                     }}
                   ></div>
                   <Building 
                     className="w-32 h-32"
-                    style={{ color: siteConfig.primary_color }}
+                    style={{ color: siteConfig?.primary_color }}
                   />
                 </div>
               )}
@@ -134,21 +134,21 @@ export default function PublicAbout() {
             <div className="order-1 lg:order-2">
               <span 
                 className="text-sm font-semibold uppercase tracking-wider"
-                style={{ color: siteConfig.primary_color }}
+                style={{ color: siteConfig?.primary_color }}
               >
                 Nossa História
               </span>
-              <h2 className="text-3xl md:text-4xl font-bold mt-2 mb-6" style={{ color: siteConfig.site_theme !== 'light' ? siteConfig.text_color : '#111827' }}>
+              <h2 className="text-3xl md:text-4xl font-bold mt-2 mb-6" style={{ color: siteConfig?.site_theme !== 'light' ? siteConfig?.text_color : '#111827' }}>
                 {subtitle}
               </h2>
-              {siteConfig.about_text ? (
-                <div className="whitespace-pre-wrap leading-relaxed text-lg" style={{ color: siteConfig.site_theme !== 'light' ? `${siteConfig.text_color}99` : '#4B5563' }}>
-                  {siteConfig.about_text}
+              {siteConfig?.about_text ? (
+                <div className="whitespace-pre-wrap leading-relaxed text-lg" style={{ color: siteConfig?.site_theme !== 'light' ? `${siteConfig?.text_color}99` : '#4B5563' }}>
+                  {siteConfig?.about_text}
                 </div>
               ) : (
-                <div className="space-y-4 text-lg leading-relaxed" style={{ color: siteConfig.site_theme !== 'light' ? `${siteConfig.text_color}99` : '#4B5563' }}>
+                <div className="space-y-4 text-lg leading-relaxed" style={{ color: siteConfig?.site_theme !== 'light' ? `${siteConfig?.text_color}99` : '#4B5563' }}>
                   <p>
-                    A {siteConfig.organization_name} nasceu com o objetivo de transformar a experiência 
+                    A {siteConfig?.organization_name} nasceu com o objetivo de transformar a experiência 
                     de comprar, vender ou alugar imóveis. Acreditamos que encontrar o lugar perfeito 
                     deve ser uma jornada prazerosa e sem complicações.
                   </p>
@@ -169,8 +169,8 @@ export default function PublicAbout() {
               <div className="mt-8 space-y-3">
                 {checkmarks.map((item, index) => (
                   <div key={index} className="flex items-center gap-3">
-                    <CheckCircle2 className="w-5 h-5 flex-shrink-0" style={{ color: siteConfig.primary_color }} />
-                    <span className="font-medium" style={{ color: siteConfig.site_theme !== 'light' ? `${siteConfig.text_color}CC` : '#374151' }}>{item}</span>
+                    <CheckCircle2 className="w-5 h-5 flex-shrink-0" style={{ color: siteConfig?.primary_color }} />
+                    <span className="font-medium" style={{ color: siteConfig?.site_theme !== 'light' ? `${siteConfig?.text_color}CC` : '#374151' }}>{item}</span>
                   </div>
                 ))}
               </div>
@@ -181,38 +181,38 @@ export default function PublicAbout() {
 
       {/* Features */}
       {features.length > 0 && (
-        <section className="py-20" style={{ backgroundColor: siteConfig.site_theme !== 'light' ? siteConfig.background_color : '#F9FAFB' }}>
+        <section className="py-20" style={{ backgroundColor: siteConfig?.site_theme !== 'light' ? siteConfig?.background_color : '#F9FAFB' }}>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-16">
               <span 
                 className="text-sm font-semibold uppercase tracking-wider"
-                style={{ color: siteConfig.primary_color }}
+                style={{ color: siteConfig?.primary_color }}
               >
                 Nossos Diferenciais
               </span>
-              <h2 className="text-3xl md:text-4xl font-bold mt-2 mb-4" style={{ color: siteConfig.site_theme !== 'light' ? siteConfig.text_color : '#111827' }}>
-                Por que escolher a {siteConfig.organization_name}?
+              <h2 className="text-3xl md:text-4xl font-bold mt-2 mb-4" style={{ color: siteConfig?.site_theme !== 'light' ? siteConfig?.text_color : '#111827' }}>
+                Por que escolher a {siteConfig?.organization_name}?
               </h2>
-              <p className="max-w-2xl mx-auto text-lg" style={{ color: siteConfig.site_theme !== 'light' ? `${siteConfig.text_color}99` : '#4B5563' }}>
+              <p className="max-w-2xl mx-auto text-lg" style={{ color: siteConfig?.site_theme !== 'light' ? `${siteConfig?.text_color}99` : '#4B5563' }}>
                 Oferecemos uma experiência diferenciada em todas as etapas do seu negócio imobiliário.
               </p>
             </div>
 
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {features.map((feature, index) => (
-                <Card key={index} className="text-center hover:shadow-xl transition-all duration-300 border-0 rounded-2xl group" style={{ backgroundColor: siteConfig.site_theme !== 'light' ? 'rgba(255,255,255,0.05)' : '#FFFFFF' }}>
+                <Card key={index} className="text-center hover:shadow-xl transition-all duration-300 border-0 rounded-2xl group" style={{ backgroundColor: siteConfig?.site_theme !== 'light' ? 'rgba(255,255,255,0.05)' : '#FFFFFF' }}>
                   <CardContent className="p-8">
                     <div 
                       className="w-16 h-16 rounded-2xl mx-auto mb-6 flex items-center justify-center transition-transform group-hover:scale-110"
-                      style={{ backgroundColor: `${siteConfig.primary_color}15` }}
+                      style={{ backgroundColor: `${siteConfig?.primary_color}15` }}
                     >
                       <feature.Icon 
                         className="w-8 h-8"
-                        style={{ color: siteConfig.primary_color }}
+                        style={{ color: siteConfig?.primary_color }}
                       />
                     </div>
-                    <h3 className="font-bold mb-3 text-lg" style={{ color: siteConfig.site_theme !== 'light' ? siteConfig.text_color : '#111827' }}>{feature.title}</h3>
-                    <p className="text-sm leading-relaxed" style={{ color: siteConfig.site_theme !== 'light' ? `${siteConfig.text_color}99` : '#4B5563' }}>{feature.description}</p>
+                    <h3 className="font-bold mb-3 text-lg" style={{ color: siteConfig?.site_theme !== 'light' ? siteConfig?.text_color : '#111827' }}>{feature.title}</h3>
+                    <p className="text-sm leading-relaxed" style={{ color: siteConfig?.site_theme !== 'light' ? `${siteConfig?.text_color}99` : '#4B5563' }}>{feature.description}</p>
                   </CardContent>
                 </Card>
               ))}
@@ -224,7 +224,7 @@ export default function PublicAbout() {
       {/* CTA */}
       <section 
         className="py-20 relative overflow-hidden"
-        style={{ backgroundColor: siteConfig.primary_color }}
+        style={{ backgroundColor: siteConfig?.primary_color }}
       >
         <div 
           className="absolute inset-0 opacity-10"
@@ -245,7 +245,7 @@ export default function PublicAbout() {
               <Button 
                 size="lg"
                 className="bg-white hover:bg-gray-100 w-full sm:w-auto rounded-full px-8 gap-2"
-                style={{ color: siteConfig.primary_color }}
+                style={{ color: siteConfig?.primary_color }}
               >
                 Fale Conosco
                 <ArrowRight className="w-5 h-5" />
