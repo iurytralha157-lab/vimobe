@@ -236,7 +236,7 @@ export function StagesEditorDialog({
         <DialogContent className="sm:max-w-md w-[90%] sm:w-full p-4 sm:p-6 rounded-lg">
           <DialogHeader>
             <div className="flex items-center justify-between">
-              <DialogTitle className="text-base sm:text-lg">Gerenciar Colunas</DialogTitle>
+              <DialogTitle className="text-base sm:text-lg">Gerenciar Pipeline</DialogTitle>
               <Button 
                 variant="outline" 
                 size="sm" 
@@ -247,9 +247,43 @@ export function StagesEditorDialog({
                 Nova Coluna
               </Button>
             </div>
-            <DialogDescription className="text-xs sm:text-sm truncate">
-              Reordene as colunas de "{pipelineName}"
-            </DialogDescription>
+            <div className="flex items-center gap-2 mt-1">
+              {isEditingPipelineName ? (
+                <div className="flex items-center gap-1.5 w-full">
+                  <Input
+                    value={currentPipelineName}
+                    onChange={(e) => setCurrentPipelineName(e.target.value)}
+                    className="h-8 text-sm"
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') setIsEditingPipelineName(false);
+                      if (e.key === 'Escape') {
+                        setCurrentPipelineName(pipelineName);
+                        setIsEditingPipelineName(false);
+                      }
+                    }}
+                  />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 shrink-0"
+                    onClick={() => setIsEditingPipelineName(false)}
+                  >
+                    <Check className="h-4 w-4 text-primary" />
+                  </Button>
+                </div>
+              ) : (
+                <div 
+                  className="flex items-center gap-2 group cursor-pointer"
+                  onClick={() => setIsEditingPipelineName(true)}
+                >
+                  <DialogDescription className="text-xs sm:text-sm font-medium text-foreground">
+                    Pipeline: {currentPipelineName}
+                  </DialogDescription>
+                  <Pencil className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
+              )}
+            </div>
           </DialogHeader>
 
           <ScrollArea className="max-h-[55vh] pr-2 sm:pr-4">
