@@ -687,11 +687,22 @@ export default function Pipelines() {
     dateRange,
   });
   
-  // Filters are now applied server-side; only merge server search results client-side
+  // Filters are now applied server-side; we merge server results AND apply a local filter for instant feedback
   const filteredStages = useMemo(() => {
     return stages.map(stage => {
       let stageLeads = [...(stage.leads || [])];
       
+      // Local filtering for instant feedback while typing
+      if (searchInput) {
+        const lowerSearch = searchInput.toLowerCase();
+        stageLeads = stageLeads.filter((lead: any) => {
+          const nameMatch = lead.name?.toLowerCase().includes(lowerSearch);
+          const phoneMatch = lead.phone?.includes(lowerSearch);
+          const emailMatch = lead.email?.toLowerCase().includes(lowerSearch);
+          return nameMatch || phoneMatch || emailMatch;
+        });
+      }
+
       // If searching and we have server results, merge leads not already loaded
       if (deferredSearch && serverSearchResults.length > 0) {
         const loadedIds = new Set(stageLeads.map((l: any) => l.id));
@@ -706,7 +717,7 @@ export default function Pipelines() {
         leads: stageLeads,
       };
     });
-  }, [stages, deferredSearch, serverSearchResults]);
+  }, [stages, searchInput, deferredSearch, serverSearchResults]);
 
   // Compute VGV from filteredStages so badge always matches visible leads
   const stageVGVMap = useMemo(() => {
