@@ -1099,7 +1099,9 @@ export default function Pipelines() {
                   </TooltipProvider>
                 )}
               </div>
+            </div>
 
+            <div className="flex items-center gap-2.5">
               {/* Sync Button */}
               <TooltipProvider>
                 <Tooltip>
@@ -1155,7 +1157,7 @@ export default function Pipelines() {
                     )}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent align="start" className="w-80 p-4 space-y-4 shadow-xl border-primary/10">
+                <PopoverContent align="end" className="w-80 p-4 space-y-4 border-border/50">
                   <div className="space-y-2">
                     <Label className="text-[11px] font-bold uppercase text-muted-foreground/70 tracking-wider">Busca</Label>
                     <div className="relative">
@@ -1280,9 +1282,9 @@ export default function Pipelines() {
                   )}
                 </PopoverContent>
               </Popover>
-            </div>
 
-            <div className="flex items-center gap-3">
+              <div className="w-px h-5 bg-border mx-1" />
+
               {/* Desktop New Button */}
               <Button 
                 data-tour="pipeline-new-lead" 
