@@ -859,7 +859,7 @@ export default function Pipelines() {
                 placeholder="Buscar..."
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
-                className="h-8 w-[110px] pl-7 pr-2 text-[10px] bg-background border-border"
+                className="h-8 w-[110px] pl-7 pr-2 text-[10px] bg-muted/40 border-border focus:bg-background transition-all"
               />
               {leadsLoading && searchInput && (
                 <div className="absolute right-1.5 top-1/2 -translate-y-1/2">
@@ -1129,7 +1129,7 @@ export default function Pipelines() {
                   placeholder="Buscar lead..."
                   value={searchInput}
                   onChange={(e) => setSearchInput(e.target.value)}
-                  className="h-8 w-[180px] lg:w-[240px] pl-8 text-xs bg-background border-border hover:border-primary/50 focus-visible:ring-primary/20 transition-all"
+                  className="h-8 w-[180px] lg:w-[240px] pl-8 text-xs bg-muted/40 border-border hover:border-primary/50 focus:bg-background focus-visible:ring-primary/20 transition-all"
                 />
                 {leadsLoading && searchInput && (
                   <div className="absolute right-2.5 top-1/2 -translate-y-1/2">
