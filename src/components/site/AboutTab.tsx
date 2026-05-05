@@ -129,7 +129,7 @@ export function AboutTab({ formData, setFormData, site, isAdmin, onImageChange }
               description="PNG, JPG ou WEBP até 5MB"
               value={site?.about_image_url}
               onChange={(url) => onImageChange?.(url)}
-              bucket="logos"
+              bucket="site-images"
               path="sites"
               aspectRatio="video"
               disabled={!isAdmin}
