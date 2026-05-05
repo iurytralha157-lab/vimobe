@@ -75,19 +75,22 @@ export default function APIDocs() {
   ];
 
   return (
-    <div className="min-h-screen bg-muted/30 py-12 px-4 sm:px-6 lg:px-8 font-sans">
+    <div className="min-h-screen bg-[#F8F9FA] py-12 px-4 sm:px-6 lg:px-8 font-sans">
       <div className="max-w-4xl mx-auto space-y-8">
-        <header className="space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-primary rounded-lg">
-              <Code2 className="h-8 w-8 text-primary-foreground" />
+        <header className="space-y-6 text-center sm:text-left">
+          <div className="flex flex-col sm:flex-row items-center gap-4">
+            <div className="p-3 bg-primary rounded-2xl shadow-lg shadow-primary/20 animate-in fade-in zoom-in duration-500">
+              <Code2 className="h-10 w-10 text-primary-foreground" />
             </div>
-            <h1 className="text-3xl font-bold tracking-tight">API Pública de Imóveis</h1>
+            <div className="space-y-1">
+              <h1 className="text-4xl font-extrabold tracking-tight text-slate-900">
+                Documentação da <span className="text-primary">API Pública</span>
+              </h1>
+              <p className="text-lg text-muted-foreground max-w-2xl">
+                Integre os dados do seu CRM Imobiliário em qualquer plataforma, site ou sistema externo de forma simples e segura.
+              </p>
+            </div>
           </div>
-          <p className="text-lg text-muted-foreground">
-            Integre os imóveis cadastrados no seu CRM em qualquer site ou sistema externo.
-            A chave de API garante que apenas os imóveis da sua organização sejam retornados.
-          </p>
         </header>
 
         {/* Base URL */}
