@@ -65,6 +65,8 @@ export function useSuperAdmin() {
       adminEmail: string; 
       adminName: string; 
       adminPassword: string;
+      whatsapp?: string;
+      phone?: string;
     }) => {
       const { data: result, error } = await supabase.functions.invoke('create-organization-admin', {
         body: data,
