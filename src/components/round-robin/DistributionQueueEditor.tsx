@@ -332,14 +332,7 @@ export function DistributionQueueEditor({
     }));
   };
 
-  const updateScheduleDay = (day: number, updates: Partial<ScheduleDay>) => {
-    setFormData(prev => ({
-      ...prev,
-      schedule: prev.schedule.map(s => 
-        s.day === day ? { ...s, ...updates } : s
-      ),
-    }));
-  };
+// updateScheduleDay removed per requirements
 
   const handleSave = async () => {
     if (!formData.name.trim()) {
