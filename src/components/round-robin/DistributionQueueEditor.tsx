@@ -255,10 +255,8 @@ export function DistributionQueueEditor({
         target_stage_id: queue.target_stage_id || '',
         is_active: queue.is_active ?? true,
         settings: queue.settings || {},
-        schedule: queue.settings?.schedule || defaultSchedule,
         conditions: existingConditions,
         members: existingMembers,
-        ai_agent_id: queue.ai_agent_id || null,
       });
     } else {
       // Reset for new queue
@@ -269,10 +267,8 @@ export function DistributionQueueEditor({
         target_stage_id: '',
         is_active: true,
         settings: {},
-        schedule: defaultSchedule,
         conditions: [],
         members: [],
-        ai_agent_id: null,
       });
     }
   }, [queue, open, teams]);
