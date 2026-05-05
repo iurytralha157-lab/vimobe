@@ -168,13 +168,27 @@ export function useUploadSiteAsset() {
 
   return useMutation({
     mutationFn: async ({ file, type }: { file: File; type: 'logo' | 'favicon' | 'about' | 'hero' | 'banner' | 'watermark' }) => {
+      // Basic validation in hook
+      const maxSize = type === 'favicon' ? 1 : 10; // 1MB for favicon, 10MB for others
+      if (file.size > maxSize * 1024 * 1024) {
+        throw new Error(`Arquivo muito grande. O limite é ${maxSize}MB.`);
+      }
+      
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml', 'image/x-icon', 'image/vnd.microsoft.icon'];
+      if (!allowedTypes.includes(file.type)) {
+        throw new Error(`Tipo de arquivo não permitido: ${file.type}`);
+      }
+
       const fileExt = file.name.split('.').pop();
       const fileName = `site-${type}-${Date.now()}.${fileExt}`;
       const filePath = `sites/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from('logos')
-        .upload(filePath, file, { upsert: true });
+        .upload(filePath, file, { 
+          upsert: true,
+          cacheControl: '3600'
+        });
 
       if (uploadError) throw uploadError;
 
@@ -187,9 +201,10 @@ export function useUploadSiteAsset() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['organization-site'] });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error('Error uploading asset:', error);
-      toast.error('Erro ao fazer upload');
+      toast.error('Erro ao fazer upload: ' + (error.message || 'Erro desconhecido'));
     },
   });
 }
+
