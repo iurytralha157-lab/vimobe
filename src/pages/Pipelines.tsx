@@ -1117,40 +1117,24 @@ export default function Pipelines() {
             </div>
 
             <div className="flex items-center gap-2.5">
-              {/* Search Button */}
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className={cn(
-                            "h-8 w-8 transition-colors",
-                            searchQuery && "text-primary border-primary bg-primary/5"
-                          )}
-                        >
-                          <Search className="h-4 w-4" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent align="center" className="w-80 p-3">
-                        <div className="relative">
-                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                          <Input
-                            placeholder="Buscar nome, telefone ou e-mail..."
-                            value={searchInput}
-                            onChange={(e) => setSearchInput(e.target.value)}
-                            className="h-10 pl-10 text-sm bg-muted/30 focus-visible:ring-primary/20"
-                            autoFocus
-                          />
-                        </div>
-                      </PopoverContent>
-                    </Popover>
-                  </TooltipTrigger>
-                  <TooltipContent>Buscar Lead</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              {/* Search Field */}
+              <div className="relative group">
+                <Search className={cn(
+                  "absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground transition-colors",
+                  searchInput && "text-primary"
+                )} />
+                <Input
+                  placeholder="Buscar lead..."
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  className="h-8 w-[180px] lg:w-[240px] pl-8 text-xs bg-background border-border hover:border-primary/50 focus-visible:ring-primary/20 transition-all"
+                />
+                {leadsLoading && searchInput && (
+                  <div className="absolute right-2.5 top-1/2 -translate-y-1/2">
+                    <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                  </div>
+                )}
+              </div>
 
               {/* Sync Button */}
               <TooltipProvider>
