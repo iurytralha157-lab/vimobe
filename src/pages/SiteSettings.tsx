@@ -28,7 +28,7 @@ export default function SiteSettings() {
   const { data: site, isLoading } = useOrganizationSite();
   const createSite = useCreateOrganizationSite();
   const updateSite = useUpdateOrganizationSite();
-  const uploadAsset = useUploadSiteAsset();
+  
 
   const [formData, setFormData] = useState({
     is_active: false,
