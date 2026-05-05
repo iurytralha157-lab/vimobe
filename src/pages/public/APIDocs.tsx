@@ -156,10 +156,10 @@ export default function APIDocs() {
             {endpoints.map((ep, i) => (
               <div key={i} className="space-y-4 pb-8 border-b last:border-0 last:pb-0">
                 <div className="flex items-center gap-3 flex-wrap">
-                  <Badge variant="default" className="font-mono">{ep.method}</Badge>
-                  <code className="text-lg font-bold break-all">{ep.path}</code>
+                  <Badge className="bg-primary hover:bg-primary/90 text-white font-mono px-3 py-1 text-xs uppercase tracking-wider">{ep.method}</Badge>
+                  <code className="text-xl font-bold text-slate-900 break-all">{ep.path}</code>
                 </div>
-                <p className="text-muted-foreground">{ep.description}</p>
+                <p className="text-slate-600 leading-relaxed font-medium">{ep.description}</p>
 
                 <div className="space-y-2">
                   <p className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
