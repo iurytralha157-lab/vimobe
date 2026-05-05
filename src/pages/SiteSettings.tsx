@@ -1421,8 +1421,11 @@ ${getWorkerCode()}`;
                 setFormData={setFormData}
                 site={site}
                 isAdmin={isAdmin}
-                handleFileUpload={handleFileUpload}
+                onImageChange={async (url) => {
+                  await updateSite.mutateAsync({ about_image_url: url });
+                }}
               />
+
             </TabsContent>
 
             <TabsContent value="analytics" className="space-y-6">
