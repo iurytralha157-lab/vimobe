@@ -760,7 +760,21 @@ export default function Pipelines() {
 
   const handleCreatePipeline = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newPipelineName.trim()) return;
+    const trimmedName = newPipelineName.trim();
+    if (!trimmedName) {
+      toast.error('O nome da pipeline não pode estar vazio');
+      return;
+    }
+    if (trimmedName.length < 3) {
+      toast.error('O nome da pipeline deve ter pelo menos 3 caracteres');
+      return;
+    }
+    const invalidChars = /[<>:"\/\\|?*]/;
+    if (invalidChars.test(trimmedName)) {
+      toast.error('O nome da pipeline contém caracteres inválidos (< > : " / \\ | ? *)');
+      return;
+    }
+    
     
     try {
       const pipeline = await createPipeline.mutateAsync({ name: newPipelineName.trim() });

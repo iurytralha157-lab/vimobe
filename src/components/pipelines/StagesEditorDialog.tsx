@@ -106,9 +106,24 @@ export function StagesEditorDialog({
     try {
       // Update pipeline name if changed
       if (pipelineNameChanged) {
+        const trimmedName = currentPipelineName.trim();
+        if (!trimmedName) {
+          toast.error('O nome da pipeline não pode estar vazio');
+          return;
+        }
+        if (trimmedName.length < 3) {
+          toast.error('O nome da pipeline deve ter pelo menos 3 caracteres');
+          return;
+        }
+        const invalidChars = /[<>:"\/\\|?*]/;
+        if (invalidChars.test(trimmedName)) {
+          toast.error('O nome da pipeline contém caracteres inválidos (< > : " / \\ | ? *)');
+          return;
+        }
+
         await updatePipeline.mutateAsync({ 
           id: pipelineId, 
-          name: currentPipelineName.trim() 
+          name: trimmedName 
         });
       }
 
