@@ -188,7 +188,7 @@ export function DistributionQueueTab() {
         // For performance in large queues, this should be an RPC
         const updates = newOrder.map((item, index) => ({
           id: item.id,
-          leads_priority_index: index
+          // reentry_count: index // use as proxy if needed
         }));
 
         for (const update of updates) {
