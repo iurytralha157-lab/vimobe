@@ -114,30 +114,33 @@ export default function APIDocs() {
         </Card>
 
         {/* Auth */}
-        <Card>
+        <Card className="border-l-4 border-l-primary shadow-sm">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-xl">
               <Lock className="h-5 w-5 text-primary" /> Autenticação
             </CardTitle>
-            <CardDescription>
-              Toda requisição precisa do header <code>Authorization</code> com sua chave de API.
+            <CardDescription className="text-base">
+              Toda requisição precisa do header <code className="bg-slate-100 px-1 rounded text-primary">Authorization</code> com sua chave de API.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="bg-slate-950 rounded-lg p-4 font-mono text-sm text-slate-200">
-              <code>Authorization: Bearer sk_live_…</code>
+            <div className="bg-slate-900 rounded-xl p-5 font-mono text-sm text-slate-200 border border-slate-800 shadow-inner">
+              <span className="text-slate-500"># Header de autorização</span><br />
+              <code className="text-primary-foreground">Authorization: Bearer <span className="text-orange-400">sk_live_...</span></code>
             </div>
-            <div className="flex items-start gap-2 text-sm bg-amber-500/10 border border-amber-500/30 p-3 rounded-md">
-              <Shield className="h-4 w-4 mt-0.5 text-amber-500 flex-shrink-0" />
-              <p>
-                <strong>Nunca</strong> exponha sua chave no frontend (HTML, JS do navegador,
-                repositórios públicos). Faça as chamadas a partir do seu backend e armazene
-                a chave em variáveis de ambiente.
-              </p>
+            <div className="flex items-start gap-3 text-sm bg-orange-50 border border-orange-200 p-4 rounded-xl">
+              <Shield className="h-5 w-5 mt-0.5 text-orange-600 flex-shrink-0" />
+              <div className="space-y-1">
+                <p className="font-semibold text-orange-900">Segurança em primeiro lugar</p>
+                <p className="text-orange-800 leading-relaxed">
+                  <strong>Nunca</strong> exponha sua chave no frontend (HTML, JavaScript cliente). 
+                  Faça as requisições a partir do seu servidor e utilize variáveis de ambiente.
+                </p>
+              </div>
             </div>
-            <p className="text-sm text-muted-foreground">
-              Gere sua chave em <strong>Configurações → API Pública</strong> dentro do CRM.
-              O super administrador precisa ter habilitado o módulo de API para a sua organização.
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Gere sua chave em <strong className="text-slate-900">Configurações → API Pública</strong> dentro do CRM. 
+              O acesso deve ser habilitado previamente pelo Super Administrador da conta.
             </p>
           </CardContent>
         </Card>
