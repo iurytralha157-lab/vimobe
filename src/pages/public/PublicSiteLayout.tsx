@@ -599,7 +599,7 @@ export default function PublicSiteLayout() {
         <div className="lg:hidden fixed bottom-6 right-6 z-50">
           <ContactFormDialog
             organizationId={organizationId}
-            whatsappNumber={siteConfig.whatsapp}
+            whatsappNumber={siteConfig?.whatsapp}
             primaryColor={primaryColor}
             trigger={
               <button className="w-14 h-14 rounded-full bg-[#25D366] text-white shadow-lg flex items-center justify-center hover:bg-[#20BD5A] transition-colors" aria-label="Fale conosco pelo WhatsApp">
