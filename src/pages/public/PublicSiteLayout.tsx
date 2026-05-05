@@ -718,7 +718,13 @@ export default function PublicSiteLayout() {
                   Contato
                 </h4>
                 <ul className="space-y-2 md:space-y-3">
-                  {siteConfig.phone && (
+                  {isLoading && !siteConfig && (
+                    <>
+                      <Skeleton className="h-4 w-32 bg-white/10" />
+                      <Skeleton className="h-4 w-24 bg-white/10" />
+                    </>
+                  )}
+                  {siteConfig?.phone && (
                     <li>
                       <a 
                         href={`tel:${siteConfig.phone}`}
@@ -730,7 +736,7 @@ export default function PublicSiteLayout() {
                       </a>
                     </li>
                   )}
-                  {siteConfig.whatsapp && organizationId && (
+                  {siteConfig?.whatsapp && organizationId && (
                     <li className="flex justify-center md:justify-start">
                       <ContactFormDialog
                         organizationId={organizationId}
@@ -745,7 +751,7 @@ export default function PublicSiteLayout() {
                       />
                     </li>
                   )}
-                  {siteConfig.email && (
+                  {siteConfig?.email && (
                     <li>
                       <a 
                         href={`mailto:${siteConfig.email}`}
