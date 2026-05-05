@@ -800,63 +800,69 @@ export default function Pipelines() {
         {isMobile ? (
           <div className="flex items-center gap-1 mb-3 w-full">
             {/* Pipeline Selector */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-8 px-2.5 gap-1 text-xs font-semibold flex-shrink-0">
-                  {currentPipeline?.name || 'Pipeline'}
-                  <ChevronDown className="h-3 w-3" />
+            <Popover open={funnelPopoverOpen} onOpenChange={(open) => {
+              setFunnelPopoverOpen(open);
+              if (open) setTempPipelineId(selectedPipelineId);
+            }}>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="h-8 px-2 gap-1 text-[10px] font-bold text-primary border-primary/20">
+                  <Filter className="h-3 w-3" />
+                  Funil
                 </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-48">
-                {pipelines.map(pipeline => (
-                  <DropdownMenuItem 
-                    key={pipeline.id}
-                    onClick={() => setSelectedPipelineId(pipeline.id)}
-                    className="flex items-center justify-between"
-                  >
-                    <span className={cn(pipeline.id === selectedPipelineId && "font-semibold")}>
-                      {pipeline.name}
-                    </span>
-                    {isAdmin && pipeline.id !== selectedPipelineId && pipelines.length > 1 && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-5 w-5 opacity-50 hover:opacity-100"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeletePipeline(pipeline.id);
-                        }}
-                      >
-                        <Trash2 className="h-3 w-3 text-destructive" />
+              </PopoverTrigger>
+              <PopoverContent align="start" className="w-[280px] p-4 z-[100]">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between border-b pb-2">
+                    <h4 className="font-bold text-sm">Selecionar Funil</h4>
+                    {isAdmin && (
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setFunnelPopoverOpen(false); setNewPipelineDialogOpen(true); }}>
+                        <Plus className="h-4 w-4" />
                       </Button>
                     )}
-                  </DropdownMenuItem>
-                ))}
-                {isAdmin && (
-                  <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => setNewPipelineDialogOpen(true)}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Nova Pipeline
-                    </DropdownMenuItem>
-                  </>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
+                  </div>
+                  <ScrollArea className="h-[200px] pr-2">
+                    <RadioGroup value={tempPipelineId || ''} onValueChange={setTempPipelineId} className="gap-1">
+                      {pipelines.map(pipeline => (
+                        <div key={pipeline.id} className="flex items-center justify-between p-2 rounded-md hover:bg-muted group">
+                          <div className="flex items-center space-x-3 flex-1" onClick={() => setTempPipelineId(pipeline.id)}>
+                            <RadioGroupItem value={pipeline.id} id={`mobile-popover-${pipeline.id}`} />
+                            <Label htmlFor={`mobile-popover-${pipeline.id}`} className="flex-1 cursor-pointer text-sm font-medium">{pipeline.name}</Label>
+                          </div>
+                          {isAdmin && pipelines.length > 1 && (
+                            <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={(e) => { e.stopPropagation(); handleDeletePipeline(pipeline.id); }}>
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                    </RadioGroup>
+                  </ScrollArea>
+                  <div className="pt-2 border-t flex flex-col gap-2">
+                    <Button className="w-full" onClick={() => { setSelectedPipelineId(tempPipelineId); setFunnelPopoverOpen(false); }}>
+                      Aplicar Filtro
+                    </Button>
+                    {canEditPipeline && (
+                      <Button variant="ghost" size="sm" className="w-full text-xs gap-2" onClick={() => { setFunnelPopoverOpen(false); setStagesEditorOpen(true); }}>
+                        <Settings className="h-3.5 w-3.5" />
+                        Gerenciar Pipeline
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
 
-            {canEditPipeline && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 flex-shrink-0"
-                onClick={() => setStagesEditorOpen(true)}
-                disabled={!selectedPipelineId}
-              >
-                <Settings className="h-3.5 w-3.5" />
-              </Button>
-            )}
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8 flex-shrink-0 border-primary/20 text-primary"
+              onClick={handleManualRefresh}
+              disabled={isRefreshing}
+            >
+              <RefreshCw className={cn("h-3.5 w-3.5", isRefreshing && "animate-spin")} />
+            </Button>
 
-            <div className="w-px h-5 bg-border flex-shrink-0" />
+            <div className="w-px h-5 bg-border flex-shrink-0 mx-0.5" />
 
             {/* Date Filter */}
             <DateFilterPopover
