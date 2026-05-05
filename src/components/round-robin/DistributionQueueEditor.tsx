@@ -77,12 +77,7 @@ interface QueueSettings {
   reentry_behavior?: 'redistribute' | 'keep_assignee';
 }
 
-interface ScheduleDay {
-  day: number;
-  enabled: boolean;
-  start: string;
-  end: string;
-}
+// ScheduleDay removed per requirements
 
 interface RuleCondition {
   id: string;
