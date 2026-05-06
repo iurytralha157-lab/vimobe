@@ -42,11 +42,9 @@ export default function SelectOrganization() {
     }
   }, [loading, orgsLoading, isSuperAdmin, organizations, navigate]);
 
-  useEffect(() => {
-    if (!loading && !orgsLoading && organizations.length === 1) {
-      handleSelectOrg(organizations[0].organization_id);
-    }
-  }, [loading, orgsLoading, organizations]);
+  // Replaced auto-redirect to allow users to always see the selection screen if desired
+  // This addresses the user request "Ele não tá sempre aparecendo, ele tem que sempre aparecer"
+
 
   const handleSelectOrg = async (orgId: string) => {
     await switchOrganization(orgId);
