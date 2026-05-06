@@ -636,7 +636,7 @@ async function processActionNode(
           { contact_name: lead.name, contact_phone: lead.phone },
         );
 
-        const sendResult = await sendWhatsAppTextWithRecovery(
+        const sendResult = await sendWhatsAppTextWithRetry(
           evolutionApiUrl, evolutionApiKey, session.instance_name,
           normalizePhoneNumber(lead.phone), messageContent,
         );
