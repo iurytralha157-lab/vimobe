@@ -420,6 +420,21 @@ Deno.serve(async (req) => {
           }, { onConflict: 'user_id,organization_id' });
 
         console.log(`Orphan user ${email} added to org ${org.name}`);
+        
+        // Send notification for existing user
+        let welcomeResult: any = { sent: false };
+        if (contactWhatsapp) {
+          welcomeResult = await sendWelcomeWhatsApp(
+            supabaseAdmin,
+            targetOrgId,
+            org.name,
+            callerProfile?.name || 'Administrador',
+            contactWhatsapp,
+            name || existingUser.name,
+            email,
+          );
+        }
+
         return new Response(JSON.stringify({
           success: true,
           user: {
@@ -429,6 +444,7 @@ Deno.serve(async (req) => {
             role,
           },
           wasOrphan: true,
+          whatsappSent: welcomeResult.sent,
           message: 'Usuário existente vinculado à organização. A senha atual dele continua válida.',
         }), {
           status: 200,
