@@ -10,7 +10,7 @@ export interface UserOrganization {
   joined_at: string;
 }
 
-export function useUserOrganizations(userId: string | undefined) {
+export function useUserOrganizations(userId: string | undefined, activeOrgId?: string | null) {
   return useQuery({
     queryKey: ['user-organizations', userId],
     queryFn: async () => {
@@ -63,14 +63,28 @@ export function useUserOrganizations(userId: string | undefined) {
         return [];
       }
 
-      return (data || []).map((item: any) => ({
-        organization_id: item.organization_id,
-        organization_name: item.organizations?.name || '',
-        organization_logo: item.organizations?.logo_url || null,
-        member_role: item.role,
-        is_active: item.is_active,
-        joined_at: item.joined_at,
-      })) as UserOrganization[];
+      const orgs = (data || []).map((item: any) => {
+        // Handle potential array structure from Supabase join
+        const orgData = Array.isArray(item.organizations) ? item.organizations[0] : item.organizations;
+        
+        return {
+          organization_id: item.organization_id,
+          organization_name: orgData?.name || 'Organização',
+          organization_logo: orgData?.logo_url || null,
+          member_role: item.role,
+          is_active: item.is_active,
+          joined_at: item.joined_at,
+        };
+      }) as UserOrganization[];
+
+      // Sort: Active org first, then alphabetically
+      return orgs.sort((a, b) => {
+        if (activeOrgId) {
+          if (a.organization_id === activeOrgId) return -1;
+          if (b.organization_id === activeOrgId) return 1;
+        }
+        return a.organization_name.localeCompare(b.organization_name);
+      });
     },
     enabled: !!userId,
     staleTime: 1000 * 60 * 5,
