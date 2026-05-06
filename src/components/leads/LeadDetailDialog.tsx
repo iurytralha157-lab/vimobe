@@ -44,6 +44,7 @@ import { LeadTimeline } from '@/components/leads/LeadTimeline';
 import { TelecomCustomerTab } from '@/components/leads/TelecomCustomerTab';
 import { ReentryBadge } from '@/components/leads/ReentryBadge';
 import { LostReasonDialog } from '@/components/leads/LostReasonDialog';
+import { SdrDistributionButton } from '@/components/leads/SdrDistributionButton';
 
 import { TaskOutcomeDialog, TaskOutcome, getOutcomeLabel } from '@/components/leads/TaskOutcomeDialog';
 import { formatResponseTime } from '@/hooks/use-lead-timeline';
