@@ -60,11 +60,11 @@ export function SdrDistributionButton({ lead, refetchStages }: SdrDistributionBu
   // Unique users from those members
   const availableUsers = Array.from(new Map(
     teamMembers.map(m => [m.user?.id, m.user])
-  ).values()).filter(Boolean);
+  ).values()).filter((u): u is NonNullable<typeof u> => !!u);
 
   const filteredUsers = availableUsers.filter(u => 
-    u?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    u?.email?.toLowerCase().includes(searchQuery.toLowerCase())
+    u.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    u.email?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const handlePipelineSelect = (id: string) => {
