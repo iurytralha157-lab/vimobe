@@ -30,10 +30,12 @@ function generateRandomPassword(length = 12): string {
 async function sendWelcomeWhatsApp(
   supabaseAdmin: any,
   organizationId: string,
+  organizationName: string,
+  inviterName: string,
   toPhone: string,
   name: string,
   email: string,
-  password: string,
+  password?: string,
 ) {
   try {
     const EVOLUTION_API_URL = Deno.env.get('EVOLUTION_API_URL');
@@ -75,13 +77,23 @@ async function sendWelcomeWhatsApp(
     }
 
     const loginUrl = 'https://vimob.vettercompany.com.br/auth';
-    const message =
-      `👋 Olá *${name}*, seja bem-vindo(a) ao Vimob CRM!\n\n` +
-      `Sua conta foi criada com sucesso. Aqui estão seus dados de acesso:\n\n` +
-      `🔗 *Link de acesso:* ${loginUrl}\n` +
-      `📧 *Login (e-mail):* ${email}\n` +
-      `🔑 *Senha:* ${password}\n\n` +
-      `Por segurança, recomendamos alterar a senha após o primeiro acesso em *Configurações → Minha Conta*.`;
+    
+    let message = '';
+    if (password) {
+      message =
+        `👋 Olá *${name}*, ${inviterName} da *${organizationName}* criou sua conta no Vimob CRM!\n\n` +
+        `Sua conta foi criada com sucesso. Aqui estão seus dados de acesso:\n\n` +
+        `🔗 *Link de acesso:* ${loginUrl}\n` +
+        `📧 *Login (e-mail):* ${email}\n` +
+        `🔑 *Senha:* ${password}\n\n` +
+        `Por segurança, recomendamos alterar a senha após o primeiro acesso em *Configurações → Minha Conta*.`;
+    } else {
+      message =
+        `👋 Olá *${name}*! ${inviterName} convidou você para participar da organização *${organizationName}* no Vimob CRM.\n\n` +
+        `Seu acesso já está garantido! Como você já possui uma conta, utilize seu e-mail e senha atuais para acessar:\n\n` +
+        `🔗 *Link de acesso:* ${loginUrl}\n` +
+        `📧 *Login (e-mail):* ${email}`;
+    }
 
     const response = await fetch(`${EVOLUTION_API_URL}/message/sendText/${instanceName}`, {
       method: 'POST',
@@ -147,7 +159,7 @@ Deno.serve(async (req) => {
     // Get caller's profile to check permissions
     const { data: callerProfile } = await supabaseAdmin
       .from('users')
-      .select('organization_id, role')
+      .select('organization_id, role, name')
       .eq('id', callerUser.id)
       .single();
 
@@ -269,6 +281,8 @@ Deno.serve(async (req) => {
           welcomeResult = await sendWelcomeWhatsApp(
             supabaseAdmin,
             targetOrgId,
+            org.name,
+            callerProfile?.name || 'Administrador',
             contactWhatsapp,
             name,
             email,
@@ -346,6 +360,8 @@ Deno.serve(async (req) => {
           welcomeResult = await sendWelcomeWhatsApp(
             supabaseAdmin,
             existingUser.organization_id || targetOrgId,
+            org.name,
+            callerProfile?.name || 'Administrador',
             contactWhatsapp,
             name || existingUser.name,
             email,
@@ -404,6 +420,21 @@ Deno.serve(async (req) => {
           }, { onConflict: 'user_id,organization_id' });
 
         console.log(`Orphan user ${email} added to org ${org.name}`);
+        
+        // Send notification for existing user
+        let welcomeResult: any = { sent: false };
+        if (contactWhatsapp) {
+          welcomeResult = await sendWelcomeWhatsApp(
+            supabaseAdmin,
+            targetOrgId,
+            org.name,
+            callerProfile?.name || 'Administrador',
+            contactWhatsapp,
+            name || existingUser.name,
+            email,
+          );
+        }
+
         return new Response(JSON.stringify({
           success: true,
           user: {
@@ -413,6 +444,7 @@ Deno.serve(async (req) => {
             role,
           },
           wasOrphan: true,
+          whatsappSent: welcomeResult.sent,
           message: 'Usuário existente vinculado à organização. A senha atual dele continua válida.',
         }), {
           status: 200,
@@ -456,6 +488,21 @@ Deno.serve(async (req) => {
       }
 
       console.log(`User ${email} added to org ${org.name} (multi-org)`);
+      
+      // Send notification for multi-org existing user
+      let welcomeResult: any = { sent: false };
+      if (contactWhatsapp) {
+        welcomeResult = await sendWelcomeWhatsApp(
+          supabaseAdmin,
+          targetOrgId,
+          org.name,
+          callerProfile?.name || 'Administrador',
+          contactWhatsapp,
+          existingUser.name,
+          email,
+        );
+      }
+
       return new Response(JSON.stringify({
         success: true,
         user: {
@@ -465,6 +512,7 @@ Deno.serve(async (req) => {
           role,
         },
         wasMultiOrg: true,
+        whatsappSent: welcomeResult.sent,
         message: `Usuário adicionado à organização ${org.name}. O acesso será feito com a senha existente.`,
       }), {
         status: 200,
@@ -538,6 +586,8 @@ Deno.serve(async (req) => {
       welcomeResult = await sendWelcomeWhatsApp(
         supabaseAdmin,
         targetOrgId,
+        org.name,
+        callerProfile?.name || 'Administrador',
         contactWhatsapp,
         name,
         email,
