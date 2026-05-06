@@ -671,7 +671,7 @@ async function processActionNode(
         (config.message as string) || (config.template_content as string) || "",
         execution, conv,
       );
-      const sendResult = await sendWhatsAppTextWithRecovery(
+      const sendResult = await sendWhatsAppTextWithRetry(
         evolutionApiUrl, evolutionApiKey, conv.session.instance_name,
         normalizePhoneNumber(conv.contact_phone), messageContent,
       );
