@@ -48,7 +48,7 @@ export function useOrganizationModules() {
       const { data, error } = await supabase
         .from('organization_modules')
         .select('*')
-        .eq('organization_id', organization.id);
+        .eq('organization_id', orgId);
 
       if (error) {
         console.error('Error fetching organization modules:', error);
