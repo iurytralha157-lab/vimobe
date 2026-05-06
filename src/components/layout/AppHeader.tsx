@@ -122,7 +122,7 @@ export const AppHeader = React.memo(function AppHeader({
                 )}
                 {!isMobile && (
                   <span className="text-xs font-medium truncate max-w-[120px]">
-                    {organization?.name || 'Organização'}
+                    {organization?.name && organization.name !== 'Organização' ? organization.name : 'Vetter Code'}
                   </span>
                 )}
                 <ChevronDown className="h-3 w-3 text-muted-foreground" />
