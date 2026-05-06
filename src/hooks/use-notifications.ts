@@ -322,15 +322,16 @@ export function useNotifications() {
         channelRef.current = null;
       }
     };
-  }, [profile?.id, queryClient]);
+  }, [profile?.id, organization?.id, queryClient]);
 
   const query = useQuery({
-    queryKey: ['notifications', profile?.id],
+    queryKey: ['notifications', profile?.id, organization?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('notifications')
         .select('*')
         .eq('user_id', profile!.id)
+        .eq('organization_id', organization!.id)
         .order('created_at', { ascending: false })
         .limit(50);
       
