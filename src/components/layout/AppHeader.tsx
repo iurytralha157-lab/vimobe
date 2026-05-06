@@ -39,32 +39,43 @@ export const AppHeader = React.memo(function AppHeader({
     switchOrganization,
     user,
   } = useAuth();
+  const [isSwitching, setIsSwitching] = useState(false);
+  const queryClient = useQueryClient();
   const { hasModule } = useOrganizationModules();
-  const {
-    theme,
-    setTheme,
-    resolvedTheme
-  } = useTheme();
-  const navigate = useNavigate();
-  const isMobile = useIsMobile();
-  const {
-    data: notifications = [],
-    isLoading
-  } = useNotifications();
+...
   const {
     data: unreadCount = 0
   } = useUnreadNotificationsCount();
   const markRead = useMarkNotificationRead();
   const markAllRead = useMarkAllNotificationsRead();
-  const { data: userOrganizations = [] } = useUserOrganizations(user?.id);
+  const { data: userOrganizations = [] } = useUserOrganizations(user?.id, organization?.id);
   
   const hasMultipleOrgs = userOrganizations.length > 1;
 
   const handleSwitchOrg = async (orgId: string) => {
-    await switchOrganization(orgId);
-    navigate('/dashboard', { replace: true });
-    // Force reload to reset all queries
-    window.location.reload();
+    if (orgId === organization?.id) return;
+    
+    setIsSwitching(true);
+    try {
+      await switchOrganization(orgId);
+      
+      // Invalidate all queries to refresh data for the new organization
+      await queryClient.invalidateQueries();
+      
+      toast.success("Organização alterada com sucesso");
+      
+      // Navigate to dashboard to ensure we are on a clean state
+      navigate('/dashboard', { replace: true });
+      
+      // Optional: if some state is not reactive enough, we can still reload
+      // but for "instant" feel, we try to avoid it.
+      // window.location.reload();
+    } catch (error) {
+      console.error('Error switching organization:', error);
+      toast.error("Erro ao trocar de organização");
+    } finally {
+      setIsSwitching(false);
+    }
   };
 
   const handleNotificationClick = (notification: any) => {
