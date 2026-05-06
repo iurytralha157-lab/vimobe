@@ -293,6 +293,79 @@ export default function AdminOrganizationDetail() {
     setNewInvite({ email: '', role: 'user' });
   };
 
+  const handleAddUser = async () => {
+    if (!id || !newUser.email || !newUser.password) return;
+
+    try {
+      const { data, error } = await supabase.functions.invoke('manage-user', {
+        body: {
+          action: 'create',
+          organization_id: id,
+          ...newUser
+        }
+      });
+
+      if (error) throw error;
+      
+      toast.success('Usuário criado com sucesso!');
+      setAddUserDialogOpen(false);
+      setNewUser({ name: '', email: '', password: '', role: 'user' });
+      refetchUsers();
+    } catch (error: any) {
+      toast.error('Erro ao criar usuário: ' + error.message);
+    }
+  };
+
+  const handleUpdateUser = async () => {
+    if (!editingUser) return;
+
+    try {
+      const { error } = await supabase.functions.invoke('manage-user', {
+        body: {
+          action: 'update',
+          userId: editingUser.id,
+          name: editingUser.name,
+          email: editingUser.email,
+          phone: editingUser.phone,
+          whatsapp: editingUser.whatsapp,
+          role: editingUser.member_role,
+          is_active: editingUser.is_active
+        }
+      });
+
+      if (error) throw error;
+
+      toast.success('Usuário atualizado com sucesso!');
+      setEditUserDialogOpen(false);
+      setEditingUser(null);
+      refetchUsers();
+    } catch (error: any) {
+      toast.error('Erro ao atualizar usuário: ' + error.message);
+    }
+  };
+
+  const handleResetUserPassword = async () => {
+    if (!editingUser || !newPassword) return;
+
+    try {
+      const { error } = await supabase.functions.invoke('manage-user', {
+        body: {
+          action: 'reset_password',
+          userId: editingUser.id,
+          password: newPassword
+        }
+      });
+
+      if (error) throw error;
+
+      toast.success('Senha alterada com sucesso!');
+      setResetPasswordDialogOpen(false);
+      setNewPassword('');
+    } catch (error: any) {
+      toast.error('Erro ao alterar senha: ' + error.message);
+    }
+  };
+
   const copyInviteLink = (token: string) => {
     navigator.clipboard.writeText(getInviteLink(token));
     toast.success('Link copiado para a área de transferência!');
