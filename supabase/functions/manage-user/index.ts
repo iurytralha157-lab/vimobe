@@ -63,6 +63,38 @@ Deno.serve(async (req) => {
     let result;
 
     switch (action) {
+      case 'create':
+        // Create user in auth.users
+        const { email, password, name, organization_id, role } = data;
+        const { data: createData, error: createError } = await supabaseAdmin.auth.admin.createUser({
+          email,
+          password,
+          email_confirm: true,
+          user_metadata: { name }
+        });
+
+        if (createError) {
+          throw new Error(`Failed to create auth user: ${createError.message}`);
+        }
+
+        // The public.users record should be created by a trigger, 
+        // but we ensure it has the right org and role
+        const { error: publicUpdateError } = await supabaseAdmin
+          .from('users')
+          .update({ 
+            organization_id, 
+            role,
+            name // Just in case
+          })
+          .eq('id', createData.user.id);
+
+        if (publicUpdateError) {
+          console.error('[manage-user] Error updating public user:', publicUpdateError);
+        }
+
+        result = { success: true, message: 'User created successfully', user: createData.user };
+        break;
+
       case 'delete':
         // Delete user from auth.users (cascades to public.users and user_roles)
         const { error: deleteAuthError } = await supabaseAdmin.auth.admin.deleteUser(userId);
@@ -74,6 +106,7 @@ Deno.serve(async (req) => {
 
       case 'update':
         // Update user in public.users
+        // Fields allowed: name, email, phone, whatsapp, role, is_active, organization_id
         const { error: updateError } = await supabaseAdmin
           .from('users')
           .update(data)
@@ -82,36 +115,33 @@ Deno.serve(async (req) => {
         if (updateError) {
           throw new Error(`Failed to update user: ${updateError.message}`);
         }
+
+        // If email changed, also update auth.users
+        if (data.email) {
+          const { error: authEmailError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+            email: data.email
+          });
+          if (authEmailError) {
+            console.error('[manage-user] Error updating auth email:', authEmailError);
+          }
+        }
+
         result = { success: true, message: 'User updated successfully' };
         break;
 
       case 'reset_password':
         // Reset user password via admin API
-        const { password } = data;
-        if (!password) {
+        const { password: newPassword } = data;
+        if (!newPassword) {
           throw new Error('Password is required for reset_password action');
         }
         const { error: resetError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
-          password,
+          password: newPassword,
         });
         if (resetError) {
           throw new Error(`Failed to reset password: ${resetError.message}`);
         }
         result = { success: true, message: 'Password reset successfully' };
-        break;
-
-      case 'change_organization':
-        // Change user's organization
-        const { organization_id } = data;
-        const { error: changeOrgError } = await supabaseAdmin
-          .from('users')
-          .update({ organization_id })
-          .eq('id', userId);
-        
-        if (changeOrgError) {
-          throw new Error(`Failed to change organization: ${changeOrgError.message}`);
-        }
-        result = { success: true, message: 'Organization changed successfully' };
         break;
 
       default:

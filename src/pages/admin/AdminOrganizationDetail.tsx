@@ -11,8 +11,15 @@ import {
   Mail,
   Copy,
   Trash2,
-  UserPlus } from
-'lucide-react';
+  UserPlus,
+  MoreHorizontal
+} from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { useSuperAdmin } from '@/hooks/use-super-admin';
@@ -139,18 +146,60 @@ export default function AdminOrganizationDetail() {
     enabled: !!id
   });
 
-  // Fetch organization users
-  const { data: orgUsers } = useQuery({
+  // Fetch organization users (via members table for accuracy)
+  const { data: orgUsers, refetch: refetchUsers } = useQuery({
     queryKey: ['org-users', id],
     queryFn: async () => {
       if (!id) return [];
-      const { data } = await supabase.
-      from('users').
-      select('*').
-      eq('organization_id', id);
-      return data || [];
+      const { data, error } = await supabase
+        .from('organization_members')
+        .select(`
+          id,
+          role,
+          joined_at,
+          users (
+            id,
+            name,
+            email,
+            role,
+            is_active,
+            avatar_url,
+            phone,
+            whatsapp,
+            created_at
+          )
+        `)
+        .eq('organization_id', id);
+      
+      if (error) throw error;
+      
+      // Flatten and sort by joined_at (seniority)
+      return (data || [])
+        .filter(m => !!m.users)
+        .map(m => {
+          const u = m.users as any;
+          return { 
+            ...u, 
+            member_role: m.role, 
+            member_id: m.id, 
+            joined_at: m.joined_at 
+          };
+        })
+        .sort((a, b) => new Date(a.joined_at || a.created_at).getTime() - new Date(b.joined_at || b.created_at).getTime());
     },
     enabled: !!id
+  });
+
+  const [editUserDialogOpen, setEditUserDialogOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<any>(null);
+  const [resetPasswordDialogOpen, setResetPasswordDialogOpen] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [addUserDialogOpen, setAddUserDialogOpen] = useState(false);
+  const [newUser, setNewUser] = useState({
+    name: '',
+    email: '',
+    password: '',
+    role: 'user' as 'admin' | 'user'
   });
 
   useEffect(() => {
@@ -249,6 +298,79 @@ export default function AdminOrganizationDetail() {
 
     setInviteDialogOpen(false);
     setNewInvite({ email: '', role: 'user' });
+  };
+
+  const handleAddUser = async () => {
+    if (!id || !newUser.email || !newUser.password) return;
+
+    try {
+      const { data, error } = await supabase.functions.invoke('manage-user', {
+        body: {
+          action: 'create',
+          organization_id: id,
+          ...newUser
+        }
+      });
+
+      if (error) throw error;
+      
+      toast.success('Usuário criado com sucesso!');
+      setAddUserDialogOpen(false);
+      setNewUser({ name: '', email: '', password: '', role: 'user' });
+      refetchUsers();
+    } catch (error: any) {
+      toast.error('Erro ao criar usuário: ' + error.message);
+    }
+  };
+
+  const handleUpdateUser = async () => {
+    if (!editingUser) return;
+
+    try {
+      const { error } = await supabase.functions.invoke('manage-user', {
+        body: {
+          action: 'update',
+          userId: editingUser.id,
+          name: editingUser.name,
+          email: editingUser.email,
+          phone: editingUser.phone,
+          whatsapp: editingUser.whatsapp,
+          role: editingUser.member_role,
+          is_active: editingUser.is_active
+        }
+      });
+
+      if (error) throw error;
+
+      toast.success('Usuário atualizado com sucesso!');
+      setEditUserDialogOpen(false);
+      setEditingUser(null);
+      refetchUsers();
+    } catch (error: any) {
+      toast.error('Erro ao atualizar usuário: ' + error.message);
+    }
+  };
+
+  const handleResetUserPassword = async () => {
+    if (!editingUser || !newPassword) return;
+
+    try {
+      const { error } = await supabase.functions.invoke('manage-user', {
+        body: {
+          action: 'reset_password',
+          userId: editingUser.id,
+          password: newPassword
+        }
+      });
+
+      if (error) throw error;
+
+      toast.success('Senha alterada com sucesso!');
+      setResetPasswordDialogOpen(false);
+      setNewPassword('');
+    } catch (error: any) {
+      toast.error('Erro ao alterar senha: ' + error.message);
+    }
   };
 
   const copyInviteLink = (token: string) => {
@@ -531,11 +653,19 @@ export default function AdminOrganizationDetail() {
           {/* Users Tab */}
           <TabsContent value="users" className="space-y-6">
             <Card>
-              <CardHeader>
-                <CardTitle>Usuários da Organização</CardTitle>
-                <CardDescription>
-                  {orgUsers?.length || 0} usuários cadastrados
-                </CardDescription>
+              <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <CardTitle>Usuários da Organização</CardTitle>
+                  <CardDescription>
+                    {orgUsers?.length || 0} usuários cadastrados
+                  </CardDescription>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => setAddUserDialogOpen(true)}>
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Adicionar Usuário
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent className="px-4 md:px-6 pb-4">
                 {orgUsers?.length === 0 ?
@@ -544,24 +674,54 @@ export default function AdminOrganizationDetail() {
                   </div> :
 
                 <div className="space-y-2">
-                    {orgUsers?.map((user) =>
-                  <div key={user.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg gap-3">
+                    {orgUsers?.map((user, index) =>
+                  <div key={user.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg hover:bg-muted/5 transition-colors gap-3">
                         <div className="flex items-center gap-4">
                           <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
                             <Users className="h-5 w-5 text-primary" />
                           </div>
                           <div>
-                            <p className="font-medium">{user.name}</p>
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium">{user.name}</p>
+                              {index === 0 && user.member_role === 'admin' && (
+                                <Badge className="bg-amber-500 hover:bg-amber-600">
+                                  Responsável
+                                </Badge>
+                              )}
+                            </div>
                             <p className="text-sm text-muted-foreground">{user.email}</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-2 flex-wrap">
-                          <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
-                            {user.role === 'admin' ? 'Administrador' : 'Usuário'}
+                          <Badge variant={user.member_role === 'admin' ? 'default' : 'secondary'}>
+                            {user.member_role === 'admin' ? 'Administrador' : 'Usuário'}
                           </Badge>
                           {!user.is_active &&
-                      <Badge variant="outline" className="text-gray-500">Inativo</Badge>
-                      }
+                            <Badge variant="outline" className="text-gray-500">Inativo</Badge>
+                          }
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => {
+                                setEditingUser(user);
+                                setEditUserDialogOpen(true);
+                              }}>
+                                <Save className="h-4 w-4 mr-2" />
+                                Editar Perfil
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => {
+                                setEditingUser(user);
+                                setResetPasswordDialogOpen(true);
+                              }}>
+                                <Check className="h-4 w-4 mr-2" />
+                                Trocar Senha
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       </div>
                   )}
@@ -569,6 +729,155 @@ export default function AdminOrganizationDetail() {
                 }
               </CardContent>
             </Card>
+
+            {/* Add User Dialog */}
+            <Dialog open={addUserDialogOpen} onOpenChange={setAddUserDialogOpen}>
+              <DialogContent className="max-w-[95vw] sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Adicionar Usuário</DialogTitle>
+                  <DialogDescription>
+                    Criar um usuário diretamente nesta organização.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label>Nome Completo</Label>
+                    <Input 
+                      value={newUser.name} 
+                      onChange={e => setNewUser({...newUser, name: e.target.value})}
+                      placeholder="Ex: Maria Souza"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Email</Label>
+                    <Input 
+                      type="email" 
+                      value={newUser.email} 
+                      onChange={e => setNewUser({...newUser, email: e.target.value})}
+                      placeholder="usuario@email.com"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Senha Inicial</Label>
+                    <Input 
+                      type="password" 
+                      value={newUser.password} 
+                      onChange={e => setNewUser({...newUser, password: e.target.value})}
+                      placeholder="Mínimo 6 caracteres"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Função</Label>
+                    <Select value={newUser.role} onValueChange={(v: any) => setNewUser({...newUser, role: v})}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="user">Usuário Comum</SelectItem>
+                        <SelectItem value="admin">Administrador</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setAddUserDialogOpen(false)}>Cancelar</Button>
+                  <Button onClick={handleAddUser} disabled={!newUser.email || !newUser.password}>Criar Usuário</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            {/* Edit User Dialog */}
+            <Dialog open={editUserDialogOpen} onOpenChange={setEditUserDialogOpen}>
+              <DialogContent className="max-w-[95vw] sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Editar Perfil</DialogTitle>
+                </DialogHeader>
+                {editingUser && (
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label>Nome</Label>
+                      <Input 
+                        value={editingUser.name} 
+                        onChange={e => setEditingUser({...editingUser, name: e.target.value})}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Email</Label>
+                      <Input 
+                        value={editingUser.email} 
+                        onChange={e => setEditingUser({...editingUser, email: e.target.value})}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Telefone</Label>
+                      <Input 
+                        value={editingUser.phone || ''} 
+                        onChange={e => setEditingUser({...editingUser, phone: e.target.value})}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>WhatsApp</Label>
+                      <Input 
+                        value={editingUser.whatsapp || ''} 
+                        onChange={e => setEditingUser({...editingUser, whatsapp: e.target.value})}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Função</Label>
+                      <Select value={editingUser.member_role} onValueChange={v => setEditingUser({...editingUser, member_role: v})}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="user">Usuário</SelectItem>
+                          <SelectItem value="admin">Administrador</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex items-center justify-between space-x-2">
+                      <Label>Conta Ativa</Label>
+                      <Switch 
+                        checked={editingUser.is_active} 
+                        onCheckedChange={v => setEditingUser({...editingUser, is_active: v})}
+                      />
+                    </div>
+                  </div>
+                )}
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setEditUserDialogOpen(false)}>Cancelar</Button>
+                  <Button onClick={handleUpdateUser}>Salvar Alterações</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            {/* Reset Password Dialog */}
+            <Dialog open={resetPasswordDialogOpen} onOpenChange={setResetPasswordDialogOpen}>
+              <DialogContent className="max-w-[95vw] sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Redefinir Senha</DialogTitle>
+                  <DialogDescription>
+                    Digite a nova senha para {editingUser?.name}.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label>Nova Senha</Label>
+                    <Input 
+                      type="password" 
+                      value={newPassword} 
+                      onChange={e => setNewPassword(e.target.value)}
+                      placeholder="Mínimo 6 caracteres"
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setResetPasswordDialogOpen(false)}>Cancelar</Button>
+                  <Button onClick={handleResetUserPassword} disabled={!newPassword || newPassword.length < 6}>
+                    Alterar Senha
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </TabsContent>
 
           {/* Invites Tab */}
