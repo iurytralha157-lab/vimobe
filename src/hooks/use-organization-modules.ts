@@ -37,12 +37,13 @@ export const DEFAULT_ENABLED_MODULES: ModuleName[] = [
 ];
 
 export function useOrganizationModules() {
-  const { organization, isSuperAdmin, loading: authLoading } = useAuth();
+  const { organization, profile, isSuperAdmin, loading: authLoading } = useAuth();
+  const orgId = organization?.id || profile?.organization_id;
 
   const { data: modules, isLoading: modulesLoading } = useQuery({
-    queryKey: ['organization-modules', organization?.id],
+    queryKey: ['organization-modules', orgId],
     queryFn: async () => {
-      if (!organization?.id) return [];
+      if (!orgId) return [];
 
       const { data, error } = await supabase
         .from('organization_modules')
