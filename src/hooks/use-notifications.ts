@@ -149,7 +149,7 @@ function sendBrowserNotification(title: string, options?: NotificationOptions) {
 
 export function useNotifications() {
   const queryClient = useQueryClient();
-  const { profile } = useAuth();
+  const { profile, organization } = useAuth();
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const audioSetupDone = useRef(false);
 
