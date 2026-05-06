@@ -40,9 +40,9 @@ export function APITab() {
         p_organization_id: profile.organization_id,
       });
       if (error) throw error;
-      const row = Array.isArray(data) ? data[0] : data;
-      if (!row?.api_key) throw new Error('Resposta inválida da geração de chave');
-      return row.api_key as string;
+      const apiKey = typeof data === 'string' ? data : (Array.isArray(data) ? data[0]?.api_key : data?.api_key);
+      if (!apiKey) throw new Error('Resposta inválida da geração de chave');
+      return apiKey as string;
     },
     onSuccess: (apiKey) => {
       setNewKey(apiKey);
