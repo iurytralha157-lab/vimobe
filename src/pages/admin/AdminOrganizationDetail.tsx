@@ -147,20 +147,52 @@ export default function AdminOrganizationDetail() {
       const { data, error } = await supabase
         .from('organization_members')
         .select(`
-          *,
-          user:users(*)
+          id,
+          role,
+          joined_at,
+          users (
+            id,
+            name,
+            email,
+            role,
+            is_active,
+            avatar_url,
+            phone,
+            whatsapp,
+            created_at
+          )
         `)
         .eq('organization_id', id);
       
       if (error) throw error;
       
-      // Flatten and sort by created_at (seniority)
+      // Flatten and sort by joined_at (seniority)
       return (data || [])
-        .map(m => ({ ...m.user, member_role: m.role, member_id: m.id, joined_at: m.joined_at }))
-        .filter(u => !!u.id)
+        .filter(m => !!m.users)
+        .map(m => {
+          const u = m.users as any;
+          return { 
+            ...u, 
+            member_role: m.role, 
+            member_id: m.id, 
+            joined_at: m.joined_at 
+          };
+        })
         .sort((a, b) => new Date(a.joined_at || a.created_at).getTime() - new Date(b.joined_at || b.created_at).getTime());
     },
     enabled: !!id
+  });
+
+  const [editUserDialogOpen, setEditUserDialogOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<any>(null);
+  const [resetPasswordDialogOpen, setResetPasswordDialogOpen] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [addUserDialogOpen, setAddUserDialogOpen] = useState(false);
+  const [newUser, setNewUser] = useState({
+    name: '',
+    email: '',
+    password: '',
+    role: 'user' as 'admin' | 'user'
   });
 
   useEffect(() => {
