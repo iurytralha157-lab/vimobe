@@ -75,16 +75,21 @@ export function useOrganizationModules() {
     
     // If no organization, no modules available
     if (!orgId) return false;
-...
+    
+    // Find the module in the list
+    const moduleRecord = modules?.find(m => m.module_name === moduleName);
+    
+    // If found in list, use its value
+    if (moduleRecord) {
+      return moduleRecord.is_enabled;
+    }
+
+    // If not found in list, check defaults
+    return DEFAULT_ENABLED_MODULES.includes(moduleName);
+  };
+
   // Get list of all enabled modules
   const enabledModules = (): ModuleName[] => {
-    /* 
-    if (isSuperAdmin && orgId) {
-...
-    }
-    */
-
-    
     if (!orgId) return [];
 
     // Start with default list
