@@ -57,52 +57,35 @@ export function useOrganizationModules() {
 
       return data || [];
     },
-    enabled: !!organization?.id,
+    enabled: !!orgId,
   });
 
   // Consider loading if auth is still loading OR if we have an org but modules aren't loaded yet
-  const isLoading = authLoading || (!!organization?.id && modulesLoading);
+  const isLoading = authLoading || (!!orgId && modulesLoading);
 
   // Check if a specific module is enabled
   const hasModule = (moduleName: ModuleName): boolean => {
     // Super admins need to enable modules explicitly to see them as a regular user would,
     // but we can keep the logic flexible. Based on user request, we want them disabled by default.
-    // if (isSuperAdmin && organization?.id) return true;
+    // if (isSuperAdmin && orgId) return true;
 
     
     // If still loading, only return true for default enabled modules to prevent flash
     if (isLoading) return DEFAULT_ENABLED_MODULES.includes(moduleName);
     
     // If no organization, no modules available
-    if (!organization?.id) return false;
-    
-    // Find the module in the list
-    const moduleRecord = modules?.find(m => m.module_name === moduleName);
-    
-    // If found in list, use its value
-    if (moduleRecord) {
-      return moduleRecord.is_enabled;
-    }
-
-    // If not found in list, check defaults
-    return DEFAULT_ENABLED_MODULES.includes(moduleName);
-  };
-
+    if (!orgId) return false;
+...
   // Get list of all enabled modules
   const enabledModules = (): ModuleName[] => {
     /* 
-    if (isSuperAdmin && organization?.id) {
-      // Return all modules for super admin
-      return [
-        ...DEFAULT_ENABLED_MODULES,
-        'financial', 'plans', 'coverage', 'telecom', 'automations', 
-        'performance', 'gamification', 'webhooks', 'site', 'ai_agent', 'api'
-      ];
+    if (isSuperAdmin && orgId) {
+...
     }
     */
 
     
-    if (!organization?.id) return [];
+    if (!orgId) return [];
 
     // Start with default list
     let list = [...DEFAULT_ENABLED_MODULES];
