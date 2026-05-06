@@ -42,7 +42,17 @@ export const AppHeader = React.memo(function AppHeader({
   const [isSwitching, setIsSwitching] = useState(false);
   const queryClient = useQueryClient();
   const { hasModule } = useOrganizationModules();
-...
+  const {
+    theme,
+    setTheme,
+    resolvedTheme
+  } = useTheme();
+  const navigate = useNavigate();
+  const isMobile = useIsMobile();
+  const {
+    data: notifications = [],
+    isLoading
+  } = useNotifications();
   const {
     data: unreadCount = 0
   } = useUnreadNotificationsCount();
@@ -66,10 +76,6 @@ export const AppHeader = React.memo(function AppHeader({
       
       // Navigate to dashboard to ensure we are on a clean state
       navigate('/dashboard', { replace: true });
-      
-      // Optional: if some state is not reactive enough, we can still reload
-      // but for "instant" feel, we try to avoid it.
-      // window.location.reload();
     } catch (error) {
       console.error('Error switching organization:', error);
       toast.error("Erro ao trocar de organização");
