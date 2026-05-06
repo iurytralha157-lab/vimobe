@@ -134,3 +134,6 @@ verify_jwt = false
 
 [functions.imoview-sync]
 verify_jwt = false
+
+[functions.send-fernando-billing]
+verify_jwt = false
