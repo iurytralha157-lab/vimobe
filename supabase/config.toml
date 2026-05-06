@@ -134,3 +134,4 @@ verify_jwt = false
 
 [functions.imoview-sync]
 verify_jwt = false
+
