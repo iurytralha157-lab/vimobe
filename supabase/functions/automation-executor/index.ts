@@ -905,16 +905,45 @@ async function sendMediaMessage(
     messageContent = "🎥 Vídeo";
   }
 
-  const response = await fetch(`${evolutionApiUrl}/${endpoint}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", apikey: evolutionApiKey },
-    body: JSON.stringify(body),
-  });
-  if (!response.ok) {
-    const errText = await response.text();
-    throw new Error(`Failed to send ${mediaType}: ${errText}`);
+  let response;
+  let result;
+  let lastError;
+  const maxAttempts = 3;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      console.log(`Attempt ${attempt}/${maxAttempts} to send ${mediaType} to ${number}...`);
+      response = await fetch(`${evolutionApiUrl}/${endpoint}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", apikey: evolutionApiKey },
+        body: JSON.stringify(body),
+      });
+
+      if (response.ok) {
+        result = await response.json();
+        break;
+      }
+
+      const errText = await response.text();
+      console.warn(`Attempt ${attempt} failed: ${errText}`);
+      
+      if (attempt < maxAttempts && (response.status >= 500 || errText.includes("timeout") || errText.includes("Connection Closed"))) {
+        await new Promise((r) => setTimeout(r, 2000 * attempt));
+        continue;
+      }
+      throw new Error(`Failed to send ${mediaType}: ${errText}`);
+    } catch (err) {
+      lastError = err;
+      if (attempt === maxAttempts) break;
+      const errMsg = err instanceof Error ? err.message : String(err);
+      if (errMsg.includes("desconectada") || errMsg.includes("invalid")) break;
+      await new Promise((r) => setTimeout(r, 2000 * attempt));
+    }
   }
-  const result = await response.json();
+
+  if (!result) {
+    throw lastError || new Error(`Failed to send ${mediaType} after ${maxAttempts} attempts`);
+  }
   const sentMsgId = result?.key?.id || result?.messageId || crypto.randomUUID();
   await persistOutgoingMessage(supabase, {
     sessionId, phone: number, contactName: lead.name, leadId: execution.lead_id,
