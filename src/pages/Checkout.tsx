@@ -18,6 +18,7 @@ interface CheckoutInfo {
     logo_url: string | null;
     primary_color: string | null;
     subscription_status: string | null;
+    subscription_value: number | null;
   };
   plan: {
     id: string;
@@ -211,7 +212,9 @@ export default function Checkout() {
     );
   }
 
-  const value = info.plan?.price || 0;
+  const value = info.organization.subscription_value && info.organization.subscription_value > 0
+    ? info.organization.subscription_value
+    : (info.plan?.price || 0);
   const valueFmt = value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2 });
 
   return (
