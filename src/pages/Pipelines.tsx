@@ -1056,10 +1056,69 @@ export default function Pipelines() {
                 <Settings className="h-4 w-4 text-foreground/70" />
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-7 px-2 gap-1 font-bold text-foreground hover:bg-accent/50">
-                      {currentPipeline?.name || 'Selecionar'}
-                      <ChevronDown className="h-3 w-3" />
-                    </Button>
+                    {editingPipelineId === currentPipeline?.id ? (
+                      <div className="flex items-center gap-1 p-1" onClick={(e) => e.stopPropagation()}>
+                        <Input
+                          value={editingPipelineName}
+                          onChange={(e) => setEditingPipelineName(e.target.value)}
+                          className="h-7 w-32 text-xs"
+                          autoFocus
+                          onKeyDown={async (e) => {
+                            if (e.key === 'Enter' && editingPipelineName.trim() && currentPipeline) {
+                              try {
+                                await updatePipeline.mutateAsync({ 
+                                  id: currentPipeline.id, 
+                                  name: editingPipelineName.trim() 
+                                });
+                                toast.success('Pipeline renomeada!');
+                                setEditingPipelineId(null);
+                              } catch (err: any) {
+                                toast.error('Erro ao renomear: ' + err.message);
+                              }
+                            }
+                            if (e.key === 'Escape') setEditingPipelineId(null);
+                          }}
+                        />
+                        <Button 
+                          size="icon" 
+                          variant="ghost" 
+                          className="h-6 w-6" 
+                          onClick={async () => {
+                            if (editingPipelineName.trim() && currentPipeline) {
+                              try {
+                                await updatePipeline.mutateAsync({ 
+                                  id: currentPipeline.id, 
+                                  name: editingPipelineName.trim() 
+                                });
+                                toast.success('Pipeline renomeada!');
+                                setEditingPipelineId(null);
+                              } catch (err: any) {
+                                toast.error('Erro ao renomear: ' + err.message);
+                              }
+                            }
+                          }}
+                        >
+                          <Check className="h-3 w-3 text-primary" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button variant="ghost" size="sm" className="h-7 px-2 gap-1 font-bold text-foreground hover:bg-accent/50 group">
+                        {currentPipeline?.name || 'Selecionar'}
+                        {isAdmin && (
+                          <Pencil 
+                            className="h-2.5 w-2.5 ml-1 opacity-0 group-hover:opacity-50 hover:opacity-100 transition-opacity" 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (currentPipeline) {
+                                setEditingPipelineId(currentPipeline.id);
+                                setEditingPipelineName(currentPipeline.name);
+                              }
+                            }}
+                          />
+                        )}
+                        <ChevronDown className="h-3 w-3" />
+                      </Button>
+                    )}
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start" className="w-48">
                     {pipelines.map(pipeline => (
