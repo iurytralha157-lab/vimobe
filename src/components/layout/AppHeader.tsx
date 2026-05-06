@@ -112,9 +112,14 @@ export const AppHeader = React.memo(function AppHeader({
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
+                disabled={isSwitching}
                 className="h-10 gap-2 px-3 rounded-full bg-card dark:bg-[#111] transition-all duration-300"
               >
-                <Building2 className="h-4 w-4 text-primary" />
+                {isSwitching ? (
+                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                ) : (
+                  <Building2 className="h-4 w-4 text-primary" />
+                )}
                 {!isMobile && (
                   <span className="text-xs font-medium truncate max-w-[120px]">
                     {organization?.name || 'Organização'}
