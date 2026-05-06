@@ -140,6 +140,7 @@ export default function Pipelines() {
   
   const { data: pipelines = [], isLoading: pipelinesLoading } = usePipelines();
   const createPipeline = useCreatePipeline();
+  const updatePipeline = useUpdatePipeline();
   const deletePipeline = useDeletePipeline();
   const createStage = useCreateStage();
   const loadMoreLeads = useLoadMoreLeads();
