@@ -60,41 +60,66 @@ async function getEvolutionConnectionState(
   };
 }
 
-async function sendWhatsAppTextWithRecovery(
+async function sendWhatsAppTextWithRetry(
   evolutionApiUrl: string,
   evolutionApiKey: string,
   instanceName: string,
   number: string,
   text: string,
+  maxAttempts = 3
 ) {
   const endpoint = `${evolutionApiUrl}/message/sendText/${instanceName}`;
-  const sendOnce = async () => {
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", apikey: evolutionApiKey },
-      body: JSON.stringify({ number, text }),
-    });
-    const rawText = await response.text();
-    let parsed: unknown = rawText;
-    try { parsed = rawText ? JSON.parse(rawText) : null; } catch { parsed = rawText; }
-    return { response, rawText, parsed };
-  };
-  const first = await sendOnce();
-  if (first.response.ok) return first.parsed;
-  const firstPayload = typeof first.parsed === "string" ? first.parsed : JSON.stringify(first.parsed);
-  if (!firstPayload.includes("Connection Closed")) {
-    throw new Error(`Failed to send WhatsApp: ${firstPayload}`);
+  let lastError: any;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      console.log(`Attempt ${attempt}/${maxAttempts} to send WhatsApp text to ${number}...`);
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", apikey: evolutionApiKey },
+        body: JSON.stringify({ number, text }),
+      });
+
+      const rawText = await response.text();
+      let parsed: any;
+      try { parsed = rawText ? JSON.parse(rawText) : { error: rawText }; } catch { parsed = { error: rawText }; }
+
+      if (response.ok) return parsed;
+
+      const payload = typeof parsed === "string" ? parsed : JSON.stringify(parsed);
+      
+      // If it's a "Connection Closed" or transient error, we definitely want to retry
+      if (payload.includes("Connection Closed") || response.status >= 500 || payload.includes("timeout")) {
+        console.warn(`Transient error on attempt ${attempt}: ${payload}`);
+        if (attempt < maxAttempts) {
+          // Check connection state before retrying a closed connection
+          if (payload.includes("Connection Closed")) {
+            const live = await getEvolutionConnectionState(evolutionApiUrl, evolutionApiKey, instanceName);
+            if (!live.isConnected) {
+               throw new Error(`Sessão WhatsApp desconectada (${live.state})`);
+            }
+          }
+          await new Promise((r) => setTimeout(r, 2000 * attempt));
+          continue;
+        }
+      }
+      
+      throw new Error(payload);
+    } catch (err) {
+      lastError = err;
+      if (attempt === maxAttempts) break;
+      
+      // Don't retry if the error is "Session disconnected" or "Invalid number"
+      const errMsg = err instanceof Error ? err.message : String(err);
+      if (errMsg.includes("desconectada") || errMsg.includes("invalid") || errMsg.includes("exists\":false")) {
+        break;
+      }
+      
+      await new Promise((r) => setTimeout(r, 2000 * attempt));
+    }
   }
-  console.warn(`Transient Connection Closed via ${instanceName}. Verifying live state...`);
-  const live = await getEvolutionConnectionState(evolutionApiUrl, evolutionApiKey, instanceName);
-  if (!live.isConnected) {
-    throw new Error(`Failed to send WhatsApp (disconnected): ${JSON.stringify({ state: live.state })}`);
-  }
-  await new Promise((r) => setTimeout(r, 1500));
-  const retry = await sendOnce();
-  if (retry.response.ok) return retry.parsed;
-  const retryPayload = typeof retry.parsed === "string" ? retry.parsed : JSON.stringify(retry.parsed);
-  throw new Error(`Failed to send WhatsApp after retry: ${retryPayload}`);
+
+  throw lastError || new Error("Failed to send WhatsApp after multiple attempts");
 }
 
 // ────────────────────────────────────────────────────────────────────────────
