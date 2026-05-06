@@ -217,6 +217,7 @@ serve(async (req) => {
       }
 
       const body = JSON.parse(rawBody);
+      console.log("Received Meta webhook payload:", JSON.stringify(body, null, 2));
       const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
       if (body.object === "page" || body.object === "instagram") {
@@ -263,10 +264,10 @@ serve(async (req) => {
                     continue;
                   }
 
-                  const pipelineId = formConfig.pipeline_id;
-                  const stageId = formConfig.stage_id;
+                  const pipelineId = formConfig.pipeline_id || integration.pipeline_id;
+                  const stageId = formConfig.stage_id || integration.stage_id;
                   if (!pipelineId || !stageId) {
-                    console.log(`Form config exists but pipeline/stage are missing for form ${formId}. Skipping.`);
+                    console.log(`Missing pipeline/stage info for form ${formId} (Form: ${formConfig.pipeline_id}/${formConfig.stage_id}, Integration: ${integration.pipeline_id}/${integration.stage_id}). Skipping.`);
                     continue;
                   }
                   const propertyId = formConfig?.property_id || null;
