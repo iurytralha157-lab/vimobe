@@ -419,16 +419,18 @@ export function useMarkNotificationRead() {
 
 export function useMarkAllNotificationsRead() {
   const queryClient = useQueryClient();
+  const { organization } = useAuth();
   
   return useMutation({
     mutationFn: async () => {
       const { data: user } = await supabase.auth.getUser();
-      if (!user.user) return;
+      if (!user.user || !organization?.id) return;
       
       const { error } = await supabase
         .from('notifications')
         .update({ is_read: true })
         .eq('user_id', user.user.id)
+        .eq('organization_id', organization.id)
         .eq('is_read', false);
       
       if (error) throw error;
