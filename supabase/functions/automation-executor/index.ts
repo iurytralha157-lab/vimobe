@@ -555,6 +555,18 @@ async function sendAutomationNotification(
   try {
     let leadName = "Lead";
     let notifyUserId: string | null = automation.created_by || null;
+    let organizationName = "";
+
+    // Fetch organization name
+    const { data: org } = await supabase
+      .from("organizations")
+      .select("name")
+      .eq("id", execution.organization_id)
+      .single();
+    if (org) {
+      organizationName = org.name;
+    }
+
     if (execution.lead_id) {
       const { data: lead } = await supabase
         .from("leads").select("name, assigned_user_id").eq("id", execution.lead_id).single();
@@ -567,9 +579,12 @@ async function sendAutomationNotification(
     const isSuccess = status === "completed";
     const title = isSuccess ? "✅ Automação Concluída" : "❌ Automação Falhou";
     const translated = errorMessage ? translateError(errorMessage) : "";
+    
+    const orgSuffix = organizationName ? ` na *${organizationName}*` : "";
     const content = isSuccess
-      ? `"${automation.name}" finalizou para ${leadName}`
-      : `"${automation.name}" falhou para ${leadName}: ${translated}`;
+      ? `"${automation.name}" finalizou para ${leadName}${orgSuffix}`
+      : `"${automation.name}" falhou para ${leadName}${orgSuffix}: ${translated}`;
+
     await supabase.from("notifications").insert({
       user_id: notifyUserId,
       organization_id: execution.organization_id,
