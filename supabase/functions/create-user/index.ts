@@ -360,6 +360,8 @@ Deno.serve(async (req) => {
           welcomeResult = await sendWelcomeWhatsApp(
             supabaseAdmin,
             existingUser.organization_id || targetOrgId,
+            org.name,
+            callerProfile?.name || 'Administrador',
             contactWhatsapp,
             name || existingUser.name,
             email,
