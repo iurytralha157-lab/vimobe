@@ -52,7 +52,24 @@
     <link rel="dns-prefetch" href="https://images.unsplash.com">
     <link rel="dns-prefetch" href="https://iemalzlfnbouobyjwlwi.supabase.co">
     <link rel="preconnect" href="https://iemalzlfnbouobyjwlwi.supabase.co/storage" crossorigin>
-  </head>
+  
+  <style>
+#lovable-badge {
+  display: none !important;
+}
+a[href*="lovable.dev"],
+iframe[src*="lovable.dev"],
+div[style*="Edit with Lovable"],
+.lovable-badge {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  position: absolute !important;
+  z-index: -9999 !important;
+}
+</style>
+</head>
 
   <body>
     <div id="root"></div>
