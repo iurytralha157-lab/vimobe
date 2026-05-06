@@ -217,6 +217,7 @@ serve(async (req) => {
       }
 
       const body = JSON.parse(rawBody);
+      console.log("Received Meta webhook payload:", JSON.stringify(body, null, 2));
       const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
       if (body.object === "page" || body.object === "instagram") {
