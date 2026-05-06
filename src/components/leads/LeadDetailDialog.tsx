@@ -1744,6 +1744,8 @@ export function LeadDetailDialog({
                     </div>
                   </PopoverContent>
                 </Popover>
+
+                <SdrDistributionButton lead={lead} refetchStages={refetchStages} />
               </div>
             </div>
             
