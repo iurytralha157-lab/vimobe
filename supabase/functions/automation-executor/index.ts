@@ -60,41 +60,66 @@ async function getEvolutionConnectionState(
   };
 }
 
-async function sendWhatsAppTextWithRecovery(
+async function sendWhatsAppTextWithRetry(
   evolutionApiUrl: string,
   evolutionApiKey: string,
   instanceName: string,
   number: string,
   text: string,
+  maxAttempts = 3
 ) {
   const endpoint = `${evolutionApiUrl}/message/sendText/${instanceName}`;
-  const sendOnce = async () => {
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", apikey: evolutionApiKey },
-      body: JSON.stringify({ number, text }),
-    });
-    const rawText = await response.text();
-    let parsed: unknown = rawText;
-    try { parsed = rawText ? JSON.parse(rawText) : null; } catch { parsed = rawText; }
-    return { response, rawText, parsed };
-  };
-  const first = await sendOnce();
-  if (first.response.ok) return first.parsed;
-  const firstPayload = typeof first.parsed === "string" ? first.parsed : JSON.stringify(first.parsed);
-  if (!firstPayload.includes("Connection Closed")) {
-    throw new Error(`Failed to send WhatsApp: ${firstPayload}`);
+  let lastError: any;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      console.log(`Attempt ${attempt}/${maxAttempts} to send WhatsApp text to ${number}...`);
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", apikey: evolutionApiKey },
+        body: JSON.stringify({ number, text }),
+      });
+
+      const rawText = await response.text();
+      let parsed: any;
+      try { parsed = rawText ? JSON.parse(rawText) : { error: rawText }; } catch { parsed = { error: rawText }; }
+
+      if (response.ok) return parsed;
+
+      const payload = typeof parsed === "string" ? parsed : JSON.stringify(parsed);
+      
+      // If it's a "Connection Closed" or transient error, we definitely want to retry
+      if (payload.includes("Connection Closed") || response.status >= 500 || payload.includes("timeout")) {
+        console.warn(`Transient error on attempt ${attempt}: ${payload}`);
+        if (attempt < maxAttempts) {
+          // Check connection state before retrying a closed connection
+          if (payload.includes("Connection Closed")) {
+            const live = await getEvolutionConnectionState(evolutionApiUrl, evolutionApiKey, instanceName);
+            if (!live.isConnected) {
+               throw new Error(`Sessão WhatsApp desconectada (${live.state})`);
+            }
+          }
+          await new Promise((r) => setTimeout(r, 2000 * attempt));
+          continue;
+        }
+      }
+      
+      throw new Error(payload);
+    } catch (err) {
+      lastError = err;
+      if (attempt === maxAttempts) break;
+      
+      // Don't retry if the error is "Session disconnected" or "Invalid number"
+      const errMsg = err instanceof Error ? err.message : String(err);
+      if (errMsg.includes("desconectada") || errMsg.includes("invalid") || errMsg.includes("exists\":false")) {
+        break;
+      }
+      
+      await new Promise((r) => setTimeout(r, 2000 * attempt));
+    }
   }
-  console.warn(`Transient Connection Closed via ${instanceName}. Verifying live state...`);
-  const live = await getEvolutionConnectionState(evolutionApiUrl, evolutionApiKey, instanceName);
-  if (!live.isConnected) {
-    throw new Error(`Failed to send WhatsApp (disconnected): ${JSON.stringify({ state: live.state })}`);
-  }
-  await new Promise((r) => setTimeout(r, 1500));
-  const retry = await sendOnce();
-  if (retry.response.ok) return retry.parsed;
-  const retryPayload = typeof retry.parsed === "string" ? retry.parsed : JSON.stringify(retry.parsed);
-  throw new Error(`Failed to send WhatsApp after retry: ${retryPayload}`);
+
+  throw lastError || new Error("Failed to send WhatsApp after multiple attempts");
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -423,9 +448,14 @@ Deno.serve(async (req) => {
           }
         } catch (nodeErr) {
           const errMsg = nodeErr instanceof Error ? nodeErr.message : "Unknown node error";
+          const translated = translateError(errMsg);
           console.error(`❌ Error processing node ${currentNodeId}:`, errMsg);
+          
           await markFailed(supabase, execution_id, errMsg);
           await sendAutomationNotification(supabase, execution, automation, "failed", errMsg);
+          await logAutomationActivity(supabase, execution.lead_id, "automation_error", 
+            `Falha na automação "${automation.name}": ${translated}`, 
+            { error: errMsg, node_id: currentNodeId });
           await safeRelease();
           return new Response(JSON.stringify({ success: false, error: errMsg }), {
             status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -611,7 +641,7 @@ async function processActionNode(
           { contact_name: lead.name, contact_phone: lead.phone },
         );
 
-        const sendResult = await sendWhatsAppTextWithRecovery(
+        const sendResult = await sendWhatsAppTextWithRetry(
           evolutionApiUrl, evolutionApiKey, session.instance_name,
           normalizePhoneNumber(lead.phone), messageContent,
         );
@@ -646,7 +676,7 @@ async function processActionNode(
         (config.message as string) || (config.template_content as string) || "",
         execution, conv,
       );
-      const sendResult = await sendWhatsAppTextWithRecovery(
+      const sendResult = await sendWhatsAppTextWithRetry(
         evolutionApiUrl, evolutionApiKey, conv.session.instance_name,
         normalizePhoneNumber(conv.contact_phone), messageContent,
       );
@@ -880,16 +910,45 @@ async function sendMediaMessage(
     messageContent = "🎥 Vídeo";
   }
 
-  const response = await fetch(`${evolutionApiUrl}/${endpoint}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", apikey: evolutionApiKey },
-    body: JSON.stringify(body),
-  });
-  if (!response.ok) {
-    const errText = await response.text();
-    throw new Error(`Failed to send ${mediaType}: ${errText}`);
+  let response;
+  let result;
+  let lastError;
+  const maxAttempts = 3;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      console.log(`Attempt ${attempt}/${maxAttempts} to send ${mediaType} to ${number}...`);
+      response = await fetch(`${evolutionApiUrl}/${endpoint}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", apikey: evolutionApiKey },
+        body: JSON.stringify(body),
+      });
+
+      if (response.ok) {
+        result = await response.json();
+        break;
+      }
+
+      const errText = await response.text();
+      console.warn(`Attempt ${attempt} failed: ${errText}`);
+      
+      if (attempt < maxAttempts && (response.status >= 500 || errText.includes("timeout") || errText.includes("Connection Closed"))) {
+        await new Promise((r) => setTimeout(r, 2000 * attempt));
+        continue;
+      }
+      throw new Error(`Failed to send ${mediaType}: ${errText}`);
+    } catch (err) {
+      lastError = err;
+      if (attempt === maxAttempts) break;
+      const errMsg = err instanceof Error ? err.message : String(err);
+      if (errMsg.includes("desconectada") || errMsg.includes("invalid")) break;
+      await new Promise((r) => setTimeout(r, 2000 * attempt));
+    }
   }
-  const result = await response.json();
+
+  if (!result) {
+    throw lastError || new Error(`Failed to send ${mediaType} after ${maxAttempts} attempts`);
+  }
   const sentMsgId = result?.key?.id || result?.messageId || crypto.randomUUID();
   await persistOutgoingMessage(supabase, {
     sessionId, phone: number, contactName: lead.name, leadId: execution.lead_id,
