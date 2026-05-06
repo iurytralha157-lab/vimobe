@@ -124,6 +124,8 @@ export default function Pipelines() {
   const [selectedPipelineId, setSelectedPipelineId] = useState<string | null>(null);
   const [newPipelineDialogOpen, setNewPipelineDialogOpen] = useState(false);
   const [newPipelineName, setNewPipelineName] = useState('');
+  const [editingPipelineId, setEditingPipelineId] = useState<string | null>(null);
+  const [editingPipelineName, setEditingPipelineName] = useState('');
   const [newStageDialogOpen, setNewStageDialogOpen] = useState(false);
   const [newStageName, setNewStageName] = useState('');
   const [newStageColor, setNewStageColor] = useState('#6b7280');
