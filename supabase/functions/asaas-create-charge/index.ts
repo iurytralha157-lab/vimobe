@@ -66,7 +66,9 @@ Deno.serve(async (req) => {
     }
     if (!plan) throw new Error('No plan selected for this organization');
 
-    const value = Number(plan.price);
+    const value = org.subscription_value && Number(org.subscription_value) > 0 
+      ? Number(org.subscription_value) 
+      : Number(plan.price);
     const isMonthly = (plan.billing_cycle || 'monthly') === 'monthly';
 
     // Ensure Asaas customer
