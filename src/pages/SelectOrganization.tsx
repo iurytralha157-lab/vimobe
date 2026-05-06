@@ -105,9 +105,7 @@ export default function SelectOrganization() {
 
         <div className="space-y-3">
           {organizations.map((org) => {
-            const name = org.organization_name && org.organization_name !== 'Organização' 
-              ? org.organization_name 
-              : 'Vetter Code';
+            const name = org.organization_name || 'Organização';
             return (
               <Card
                 key={org.organization_id}
