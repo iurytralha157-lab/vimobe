@@ -139,16 +139,26 @@ export default function AdminOrganizationDetail() {
     enabled: !!id
   });
 
-  // Fetch organization users
-  const { data: orgUsers } = useQuery({
+  // Fetch organization users (via members table for accuracy)
+  const { data: orgUsers, refetch: refetchUsers } = useQuery({
     queryKey: ['org-users', id],
     queryFn: async () => {
       if (!id) return [];
-      const { data } = await supabase.
-      from('users').
-      select('*').
-      eq('organization_id', id);
-      return data || [];
+      const { data, error } = await supabase
+        .from('organization_members')
+        .select(`
+          *,
+          user:users(*)
+        `)
+        .eq('organization_id', id);
+      
+      if (error) throw error;
+      
+      // Flatten and sort by created_at (seniority)
+      return (data || [])
+        .map(m => ({ ...m.user, member_role: m.role, member_id: m.id, joined_at: m.joined_at }))
+        .filter(u => !!u.id)
+        .sort((a, b) => new Date(a.joined_at || a.created_at).getTime() - new Date(b.joined_at || b.created_at).getTime());
     },
     enabled: !!id
   });
