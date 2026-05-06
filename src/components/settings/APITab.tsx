@@ -36,8 +36,8 @@ export function APITab() {
       // Geração 100% server-side via RPC SECURITY DEFINER.
       // O banco gera a chave, salva apenas o hash SHA-256 e retorna a chave em texto UMA ÚNICA VEZ.
       const { data, error } = await supabase.rpc('generate_organization_api_key' as any, {
-        p_organization_id: profile.organization_id,
         p_name: keyName || 'Chave Padrão',
+        p_organization_id: profile.organization_id,
       });
       if (error) throw error;
       const row = Array.isArray(data) ? data[0] : data;
