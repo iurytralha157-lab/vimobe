@@ -36,7 +36,7 @@ export function useTeams() {
       
       const { data: members } = await supabase
         .from('team_members')
-        .select('*, user:users(id, name, avatar_url)')
+        .select('*, user:users(id, name, avatar_url, email)')
         .in('team_id', teamIds);
       
       // Cast the result to include is_leader
