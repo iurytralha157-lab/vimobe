@@ -488,6 +488,21 @@ Deno.serve(async (req) => {
       }
 
       console.log(`User ${email} added to org ${org.name} (multi-org)`);
+      
+      // Send notification for multi-org existing user
+      let welcomeResult: any = { sent: false };
+      if (contactWhatsapp) {
+        welcomeResult = await sendWelcomeWhatsApp(
+          supabaseAdmin,
+          targetOrgId,
+          org.name,
+          callerProfile?.name || 'Administrador',
+          contactWhatsapp,
+          existingUser.name,
+          email,
+        );
+      }
+
       return new Response(JSON.stringify({
         success: true,
         user: {
@@ -497,6 +512,7 @@ Deno.serve(async (req) => {
           role,
         },
         wasMultiOrg: true,
+        whatsappSent: welcomeResult.sent,
         message: `Usuário adicionado à organização ${org.name}. O acesso será feito com a senha existente.`,
       }), {
         status: 200,
