@@ -17,9 +17,9 @@ const getInitials = (name?: string | null) => {
 };
 
 export default function SelectOrganization() {
-  const { user, loading, isSuperAdmin, switchOrganization } = useAuth();
+  const { user, loading, isSuperAdmin, switchOrganization, organization } = useAuth();
   const navigate = useNavigate();
-  const { data: organizations = [], isLoading: orgsLoading } = useUserOrganizations(user?.id);
+  const { data: organizations = [], isLoading: orgsLoading } = useUserOrganizations(user?.id, organization?.id);
   const { data: systemSettings } = useSystemSettings();
   const { resolvedTheme } = useTheme();
 
