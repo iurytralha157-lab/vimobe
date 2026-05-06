@@ -16,7 +16,7 @@ export interface TeamMember {
   user_id: string;
   created_at: string;
   is_leader?: boolean;
-  user?: { id: string; name: string; avatar_url: string | null };
+  user?: { id: string; name: string; avatar_url: string | null; email?: string | null };
 }
 
 export function useTeams() {
