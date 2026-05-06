@@ -353,10 +353,10 @@ export function useUnreadNotificationsCount() {
   const { profile, organization } = useAuth();
 
   useEffect(() => {
-    if (!profile?.id) return;
+    if (!profile?.id || !organization?.id) return;
 
     const channel = supabase
-      .channel('notifications-count-realtime-v3')
+      .channel(`notifications-count-realtime-${profile.id}-${organization.id}`)
       .on(
         'postgres_changes',
         {
@@ -365,8 +365,12 @@ export function useUnreadNotificationsCount() {
           table: 'notifications',
           filter: `user_id=eq.${profile.id}`,
         },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ['unread-notifications-count'] });
+        (payload) => {
+          // Only invalidate if the notification belongs to current organization
+          const notification = payload.new as any;
+          if (!notification || notification.organization_id === organization.id) {
+            queryClient.invalidateQueries({ queryKey: ['unread-notifications-count'] });
+          }
         }
       )
       .subscribe();
@@ -374,21 +378,22 @@ export function useUnreadNotificationsCount() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [profile?.id, queryClient]);
+  }, [profile?.id, organization?.id, queryClient]);
 
   return useQuery({
-    queryKey: ['unread-notifications-count', profile?.id],
+    queryKey: ['unread-notifications-count', profile?.id, organization?.id],
     queryFn: async () => {
       const { count, error } = await supabase
         .from('notifications')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', profile!.id)
+        .eq('organization_id', organization!.id)
         .eq('is_read', false);
       
       if (error) throw error;
       return count || 0;
     },
-    enabled: !!profile?.id,
+    enabled: !!profile?.id && !!organization?.id,
     refetchInterval: 30000,
   });
 }
