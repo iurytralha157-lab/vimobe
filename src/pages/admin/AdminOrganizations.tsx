@@ -239,51 +239,43 @@ export default function AdminOrganizations() {
           </Dialog>
         </div>
 
-        {/* Organizations List */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Todas as Organizações</CardTitle>
-            <CardDescription>
-              {filteredOrgs.length} organizações encontradas
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="px-4 md:px-6 pb-4">
-            {loadingOrgs ?
-            <div className="text-center py-8 text-muted-foreground">
-                Carregando...
-              </div> :
-            filteredOrgs.length === 0 ?
-            <div className="text-center py-8 text-muted-foreground">
-                Nenhuma organização encontrada
-              </div> :
-
-            <div className="space-y-2">
-                {filteredOrgs.map((org) =>
-              <div
-                key={org.id}
-                className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors gap-3">
-
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
+          {loadingOrgs ? (
+            <div className="col-span-full text-center py-8 text-muted-foreground">
+              Carregando...
+            </div>
+          ) : filteredOrgs.length === 0 ? (
+            <div className="col-span-full text-center py-8 text-muted-foreground">
+              Nenhuma organização encontrada
+            </div>
+          ) : (
+            filteredOrgs.map((org) => (
+              <Card 
+                key={org.id} 
+                className="cursor-pointer hover:border-primary/50 transition-all hover:shadow-md group relative"
+                onClick={() => navigate(`/admin/organizations/${org.id}`)}
+              >
+                <CardContent className="p-5">
+                  <div className="flex justify-between items-start mb-4">
                     <div className="flex items-center gap-4">
-                      <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                        <Building2 className="h-5 w-5 text-primary" />
+                      <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                        <Building2 className="h-6 w-6 text-primary" />
                       </div>
                       <div>
-                        <p className="font-medium">{org.name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {org.user_count} usuários • {org.lead_count} leads • 
-                          Criado {formatDistanceToNow(new Date(org.created_at), {
-                        addSuffix: true,
-                        locale: ptBR
-                      })}
-                        </p>
+                        <h3 className="font-bold text-lg leading-tight">{org.name}</h3>
+                        <div className="flex items-center gap-2 mt-1">
+                          {getStatusBadge(org.subscription_status, org.is_active)}
+                          <Badge variant="secondary" className="text-[10px] uppercase">
+                            {org.segment || 'Geral'}
+                          </Badge>
+                        </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-                      {getStatusBadge(org.subscription_status, org.is_active)}
-                      
+                    
+                    <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
@@ -298,25 +290,25 @@ export default function AdminOrganizations() {
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
-                        onClick={() => handleToggleActive(org.id, org.is_active)}
-                        className={org.is_active ? 'text-destructive' : 'text-orange-600'}>
-
-                            {org.is_active ?
-                        <>
+                            onClick={() => handleToggleActive(org.id, org.is_active)}
+                            className={org.is_active ? 'text-destructive' : 'text-orange-600'}
+                          >
+                            {org.is_active ? (
+                              <>
                                 <PowerOff className="h-4 w-4 mr-2" />
                                 Desativar
-                              </> :
-
-                        <>
+                              </>
+                            ) : (
+                              <>
                                 <Power className="h-4 w-4 mr-2" />
                                 Ativar
                               </>
-                        }
+                            )}
                           </DropdownMenuItem>
                           <DropdownMenuItem
-                        onClick={() => openDeleteDialog({ id: org.id, name: org.name })}
-                        className="text-destructive">
-
+                            onClick={() => openDeleteDialog({ id: org.id, name: org.name })}
+                            className="text-destructive"
+                          >
                             <Trash2 className="h-4 w-4 mr-2" />
                             Excluir Organização
                           </DropdownMenuItem>
@@ -324,11 +316,31 @@ export default function AdminOrganizations() {
                       </DropdownMenu>
                     </div>
                   </div>
-              )}
-              </div>
-            }
-          </CardContent>
-        </Card>
+
+                  <div className="grid grid-cols-2 gap-4 pt-4 border-t border-muted">
+                    <div>
+                      <p className="text-xs text-muted-foreground uppercase font-semibold">Usuários</p>
+                      <p className="text-sm font-medium">{org.user_count || 0}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground uppercase font-semibold">Leads</p>
+                      <p className="text-sm font-medium">{org.lead_count || 0}</p>
+                    </div>
+                    <div className="col-span-2">
+                      <p className="text-xs text-muted-foreground uppercase font-semibold">Criado em</p>
+                      <p className="text-sm font-medium">
+                        {formatDistanceToNow(new Date(org.created_at), {
+                          addSuffix: true,
+                          locale: ptBR
+                        })}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </div>
 
         {/* Delete Confirmation Dialog */}
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
