@@ -23,6 +23,7 @@ export interface OrganizationWithStats {
   next_billing_date?: string | null;
   asaas_customer_id?: string | null;
   asaas_subscription_id?: string | null;
+  segment?: string | null;
 }
 
 export function useSuperAdmin() {
