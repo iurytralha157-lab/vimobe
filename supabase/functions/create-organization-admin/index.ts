@@ -151,10 +151,10 @@ Deno.serve(async (req) => {
         role: 'admin',
         organization_id: org.id,
         is_active: true,
-        whatsapp: phone || whatsapp || null,
+        whatsapp: whatsapp || phone || null,
         phone: phone || null,
         cpf: cpf || null,
-      })
+      }, { onConflict: 'id' })
       .eq('id', authData.user.id);
 
     if (userError) {
