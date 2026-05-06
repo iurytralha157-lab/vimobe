@@ -44,6 +44,7 @@ import { LeadTimeline } from '@/components/leads/LeadTimeline';
 import { TelecomCustomerTab } from '@/components/leads/TelecomCustomerTab';
 import { ReentryBadge } from '@/components/leads/ReentryBadge';
 import { LostReasonDialog } from '@/components/leads/LostReasonDialog';
+import { SdrDistributionButton } from '@/components/leads/SdrDistributionButton';
 
 import { TaskOutcomeDialog, TaskOutcome, getOutcomeLabel } from '@/components/leads/TaskOutcomeDialog';
 import { formatResponseTime } from '@/hooks/use-lead-timeline';
@@ -1367,6 +1368,9 @@ export function LeadDetailDialog({
                     </div>
                   </PopoverContent>
                 </Popover>
+                <div className="mt-2">
+                  <SdrDistributionButton lead={lead} refetchStages={refetchStages} />
+                </div>
               </div>
 
               {/* Origem */}
@@ -1743,6 +1747,8 @@ export function LeadDetailDialog({
                     </div>
                   </PopoverContent>
                 </Popover>
+
+                <SdrDistributionButton lead={lead} refetchStages={refetchStages} />
               </div>
             </div>
             
