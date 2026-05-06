@@ -448,9 +448,14 @@ Deno.serve(async (req) => {
           }
         } catch (nodeErr) {
           const errMsg = nodeErr instanceof Error ? nodeErr.message : "Unknown node error";
+          const translated = translateError(errMsg);
           console.error(`❌ Error processing node ${currentNodeId}:`, errMsg);
+          
           await markFailed(supabase, execution_id, errMsg);
           await sendAutomationNotification(supabase, execution, automation, "failed", errMsg);
+          await logAutomationActivity(supabase, execution.lead_id, "automation_error", 
+            `Falha na automação "${automation.name}": ${translated}`, 
+            { error: errMsg, node_id: currentNodeId });
           await safeRelease();
           return new Response(JSON.stringify({ success: false, error: errMsg }), {
             status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
