@@ -42,11 +42,9 @@ export default function SelectOrganization() {
     }
   }, [loading, orgsLoading, isSuperAdmin, organizations, navigate]);
 
-  useEffect(() => {
-    if (!loading && !orgsLoading && organizations.length === 1) {
-      handleSelectOrg(organizations[0].organization_id);
-    }
-  }, [loading, orgsLoading, organizations]);
+  // Replaced auto-redirect to allow users to always see the selection screen if desired
+  // This addresses the user request "Ele não tá sempre aparecendo, ele tem que sempre aparecer"
+
 
   const handleSelectOrg = async (orgId: string) => {
     await switchOrganization(orgId);
@@ -61,13 +59,28 @@ export default function SelectOrganization() {
     );
   }
 
-  if (organizations.length <= 1) {
+  if (organizations.length === 0) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4 text-center space-y-4">
+        <Building2 className="h-12 w-12 text-muted-foreground" />
+        <div className="space-y-2">
+          <h2 className="text-xl font-semibold">Nenhuma organização encontrada</h2>
+          <p className="text-muted-foreground max-w-xs">
+            Você não possui acesso a nenhuma organização ativa no momento.
+          </p>
+        </div>
+        {isSuperAdmin && (
+          <button
+            onClick={() => navigate('/admin')}
+            className="text-primary hover:underline font-medium"
+          >
+            Acessar Painel Super Admin
+          </button>
+        )}
       </div>
     );
   }
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
