@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Bell, Moon, Sun, Loader2, LogOut, ChevronDown, UserPlus, CheckSquare, FileText, DollarSign, Info, Settings, HelpCircle, Shield, Building2, Check, Key } from 'lucide-react';
 import { useOrganizationModules } from '@/hooks/use-organization-modules';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useNavigate } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 
 const notificationIcons: Record<string, typeof Bell> = {
   lead: UserPlus,
@@ -37,6 +39,8 @@ export const AppHeader = React.memo(function AppHeader({
     switchOrganization,
     user,
   } = useAuth();
+  const [isSwitching, setIsSwitching] = useState(false);
+  const queryClient = useQueryClient();
   const { hasModule } = useOrganizationModules();
   const {
     theme,
@@ -54,15 +58,30 @@ export const AppHeader = React.memo(function AppHeader({
   } = useUnreadNotificationsCount();
   const markRead = useMarkNotificationRead();
   const markAllRead = useMarkAllNotificationsRead();
-  const { data: userOrganizations = [] } = useUserOrganizations(user?.id);
+  const { data: userOrganizations = [] } = useUserOrganizations(user?.id, organization?.id);
   
   const hasMultipleOrgs = userOrganizations.length > 1;
 
   const handleSwitchOrg = async (orgId: string) => {
-    await switchOrganization(orgId);
-    navigate('/dashboard', { replace: true });
-    // Force reload to reset all queries
-    window.location.reload();
+    if (orgId === organization?.id) return;
+    
+    setIsSwitching(true);
+    try {
+      await switchOrganization(orgId);
+      
+      // Invalidate all queries to refresh data for the new organization
+      await queryClient.invalidateQueries();
+      
+      toast.success("Organização alterada com sucesso");
+      
+      // Navigate to dashboard to ensure we are on a clean state
+      navigate('/dashboard', { replace: true });
+    } catch (error) {
+      console.error('Error switching organization:', error);
+      toast.error("Erro ao trocar de organização");
+    } finally {
+      setIsSwitching(false);
+    }
   };
 
   const handleNotificationClick = (notification: any) => {
@@ -93,9 +112,14 @@ export const AppHeader = React.memo(function AppHeader({
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
+                disabled={isSwitching}
                 className="h-10 gap-2 px-3 rounded-full bg-card dark:bg-[#111] transition-all duration-300"
               >
-                <Building2 className="h-4 w-4 text-primary" />
+                {isSwitching ? (
+                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                ) : (
+                  <Building2 className="h-4 w-4 text-primary" />
+                )}
                 {!isMobile && (
                   <span className="text-xs font-medium truncate max-w-[120px]">
                     {organization?.name || 'Organização'}
