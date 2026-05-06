@@ -363,15 +363,28 @@ Deno.serve(async (req) => {
           : automation.created_by;
         
         if (notifyUserId) {
+          // Fetch organization name
+          let organizationName = "";
+          const { data: org } = await supabaseAdmin
+            .from("organizations")
+            .select("name")
+            .eq("id", organizationId)
+            .single();
+          if (org) {
+            organizationName = org.name;
+          }
+
+          const orgSuffix = organizationName ? ` na *${organizationName}*` : "";
+
           await supabaseAdmin.from("notifications").insert({
             user_id: notifyUserId,
             organization_id: organizationId,
             title: "🤖 Automação Iniciada",
-            content: `"${automation.name}" iniciou para ${leadName}`,
+            content: `"${automation.name}" iniciou para ${leadName}${orgSuffix}`,
             type: "automation",
             lead_id: data.lead_id || null,
           });
-          console.log(`Notification sent: automation started for ${leadName}`);
+          console.log(`Notification sent: automation started for ${leadName} at ${organizationName}`);
         }
 
         // Call executor to process the first node
