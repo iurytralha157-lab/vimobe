@@ -159,7 +159,7 @@ Deno.serve(async (req) => {
     // Get caller's profile to check permissions
     const { data: callerProfile } = await supabaseAdmin
       .from('users')
-      .select('organization_id, role')
+      .select('organization_id, role, name')
       .eq('id', callerUser.id)
       .single();
 
