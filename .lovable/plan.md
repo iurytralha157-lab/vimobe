@@ -1,19 +1,16 @@
-O sistema está processando leads do Meta normalmente até o final do dia 04/05 (anteontem). Identifiquei que leads foram gerados para as três organizações mencionadas nesse período:
+I will ensure the Meta webhook follows a strict 'Active Form' policy for lead generation.
 
-- **Nexo Imóveis (Fernando):** Último lead do Meta em 04/05 às 22:12.
-- **Rede Nardo (RE/MAX):** Último lead do Meta em 04/05 às 22:13.
-- **Visioria (Daniel Thomaz):** Último lead do Meta em 04/05 às 20:23.
+1. Review and refine the `meta-webhook` Edge Function:
+   - Verify that the `leadgen` event (Meta Lead Ads) strictly requires an entry in the `meta_form_configs` table with `is_active = true`.
+   - Ensure that if no active configuration is found for a specific `form_id`, the lead is intentionally skipped and logged.
+   - Remove any potential "auto-create" or "permissive" fallbacks that might have been added to bypass the form configuration requirement.
+   - Add detailed logging for skipped leads to help identify which forms are being ignored and why (e.g., 'Form ID X is inactive' or 'Form ID X not found in configuration').
 
-A ausência de leads nas últimas 36 horas (dia 05/05 e hoje) parece estar relacionada à **falta de novos disparos vindos do próprio Meta (Facebook/Instagram)**, e não a uma falha interna do sistema, dado que:
-1. As integrações aparecem como "Conectadas" no banco de dados.
-2. Não há registros de erros recentes de integração (last_error está vazio).
-3. Outras formas de entrada (como WhatsApp) continuam gerando centenas de leads normalmente hoje (308 leads via WhatsApp em 05/05).
+2. Verification:
+   - Check the `meta_form_configs` for the mentioned accounts (Nexo, Daniel Thomaz, Rede Nardo) to ensure their current forms are marked as active and have the correct mappings.
+   - Verify that the logic correctly handles cases where multiple organizations might be linked to the same Facebook Page.
 
-Vou realizar uma manutenção preventiva para garantir que qualquer barreira técnica seja removida:
-
-1. **Re-sincronização de Webhooks:** Forçar uma atualização das configurações de webhook para essas contas para garantir que o Meta tenha o caminho correto para enviar os dados.
-2. **Verificação de Tokens:** Validar se os tokens de acesso ainda possuem as permissões necessárias para buscar leads em tempo real.
-3. **Logs de Diagnóstico:** Ativar um log temporário mais detalhado na função `meta-webhook` para capturar qualquer tentativa frustrada de envio pelo Meta que possa estar sendo ignorada silenciosamente.
-
-**Recomendação para o usuário:**
-Peça aos clientes para verificarem se suas campanhas no Gerenciador de Anúncios do Meta ainda estão ativas e se não há notificações de "Token Expirado" ou "Configuração de Webhook pendente" na página do Facebook.
+Technical details:
+- File: `supabase/functions/meta-webhook/index.ts`
+- Logic: The loop over `entry.changes` for `field === 'leadgen'` will continue to require a successful `maybeSingle()` fetch from `meta_form_configs` where `is_active` is true.
+- If `formConfig` is null, the process for that specific integration/form combination will `continue` (skip).

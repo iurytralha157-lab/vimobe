@@ -249,20 +249,32 @@ serve(async (req) => {
                 if (!integrations?.length) continue;
 
                 for (const integration of integrations) {
-                  console.log(`Checking form config for integration ${integration.id} and form ${formId}`);
+                  console.log(`Checking form config for integration ${integration.id} (Org: ${integration.organization_id}) and form ${formId}`);
                   
-                  const { data: formConfig } = await supabase
+                  // STRICT CHECK: Form must be in meta_form_configs AND is_active must be true
+                  const { data: formConfig, error: configError } = await supabase
                     .from("meta_form_configs")
                     .select("*")
                     .eq("integration_id", integration.id)
                     .eq("form_id", formId)
-                    .eq("is_active", true)
                     .maybeSingle();
 
-                  if (!formConfig) {
-                    console.log(`No active form config found for form ${formId} on integration ${integration.id}. Skipping lead creation per user request.`);
+                  if (configError) {
+                    console.error(`Error fetching form config for form ${formId}:`, configError);
                     continue;
                   }
+
+                  if (!formConfig) {
+                    console.log(`[REJECTED] Form ${formId} not found in meta_form_configs for integration ${integration.id}. Skipping lead.`);
+                    continue;
+                  }
+
+                  if (formConfig.is_active !== true) {
+                    console.log(`[REJECTED] Form ${formId} (${formConfig.form_name}) is INACTIVE for integration ${integration.id}. Skipping lead.`);
+                    continue;
+                  }
+
+                  console.log(`[ACCEPTED] Processing lead for form ${formId} (${formConfig.form_name})`);
 
                   const pipelineId = formConfig.pipeline_id || integration.pipeline_id;
                   const stageId = formConfig.stage_id || integration.stage_id;
