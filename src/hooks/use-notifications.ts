@@ -201,7 +201,7 @@ export function useNotifications() {
 
   // Subscribe to realtime notifications with exponential backoff
   useEffect(() => {
-    if (!profile?.id) return;
+    if (!profile?.id || !organization?.id) return;
 
     let reconnectAttempts = 0;
     const maxReconnectAttempts = 5;
@@ -217,10 +217,10 @@ export function useNotifications() {
         channelRef.current = null;
       }
 
-      console.log('📡 Setting up notifications realtime channel for user:', profile.id);
+      console.log('📡 Setting up notifications realtime channel for user:', profile.id, 'org:', organization.id);
 
       const channel = supabase
-        .channel(`notifications-realtime-v5-${profile.id}-${Date.now()}`)
+        .channel(`notifications-realtime-v6-${profile.id}-${organization.id}-${Date.now()}`)
         .on(
           'postgres_changes',
           {
@@ -230,9 +230,15 @@ export function useNotifications() {
             filter: `user_id=eq.${profile.id}`,
           },
           (payload) => {
-            console.log('🔔 New notification received via Realtime:', payload);
-            
             const newNotification = payload.new as Notification;
+            
+            // Only process notifications for the current organization
+            if (newNotification.organization_id !== organization.id) {
+              console.log('⏭️ Notification for different organization ignored:', newNotification.organization_id);
+              return;
+            }
+
+            console.log('🔔 New notification received via Realtime:', payload);
             
             // Skip WhatsApp message notifications (silent)
             const isWhatsAppNotification = newNotification.type === 'whatsapp' || newNotification.type === 'message';
