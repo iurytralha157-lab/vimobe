@@ -350,7 +350,7 @@ export function useNotifications() {
 
 export function useUnreadNotificationsCount() {
   const queryClient = useQueryClient();
-  const { profile } = useAuth();
+  const { profile, organization } = useAuth();
 
   useEffect(() => {
     if (!profile?.id) return;
