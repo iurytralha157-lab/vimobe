@@ -30,10 +30,12 @@ function generateRandomPassword(length = 12): string {
 async function sendWelcomeWhatsApp(
   supabaseAdmin: any,
   organizationId: string,
+  organizationName: string,
+  inviterName: string,
   toPhone: string,
   name: string,
   email: string,
-  password: string,
+  password?: string,
 ) {
   try {
     const EVOLUTION_API_URL = Deno.env.get('EVOLUTION_API_URL');
@@ -75,13 +77,23 @@ async function sendWelcomeWhatsApp(
     }
 
     const loginUrl = 'https://vimob.vettercompany.com.br/auth';
-    const message =
-      `👋 Olá *${name}*, seja bem-vindo(a) ao Vimob CRM!\n\n` +
-      `Sua conta foi criada com sucesso. Aqui estão seus dados de acesso:\n\n` +
-      `🔗 *Link de acesso:* ${loginUrl}\n` +
-      `📧 *Login (e-mail):* ${email}\n` +
-      `🔑 *Senha:* ${password}\n\n` +
-      `Por segurança, recomendamos alterar a senha após o primeiro acesso em *Configurações → Minha Conta*.`;
+    
+    let message = '';
+    if (password) {
+      message =
+        `👋 Olá *${name}*, ${inviterName} da *${organizationName}* criou sua conta no Vimob CRM!\n\n` +
+        `Sua conta foi criada com sucesso. Aqui estão seus dados de acesso:\n\n` +
+        `🔗 *Link de acesso:* ${loginUrl}\n` +
+        `📧 *Login (e-mail):* ${email}\n` +
+        `🔑 *Senha:* ${password}\n\n` +
+        `Por segurança, recomendamos alterar a senha após o primeiro acesso em *Configurações → Minha Conta*.`;
+    } else {
+      message =
+        `👋 Olá *${name}*! ${inviterName} convidou você para participar da organização *${organizationName}* no Vimob CRM.\n\n` +
+        `Seu acesso já está garantido! Como você já possui uma conta, utilize seu e-mail e senha atuais para acessar:\n\n` +
+        `🔗 *Link de acesso:* ${loginUrl}\n` +
+        `📧 *Login (e-mail):* ${email}`;
+    }
 
     const response = await fetch(`${EVOLUTION_API_URL}/message/sendText/${instanceName}`, {
       method: 'POST',
