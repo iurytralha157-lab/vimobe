@@ -162,28 +162,27 @@ Deno.serve(async (req) => {
               });
             }
 
-            // 3. Verificar se deve parar a automação
-            if (nodeConfig.stop_on_reply === true) {
+            // 3. Se houver uma conexão específica para "Respondido", seguir por ela
+            const replyConn = automation.connections?.find(
+              (c: any) => c.source_node_id === previousNode.id && 
+              (c.source_handle === "replied" || c.source_handle === "reply" || c.source_handle === "respondido" || c.condition_branch === "replied")
+            );
+
+            if (replyConn) {
+              console.log(`Following 'replied' branch to node ${replyConn.target_node_id}`);
+              await supabaseAdmin.from("automation_executions").update({
+                current_node_id: replyConn.target_node_id,
+                status: "running",
+                next_execution_at: null
+              }).eq("id", exec.id);
+            } else if (nodeConfig.stop_on_reply === true) {
+              // 4. Verificar se deve parar a automação (apenas se não houver ramo de resposta específico)
               console.log(`Stopping execution ${exec.id} due to stop_on_reply`);
               await supabaseAdmin.from("automation_executions").update({
                 status: "completed",
                 completed_at: new Date().toISOString()
               }).eq("id", exec.id);
               continue;
-            }
-
-            // 4. Se houver uma conexão específica para "Respondido", seguir por ela
-            const replyConn = automation.connections?.find(
-              (c: any) => c.source_node_id === previousNode.id && (c.source_handle === "reply" || c.source_handle === "respondido")
-            );
-
-            if (replyConn) {
-              console.log(`Following 'reply' branch to node ${replyConn.target_node_id}`);
-              await supabaseAdmin.from("automation_executions").update({
-                current_node_id: replyConn.target_node_id,
-                status: "running",
-                next_execution_at: null
-              }).eq("id", exec.id);
             } else {
               // Caso contrário, apenas continua o fluxo normal (pula o tempo de espera)
               await supabaseAdmin.from("automation_executions").update({
