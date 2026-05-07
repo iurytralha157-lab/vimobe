@@ -25,18 +25,36 @@ const handleChunkError = (event: Event | PromiseRejectionEvent) => {
 window.addEventListener('error', handleChunkError);
 window.addEventListener('unhandledrejection', handleChunkError);
 
+// One-time cleanup for users stuck on old cached versions.
+// Bump CACHE_BUST_VERSION to force ALL clients to clear caches + SWs once.
+const CACHE_BUST_VERSION = '2026-05-07-v1';
+const BUST_KEY = 'lovable_cache_bust_version';
+try {
+  if (typeof window !== 'undefined' && localStorage.getItem(BUST_KEY) !== CACHE_BUST_VERSION) {
+    localStorage.setItem(BUST_KEY, CACHE_BUST_VERSION);
+    (async () => {
+      try {
+        if ('caches' in window) {
+          const names = await caches.keys();
+          await Promise.all(names.map((n) => caches.delete(n)));
+        }
+        if ('serviceWorker' in navigator) {
+          const regs = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(regs.map((r) => r.unregister()));
+        }
+      } catch (e) {
+        console.warn('Cache bust cleanup failed', e);
+      } finally {
+        window.location.reload();
+      }
+    })();
+  }
+} catch {}
+
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <App />
   </React.StrictMode>
 );
 
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').then(registration => {
-      console.log('SW registered: ', registration);
-    }).catch(registrationError => {
-      console.log('SW registration failed: ', registrationError);
-    });
-  });
-}
+// SW registration is handled by vite-plugin-pwa via usePwaUpdate hook.

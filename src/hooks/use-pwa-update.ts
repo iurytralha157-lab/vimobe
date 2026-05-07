@@ -5,56 +5,48 @@ import { toast } from 'sonner';
 
 export function usePwaUpdate() {
   const {
-    needRefresh: [needRefresh, setNeedRefresh],
+    needRefresh: [needRefresh],
     updateServiceWorker,
   } = useRegisterSW({
-    onRegistered(r) {
+    onRegistered(r: ServiceWorkerRegistration | undefined) {
       console.log('SW Registered:', r);
-      // Check for updates every 10 minutes
-      if (r) {
-        setInterval(() => {
-          r.update();
-        }, 10 * 60 * 1000);
-      }
+      if (!r) return;
+
+      // Check for updates every 2 minutes
+      setInterval(() => {
+        r.update().catch(() => {});
+      }, 2 * 60 * 1000);
+
+      // Also check whenever the tab becomes visible / focused
+      const checkUpdate = () => {
+        if (document.visibilityState === 'visible') {
+          r.update().catch(() => {});
+        }
+      };
+      document.addEventListener('visibilitychange', checkUpdate);
+      window.addEventListener('focus', checkUpdate);
     },
-    onRegisterError(error) {
+    onRegisterError(error: unknown) {
       console.error('SW registration error', error);
     },
     onNeedRefresh() {
-      console.log('Update available! Showing toast...');
-      toast('Nova atualização disponível!', {
-        description: 'Clique para atualizar o app e garantir que todos os ícones e recursos estejam corretos.',
-        action: {
-          label: 'Atualizar Agora',
-          onClick: () => {
-            // Clear simple caches before reloading
-            if ('caches' in window) {
-              caches.keys().then(names => {
-                for (let name of names) {
-                  if (name.includes('supabase') || name.includes('images')) {
-                    caches.delete(name);
-                  }
-                }
-              });
-            }
-            // Clear all caches for icons specifically
-            if ('caches' in window) {
-              caches.keys().then(names => {
-                for (let name of names) {
-                  caches.delete(name);
-                }
-              });
-            }
-            // Clear storage and reload
-            localStorage.clear();
-            sessionStorage.clear();
-            
-            updateServiceWorker(true);
-            setTimeout(() => window.location.reload(), 500);
-          },
-        },
-        duration: Infinity,
-      });
+      console.log('Update available! Auto-applying...');
+      toast.info('Atualizando para a nova versão...', { duration: 2000 });
+
+      // Limpa caches do runtime para garantir conteúdo fresco
+      if ('caches' in window) {
+        caches.keys().then((names) => {
+          names.forEach((name) => caches.delete(name));
+        }).catch(() => {});
+      }
+
+      // Aplica o novo SW e recarrega
+      try {
+        updateServiceWorker(true);
+      } catch (e) {
+        console.error('updateServiceWorker failed', e);
+      }
+      setTimeout(() => window.location.reload(), 800);
     },
     onOfflineReady() {
       console.log('App ready for offline use');
@@ -62,10 +54,7 @@ export function usePwaUpdate() {
   });
 
   useEffect(() => {
-    if (needRefresh) {
-      // In some cases we might want to force update if the user hasn't interacted
-      // but showing a toast is safer to avoid losing state.
-    }
+    // No-op: refresh é automático em onNeedRefresh
   }, [needRefresh]);
 
   return { needRefresh, updateServiceWorker };
