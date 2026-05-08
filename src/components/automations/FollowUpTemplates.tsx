@@ -25,7 +25,7 @@ export const FOLLOW_UP_TEMPLATES: FollowUpTemplate[] = [
     description: 'Sequência rápida de 3 mensagens para leads quentes',
     days: 3,
     industry: 'real_estate',
-    onReplyMessage: DEFAULT_ON_REPLY_MESSAGE,
+    onReplyMessage: undefined,
     messages: [
       { day: 1, title: 'Primeiro contato', content: `Olá {{lead.name}}! 👋\n\nAqui é da {{organization.name}}. Vi que você demonstrou interesse em nossos imóveis.\n\nPosso ajudar a encontrar o imóvel perfeito para você? Qual região você está procurando?` },
       { day: 2, title: 'Lembrete', content: `Oi {{lead.name}}, tudo bem? \n\nSó passando para lembrar que estamos à disposição para ajudar na sua busca!\n\nTemos ótimas opções disponíveis. Quer que eu envie algumas sugestões?` },
