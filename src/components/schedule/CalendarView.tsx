@@ -62,6 +62,8 @@ interface CalendarViewProps {
   events: ScheduleEvent[];
   selectedDate: Date;
   onDateSelect: (date: Date) => void;
+  pivotDate: Date;
+  onPivotChange: (date: Date) => void;
   viewMode: 'day' | 'week' | 'month' | 'year';
 }
 export function CalendarView({
