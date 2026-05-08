@@ -49,15 +49,6 @@ const eventTypeColors: Record<EventType, string> = {
   visit: 'bg-[#ec4899] border-[#db2777] text-white shadow-pink-500/20',
 };
 
-const eventTypeIcons: Record<EventType, React.ElementType> = {
-  call: Phone,
-  email: Mail,
-  meeting: CalendarIcon,
-  task: CheckSquare,
-  message: MessageSquare,
-  visit: MapPin,
-};
-
 interface CalendarViewProps {
   events: ScheduleEvent[];
   selectedDate: Date;
@@ -132,7 +123,6 @@ export function CalendarView({
     }
 
     return (
-    return (
       <div className="flex items-center justify-between p-4 border-b bg-muted/30">
         <div className="flex items-center gap-3">
           <Button variant="outline" size="sm" onClick={handleToday} className="font-bold rounded-xl h-9">
@@ -153,8 +143,6 @@ export function CalendarView({
       </div>
     );
   };
-    );
-  };
 
   const renderMonthView = () => {
     const monthStart = startOfMonth(pivotDate);
@@ -165,11 +153,11 @@ export function CalendarView({
     const weekDays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
     return (
-      <div className="flex flex-col h-full">
-        <div className="grid grid-cols-7 mb-2 border-b">
+      <div className="flex flex-col h-full overflow-hidden">
+        <div className="grid grid-cols-7 border-b">
           {weekDays.map(day => (
-            <div key={day} className="text-center text-xs font-semibold text-muted-foreground py-3">
-              {day.toUpperCase()}
+            <div key={day} className="text-center text-[10px] font-black text-muted-foreground py-3 uppercase tracking-widest">
+              {day}
             </div>
           ))}
         </div>
@@ -248,7 +236,7 @@ export function CalendarView({
           <div className="w-16 border-r flex-shrink-0">
             {hours.map(hour => (
               <div key={hour.toString()} className="h-20 border-b flex justify-center pt-2">
-                <span className="text-[10px] text-muted-foreground font-medium">
+                <span className="text-[10px] text-muted-foreground font-black uppercase tracking-tighter opacity-50">
                   {format(hour, 'HH:mm')}
                 </span>
               </div>
@@ -293,14 +281,14 @@ export function CalendarView({
                 >
                   <div className="flex items-center gap-2 mb-1">
                     <Icon className="h-3.5 w-3.5" />
-                    <span className="text-xs font-bold truncate">{event.title}</span>
+                    <span className="text-xs font-black truncate tracking-tight">{event.title}</span>
                   </div>
-                  <div className="flex items-center gap-2 text-[10px] opacity-80">
+                  <div className="flex items-center gap-2 text-[10px] font-bold opacity-90">
                     <Clock className="h-3 w-3" />
                     <span>{format(start, 'HH:mm')} - {format(end, 'HH:mm')}</span>
                   </div>
                   {event.lead && (
-                    <div className="flex items-center gap-1.5 mt-1 text-[10px] opacity-80">
+                    <div className="flex items-center gap-1.5 mt-1 text-[10px] font-bold opacity-90">
                       <User className="h-3 w-3" />
                       <span className="truncate">{event.lead.name}</span>
                     </div>
@@ -324,18 +312,18 @@ export function CalendarView({
 
     return (
       <ScrollArea className="flex-1 border-0 bg-card">
-        <div className="relative flex flex-col">
+        <div className="relative flex flex-col min-w-[800px]">
           {/* Header */}
           <div className="flex border-b sticky top-0 bg-card z-20">
             <div className="w-16 border-r flex-shrink-0" />
             {weekDays.map(day => (
               <div key={day.toString()} className="flex-1 border-r last:border-r-0 py-3 text-center">
-                <span className="block text-[10px] text-muted-foreground font-semibold uppercase">
+                <span className="block text-[10px] text-muted-foreground font-black uppercase tracking-widest opacity-60">
                   {format(day, 'EEE', { locale: ptBR })}
                 </span>
                 <span className={cn(
-                  "text-lg font-bold h-9 w-9 inline-flex items-center justify-center rounded-full mt-1",
-                  isToday(day) && "bg-primary text-primary-foreground"
+                  "text-lg font-black h-9 w-9 inline-flex items-center justify-center rounded-xl mt-1 transition-all",
+                  isToday(day) ? "bg-primary text-primary-foreground shadow-md shadow-primary/20" : "text-foreground"
                 )}>
                   {format(day, 'd')}
                 </span>
@@ -349,7 +337,7 @@ export function CalendarView({
             <div className="w-16 border-r flex-shrink-0">
               {hours.map(hour => (
                 <div key={hour.toString()} className="h-20 border-b flex justify-center pt-2">
-                  <span className="text-[10px] text-muted-foreground font-medium">
+                  <span className="text-[10px] text-muted-foreground font-black uppercase tracking-tighter opacity-50">
                     {format(hour, 'HH:mm')}
                   </span>
                 </div>
@@ -362,7 +350,7 @@ export function CalendarView({
                 {hours.map(hour => (
                   <div 
                     key={hour.toString()} 
-                    className="h-20 border-b cursor-pointer hover:bg-muted/20 transition-colors" 
+                    className="h-20 border-b cursor-pointer hover:bg-muted/30 transition-colors" 
                     onClick={() => {
                       const clickDate = new Date(day);
                       clickDate.setHours(hour.getHours(), 0, 0, 0);
@@ -383,17 +371,21 @@ export function CalendarView({
                   return (
                     <div 
                       key={event.id}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEditEvent?.(event);
+                      }}
                       className={cn(
-                        "absolute left-1 right-1 rounded border p-1.5 overflow-hidden shadow-sm transition-transform hover:scale-[1.02] z-10",
-                        eventTypeLightColors[event.event_type as EventType]
+                        "absolute left-1 right-1 rounded-lg border p-1.5 overflow-hidden shadow-md transition-all hover:scale-[1.05] hover:z-20 z-10 cursor-pointer",
+                        eventTypeColors[event.event_type as EventType]
                       )}
-                      style={{ top: `${top}px`, height: `${height}px`, minHeight: '25px' }}
+                      style={{ top: `${top}px`, height: `${height}px`, minHeight: '30px' }}
                     >
                       <div className="flex items-center gap-1.5 mb-0.5">
                         <Icon className="h-3 w-3 flex-shrink-0" />
-                        <span className="text-[10px] font-bold truncate leading-tight">{event.title}</span>
+                        <span className="text-[10px] font-black truncate leading-tight tracking-tighter">{event.title}</span>
                       </div>
-                      <span className="text-[8px] opacity-80 block leading-tight">
+                      <span className="text-[8px] font-bold opacity-90 block leading-tight">
                         {format(start, 'HH:mm')}
                       </span>
                     </div>
@@ -415,7 +407,7 @@ export function CalendarView({
     });
 
     return (
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-8 p-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 p-6 h-full overflow-y-auto">
         {months.map(month => {
           const monthStart = startOfMonth(month);
           const monthEnd = endOfMonth(month);
@@ -425,13 +417,13 @@ export function CalendarView({
           const weekDaysShort = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
 
           return (
-            <div key={month.toString()} className="space-y-3">
-              <h3 className="font-bold text-sm capitalize text-primary">
+            <div key={month.toString()} className="space-y-4 bg-card border p-4 rounded-2xl shadow-sm">
+              <h3 className="font-black text-sm capitalize text-primary tracking-wider text-center">
                 {format(month, 'MMMM', { locale: ptBR })}
               </h3>
               <div className="grid grid-cols-7 gap-px">
                 {weekDaysShort.map((d, i) => (
-                  <div key={i} className="text-[8px] font-bold text-muted-foreground text-center pb-1">
+                  <div key={i} className="text-[9px] font-black text-muted-foreground text-center pb-2 uppercase opacity-50">
                     {d}
                   </div>
                 ))}
@@ -448,16 +440,16 @@ export function CalendarView({
                         onPivotChange(day);
                       }}
                       className={cn(
-                        "text-[10px] h-6 flex items-center justify-center rounded-full cursor-pointer relative",
-                        !isCurrentMonth && "text-muted-foreground/30",
-                        isDayToday && "bg-primary text-primary-foreground font-bold",
+                        "text-[10px] h-7 flex items-center justify-center rounded-lg cursor-pointer relative font-bold",
+                        !isCurrentMonth && "opacity-10",
+                        isDayToday && "bg-primary text-primary-foreground shadow-sm shadow-primary/20",
                         !isDayToday && isCurrentMonth && "hover:bg-accent",
-                        hasEvents && !isDayToday && "font-bold text-foreground"
+                        hasEvents && !isDayToday && "text-primary ring-1 ring-primary/20"
                       )}
                     >
                       {format(day, 'd')}
                       {hasEvents && !isDayToday && (
-                        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 bg-primary rounded-full" />
+                        <div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-primary rounded-full" />
                       )}
                     </div>
                   );
@@ -474,7 +466,7 @@ export function CalendarView({
     <div className="h-full flex flex-col bg-card overflow-hidden">
       {renderHeader()}
       
-      <div className="flex-1">
+      <div className="flex-1 overflow-hidden">
         {viewMode === 'month' && renderMonthView()}
         {viewMode === 'day' && renderDayView()}
         {viewMode === 'week' && renderWeekView()}
@@ -482,18 +474,19 @@ export function CalendarView({
       </div>
 
       {/* Legend */}
-      <div className="flex flex-wrap gap-4 mt-8 pt-6 border-t text-xs text-muted-foreground font-medium">
+      <div className="flex flex-wrap items-center justify-center gap-6 px-6 py-4 border-t bg-muted/10">
         {Object.entries(eventTypeIcons).map(([type, Icon]) => (
-          <div key={type} className="flex items-center gap-2">
-            <div className={cn("p-1.5 rounded-lg", eventTypeLightColors[type as EventType])}>
+          <div key={type} className="flex items-center gap-2 group cursor-default">
+            <div className={cn("p-1.5 rounded-lg shadow-sm transition-transform group-hover:scale-110", eventTypeColors[type as EventType])}>
               <Icon className="h-3.5 w-3.5" />
             </div>
-            <span className="capitalize">
+            <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground group-hover:text-foreground transition-colors">
               {type === 'call' ? 'Ligação' : 
                type === 'email' ? 'E-mail' :
                type === 'meeting' ? 'Reunião' :
                type === 'task' ? 'Tarefa' :
-               type === 'message' ? 'Mensagem' : 'Visita'}
+               type === 'message' ? 'Mensagem' :
+               type === 'visit' ? 'Visita' : type}
             </span>
           </div>
         ))}
