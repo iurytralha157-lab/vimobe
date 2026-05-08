@@ -187,7 +187,7 @@ export function EventsList({ events, onEditEvent, onAddEvent, showUser = true, s
                             Editar
                           </DropdownMenuItem>
                           <DropdownMenuItem
-                            onClick={() => deleteEvent.mutate({ id: event.id, google_event_id: event.google_event_id })}
+                            onClick={() => deleteEvent.mutate({ id: event.id })}
                             className="text-destructive focus:text-destructive"
                           >
                             <Trash2 className="h-4 w-4 mr-2" />
