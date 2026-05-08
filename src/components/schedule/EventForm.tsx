@@ -74,6 +74,14 @@ export function EventForm({ open, onOpenChange, event, leadId, leadName, default
   const [time, setTime] = useState('');
   const [duration, setDuration] = useState(30);
   const [isCompleted, setIsCompleted] = useState(false);
+  const [isViewMode, setIsViewMode] = useState(false);
+  
+  // Lead search states
+  const [leadSearch, setLeadSearch] = useState('');
+  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
+  const [selectedLeadName, setSelectedLeadName] = useState<string | null>(null);
+
+  const { data: searchedLeads = [] } = useLeads({ search: leadSearch, limit: 5 });
 
   // Reset form when event changes or dialog opens
   useEffect(() => {
