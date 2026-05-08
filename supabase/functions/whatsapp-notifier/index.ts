@@ -11,7 +11,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { organization_id, user_id, message } = await req.json();
+    const { organization_id, user_id, phone, message } = await req.json();
 
     if (!organization_id || !message) {
       return new Response(
