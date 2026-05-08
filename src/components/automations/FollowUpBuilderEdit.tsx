@@ -636,9 +636,10 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
               delay_type: node.data.wait_type || 'days',
               delay_value: node.data.wait_value || 1,
               stop_on_reply: node.data.stop_on_reply || false,
-              on_reply_message: waitReplyMessage,
-              on_reply_stage_id: waitStageId,
-              on_reply_move_to_stage_id: waitStageId,
+              on_reply_message: null,
+              on_reply_stage_id: null,
+              on_reply_move_to_stage_id: null,
+
               nodeType: 'delay',
             },
             ...pos,
