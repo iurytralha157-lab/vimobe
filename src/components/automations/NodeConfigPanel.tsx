@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { TriggerType } from '@/hooks/use-automations';
 import { useCreateTag } from '@/hooks/use-tags';
+import { useAllMetaFormConfigs } from '@/hooks/use-meta-forms';
 import { useRef, useState, useCallback, useEffect } from 'react';
 import { AutomationMediaGallery } from './AutomationMediaGallery';
 import { AudioRecorderInline } from './AudioRecorderInline';
@@ -62,6 +63,29 @@ const NODE_TITLES: Record<string, { icon: React.ComponentType<{ className?: stri
   property_interest: { icon: Home, label: 'Imóvel Interesse', color: 'text-emerald-600 dark:text-emerald-400' },
   deal_status: { icon: CircleDot, label: 'Status', color: 'text-pink-600 dark:text-pink-400' },
 };
+
+function MetaFormSelector({ value, onChange }: { value: string | undefined; onChange: (id: string | null) => void }) {
+  const { data: formConfigs, isLoading } = useAllMetaFormConfigs();
+
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-xs">Formulário Meta</Label>
+      <Select value={value || '__all__'} onValueChange={(v) => onChange(v === '__all__' ? null : v)}>
+        <SelectTrigger className="h-9">
+          <SelectValue placeholder={isLoading ? "Carregando..." : "Todos os formulários"} />
+        </SelectTrigger>
+        <SelectContent className="z-[200]">
+          <SelectItem value="__all__">Todos os formulários</SelectItem>
+          {formConfigs?.map((form) => (
+            <SelectItem key={form.form_id} value={form.form_id}>
+              {form.form_name || form.form_id}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
 
 export function NodeConfigPanel({
   selectedNode, onClose, onNodeDataChange, onDeleteNode, onSaveNode,
@@ -154,6 +178,35 @@ export function NodeConfigPanel({
                   </SelectContent>
                 </Select>
               </div>
+
+              {selectedNode.data.trigger_type === 'lead_created' && (
+                <>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Origem do Lead</Label>
+                    <Select 
+                      value={selectedNode.data.source || '__all__'} 
+                      onValueChange={(v) => onNodeDataChange(selectedNode.id, { source: v === '__all__' ? null : v })}
+                    >
+                      <SelectTrigger className="h-9"><SelectValue placeholder="Todas as origens" /></SelectTrigger>
+                      <SelectContent className="z-[200]">
+                        <SelectItem value="__all__">Todas as origens</SelectItem>
+                        <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                        <SelectItem value="meta">Meta (Facebook/Instagram)</SelectItem>
+                        <SelectItem value="site">Site Interno</SelectItem>
+                        <SelectItem value="website">Website Externo / Formulário</SelectItem>
+                        <SelectItem value="manual">Manual</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {selectedNode.data.source === 'meta' && (
+                    <MetaFormSelector 
+                      value={selectedNode.data.meta_form_id} 
+                      onChange={(id) => onNodeDataChange(selectedNode.id, { meta_form_id: id })} 
+                    />
+                  )}
+                </>
+              )}
               {selectedNode.data.trigger_type === 'tag_added' && tags && setTagId && (
                 <div className="space-y-1.5">
                   <Label className="text-xs">Tag</Label>

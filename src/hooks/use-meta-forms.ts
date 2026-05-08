@@ -68,6 +68,35 @@ export function useMetaFormConfigs(integrationId: string | undefined) {
   });
 }
 
+// Fetch all form configurations for the organization
+export function useAllMetaFormConfigs() {
+  const { profile } = useAuth();
+
+  return useQuery({
+    queryKey: ["meta-form-configs", "all", profile?.organization_id],
+    queryFn: async () => {
+      if (!profile?.organization_id) return [];
+
+      const { data, error } = await (supabase as any)
+        .from("meta_form_configs")
+        .select("*")
+        .eq("organization_id", profile.organization_id)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      
+      // Parse JSONB fields
+      return (data || []).map((config: any) => ({
+        ...config,
+        auto_tags: Array.isArray(config.auto_tags) ? config.auto_tags : [],
+        field_mapping: typeof config.field_mapping === 'object' ? config.field_mapping : {},
+        custom_fields_config: Array.isArray(config.custom_fields_config) ? config.custom_fields_config : [],
+      })) as MetaFormConfig[];
+    },
+    enabled: !!profile?.organization_id,
+  });
+}
+
 // Fetch forms from Meta Graph API via edge function
 export function useFetchPageForms() {
   return useMutation({
