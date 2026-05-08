@@ -328,7 +328,7 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
   useEffect(() => {
     if (isInitialized && pipelineId !== initialPipelineId) {
       setStageId('');
-      setOnReplyStageId('');
+      
     }
     // After first manual change, reset initialPipelineId so subsequent changes also clear
     if (isInitialized && initialPipelineId && pipelineId !== initialPipelineId) {
