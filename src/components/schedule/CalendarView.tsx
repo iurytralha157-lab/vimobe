@@ -230,7 +230,7 @@ export function CalendarView({
     const dayEvents = eventsByDate[format(pivotDate, 'yyyy-MM-dd')] || [];
 
     return (
-      <ScrollArea className="flex-1 border-0 bg-background/50">
+      <ScrollArea className="h-full border-0 bg-background/50">
         <div className="relative flex min-h-full">
           {/* Time axis */}
           <div className="w-20 border-r border-border/40 flex-shrink-0 bg-card/50">
@@ -315,7 +315,7 @@ export function CalendarView({
     });
 
     return (
-      <ScrollArea className="flex-1 border-0 bg-background/50">
+      <ScrollArea className="h-full border-0 bg-background/50">
         <div className="relative flex flex-col min-w-[1000px] min-h-full">
           {/* Header */}
           <div className="flex border-b border-border/40 sticky top-0 bg-card z-20 shadow-sm">
