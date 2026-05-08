@@ -849,6 +849,12 @@ async function handleMessagesUpsert(
         
         // ===== FIRST RESPONSE TRACKING: Track when broker sends message via native WhatsApp =====
         if (fromMe && !isGroup && conversation.lead_id) {
+          // If this is a manual message (fromMe = true and not from automation), stop any active automations
+          if (!isAutomationMessage) {
+            console.log(`Manual interaction detected for lead ${conversation.lead_id}, checking for automations to stop`);
+            EdgeRuntime.waitUntil(handleStopFollowUpOnReply(supabase, conversation.id, conversation.lead_id, true));
+          }
+
           try {
             console.log(`Tracking first response for lead ${conversation.lead_id} via native WhatsApp (session owner: ${session.owner_user_id})`);
             
