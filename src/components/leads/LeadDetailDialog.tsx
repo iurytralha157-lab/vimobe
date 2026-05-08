@@ -1153,6 +1153,7 @@ export function LeadDetailDialog({
                 onEditEvent={handleEditScheduleEvent} 
                 onAddEvent={() => {
                   setEditingScheduleEvent(null);
+                  setScheduleDefaultType('call');
                   setScheduleFormOpen(true);
                 }}
               />
