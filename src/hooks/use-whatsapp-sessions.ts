@@ -476,7 +476,11 @@ export function useQRCodePolling(session: WhatsAppSession | null) {
           // Update database status
           await supabase
             .from("whatsapp_sessions")
-            .update({ status: "connected" })
+            .update({ 
+              status: "connected",
+              phone_number: status?.instance?.wuid?.split("@")[0] || null,
+              last_connected_at: new Date().toISOString()
+            })
             .eq("id", session.id);
           
           queryClient.invalidateQueries({ queryKey: ["whatsapp-sessions"] });

@@ -245,9 +245,9 @@ async function getConnectionStatus(apiUrl: string, apiKey: string, instanceName:
       };
     }
 
-    // Map Evolution v2 status to our format
+    // Map Evolution v2 status to our format - Strictly only "open" is connected
     const state = data.instance?.state || data.state || "close";
-    const isConnected = state === "open" || state === "connected";
+    const isConnected = state === "open";
     
     return { 
       success: true, 
