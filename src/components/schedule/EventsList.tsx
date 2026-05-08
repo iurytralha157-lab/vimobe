@@ -113,13 +113,13 @@ export function EventsList({ events, onEditEvent, onAddEvent, showUser = true, s
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {groupedEvents.map(([dateKey, dayEvents]) => (
         <div key={dateKey}>
-          <h3 className="text-sm font-medium text-muted-foreground mb-3 capitalize">
+          <h3 className="text-[10px] font-black text-muted-foreground/60 mb-4 uppercase tracking-[0.2em] ml-1">
             {getDateLabel(dayEvents[0].start_time)}
           </h3>
-          <div className="space-y-2">
+          <div className="space-y-3">
             {dayEvents.map((event) => {
               const Icon = eventTypeIcons[event.event_type as EventType];
               const isCompleted = event.status === 'completed';
@@ -129,9 +129,9 @@ export function EventsList({ events, onEditEvent, onAddEvent, showUser = true, s
                 <div
                   key={event.id}
                   className={cn(
-                    "group flex items-start gap-3 p-3 rounded-lg border bg-card transition-all",
-                    isCompleted && "opacity-60",
-                    isOverdue && "border-destructive/50 bg-destructive/5"
+                    "group flex items-start gap-4 p-4 rounded-3xl border bg-card transition-all hover:shadow-xl hover:-translate-y-0.5",
+                    isCompleted && "opacity-60 grayscale",
+                    isOverdue && "border-destructive/20 bg-destructive/[0.02]"
                   )}
                 >
                   <Checkbox
@@ -139,33 +139,34 @@ export function EventsList({ events, onEditEvent, onAddEvent, showUser = true, s
                     onCheckedChange={(checked) => {
                       completeEvent.mutate({ id: event.id, status: checked ? 'completed' : 'scheduled' });
                     }}
-                    className="mt-1"
+                    className="mt-1.5 h-5 w-5 rounded-lg border-2"
                   />
 
                   <div
                     className={cn(
-                      "flex-shrink-0 p-2 rounded-lg",
+                      "flex-shrink-0 p-3 rounded-2xl shadow-sm",
                       eventTypeColors[event.event_type as EventType]
                     )}
                   >
-                    <Icon className="h-4 w-4" />
+                    <Icon className="h-5 w-5" />
                   </div>
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
-                      <div>
+                      <div className="min-w-0">
                         <p className={cn(
-                          "font-medium",
-                          isCompleted && "line-through"
+                          "font-black text-base truncate",
+                          isCompleted && "line-through text-muted-foreground"
                         )}>
                           {event.title}
                         </p>
-                        <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
-                          <span className="flex items-center gap-1">
+                        <div className="flex flex-wrap items-center gap-3 mt-1 text-xs text-muted-foreground/80 font-bold uppercase tracking-tighter">
+                          <span className="flex items-center gap-1.5">
                             <Clock className="h-3.5 w-3.5" />
                             {format(new Date(event.start_time), 'HH:mm')}
                           </span>
-                          <span className="text-xs px-1.5 py-0.5 rounded bg-muted">
+                          <span className="flex items-center gap-1.5">
+                            <div className="h-1.5 w-1.5 rounded-full bg-primary/40" />
                             {eventTypeLabels[event.event_type as EventType]}
                           </span>
                         </div>
@@ -176,21 +177,21 @@ export function EventsList({ events, onEditEvent, onAddEvent, showUser = true, s
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                            className="h-8 w-8 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity hover:bg-muted"
                           >
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => onEditEvent?.(event)}>
-                            <Edit2 className="h-4 w-4 mr-2" />
+                        <DropdownMenuContent align="end" className="rounded-2xl border-border/40 p-2">
+                          <DropdownMenuItem onClick={() => onEditEvent?.(event)} className="rounded-xl gap-2 font-bold py-2">
+                            <Edit2 className="h-4 w-4 text-muted-foreground" />
                             Editar
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() => deleteEvent.mutate({ id: event.id })}
-                            className="text-destructive focus:text-destructive"
+                            className="text-destructive focus:text-destructive rounded-xl gap-2 font-bold py-2"
                           >
-                            <Trash2 className="h-4 w-4 mr-2" />
+                            <Trash2 className="h-4 w-4" />
                             Excluir
                           </DropdownMenuItem>
                         </DropdownMenuContent>
@@ -198,28 +199,30 @@ export function EventsList({ events, onEditEvent, onAddEvent, showUser = true, s
                     </div>
 
                     {event.description && (
-                      <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
+                      <p className="text-sm text-muted-foreground/80 mt-3 line-clamp-2 leading-relaxed bg-muted/30 p-3 rounded-2xl border border-border/40">
                         {event.description}
                       </p>
                     )}
 
-                    <div className="flex items-center gap-4 mt-2">
+                    <div className="flex flex-wrap items-center gap-6 mt-4">
                       {showUser && event.user && (
-                        <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                          <Avatar className="h-5 w-5">
+                        <div className="flex items-center gap-2.5 text-[11px] font-black uppercase tracking-tighter text-muted-foreground/70">
+                          <Avatar className="h-6 w-6 border-2 border-background shadow-sm">
                             <AvatarImage src={event.user.avatar_url || undefined} />
-                            <AvatarFallback className="text-[10px]">
+                            <AvatarFallback className="bg-primary/10 text-primary text-[8px] font-black">
                               {event.user.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
                             </AvatarFallback>
                           </Avatar>
-                          <span className="truncate max-w-[100px]">{event.user.name}</span>
+                          <span className="truncate max-w-[120px]">{event.user.name}</span>
                         </div>
                       )}
 
                       {showLead && event.lead && (
-                        <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                          <User className="h-3.5 w-3.5" />
-                          <span className="truncate max-w-[120px]">{event.lead.name}</span>
+                        <div className="flex items-center gap-2.5 text-[11px] font-black uppercase tracking-tighter text-muted-foreground/70">
+                          <div className="h-6 w-6 rounded-full bg-muted/50 flex items-center justify-center">
+                            <User className="h-3.5 w-3.5" />
+                          </div>
+                          <span className="truncate max-w-[150px]">{event.lead.name}</span>
                         </div>
                       )}
                     </div>

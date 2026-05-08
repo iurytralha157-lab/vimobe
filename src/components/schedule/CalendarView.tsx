@@ -41,12 +41,12 @@ const eventTypeIcons: Record<EventType, React.ElementType> = {
 };
 
 const eventTypeColors: Record<EventType, string> = {
-  call: 'bg-[#3b82f6] border-[#2563eb] text-white shadow-blue-500/20',
-  email: 'bg-[#f97316] border-[#ea580c] text-white shadow-orange-500/20',
-  meeting: 'bg-[#a855f7] border-[#9333ea] text-white shadow-purple-500/20',
-  task: 'bg-[#f59e0b] border-[#d97706] text-white shadow-amber-500/20',
-  message: 'bg-[#14b8a6] border-[#0d9488] text-white shadow-teal-500/20',
-  visit: 'bg-[#ec4899] border-[#db2777] text-white shadow-pink-500/20',
+  call: 'bg-[#E3F2FD] border-[#90CAF9] text-[#1976D2] shadow-blue-500/5',
+  email: 'bg-[#FFF3E0] border-[#FFCC80] text-[#E65100] shadow-orange-500/5',
+  meeting: 'bg-[#F3E5F5] border-[#CE93D8] text-[#7B1FA2] shadow-purple-500/5',
+  task: 'bg-[#FFF8E1] border-[#FFE082] text-[#F57F17] shadow-amber-500/5',
+  message: 'bg-[#E0F2F1] border-[#80CBC4] text-[#00796B] shadow-teal-500/5',
+  visit: 'bg-[#FCE4EC] border-[#F48FB1] text-[#C2185B] shadow-pink-500/5',
 };
 
 interface CalendarViewProps {
@@ -123,20 +123,20 @@ export function CalendarView({
     }
 
     return (
-      <div className="flex items-center justify-between p-4 border-b bg-muted/30">
-        <div className="flex items-center gap-3">
-          <Button variant="outline" size="sm" onClick={handleToday} className="font-bold rounded-xl h-9">
+      <div className="flex items-center justify-between px-6 py-5 border-b bg-card">
+        <div className="flex items-center gap-4">
+          <Button variant="outline" size="sm" onClick={handleToday} className="font-black rounded-2xl h-10 px-6 border-border/60 hover:bg-accent transition-all text-xs uppercase tracking-widest">
             Hoje
           </Button>
-          <div className="flex items-center bg-card border rounded-xl p-0.5">
-            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={() => handleNavigate('prev')}>
+          <div className="flex items-center bg-muted/30 border border-border/40 rounded-2xl p-1">
+            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl hover:bg-card hover:shadow-sm" onClick={() => handleNavigate('prev')}>
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={() => handleNavigate('next')}>
+            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl hover:bg-card hover:shadow-sm" onClick={() => handleNavigate('next')}>
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
-          <h2 className="text-base font-black capitalize ml-2 tracking-tight">
+          <h2 className="text-xl font-black capitalize ml-4 tracking-tight text-foreground/90">
             {label}
           </h2>
         </div>
@@ -153,15 +153,15 @@ export function CalendarView({
     const weekDays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
     return (
-      <div className="flex flex-col h-full overflow-hidden">
-        <div className="grid grid-cols-7 border-b">
+      <div className="flex flex-col h-full overflow-hidden bg-background">
+        <div className="grid grid-cols-7 border-b bg-card">
           {weekDays.map(day => (
-            <div key={day} className="text-center text-[10px] font-black text-muted-foreground py-3 uppercase tracking-widest">
+            <div key={day} className="text-center text-[10px] font-black text-muted-foreground/60 py-4 uppercase tracking-[0.2em]">
               {day}
             </div>
           ))}
         </div>
-        <div className="grid grid-cols-7 gap-px bg-border flex-1 overflow-hidden">
+        <div className="grid grid-cols-7 gap-px bg-border/20 flex-1 overflow-hidden">
           {calendarDays.map(day => {
             const dateKey = format(day, 'yyyy-MM-dd');
             const dayEvents = eventsByDate[dateKey] || [];
@@ -179,20 +179,20 @@ export function CalendarView({
                   }
                 }}
                 className={cn(
-                  "bg-card min-h-[120px] p-2 transition-all cursor-pointer hover:bg-muted/30 group",
-                  !isCurrentMonth && "bg-muted/10 opacity-40",
-                  isSelected && "bg-primary/5 ring-1 ring-primary/20 ring-inset z-10"
+                  "bg-card min-h-[120px] p-3 transition-all cursor-pointer hover:bg-muted/5 group relative",
+                  !isCurrentMonth && "bg-muted/5 opacity-30",
+                  isSelected && "bg-primary/[0.03] ring-1 ring-primary/10 ring-inset z-10"
                 )}
               >
-                <div className="flex justify-between items-center mb-1">
+                <div className="flex justify-between items-center mb-3">
                   <span className={cn(
-                    "text-xs font-black h-6 w-6 flex items-center justify-center rounded-lg transition-colors",
-                    isDayToday ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20" : "text-muted-foreground group-hover:text-foreground"
+                    "text-xs font-black h-8 w-8 flex items-center justify-center rounded-xl transition-all",
+                    isDayToday ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20 scale-110" : "text-muted-foreground group-hover:text-foreground"
                   )}>
                     {format(day, 'd')}
                   </span>
                 </div>
-                <div className="space-y-1 overflow-y-auto max-h-[85px] scrollbar-none">
+                <div className="space-y-1.5 overflow-y-auto max-h-[85px] scrollbar-none pr-1">
                   {dayEvents.map(event => {
                     const Icon = eventTypeIcons[event.event_type as EventType] || CalendarIcon;
                     return (
@@ -203,12 +203,12 @@ export function CalendarView({
                           onEditEvent?.(event);
                         }}
                         className={cn(
-                          "px-1.5 py-0.5 rounded-md text-[10px] font-bold border truncate flex items-center gap-1 shadow-sm transition-transform hover:scale-[1.02]",
+                          "px-2 py-1.5 rounded-xl text-[10px] font-black border truncate flex items-center gap-2 shadow-sm transition-all hover:scale-[1.03] active:scale-95",
                           eventTypeColors[event.event_type as EventType] || "bg-muted border-muted"
                         )}
                       >
-                        <Icon className="h-2.5 w-2.5 flex-shrink-0" />
-                        <span className="truncate">{event.title}</span>
+                        <Icon className="h-3 w-3 flex-shrink-0 opacity-80" />
+                        <span className="truncate tracking-tight">{event.title}</span>
                       </div>
                     );
                   })}
@@ -230,13 +230,13 @@ export function CalendarView({
     const dayEvents = eventsByDate[format(pivotDate, 'yyyy-MM-dd')] || [];
 
     return (
-      <ScrollArea className="flex-1 border-0 bg-card">
-        <div className="relative flex">
+      <ScrollArea className="flex-1 border-0 bg-background/50">
+        <div className="relative flex min-h-full">
           {/* Time axis */}
-          <div className="w-16 border-r flex-shrink-0">
+          <div className="w-20 border-r border-border/40 flex-shrink-0 bg-card/50">
             {hours.map(hour => (
-              <div key={hour.toString()} className="h-20 border-b flex justify-center pt-2">
-                <span className="text-[10px] text-muted-foreground font-black uppercase tracking-tighter opacity-50">
+              <div key={hour.toString()} className="h-20 border-b border-border/40 flex justify-center pt-3">
+                <span className="text-[11px] text-muted-foreground/60 font-black uppercase tracking-tighter tabular-nums">
                   {format(hour, 'HH:mm')}
                 </span>
               </div>
@@ -248,7 +248,7 @@ export function CalendarView({
             {hours.map(hour => (
               <div 
                 key={hour.toString()} 
-                className="h-20 border-b w-full cursor-pointer hover:bg-muted/30 transition-colors" 
+                className="h-20 border-b border-border/40 w-full cursor-pointer hover:bg-primary/[0.02] transition-colors" 
                 onClick={() => {
                   const clickDate = new Date(pivotDate);
                   clickDate.setHours(hour.getHours(), 0, 0, 0);
@@ -262,7 +262,7 @@ export function CalendarView({
               const start = parseISO(event.start_time);
               const end = parseISO(event.end_time);
               const top = (start.getHours() * 60 + start.getMinutes()) * (80 / 60);
-              const duration = (end.getTime() - start.getTime()) / (1000 * 60);
+              const duration = Math.max((end.getTime() - start.getTime()) / (1000 * 60), 30);
               const height = duration * (80 / 60);
               const Icon = eventTypeIcons[event.event_type as EventType] || CalendarIcon;
 
@@ -274,25 +274,29 @@ export function CalendarView({
                     onEditEvent?.(event);
                   }}
                   className={cn(
-                    "absolute left-2 right-2 rounded-xl border p-2.5 overflow-hidden shadow-md transition-all hover:scale-[1.01] hover:z-20 z-10 group cursor-pointer",
+                    "absolute left-3 right-3 rounded-[1.25rem] border-2 p-4 overflow-hidden shadow-xl shadow-black/5 transition-all hover:scale-[1.01] hover:z-20 z-10 group cursor-pointer",
                     eventTypeColors[event.event_type as EventType]
                   )}
-                  style={{ top: `${top}px`, height: `${height}px`, minHeight: '40px' }}
+                  style={{ top: `${top}px`, height: `${height}px`, minHeight: '60px' }}
                 >
-                  <div className="flex items-center gap-2 mb-1">
-                    <Icon className="h-3.5 w-3.5" />
-                    <span className="text-xs font-black truncate tracking-tight">{event.title}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-[10px] font-bold opacity-90">
-                    <Clock className="h-3 w-3" />
-                    <span>{format(start, 'HH:mm')} - {format(end, 'HH:mm')}</span>
-                  </div>
-                  {event.lead && (
-                    <div className="flex items-center gap-1.5 mt-1 text-[10px] font-bold opacity-90">
-                      <User className="h-3 w-3" />
-                      <span className="truncate">{event.lead.name}</span>
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="p-1.5 rounded-lg bg-white/40 shadow-sm">
+                      <Icon className="h-4 w-4" />
                     </div>
-                  )}
+                    <span className="text-sm font-black truncate tracking-tight">{event.title}</span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-4 text-[10px] font-bold opacity-80">
+                    <div className="flex items-center gap-1.5">
+                      <Clock className="h-3.5 w-3.5" />
+                      <span>{format(start, 'HH:mm')} - {format(end, 'HH:mm')}</span>
+                    </div>
+                    {event.lead && (
+                      <div className="flex items-center gap-1.5">
+                        <User className="h-3.5 w-3.5" />
+                        <span className="truncate">{event.lead.name}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               );
             })}
@@ -311,19 +315,19 @@ export function CalendarView({
     });
 
     return (
-      <ScrollArea className="flex-1 border-0 bg-card">
-        <div className="relative flex flex-col min-w-[800px]">
+      <ScrollArea className="flex-1 border-0 bg-background/50">
+        <div className="relative flex flex-col min-w-[1000px] min-h-full">
           {/* Header */}
-          <div className="flex border-b sticky top-0 bg-card z-20">
-            <div className="w-16 border-r flex-shrink-0" />
+          <div className="flex border-b border-border/40 sticky top-0 bg-card z-20 shadow-sm">
+            <div className="w-20 border-r border-border/40 flex-shrink-0 bg-card/50" />
             {weekDays.map(day => (
-              <div key={day.toString()} className="flex-1 border-r last:border-r-0 py-3 text-center">
-                <span className="block text-[10px] text-muted-foreground font-black uppercase tracking-widest opacity-60">
+              <div key={day.toString()} className="flex-1 border-r border-border/40 last:border-r-0 py-4 text-center">
+                <span className="block text-[10px] text-muted-foreground/60 font-black uppercase tracking-[0.2em] mb-2">
                   {format(day, 'EEE', { locale: ptBR })}
                 </span>
                 <span className={cn(
-                  "text-lg font-black h-9 w-9 inline-flex items-center justify-center rounded-xl mt-1 transition-all",
-                  isToday(day) ? "bg-primary text-primary-foreground shadow-md shadow-primary/20" : "text-foreground"
+                  "text-lg font-black h-10 w-10 inline-flex items-center justify-center rounded-2xl transition-all",
+                  isToday(day) ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20 scale-110" : "text-foreground"
                 )}>
                   {format(day, 'd')}
                 </span>
@@ -332,12 +336,12 @@ export function CalendarView({
           </div>
 
           {/* Grid */}
-          <div className="flex relative">
+          <div className="flex relative flex-1">
             {/* Time axis */}
-            <div className="w-16 border-r flex-shrink-0">
+            <div className="w-20 border-r border-border/40 flex-shrink-0 bg-card/50">
               {hours.map(hour => (
-                <div key={hour.toString()} className="h-20 border-b flex justify-center pt-2">
-                  <span className="text-[10px] text-muted-foreground font-black uppercase tracking-tighter opacity-50">
+                <div key={hour.toString()} className="h-20 border-b border-border/40 flex justify-center pt-3">
+                  <span className="text-[11px] text-muted-foreground/60 font-black uppercase tracking-tighter tabular-nums">
                     {format(hour, 'HH:mm')}
                   </span>
                 </div>
@@ -346,11 +350,11 @@ export function CalendarView({
 
             {/* Days columns */}
             {weekDays.map(day => (
-              <div key={day.toString()} className="flex-1 border-r last:border-r-0 relative">
+              <div key={day.toString()} className="flex-1 border-r border-border/40 last:border-r-0 relative">
                 {hours.map(hour => (
                   <div 
                     key={hour.toString()} 
-                    className="h-20 border-b cursor-pointer hover:bg-muted/30 transition-colors" 
+                    className="h-20 border-b border-border/40 cursor-pointer hover:bg-primary/[0.01] transition-colors" 
                     onClick={() => {
                       const clickDate = new Date(day);
                       clickDate.setHours(hour.getHours(), 0, 0, 0);
@@ -364,7 +368,7 @@ export function CalendarView({
                   const start = parseISO(event.start_time);
                   const end = parseISO(event.end_time);
                   const top = (start.getHours() * 60 + start.getMinutes()) * (80 / 60);
-                  const duration = (end.getTime() - start.getTime()) / (1000 * 60);
+                  const duration = Math.max((end.getTime() - start.getTime()) / (1000 * 60), 30);
                   const height = duration * (80 / 60);
                   const Icon = eventTypeIcons[event.event_type as EventType] || CalendarIcon;
 
@@ -376,18 +380,21 @@ export function CalendarView({
                         onEditEvent?.(event);
                       }}
                       className={cn(
-                        "absolute left-1 right-1 rounded-lg border p-1.5 overflow-hidden shadow-md transition-all hover:scale-[1.05] hover:z-20 z-10 cursor-pointer",
+                        "absolute left-1.5 right-1.5 rounded-[1rem] border-2 p-2.5 overflow-hidden shadow-lg shadow-black/5 transition-all hover:scale-[1.03] hover:z-20 z-10 cursor-pointer",
                         eventTypeColors[event.event_type as EventType]
                       )}
-                      style={{ top: `${top}px`, height: `${height}px`, minHeight: '30px' }}
+                      style={{ top: `${top}px`, height: `${height}px`, minHeight: '45px' }}
                     >
-                      <div className="flex items-center gap-1.5 mb-0.5">
-                        <Icon className="h-3 w-3 flex-shrink-0" />
-                        <span className="text-[10px] font-black truncate leading-tight tracking-tighter">{event.title}</span>
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className="p-1 rounded-lg bg-white/40">
+                          <Icon className="h-3 w-3 flex-shrink-0" />
+                        </div>
+                        <span className="text-[11px] font-black truncate leading-tight tracking-tight">{event.title}</span>
                       </div>
-                      <span className="text-[8px] font-bold opacity-90 block leading-tight">
-                        {format(start, 'HH:mm')}
-                      </span>
+                      <div className="flex items-center gap-1 text-[9px] font-bold opacity-80 tabular-nums">
+                        <Clock className="h-2.5 w-2.5" />
+                        <span>{format(start, 'HH:mm')}</span>
+                      </div>
                     </div>
                   );
                 })}
