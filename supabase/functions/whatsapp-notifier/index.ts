@@ -74,30 +74,37 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 3. Get the target user's phone number
-    if (!user_id) {
+    // 3. Get the target phone number
+    let targetPhone = phone;
+    let targetName = "Lead/Usuário";
+
+    if (!targetPhone && user_id) {
+      const { data: user, error: userError } = await supabase
+        .from("users")
+        .select("whatsapp, name")
+        .eq("id", user_id)
+        .single();
+
+      if (userError || !user?.whatsapp) {
+        console.log("User not found or no WhatsApp:", user_id);
+        return new Response(
+          JSON.stringify({ success: false, error: "User has no WhatsApp number" }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      targetPhone = user.whatsapp;
+      targetName = user.name;
+    }
+
+    if (!targetPhone) {
       return new Response(
-        JSON.stringify({ success: false, error: "user_id is required" }),
+        JSON.stringify({ success: false, error: "user_id or phone is required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const { data: user, error: userError } = await supabase
-      .from("users")
-      .select("whatsapp, name")
-      .eq("id", user_id)
-      .single();
-
-    if (userError || !user?.whatsapp) {
-      console.log("User not found or no WhatsApp:", user_id);
-      return new Response(
-        JSON.stringify({ success: false, error: "User has no WhatsApp number" }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
     // 4. Send the message via Evolution API
-    const formattedPhone = user.whatsapp.replace(/\D/g, "");
+    const formattedPhone = targetPhone.replace(/\D/g, "");
     
     // Fetch organization name to add context if it's not already in the message
     const { data: org } = await supabase
