@@ -535,12 +535,7 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
     try {
       const waitReplyConfig = getWaitReplyConfig(nodes);
       const shouldStopOnReply = waitReplyConfig.hasWaitNodes ? waitReplyConfig.stopOnReply : stopOnReply;
-      const resolvedOnReplyStageId = shouldStopOnReply
-        ? (waitReplyConfig.onReplyMoveToStageId ?? (onReplyStageId && onReplyStageId !== '__none__' ? onReplyStageId : null))
-        : null;
-      const resolvedOnReplyMessage = shouldStopOnReply
-        ? (waitReplyConfig.onReplyMessage ?? (onReplyMessage?.trim() ? onReplyMessage.trim() : null))
-        : null;
+
 
       // Find the start node to get its data (source, meta_form_id)
       const startNode = nodes.find(n => n.type === 'start');
