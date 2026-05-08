@@ -86,6 +86,25 @@ export default function Agenda() {
     });
   }, [events, selectedDate]);
 
+  // Statistics for the current week
+  const weekStats = useMemo(() => {
+    const weekStart = startOfWeek(new Date(), { weekStartsOn: 0 });
+    const weekEnd = endOfWeek(new Date(), { weekStartsOn: 0 });
+    
+    const weekEvents = events.filter(e => {
+      const eventDate = new Date(e.start_time);
+      return isWithinInterval(eventDate, { start: weekStart, end: weekEnd });
+    });
+
+    return {
+      pending: weekEvents.filter(e => e.status !== 'completed').length,
+      completed: weekEvents.filter(e => e.status === 'completed').length,
+      meetings: weekEvents.filter(e => e.event_type === 'meeting').length,
+      visits: weekEvents.filter(e => e.event_type === 'visit').length,
+      tasks: weekEvents.filter(e => e.event_type === 'task').length
+    };
+  }, [events]);
+
   // Upcoming events for today and next 7 days
   const upcomingEvents = useMemo(() => {
     const today = startOfDay(new Date());
@@ -95,10 +114,12 @@ export default function Agenda() {
       return eventDate >= today && eventDate <= nextWeek && event.status !== 'completed';
     }).slice(0, 10);
   }, [events]);
+
   const handleEditEvent = (event: ScheduleEvent) => {
     setEditingEvent(event);
     setEventFormOpen(true);
   };
+
   const handleCloseEventForm = () => {
     setEventFormOpen(false);
     setEditingEvent(null);
