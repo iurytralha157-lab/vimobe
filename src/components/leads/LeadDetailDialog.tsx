@@ -1777,11 +1777,16 @@ export function LeadDetailDialog({
                       <ChevronDown className="h-3 w-3" />
                     </button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-[280px] p-0" align="start">
+                  <PopoverContent className="w-[300px] p-0 shadow-2xl border-primary/20" align="start">
                     <Command className="border-none">
-                      <CommandInput placeholder="Buscar..." />
-                      <CommandList className="max-h-[350px]">
-                        <CommandEmpty>Nenhum encontrado.</CommandEmpty>
+                      <div className="flex items-center border-b px-3">
+                        <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+                        <CommandInput placeholder="Buscar..." className="border-none focus:ring-0 h-10" />
+                      </div>
+                      <CommandList className="max-h-[350px] p-1">
+                        <CommandEmpty className="py-4 text-center text-sm text-muted-foreground">
+                          Nenhum encontrado.
+                        </CommandEmpty>
                         <CommandGroup>
                           <CommandItem
                             onSelect={() => {
@@ -1789,14 +1794,14 @@ export function LeadDetailDialog({
                               setAssigneePopoverOpen(false);
                             }}
                             className={cn(
-                              "flex items-center gap-2.5 px-3 py-2 cursor-pointer transition-colors",
+                              "flex items-center gap-2.5 px-3 py-2.5 cursor-pointer transition-colors rounded-lg",
                               !lead.assigned_user_id && "bg-accent"
                             )}
                           >
-                            <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center shrink-0">
-                              <User className="h-3 w-3 text-muted-foreground" />
+                            <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center shrink-0">
+                              <User className="h-3.5 w-3.5 text-muted-foreground" />
                             </div>
-                            <span className="text-muted-foreground text-sm">Sem responsável</span>
+                            <span className="text-muted-foreground text-sm font-medium">Sem responsável</span>
                           </CommandItem>
                           {allUsers.map((user: any) => (
                             <CommandItem
@@ -1806,18 +1811,22 @@ export function LeadDetailDialog({
                                 setAssigneePopoverOpen(false);
                               }}
                               className={cn(
-                                "flex items-center gap-2.5 px-3 py-2 cursor-pointer transition-colors",
-                                lead.assigned_user_id === user.id && "bg-accent"
+                                "flex items-center gap-2.5 px-3 py-2.5 cursor-pointer transition-all rounded-lg my-0.5",
+                                lead.assigned_user_id === user.id && "bg-primary/10 shadow-sm"
                               )}
                             >
-                              <Avatar className="h-6 w-6 shrink-0">
+                              <Avatar className="h-8 w-8 shrink-0 border border-primary/5 shadow-sm">
                                 <AvatarImage src={user.avatar_url} alt={user.name} />
-                                <AvatarFallback className="text-[10px]">
+                                <AvatarFallback className="text-[10px] bg-primary/10 text-primary font-bold">
                                   {user.name?.[0]?.toUpperCase()}
                                 </AvatarFallback>
                               </Avatar>
-                              <span className="text-sm truncate">{user.name}</span>
-                              {lead.assigned_user_id === user.id && <Check className="h-3 w-3 ml-auto text-primary shrink-0" />}
+                              <span className="text-sm font-medium truncate">{user.name}</span>
+                              {lead.assigned_user_id === user.id && (
+                                <div className="h-5 w-5 rounded-full bg-primary/20 flex items-center justify-center ml-auto">
+                                  <Check className="h-3.5 w-3.5 text-primary shrink-0" />
+                                </div>
+                              )}
                             </CommandItem>
                           ))}
                         </CommandGroup>
