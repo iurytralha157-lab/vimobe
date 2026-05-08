@@ -490,15 +490,37 @@ export function LeadDetailDialog({
     }
   };
   const handleAssignUser = async (userId: string | null) => {
+    // UI Otimista
+    const previousLead = { ...localLead };
+    const selectedUser = userId ? allUsers.find(u => u.id === userId) : null;
+    
+    const updatedLead = {
+      ...localLead,
+      assigned_user_id: userId,
+      assignee: selectedUser ? {
+        id: selectedUser.id,
+        name: selectedUser.name,
+        email: selectedUser.email,
+        avatar_url: selectedUser.avatar_url
+      } : null
+    };
+
+    setLocalLead(updatedLead);
+    setIsUpdatingAssignee(true);
+    setAssigneePopoverOpen(false);
+
     if (!userId) {
       try {
         await updateLead.mutateAsync({
           id: lead.id,
           assigned_user_id: null
         });
-        setAssigneePopoverOpen(false);
         refetchStages();
-      } catch (error) {}
+      } catch (error) {
+        setLocalLead(previousLead);
+      } finally {
+        setIsUpdatingAssignee(false);
+      }
       return;
     }
 
@@ -531,13 +553,21 @@ export function LeadDetailDialog({
             const confirmAssign = window.confirm(
               `Atenção: Este usuário está fora do seu horário de escala (${availability.start_time?.slice(0, 5)} - ${availability.end_time?.slice(0, 5)}). Deseja atribuir mesmo assim?`
             );
-            if (!confirmAssign) return;
+            if (!confirmAssign) {
+              setLocalLead(previousLead);
+              setIsUpdatingAssignee(false);
+              return;
+            }
           }
         } else {
           const confirmAssign = window.confirm(
             'Atenção: Este usuário não tem escala ativa para hoje. Deseja atribuir mesmo assim?'
           );
-          if (!confirmAssign) return;
+          if (!confirmAssign) {
+            setLocalLead(previousLead);
+            setIsUpdatingAssignee(false);
+            return;
+          }
         }
       }
 
@@ -545,10 +575,11 @@ export function LeadDetailDialog({
         id: lead.id,
         assigned_user_id: userId
       });
-      setAssigneePopoverOpen(false);
       refetchStages();
     } catch (error) {
-      // Error handled by mutation
+      setLocalLead(previousLead);
+    } finally {
+      setIsUpdatingAssignee(false);
     }
   };
   const handleToggleCadenceTask = async (task: any, outcome?: string, outcomeNotes?: string) => {
