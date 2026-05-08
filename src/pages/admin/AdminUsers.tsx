@@ -149,6 +149,16 @@ export default function AdminUsers() {
     }
   };
 
+  const handleDeleteUser = async () => {
+    try {
+      await deleteUser.mutateAsync(deleteDialog.userId);
+      toast.success('Usuário excluído');
+      setDeleteDialog({ open: false, userId: '', userName: '' });
+    } catch (error) {
+      toast.error(getFriendlyErrorMessage(error));
+    }
+  };
+
   const handleUpdateUser = async (data: any) => {
     try {
       await updateUser.mutateAsync({
