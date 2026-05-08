@@ -1763,39 +1763,52 @@ export function LeadDetailDialog({
                       <ChevronDown className="h-3 w-3" />
                     </button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-52 p-2" align="start">
-                    <div className="space-y-1 max-h-60 overflow-y-auto">
-                      <button
-                        onClick={() => handleAssignUser(null)}
-                        className={cn(
-                          "w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-accent text-left text-sm transition-colors",
-                          !lead.assigned_user_id && "bg-accent"
-                        )}
-                      >
-                        <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center">
-                          <User className="h-3 w-3 text-muted-foreground" />
-                        </div>
-                        <span className="text-muted-foreground">Sem responsável</span>
-                      </button>
-                      {allUsers.map((user: any) => (
-                        <button
-                          key={user.id}
-                          onClick={() => handleAssignUser(user.id)}
-                          className={cn(
-                            "w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-accent text-left text-sm transition-colors",
-                            lead.assigned_user_id === user.id && "bg-accent"
-                          )}
-                        >
-                          <Avatar className="h-6 w-6">
-                            <AvatarImage src={user.avatar_url} alt={user.name} />
-                            <AvatarFallback className="text-xs">
-                              {user.name?.[0]?.toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span>{user.name}</span>
-                        </button>
-                      ))}
-                    </div>
+                  <PopoverContent className="w-[280px] p-0" align="start">
+                    <Command className="border-none">
+                      <CommandInput placeholder="Buscar..." />
+                      <CommandList className="max-h-[350px]">
+                        <CommandEmpty>Nenhum encontrado.</CommandEmpty>
+                        <CommandGroup>
+                          <CommandItem
+                            onSelect={() => {
+                              handleAssignUser(null);
+                              setAssigneePopoverOpen(false);
+                            }}
+                            className={cn(
+                              "flex items-center gap-2.5 px-3 py-2 cursor-pointer transition-colors",
+                              !lead.assigned_user_id && "bg-accent"
+                            )}
+                          >
+                            <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center shrink-0">
+                              <User className="h-3 w-3 text-muted-foreground" />
+                            </div>
+                            <span className="text-muted-foreground text-sm">Sem responsável</span>
+                          </CommandItem>
+                          {allUsers.map((user: any) => (
+                            <CommandItem
+                              key={user.id}
+                              onSelect={() => {
+                                handleAssignUser(user.id);
+                                setAssigneePopoverOpen(false);
+                              }}
+                              className={cn(
+                                "flex items-center gap-2.5 px-3 py-2 cursor-pointer transition-colors",
+                                lead.assigned_user_id === user.id && "bg-accent"
+                              )}
+                            >
+                              <Avatar className="h-6 w-6 shrink-0">
+                                <AvatarImage src={user.avatar_url} alt={user.name} />
+                                <AvatarFallback className="text-[10px]">
+                                  {user.name?.[0]?.toUpperCase()}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className="text-sm truncate">{user.name}</span>
+                              {lead.assigned_user_id === user.id && <Check className="h-3 w-3 ml-auto text-primary shrink-0" />}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
                   </PopoverContent>
                 </Popover>
 
