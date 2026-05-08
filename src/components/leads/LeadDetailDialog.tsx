@@ -619,6 +619,7 @@ export function LeadDetailDialog({
     // Se agendou visita/reunião, abrir o formulário de agenda automaticamente
     if (outcome === 'scheduled') {
       setEditingScheduleEvent(null);
+      setScheduleDefaultType('visit');
       setScheduleFormOpen(true);
     }
     
