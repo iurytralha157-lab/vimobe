@@ -44,7 +44,7 @@ import { useActivities, useCreateActivity } from '@/hooks/use-activities';
 import { useUpdateLead, useAddLeadTag, useRemoveLeadTag } from '@/hooks/use-leads';
 import { useProperties } from '@/hooks/use-properties';
 import { useServicePlans } from '@/hooks/use-service-plans';
-import { useScheduleEvents, ScheduleEvent } from '@/hooks/use-schedule-events';
+import { useScheduleEvents, ScheduleEvent, EventType } from '@/hooks/use-schedule-events';
 import { useLeadMeta } from '@/hooks/use-lead-meta';
 import { useLeadAttachments, useCreateLeadAttachment } from '@/hooks/use-lead-attachments';
 import { useLanguage } from '@/contexts/LanguageContext';
