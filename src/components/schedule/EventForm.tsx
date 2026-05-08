@@ -99,7 +99,7 @@ export function EventForm({ open, onOpenChange, event, leadId, leadName, default
         setDescription('');
         setSelectedUserId(defaultUserId || '');
         setDate(defaultDate || getBrasiliaTime());
-        setTime(getCurrentTimeForInput());
+        setTime(defaultDate ? format(defaultDate, 'HH:mm') : getCurrentTimeForInput());
         setDuration(30);
         setIsCompleted(false);
       }
