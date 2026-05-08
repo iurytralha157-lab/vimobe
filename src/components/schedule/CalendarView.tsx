@@ -1,10 +1,35 @@
 import { useState, useMemo } from 'react';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isToday, addMonths, subMonths, startOfWeek, endOfWeek, parseISO } from 'date-fns';
+import { 
+  format, 
+  startOfMonth, 
+  endOfMonth, 
+  eachDayOfInterval, 
+  isSameMonth, 
+  isSameDay, 
+  isToday, 
+  addMonths, 
+  subMonths, 
+  startOfWeek, 
+  endOfWeek, 
+  parseISO,
+  addWeeks,
+  subWeeks,
+  addDays,
+  subDays,
+  startOfDay,
+  eachHourOfInterval,
+  isSameHour,
+  startOfYear,
+  endOfYear,
+  eachMonthOfInterval
+} from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Phone, Mail, Calendar as CalendarIcon, CheckSquare, MessageSquare, MapPin, Clock, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ScheduleEvent, EventType } from '@/hooks/use-schedule-events';
+import { ScrollArea } from '@/components/ui/scroll-area';
+
 const eventTypeColors: Record<EventType, string> = {
   call: 'bg-blue-500',
   email: 'bg-orange-500',
@@ -13,10 +38,30 @@ const eventTypeColors: Record<EventType, string> = {
   message: 'bg-teal-500',
   visit: 'bg-pink-500'
 };
+
+const eventTypeIcons: Record<EventType, React.ElementType> = {
+  call: Phone,
+  email: Mail,
+  meeting: CalendarIcon,
+  task: CheckSquare,
+  message: MessageSquare,
+  visit: MapPin,
+};
+
+const eventTypeLightColors: Record<EventType, string> = {
+  call: 'bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-300',
+  email: 'bg-orange-50 border-orange-200 text-orange-700 dark:bg-orange-900/20 dark:border-orange-800 dark:text-orange-300',
+  meeting: 'bg-purple-50 border-purple-200 text-purple-700 dark:bg-purple-900/20 dark:border-purple-800 dark:text-purple-300',
+  task: 'bg-amber-50 border-amber-200 text-amber-700 dark:bg-amber-900/20 dark:border-amber-800 dark:text-amber-300',
+  message: 'bg-teal-50 border-teal-200 text-teal-700 dark:bg-teal-900/20 dark:border-teal-800 dark:text-teal-300',
+  visit: 'bg-pink-50 border-pink-200 text-pink-700 dark:bg-pink-900/20 dark:border-pink-800 dark:text-pink-300',
+};
+
 interface CalendarViewProps {
   events: ScheduleEvent[];
   selectedDate: Date;
   onDateSelect: (date: Date) => void;
+  viewMode: 'day' | 'week' | 'month' | 'year';
 }
 export function CalendarView({
   events,
