@@ -63,9 +63,7 @@ export function useWhatsAppHealthMonitor() {
       const reportedState = (data?.data?.state || "").toLowerCase();
       const isConnected = data?.success && (
         data.data?.connected === true || 
-        reportedState === "open" ||
-        reportedState === "connected" ||
-        reportedState === "connecting"
+        reportedState === "open"
       );
 
       return isConnected;

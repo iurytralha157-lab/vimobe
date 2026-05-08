@@ -86,12 +86,9 @@ export function WhatsAppTab() {
 
       const result = data.data;
 
-      const isConnected =
-      result?.connected === true ||
-      result?.status === true ||
-      result?.state === "open" ||
-      result?.state === "connected" ||
-      result?.state === "connecting";
+      const isConnected = 
+        result?.state === "open" || 
+        result?.connected === true;
 
       if (isConnected) {
         await supabase.

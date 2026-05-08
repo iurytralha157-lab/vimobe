@@ -93,8 +93,7 @@ export default function WhatsAppSettings() {
       // We are very strict: only "open" counts as connected.
       const isConnected = 
         result?.state === "open" ||
-        result?.connected === true ||
-        result?.instance?.state === "open";
+        result?.connected === true;
       
       if (isConnected) {
         // Update status in database
