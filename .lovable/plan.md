@@ -1,19 +1,27 @@
-Eu identifiquei os problemas relatados na aba de Gestão (Equipes e Escala).
+O usuário relatou dois problemas: o scroll dentro da lista de atribuição de leads não está funcionando corretamente e a atualização visual da atribuição é lenta (falta de feedback imediato).
 
-### Problemas Identificados:
-1.  **Escala não salva (reseta para o padrão)**: Ao desativar a escala de um membro para determinados dias (ex: desmarcar Segunda-feira), o sistema deleta o registro no banco de dados. Ao reabrir a configuração, como não existe registro para aquele dia, o sistema aplica o padrão automático (Segunda a Sexta), fazendo parecer que a alteração não foi salva.
-2.  **Membros inativos aparecendo**: A listagem de equipes e a seleção de novos membros não estão filtrando usuários desativados (`is_active: false`), o que faz com que pessoas que não fazem mais parte do CRM continuem aparecendo na gestão.
+### 1. Correção do Scroll
+O problema do scroll geralmente ocorre quando o componente `Command` (da biblioteca `cmdk`) é usado dentro de um `Popover` ou `Dialog` sem a configuração correta de eventos, ou devido ao `CommandList` não lidar bem com o scroll nativo em certos contextos.
+- Vou ajustar o `CommandList` e garantir que o container tenha as propriedades de scroll corretas.
+- Vou remover a div de busca personalizada que adicionei manualmente e usar o `CommandInput` nativo que já inclui o ícone, evitando conflitos de layout.
 
-### Soluções Propostas:
-1.  **Ajuste na Escala**:
-    *   Alterar o salvamento para manter os registros de todos os dias da semana, salvando explicitamente o status `is_active: false` quando o dia for desmarcado.
-    *   Corrigir a lógica de carregamento para que, caso um registro não exista, ele não assuma automaticamente o padrão de "Segunda a Sexta" se o usuário já tiver outras configurações de escala.
-2.  **Filtro de Membros**:
-    *   Atualizar a busca de equipes para filtrar apenas membros ativos.
-    *   Atualizar a seleção de membros (ao criar/editar equipe) para mostrar apenas usuários ativos no sistema.
-    *   Garantir que usuários deletados ou sem vínculo válido com o CRM não apareçam nas listagens.
+### 2. Atribuição Instantânea (UI Otimista)
+Atualmente, o sistema espera a resposta do banco de dados e o refetch dos dados para atualizar o nome e avatar do responsável. Isso causa a percepção de lentidão.
+- Vou implementar uma **Atualização Otimista (Optimistic UI)**: assim que o usuário clica em um novo responsável, o estado local do lead será atualizado imediatamente na interface, enquanto a requisição acontece em segundo plano.
+- Vou adicionar um estado de transição visual (loading sutil) no avatar do responsável para indicar que a alteração está sendo processada, mas já mostrando o novo nome/foto.
 
-### Detalhes Técnicos:
-*   **Hooks**: Atualização em `use-member-availability.ts`, `use-teams.ts` e `use-users.ts` para incluir filtros de `is_active` e persistência correta de status desativado.
-*   **Componentes**: Ajuste em `MemberAvailabilityDialog.tsx` para tratar corretamente a ausência de registros sem recorrer a valores padrão de "Segunda a Sexta".
-*   **Database**: As tabelas `member_availability` e `users` já possuem os campos necessários (`is_active`), sendo apenas necessário ajustar as queries.
+### Detalhes Técnicos
+
+**Componente: LeadDetailDialog.tsx**
+- Criar um estado local `localLead` inicializado com o `lead` recebido via props.
+- Sincronizar o `localLead` quando a prop `lead` mudar (mas apenas se não houver uma operação em curso).
+- No `handleAssignUser`:
+    1. Identificar o usuário selecionado na lista `allUsers`.
+    2. Atualizar o `localLead` imediatamente com o novo objeto `assignee` e `assigned_user_id`.
+    3. Chamar a mutação do Supabase.
+    4. Em caso de erro, reverter para o estado original.
+- No JSX, usar o `localLead` para exibir o nome e avatar do responsável no cabeçalho e na seção de detalhes.
+
+**Correção da Interface:**
+- Simplificar o uso do `Command` removendo wrappers desnecessários que podem estar bloqueando o scroll.
+- Garantir que o `PopoverContent` não tenha `overflow-hidden` se o `CommandList` precisar gerenciar o scroll.
