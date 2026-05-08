@@ -55,9 +55,10 @@ interface EventFormProps {
   leadName?: string;
   defaultUserId?: string;
   defaultDate?: Date;
+  defaultType?: EventType;
 }
 
-export function EventForm({ open, onOpenChange, event, leadId, leadName, defaultUserId, defaultDate }: EventFormProps) {
+export function EventForm({ open, onOpenChange, event, leadId, leadName, defaultUserId, defaultDate, defaultType }: EventFormProps) {
   const { data: users = [] } = useUsers();
   const createEvent = useCreateScheduleEvent();
   const updateEvent = useUpdateScheduleEvent();
@@ -93,7 +94,7 @@ export function EventForm({ open, onOpenChange, event, leadId, leadName, default
         setIsCompleted(event.status === 'completed');
       } else {
         // Creating new event
-        setSelectedType('call');
+        setSelectedType(defaultType || 'call');
         setTitle('');
         setDescription('');
         setSelectedUserId(defaultUserId || '');

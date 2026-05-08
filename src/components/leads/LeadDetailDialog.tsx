@@ -44,7 +44,7 @@ import { useActivities, useCreateActivity } from '@/hooks/use-activities';
 import { useUpdateLead, useAddLeadTag, useRemoveLeadTag } from '@/hooks/use-leads';
 import { useProperties } from '@/hooks/use-properties';
 import { useServicePlans } from '@/hooks/use-service-plans';
-import { useScheduleEvents, ScheduleEvent } from '@/hooks/use-schedule-events';
+import { useScheduleEvents, ScheduleEvent, EventType } from '@/hooks/use-schedule-events';
 import { useLeadMeta } from '@/hooks/use-lead-meta';
 import { useLeadAttachments, useCreateLeadAttachment } from '@/hooks/use-lead-attachments';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -153,6 +153,7 @@ export function LeadDetailDialog({
   const [isEditingContact, setIsEditingContact] = useState(false);
   const [scheduleFormOpen, setScheduleFormOpen] = useState(false);
   const [editingScheduleEvent, setEditingScheduleEvent] = useState<ScheduleEvent | null>(null);
+  const [scheduleDefaultType, setScheduleDefaultType] = useState<EventType>('call');
   const [activeTab, setActiveTab] = useState('activities');
   const [stagePopoverOpen, setStagePopoverOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<any>(null);
@@ -614,6 +615,14 @@ export function LeadDetailDialog({
     if (!taskForOutcome) return;
     await handleToggleCadenceTask(taskForOutcome, outcome, notes);
     setOutcomeDialogOpen(false);
+    
+    // Se agendou visita/reunião, abrir o formulário de agenda automaticamente
+    if (outcome === 'scheduled') {
+      setEditingScheduleEvent(null);
+      setScheduleDefaultType('visit');
+      setScheduleFormOpen(true);
+    }
+    
     setTaskForOutcome(null);
   };
   
@@ -1128,23 +1137,25 @@ export function LeadDetailDialog({
 
           {/* Schedule Tab */}
           {activeTab === 'schedule' && <div className="space-y-4">
-              {scheduleEvents.length > 0 && (
-                <div className="flex justify-end">
-                  <Button variant="default" onClick={() => setScheduleFormOpen(true)} className="rounded-xl h-11 px-6">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Novo agendamento
-                  </Button>
-                </div>
-              )}
+              <div className="flex justify-end">
+                <Button variant="default" onClick={() => {
+                  setEditingScheduleEvent(null);
+                  setScheduleDefaultType('call');
+                  setScheduleFormOpen(true);
+                }} className="rounded-xl h-11 px-6">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Novo agendamento
+                </Button>
+              </div>
 
-              {scheduleFormOpen && <div className="rounded-xl border bg-card p-4">
-                  <EventForm open={scheduleFormOpen} onOpenChange={open => !open && handleCloseScheduleForm()} leadId={lead.id} leadName={lead.name} event={editingScheduleEvent} />
-                </div>}
-              
               <EventsList 
                 events={scheduleEvents} 
                 onEditEvent={handleEditScheduleEvent} 
-                onAddEvent={() => setScheduleFormOpen(true)}
+                onAddEvent={() => {
+                  setEditingScheduleEvent(null);
+                  setScheduleDefaultType('call');
+                  setScheduleFormOpen(true);
+                }}
               />
             </div>}
 
@@ -2111,23 +2122,25 @@ export function LeadDetailDialog({
           {/* Schedule Tab */}
           <TabsContent value="schedule" className="p-6 mt-0">
             <div className="space-y-4">
-              {scheduleEvents.length > 0 && (
-                <div className="flex justify-end">
-                  <Button variant="default" onClick={() => setScheduleFormOpen(true)} className="rounded-xl h-11 px-6">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Novo agendamento
-                  </Button>
-                </div>
-              )}
+              <div className="flex justify-end">
+                <Button variant="default" onClick={() => {
+                  setEditingScheduleEvent(null);
+                  setScheduleDefaultType('call');
+                  setScheduleFormOpen(true);
+                }} className="rounded-xl h-11 px-6">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Novo agendamento
+                </Button>
+              </div>
 
-              {scheduleFormOpen && <div className="rounded-xl border bg-card p-4">
-                  <EventForm open={scheduleFormOpen} onOpenChange={open => !open && handleCloseScheduleForm()} leadId={lead.id} leadName={lead.name} event={editingScheduleEvent} />
-                </div>}
-              
               <EventsList 
                 events={scheduleEvents} 
                 onEditEvent={handleEditScheduleEvent} 
-                onAddEvent={() => setScheduleFormOpen(true)}
+                onAddEvent={() => {
+                  setEditingScheduleEvent(null);
+                  setScheduleDefaultType('call');
+                  setScheduleFormOpen(true);
+                }}
               />
             </div>
           </TabsContent>
@@ -2917,6 +2930,17 @@ export function LeadDetailDialog({
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Formulário de agendamento (global para o card) */}
+      <EventForm 
+        open={scheduleFormOpen} 
+        onOpenChange={open => !open && handleCloseScheduleForm()} 
+        leadId={lead.id} 
+        leadName={lead.name} 
+        event={editingScheduleEvent}
+        defaultUserId={lead.assigned_user_id}
+        defaultType={scheduleDefaultType}
+      />
     </>
   );
 }
