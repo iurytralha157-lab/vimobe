@@ -1,13 +1,14 @@
 import { useState, useMemo } from 'react';
 import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, addDays, isWithinInterval } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Plus, Calendar as CalendarIcon, List, LayoutGrid } from 'lucide-react';
+import { Plus, Calendar as CalendarIcon, List, LayoutGrid, ChevronLeft, ChevronRight } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CalendarView } from '@/components/schedule/CalendarView';
 import { EventsList } from '@/components/schedule/EventsList';
 import { EventForm } from '@/components/schedule/EventForm';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 // Google Calendar integration removed temporarily
 import { UserFilter } from '@/components/schedule/UserFilter';
 import { useScheduleEvents, ScheduleEvent } from '@/hooks/use-schedule-events';
