@@ -25,41 +25,52 @@ const handleChunkError = (event: Event | PromiseRejectionEvent) => {
 window.addEventListener('error', handleChunkError);
 window.addEventListener('unhandledrejection', handleChunkError);
 
-// One-time cleanup for users stuck on old cached versions.
-// Bump CACHE_BUST_VERSION to force ALL clients to clear caches + SWs once.
-// One-time cleanup and aggressive Service Worker removal
-// Bump CACHE_BUST_VERSION to force ALL clients to clear caches + SWs once.
-const CACHE_BUST_VERSION = '2026-05-08-v2';
-const BUST_KEY = 'lovable_cache_bust_version';
+// Aggressive version management and cache busting
+const CACHE_BUST_VERSION = '2026-05-08-v3';
+const BUST_KEY = 'lovable_app_version';
 
 async function cleanupServiceWorkers() {
   try {
     if ('serviceWorker' in navigator) {
       const registrations = await navigator.serviceWorker.getRegistrations();
-      await Promise.all(registrations.map(r => r.unregister()));
-      console.log('All Service Workers unregistered');
+      if (registrations.length > 0) {
+        await Promise.all(registrations.map(r => r.unregister()));
+        console.log('All Service Workers unregistered');
+      }
     }
     if ('caches' in window) {
       const keys = await caches.keys();
-      await Promise.all(keys.map(k => caches.delete(k)));
-      console.log('All Caches cleared');
+      if (keys.length > 0) {
+        await Promise.all(keys.map(k => caches.delete(k)));
+        console.log('All Caches cleared');
+      }
     }
   } catch (e) {
     console.warn('Cleanup failed', e);
   }
 }
 
-// Always try to unregister SWs on load to ensure PWA is truly disabled
-cleanupServiceWorkers();
+// Ensure SWs are cleaned up if PWA is disabled
+if ('serviceWorker' in navigator) {
+  cleanupServiceWorkers();
+}
 
 try {
-  if (typeof window !== 'undefined' && localStorage.getItem(BUST_KEY) !== CACHE_BUST_VERSION) {
+  const currentVersion = localStorage.getItem(BUST_KEY);
+  if (currentVersion && currentVersion !== CACHE_BUST_VERSION) {
     localStorage.setItem(BUST_KEY, CACHE_BUST_VERSION);
     cleanupServiceWorkers().finally(() => {
-      window.location.reload();
+      // Add unique param to force bypass any proxy cache
+      const url = new URL(window.location.href);
+      url.searchParams.set('reload_v', CACHE_BUST_VERSION);
+      window.location.replace(url.toString());
     });
+  } else if (!currentVersion) {
+    localStorage.setItem(BUST_KEY, CACHE_BUST_VERSION);
   }
-} catch {}
+} catch (err) {
+  console.error('Version management error:', err);
+}
 
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
