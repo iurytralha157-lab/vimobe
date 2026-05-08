@@ -1448,7 +1448,7 @@ export function LeadDetailDialog({
                               }}
                               className={cn(
                                 "flex items-center gap-3 px-3 py-2.5 cursor-pointer transition-all rounded-lg my-0.5",
-                                user.id === lead.assigned_user_id && "bg-primary/10 shadow-sm"
+                                user.id === localLead.assigned_user_id && "bg-primary/10 shadow-sm"
                               )}
                             >
                               <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 border border-primary/5">
@@ -1469,7 +1469,7 @@ export function LeadDetailDialog({
                                 <p className="font-semibold truncate text-sm">{user.name}</p>
                                 {user.email && <p className="text-[11px] text-muted-foreground truncate opacity-70">{user.email}</p>}
                               </div>
-                              {user.id === lead.assigned_user_id && (
+                              {user.id === localLead.assigned_user_id && (
                                 <div className="h-6 w-6 rounded-full bg-primary/20 flex items-center justify-center ml-auto">
                                   <Check className="h-4 w-4 text-primary shrink-0" />
                                 </div>
