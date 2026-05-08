@@ -123,20 +123,20 @@ export function CalendarView({
     }
 
     return (
-      <div className="flex items-center justify-between p-4 border-b bg-muted/30">
-        <div className="flex items-center gap-3">
-          <Button variant="outline" size="sm" onClick={handleToday} className="font-bold rounded-xl h-9">
+      <div className="flex items-center justify-between px-6 py-5 border-b bg-card">
+        <div className="flex items-center gap-4">
+          <Button variant="outline" size="sm" onClick={handleToday} className="font-black rounded-2xl h-10 px-6 border-border/60 hover:bg-accent transition-all text-xs uppercase tracking-widest">
             Hoje
           </Button>
-          <div className="flex items-center bg-card border rounded-xl p-0.5">
-            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={() => handleNavigate('prev')}>
+          <div className="flex items-center bg-muted/30 border border-border/40 rounded-2xl p-1">
+            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl hover:bg-card hover:shadow-sm" onClick={() => handleNavigate('prev')}>
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={() => handleNavigate('next')}>
+            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl hover:bg-card hover:shadow-sm" onClick={() => handleNavigate('next')}>
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
-          <h2 className="text-base font-black capitalize ml-2 tracking-tight">
+          <h2 className="text-xl font-black capitalize ml-4 tracking-tight text-foreground/90">
             {label}
           </h2>
         </div>
