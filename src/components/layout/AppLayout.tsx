@@ -8,8 +8,9 @@ import { FloatingChatProvider } from '@/contexts/FloatingChatContext';
 import { FloatingChat } from '@/components/chat/FloatingChat';
 import { FloatingChatButton } from '@/components/chat/FloatingChatButton';
 import { SidebarProvider } from '@/contexts/SidebarContext';
-import { InstallPrompt } from '@/components/pwa/InstallPrompt';
-import { WebPushPrompt } from '@/components/pwa/WebPushPrompt';
+// PWA components disabled
+// import { InstallPrompt } from '@/components/pwa/InstallPrompt';
+// import { WebPushPrompt } from '@/components/pwa/WebPushPrompt';
 import { useWhatsAppHealthMonitor } from '@/hooks/use-whatsapp-health-monitor';
 import { usePushNotifications } from '@/hooks/use-push-notifications';
 import { usePhoneReminder } from '@/hooks/use-phone-reminder';
@@ -45,30 +46,7 @@ function AppLayoutContent({ children, title, disableMainScroll = false }: AppLay
   const isMobile = useIsMobile();
   const { data: settings } = useSystemSettings();
 
-  // Dynamic PWA Manifest Update
-  useEffect(() => {
-    if (settings?.pwa_icon_url) {
-      // Update link icons for iOS/Apple Touch
-      const appleIcon = document.querySelector('link[rel="apple-touch-icon"]');
-      if (appleIcon) {
-        appleIcon.setAttribute('href', settings.pwa_icon_url);
-      } else {
-        const newAppleIcon = document.createElement('link');
-        newAppleIcon.rel = 'apple-touch-icon';
-        newAppleIcon.href = settings.pwa_icon_url;
-        document.head.appendChild(newAppleIcon);
-      }
-
-      // We can't easily update the manifest.json src dynamically in all browsers,
-      // but most modern browsers will respect the favicon/apple-touch-icon 
-      // when adding to home screen if the manifest is not yet cached or if it's updated.
-      // We also update common favicon tags
-      const iconTags = document.querySelectorAll('link[rel="icon"]');
-      iconTags.forEach(tag => {
-        tag.setAttribute('href', settings.pwa_icon_url);
-      });
-    }
-  }, [settings?.pwa_icon_url]);
+  // Dynamic PWA Manifest Update disabled as requested
   
   // Start WhatsApp session health monitoring
   useWhatsAppHealthMonitor();
@@ -116,9 +94,9 @@ function AppLayoutContent({ children, title, disableMainScroll = false }: AppLay
       <FloatingChatButton />
       <FloatingChat />
       
-      {/* PWA Prompts */}
-      <InstallPrompt />
-      <WebPushPrompt />
+      {/* PWA Prompts disabled as requested */}
+      {/* <InstallPrompt />
+      <WebPushPrompt /> */}
     </div>
   );
 }

@@ -285,6 +285,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Logout ou sessão expirada - limpar tudo e NÃO processar mais nada
         if (event === 'SIGNED_OUT') {
           clearAllStates();
+          window.location.href = '/auth';
           return;
         }
 
@@ -399,8 +400,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Se falhar (sessão já expirada), não importa - tokens já foram limpos
     try {
       await supabase.auth.signOut({ scope: 'global' });
+      window.location.href = '/auth';
     } catch (error) {
       console.log('Logout server-side falhou (sessão provavelmente já expirada):', error);
+      window.location.href = '/auth';
     }
   };
 
