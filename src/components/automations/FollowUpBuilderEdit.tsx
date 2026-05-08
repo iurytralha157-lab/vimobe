@@ -598,7 +598,12 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
           dbNodes.push({
             id: node.id, node_type: 'trigger', action_type: null,
             config: { 
-              trigger_type: triggerType, tag_id: tagId, pipeline_id: pipelineId, to_stage_id: stageId,
+              trigger_type: triggerType, 
+              tag_id: tagId, 
+              pipeline_id: pipelineId, 
+              to_stage_id: stageId,
+              source: node.data.source || null,
+              meta_form_id: node.data.meta_form_id || null,
               filter_user_id: filterUserId && filterUserId !== "__all__" ? filterUserId : null,
               stop_on_reply: stopOnReply,
               on_reply_move_to_stage_id: stopOnReply && onReplyStageId && onReplyStageId !== "__none__" ? onReplyStageId : null,
