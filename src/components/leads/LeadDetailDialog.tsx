@@ -1796,7 +1796,7 @@ export function LeadDetailDialog({
             
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
-                <DialogTitle className="text-xl font-semibold truncate">{lead.name}</DialogTitle>
+                <DialogTitle className="text-xl font-semibold truncate">{localLead.name}</DialogTitle>
                 <ReentryBadge count={lead.reentry_count} lastEntryAt={lead.last_entry_at} />
                 {lead.first_response_seconds != null && (
                   <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-gradient-to-r from-amber-500/10 via-yellow-500/10 to-orange-500/10 border border-yellow-500/20 text-amber-600 dark:text-amber-400 whitespace-nowrap shrink-0">
