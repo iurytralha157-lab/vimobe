@@ -38,7 +38,7 @@ export const FOLLOW_UP_TEMPLATES: FollowUpTemplate[] = [
     description: 'Sequência completa para nutrir leads interessados',
     days: 6,
     industry: 'real_estate',
-    onReplyMessage: DEFAULT_ON_REPLY_MESSAGE,
+    onReplyMessage: undefined,
     messages: [
       { day: 1, title: 'Boas-vindas', content: `Olá {{lead.name}}! 👋\n\nSeja bem-vindo(a) à {{organization.name}}! \n\nEstou aqui para ajudar você a encontrar o imóvel ideal. Pode me contar um pouco sobre o que você busca? 🏠` },
       { day: 2, title: 'Apresentação', content: `Oi {{lead.name}}! Tudo bem?\n\nAproveitando para me apresentar melhor: sou consultor(a) imobiliário(a) e tenho acesso a diversas opções que podem te interessar.\n\nQual tipo de imóvel você está procurando? Casa, apartamento, terreno?` },
