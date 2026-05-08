@@ -12,6 +12,7 @@ export function useOrganizationUsers() {
       const { data, error } = await supabase
         .from('users')
         .select('*')
+        .eq('is_active', true)
         .order('name');
       
       if (error) throw error;

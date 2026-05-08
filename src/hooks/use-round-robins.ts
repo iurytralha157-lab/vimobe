@@ -80,7 +80,7 @@ export function useRoundRobins() {
       // Get members with user info
       const { data: members } = await supabase
         .from('round_robin_members')
-        .select('*, user:users(id, name, email, avatar_url)')
+        .select('*, user:users(id, name, email, avatar_url, is_active)')
         .in('round_robin_id', rrIds.length > 0 ? rrIds : ['no-rr'])
         .order('position');
       
@@ -113,7 +113,9 @@ export function useRoundRobins() {
         return acc;
       }, {} as Record<string, RoundRobinRule[]>);
       
-      const membersByRR = (members || []).reduce((acc, m) => {
+      const membersByRR = (members || [])
+        .filter(m => m.user && (m.user as any).is_active !== false)
+        .reduce((acc, m) => {
         if (!acc[m.round_robin_id]) acc[m.round_robin_id] = [];
         const memberKey = `${m.round_robin_id}_${m.user_id}`;
         acc[m.round_robin_id].push({
