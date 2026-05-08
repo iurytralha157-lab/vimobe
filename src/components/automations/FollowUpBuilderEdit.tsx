@@ -235,6 +235,9 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
       if (typeof config.stop_on_reply === 'boolean') setStopOnReply(config.stop_on_reply);
       if (config.on_reply_move_to_stage_id) setOnReplyStageId(config.on_reply_move_to_stage_id as string);
       if (config.on_reply_message) setOnReplyMessage(config.on_reply_message as string);
+      // New: load source and meta_form_id from trigger_config
+      const source = config.source as string | undefined;
+      const metaFormId = config.meta_form_id as string | undefined;
       
       // Load nodes and edges
       const flowNodes: Node[] = [];
