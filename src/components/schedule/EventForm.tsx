@@ -181,7 +181,7 @@ export function EventForm({ open, onOpenChange, event, leadId, leadName, default
 
   const handleDelete = async () => {
     if (!event) return;
-    await deleteEvent.mutateAsync({ id: event.id, google_event_id: event.google_event_id });
+    await deleteEvent.mutateAsync({ id: event.id });
     onOpenChange(false);
   };
 
