@@ -622,13 +622,6 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
             ...pos,
           });
         } else if (node.type === 'wait') {
-          const waitRawStageId = node.data.on_reply_stage_id || node.data.on_reply_move_to_stage_id;
-          const waitStageId = typeof waitRawStageId === 'string' && waitRawStageId && waitRawStageId !== '__none__'
-            ? waitRawStageId
-            : null;
-          const waitReplyMessage = typeof node.data.on_reply_message === 'string' && node.data.on_reply_message.trim()
-            ? node.data.on_reply_message.trim()
-            : null;
 
           dbNodes.push({
             id: node.id, node_type: 'delay', action_type: null,
