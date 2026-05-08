@@ -127,40 +127,7 @@ Deno.serve(async (req) => {
             
             console.log(`Waking up execution ${exec.id} via node ${previousNode.id}`);
             
-            // 1. Mover etapa se configurado
-            const targetStageId = nodeConfig.on_reply_move_to_stage_id || nodeConfig.on_reply_stage_id;
-            if (targetStageId) {
-              console.log(`Moving lead ${data.lead_id} to stage ${targetStageId} on reply`);
-              await supabaseAdmin.from("leads").update({ 
-                stage_id: targetStageId,
-                stage_entered_at: new Date().toISOString()
-              }).eq("id", data.lead_id);
-            }
-
-            // 2. Enviar mensagem de resposta se configurada
-            if (nodeConfig.on_reply_message) {
-              console.log(`Sending auto-reply on node ${previousNode.id}`);
-              // Usamos o executor para enviar a mensagem para aproveitar a lógica de variáveis
-              // Criamos um nó temporário de ação para o executor processar
-              await fetch(`${SUPABASE_URL}/functions/v1/automation-executor`, {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-                },
-                body: JSON.stringify({
-                  execution_id: exec.id,
-                  override_node: {
-                    node_type: "action",
-                    action_type: "send_whatsapp",
-                    node_config: {
-                      message: nodeConfig.on_reply_message,
-                      session_id: data.session_id
-                    }
-                  }
-                }),
-              });
-            }
+            // Legacy auto-reply and stage move logic removed to ensure only explicit flow bubbles are executed.
 
             // 3. Se houver uma conexão específica para "Respondido", seguir por ela
             const replyConn = automation.connections?.find(
