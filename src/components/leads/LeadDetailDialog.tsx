@@ -148,6 +148,8 @@ export function LeadDetailDialog({
   } = useFloatingChat();
   const [tagPopoverOpen, setTagPopoverOpen] = useState(false);
   const [assigneePopoverOpen, setAssigneePopoverOpen] = useState(false);
+  const [localLead, setLocalLead] = useState(lead);
+  const [isUpdatingAssignee, setIsUpdatingAssignee] = useState(false);
   const [isEditingContact, setIsEditingContact] = useState(false);
   const [scheduleFormOpen, setScheduleFormOpen] = useState(false);
   const [editingScheduleEvent, setEditingScheduleEvent] = useState<ScheduleEvent | null>(null);
@@ -238,6 +240,12 @@ export function LeadDetailDialog({
   // Use a ref to track if this is the initial load vs subsequent updates
   const isInitialMount = useState(true);
   
+  useEffect(() => {
+    if (lead && !isUpdatingAssignee) {
+      setLocalLead(lead);
+    }
+  }, [lead, isUpdatingAssignee]);
+
   useEffect(() => {
     if (lead) {
       setEditForm({
@@ -482,15 +490,37 @@ export function LeadDetailDialog({
     }
   };
   const handleAssignUser = async (userId: string | null) => {
+    // UI Otimista
+    const previousLead = { ...localLead };
+    const selectedUser = userId ? allUsers.find(u => u.id === userId) : null;
+    
+    const updatedLead = {
+      ...localLead,
+      assigned_user_id: userId,
+      assignee: selectedUser ? {
+        id: selectedUser.id,
+        name: selectedUser.name,
+        email: selectedUser.email,
+        avatar_url: selectedUser.avatar_url
+      } : null
+    };
+
+    setLocalLead(updatedLead);
+    setIsUpdatingAssignee(true);
+    setAssigneePopoverOpen(false);
+
     if (!userId) {
       try {
         await updateLead.mutateAsync({
           id: lead.id,
           assigned_user_id: null
         });
-        setAssigneePopoverOpen(false);
         refetchStages();
-      } catch (error) {}
+      } catch (error) {
+        setLocalLead(previousLead);
+      } finally {
+        setIsUpdatingAssignee(false);
+      }
       return;
     }
 
@@ -523,13 +553,21 @@ export function LeadDetailDialog({
             const confirmAssign = window.confirm(
               `Atenção: Este usuário está fora do seu horário de escala (${availability.start_time?.slice(0, 5)} - ${availability.end_time?.slice(0, 5)}). Deseja atribuir mesmo assim?`
             );
-            if (!confirmAssign) return;
+            if (!confirmAssign) {
+              setLocalLead(previousLead);
+              setIsUpdatingAssignee(false);
+              return;
+            }
           }
         } else {
           const confirmAssign = window.confirm(
             'Atenção: Este usuário não tem escala ativa para hoje. Deseja atribuir mesmo assim?'
           );
-          if (!confirmAssign) return;
+          if (!confirmAssign) {
+            setLocalLead(previousLead);
+            setIsUpdatingAssignee(false);
+            return;
+          }
         }
       }
 
@@ -537,10 +575,11 @@ export function LeadDetailDialog({
         id: lead.id,
         assigned_user_id: userId
       });
-      setAssigneePopoverOpen(false);
       refetchStages();
     } catch (error) {
-      // Error handled by mutation
+      setLocalLead(previousLead);
+    } finally {
+      setIsUpdatingAssignee(false);
     }
   };
   const handleToggleCadenceTask = async (task: any, outcome?: string, outcomeNotes?: string) => {
@@ -1350,14 +1389,23 @@ export function LeadDetailDialog({
                 <Popover open={assigneePopoverOpen} onOpenChange={setAssigneePopoverOpen}>
                   <PopoverTrigger asChild>
                     <button className="w-full flex items-center gap-3 p-3 rounded-xl border hover:border-primary/30 hover:bg-accent/30 transition-all">
-                      <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                        {lead.assignee?.name ? <span className="text-sm font-semibold text-primary">
-                            {lead.assignee.name.split(' ').map((n: string) => n[0]).join('').substring(0, 2)}
-                          </span> : <User className="h-5 w-5 text-muted-foreground" />}
+                      <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center relative overflow-hidden">
+                        {localLead.assignee?.name ? (
+                          <>
+                            <span className="text-sm font-semibold text-primary">
+                              {localLead.assignee.name.split(' ').map((n: string) => n[0]).join('').substring(0, 2)}
+                            </span>
+                            {isUpdatingAssignee && (
+                              <div className="absolute inset-0 bg-background/50 flex items-center justify-center">
+                                <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                              </div>
+                            )}
+                          </>
+                        ) : <User className="h-5 w-5 text-muted-foreground" />}
                       </div>
                       <div className="flex-1 text-left min-w-0">
-                        <p className="font-medium truncate">{lead.assignee?.name || 'Sem responsável'}</p>
-                        {lead.assignee?.email && <p className="text-xs text-muted-foreground truncate">{lead.assignee.email}</p>}
+                        <p className="font-medium truncate">{localLead.assignee?.name || 'Sem responsável'}</p>
+                        {localLead.assignee?.email && <p className="text-xs text-muted-foreground truncate">{localLead.assignee.email}</p>}
                       </div>
                       <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
                     </button>
@@ -1368,7 +1416,7 @@ export function LeadDetailDialog({
                         <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
                         <CommandInput placeholder="Buscar responsável..." className="border-none focus:ring-0 h-11" />
                       </div>
-                      <CommandList className="max-h-[450px] p-1">
+                      <CommandList className="max-h-[450px] p-1 overflow-y-auto">
                         <CommandEmpty className="py-6 text-center text-sm text-muted-foreground">
                           Nenhum usuário encontrado.
                         </CommandEmpty>
@@ -1400,7 +1448,7 @@ export function LeadDetailDialog({
                               }}
                               className={cn(
                                 "flex items-center gap-3 px-3 py-2.5 cursor-pointer transition-all rounded-lg my-0.5",
-                                user.id === lead.assigned_user_id && "bg-primary/10 shadow-sm"
+                                user.id === localLead.assigned_user_id && "bg-primary/10 shadow-sm"
                               )}
                             >
                               <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 border border-primary/5">
@@ -1421,7 +1469,7 @@ export function LeadDetailDialog({
                                 <p className="font-semibold truncate text-sm">{user.name}</p>
                                 {user.email && <p className="text-[11px] text-muted-foreground truncate opacity-70">{user.email}</p>}
                               </div>
-                              {user.id === lead.assigned_user_id && (
+                              {user.id === localLead.assigned_user_id && (
                                 <div className="h-6 w-6 rounded-full bg-primary/20 flex items-center justify-center ml-auto">
                                   <Check className="h-4 w-4 text-primary shrink-0" />
                                 </div>
@@ -1748,7 +1796,7 @@ export function LeadDetailDialog({
             
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
-                <DialogTitle className="text-xl font-semibold truncate">{lead.name}</DialogTitle>
+                <DialogTitle className="text-xl font-semibold truncate">{localLead.name}</DialogTitle>
                 <ReentryBadge count={lead.reentry_count} lastEntryAt={lead.last_entry_at} />
                 {lead.first_response_seconds != null && (
                   <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-gradient-to-r from-amber-500/10 via-yellow-500/10 to-orange-500/10 border border-yellow-500/20 text-amber-600 dark:text-amber-400 whitespace-nowrap shrink-0">
@@ -1771,10 +1819,14 @@ export function LeadDetailDialog({
                 {/* Assignee Selector */}
                 <Popover open={assigneePopoverOpen} onOpenChange={setAssigneePopoverOpen}>
                   <PopoverTrigger asChild>
-                    <button className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded-md hover:bg-accent">
+                    <button className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded-md hover:bg-accent relative overflow-hidden">
                       <User className="h-3.5 w-3.5" />
-                      <span>{lead.assignee?.name || 'Sem responsável'}</span>
-                      <ChevronDown className="h-3 w-3" />
+                      <span>{localLead.assignee?.name || 'Sem responsável'}</span>
+                      {isUpdatingAssignee ? (
+                        <Loader2 className="h-3 w-3 animate-spin text-primary" />
+                      ) : (
+                        <ChevronDown className="h-3 w-3" />
+                      )}
                     </button>
                   </PopoverTrigger>
                   <PopoverContent className="w-[300px] p-0 shadow-2xl border-primary/20" align="start">
@@ -1783,7 +1835,7 @@ export function LeadDetailDialog({
                         <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
                         <CommandInput placeholder="Buscar..." className="border-none focus:ring-0 h-10" />
                       </div>
-                      <CommandList className="max-h-[350px] p-1">
+                      <CommandList className="max-h-[350px] p-1 overflow-y-auto">
                         <CommandEmpty className="py-4 text-center text-sm text-muted-foreground">
                           Nenhum encontrado.
                         </CommandEmpty>
@@ -1795,7 +1847,7 @@ export function LeadDetailDialog({
                             }}
                             className={cn(
                               "flex items-center gap-2.5 px-3 py-2.5 cursor-pointer transition-colors rounded-lg",
-                              !lead.assigned_user_id && "bg-accent"
+                              !localLead.assigned_user_id && "bg-accent"
                             )}
                           >
                             <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center shrink-0">
@@ -1812,7 +1864,7 @@ export function LeadDetailDialog({
                               }}
                               className={cn(
                                 "flex items-center gap-2.5 px-3 py-2.5 cursor-pointer transition-all rounded-lg my-0.5",
-                                lead.assigned_user_id === user.id && "bg-primary/10 shadow-sm"
+                                localLead.assigned_user_id === user.id && "bg-primary/10 shadow-sm"
                               )}
                             >
                               <Avatar className="h-8 w-8 shrink-0 border border-primary/5 shadow-sm">
@@ -1822,7 +1874,7 @@ export function LeadDetailDialog({
                                 </AvatarFallback>
                               </Avatar>
                               <span className="text-sm font-medium truncate">{user.name}</span>
-                              {lead.assigned_user_id === user.id && (
+                              {localLead.assigned_user_id === user.id && (
                                 <div className="h-5 w-5 rounded-full bg-primary/20 flex items-center justify-center ml-auto">
                                   <Check className="h-3.5 w-3.5 text-primary shrink-0" />
                                 </div>
