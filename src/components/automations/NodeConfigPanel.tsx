@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { TriggerType } from '@/hooks/use-automations';
 import { useCreateTag } from '@/hooks/use-tags';
+import { useAllMetaFormConfigs } from '@/hooks/use-meta-forms';
 import { useRef, useState, useCallback, useEffect } from 'react';
 import { AutomationMediaGallery } from './AutomationMediaGallery';
 import { AudioRecorderInline } from './AudioRecorderInline';
