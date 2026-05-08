@@ -478,7 +478,16 @@ function validateTriggerConditions(
       return true;
 
     case "lead_created":
-      // No specific conditions for lead creation
+      // Check source if configured
+      if (config.source && config.source !== data.source) {
+        console.log(`Source filter not matched: lead.source=${data.source}, filter.source=${config.source}`);
+        return false;
+      }
+      // Check meta form id if configured
+      if (config.meta_form_id && config.meta_form_id !== data.meta_form_id) {
+        console.log(`Meta form filter not matched: lead.meta_form_id=${data.meta_form_id}, filter.meta_form_id=${config.meta_form_id}`);
+        return false;
+      }
       return true;
 
     case "tag_added":
