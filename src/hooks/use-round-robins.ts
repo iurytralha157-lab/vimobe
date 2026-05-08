@@ -80,7 +80,7 @@ export function useRoundRobins() {
       // Get members with user info
       const { data: members } = await supabase
         .from('round_robin_members')
-        .select('*, user:users(id, name, email, avatar_url)')
+        .select('*, user:users(id, name, email, avatar_url, is_active)')
         .in('round_robin_id', rrIds.length > 0 ? rrIds : ['no-rr'])
         .order('position');
       
