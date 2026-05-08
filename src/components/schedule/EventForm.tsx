@@ -55,6 +55,7 @@ interface EventFormProps {
   leadName?: string;
   defaultUserId?: string;
   defaultDate?: Date;
+  defaultType?: EventType;
 }
 
 export function EventForm({ open, onOpenChange, event, leadId, leadName, defaultUserId, defaultDate }: EventFormProps) {
