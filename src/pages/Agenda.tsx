@@ -4,7 +4,7 @@ import {
   startOfMonth, endOfMonth, startOfYear, endOfYear
 } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Plus, Calendar as CalendarIcon, List, LayoutGrid, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Calendar as CalendarIcon, List, LayoutGrid, ChevronLeft, ChevronRight, CheckCircle2, Clock } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -12,13 +12,16 @@ import { CalendarView } from '@/components/schedule/CalendarView';
 import { EventsList } from '@/components/schedule/EventsList';
 import { EventForm } from '@/components/schedule/EventForm';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-// Google Calendar integration removed temporarily
+import { Calendar } from '@/components/ui/calendar';
 import { UserFilter } from '@/components/schedule/UserFilter';
 import { useScheduleEvents, ScheduleEvent } from '@/hooks/use-schedule-events';
 import { useUsers } from '@/hooks/use-users';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { Separator } from '@/components/ui/separator';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { cn } from '@/lib/utils';
 
 export default function Agenda() {
   const {
@@ -103,46 +106,12 @@ export default function Agenda() {
 
   // Check if user is admin or team leader
   const canFilterUsers = profile?.role === 'admin' || isTeamLeader;
-  return <AppLayout>
-      <div className="p-6 space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold">Agenda</h1>
-            <p className="text-muted-foreground">
-              Gerencie suas atividades e compromissos
-            </p>
-          </div>
-
-          <div className="flex items-center gap-3">
-            {canFilterUsers && <UserFilter users={users} selectedUserId={selectedUserId} onUserSelect={setSelectedUserId} />}
-
-            <div className="flex items-center border rounded-xl p-1 bg-muted/30">
-              <Select value={viewMode} onValueChange={(v: any) => setViewMode(v)}>
-                <SelectTrigger className="w-[120px] h-9 border-0 bg-transparent focus:ring-0">
-                  <SelectValue placeholder="Visualização" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="day">Dia</SelectItem>
-                  <SelectItem value="week">Semana</SelectItem>
-                  <SelectItem value="month">Mês</SelectItem>
-                  <SelectItem value="year">Ano</SelectItem>
-                  <SelectItem value="list">Lista</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <Button variant="default" onClick={() => setEventFormOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Novo agendamento
-            </Button>
-          </div>
-        </div>
-
-        {/* Main content */}
-        <div className="grid lg:grid-cols-[1fr,350px] gap-6">
-          {/* Calendar / List view */}
-          <div className="min-h-[600px]">
+  return (
+    <AppLayout title="Agenda" disableMainScroll={true}>
+      <div className="flex h-full overflow-hidden bg-background -m-4 md:-m-6">
+        {/* Main Content Area - Left */}
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden border-r">
+          <div className="flex-1 overflow-hidden">
             {viewMode !== 'list' ? (
               <CalendarView 
                 events={events} 
@@ -151,78 +120,199 @@ export default function Agenda() {
                 pivotDate={pivotDate}
                 onPivotChange={setPivotDate}
                 viewMode={viewMode}
+                onEditEvent={handleEditEvent}
+                onQuickCreate={(date) => {
+                  setSelectedDate(date);
+                  setEventFormOpen(true);
+                }}
               />
             ) : (
-              <div className="bg-card rounded-xl border p-4">
-                <h3 className="font-semibold mb-4">
-                  Próximas atividades
-                </h3>
-                <EventsList events={upcomingEvents} onEditEvent={handleEditEvent} showUser={canFilterUsers} />
+              <div className="h-full p-6 overflow-y-auto">
+                <div className="bg-card rounded-2xl border shadow-sm p-6">
+                  <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
+                    <List className="h-5 w-5 text-primary" />
+                    Próximas atividades
+                  </h3>
+                  <EventsList events={upcomingEvents} onEditEvent={handleEditEvent} showUser={canFilterUsers} />
+                </div>
               </div>
             )}
           </div>
-
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Google Calendar integration disabled */}
-
-            {/* Quick stats - filtered for current week only */}
-            <div className="bg-card rounded-xl p-4 space-y-4 border-0">
-              <h3 className="font-semibold">Resumo da semana</h3>
-              {(() => {
-                const weekStart = startOfWeek(new Date(), { weekStartsOn: 0 });
-                const weekEnd = endOfWeek(new Date(), { weekStartsOn: 0 });
-                const weekEvents = events.filter(e => {
-                  const eventDate = new Date(e.start_time);
-                  return isWithinInterval(eventDate, { start: weekStart, end: weekEnd });
-                });
-                return (
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="text-center p-3 bg-accent/50 rounded-lg">
-                      <p className="text-2xl font-bold text-primary">
-                        {weekEvents.filter(e => e.status !== 'completed').length}
-                      </p>
-                      <p className="text-xs text-muted-foreground">Pendentes</p>
-                    </div>
-                    <div className="text-center p-3 bg-success/10 rounded-lg">
-                      <p className="text-2xl font-bold text-success">
-                        {weekEvents.filter(e => e.status === 'completed').length}
-                      </p>
-                      <p className="text-xs text-muted-foreground">Concluídas</p>
-                    </div>
-                  </div>
-                );
-              })()}
-            </div>
-
-            {/* Atividades do dia selecionado */}
-            <div className="bg-card rounded-xl p-4 border-0">
-              <h3 className="font-semibold mb-3">
-                {startOfDay(selectedDate).getTime() === startOfDay(new Date()).getTime() ? 'Hoje' : format(selectedDate, "EEEE, dd 'de' MMMM", {
-                locale: ptBR
-              })}
-              </h3>
-              <div className="space-y-2 max-h-[300px] overflow-y-auto scrollbar-thin">
-                {selectedDayEvents.length > 0 ? selectedDayEvents.map(event => <div key={event.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-accent cursor-pointer" onClick={() => handleEditEvent(event)}>
-                      <div className="text-sm font-medium text-muted-foreground w-12">
-                        {format(new Date(event.start_time), 'HH:mm')}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{event.title}</p>
-                        {event.lead && <p className="text-xs text-muted-foreground truncate">
-                            {event.lead.name}
-                          </p>}
-                      </div>
-                    </div>) : <p className="text-sm text-muted-foreground text-center py-4">
-                    Nenhuma atividade para este dia
-                  </p>}
-              </div>
-            </div>
-          </div>
         </div>
 
-        {/* Event form dialog */}
-        <EventForm open={eventFormOpen} onOpenChange={handleCloseEventForm} event={editingEvent} defaultUserId={profile?.id} defaultDate={selectedDate} />
+        {/* Sidebar - Right */}
+        <div className="w-[320px] flex-shrink-0 flex flex-col bg-muted/10 overflow-hidden">
+          <ScrollArea className="flex-1">
+            <div className="p-5 space-y-6">
+              {/* Button: Novo Agendamento */}
+              <Button 
+                variant="default" 
+                size="lg"
+                onClick={() => setEventFormOpen(true)}
+                className="w-full rounded-2xl h-12 shadow-lg shadow-primary/20 gap-2 font-bold"
+              >
+                <Plus className="h-5 w-5" />
+                Novo agendamento
+              </Button>
+
+              <Separator className="bg-border/40" />
+
+              {/* Navigation Calendar (Datepicker style) */}
+              <div className="bg-card rounded-2xl border border-border/40 p-1 shadow-sm overflow-hidden">
+                <Calendar
+                  mode="single"
+                  selected={pivotDate}
+                  onSelect={(date) => date && setPivotDate(date)}
+                  locale={ptBR}
+                  className="w-full"
+                  classNames={{
+                    day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
+                    day_today: "bg-accent text-accent-foreground",
+                    head_cell: "text-muted-foreground font-normal text-[0.8rem] w-9",
+                    cell: "text-center text-sm p-0 relative focus-within:relative focus-within:z-20",
+                    day: "h-9 w-9 p-0 font-normal aria-selected:opacity-100 rounded-xl hover:bg-accent transition-colors",
+                  }}
+                />
+              </div>
+
+              {/* User Filter (Selector) */}
+              {canFilterUsers && (
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider ml-1">
+                    Filtrar por Usuário
+                  </label>
+                  <UserFilter 
+                    users={users} 
+                    selectedUserId={selectedUserId} 
+                    onUserSelect={setSelectedUserId} 
+                  />
+                </div>
+              )}
+
+              {/* View Selector (dia, semana, mês, etc) */}
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider ml-1">
+                  Visualização
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { value: 'day', label: 'Dia' },
+                    { value: 'week', label: 'Semana' },
+                    { value: 'month', label: 'Mês' },
+                    { value: 'list', label: 'Lista' }
+                  ].map((mode) => (
+                    <Button
+                      key={mode.value}
+                      variant={viewMode === mode.value ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setViewMode(mode.value as any)}
+                      className={cn(
+                        "rounded-xl h-9 font-medium transition-all",
+                        viewMode === mode.value ? "shadow-md shadow-primary/10" : "bg-card hover:bg-accent"
+                      )}
+                    >
+                      {mode.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Weekly Summary (Resumo da Semana) */}
+              <div className="space-y-3">
+                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider ml-1">
+                  Resumo da Semana
+                </label>
+                {(() => {
+                  const weekStart = startOfWeek(new Date(), { weekStartsOn: 0 });
+                  const weekEnd = endOfWeek(new Date(), { weekStartsOn: 0 });
+                  const weekEvents = events.filter(e => {
+                    const eventDate = new Date(e.start_time);
+                    return isWithinInterval(eventDate, { start: weekStart, end: weekEnd });
+                  });
+                  const pendingCount = weekEvents.filter(e => e.status !== 'completed').length;
+                  const completedCount = weekEvents.filter(e => e.status === 'completed').length;
+
+                  return (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-card border border-border/40 p-3 rounded-2xl shadow-sm text-center">
+                        <div className="text-2xl font-black text-amber-500">{pendingCount}</div>
+                        <div className="text-[10px] font-bold text-muted-foreground uppercase">Pendentes</div>
+                      </div>
+                      <div className="bg-card border border-border/40 p-3 rounded-2xl shadow-sm text-center">
+                        <div className="text-2xl font-black text-emerald-500">{completedCount}</div>
+                        <div className="text-[10px] font-bold text-muted-foreground uppercase">Concluídos</div>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Daily Activities (Atividades do Dia Selecionado) */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between ml-1">
+                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                    {startOfDay(selectedDate).getTime() === startOfDay(new Date()).getTime() ? 'Atividades de Hoje' : 'Atividades do Dia'}
+                  </label>
+                  <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                    {selectedDayEvents.length}
+                  </span>
+                </div>
+                
+                <div className="space-y-2">
+                  {selectedDayEvents.length > 0 ? (
+                    selectedDayEvents.map(event => (
+                      <div 
+                        key={event.id} 
+                        className="group bg-card border border-border/40 p-3 rounded-2xl hover:border-primary/50 hover:shadow-md transition-all cursor-pointer relative overflow-hidden"
+                        onClick={() => handleEditEvent(event)}
+                      >
+                        <div className="absolute top-0 left-0 w-1 h-full bg-primary/20 group-hover:bg-primary transition-colors" />
+                        <div className="flex items-start gap-3">
+                          <div className="flex flex-col items-center">
+                            <span className="text-xs font-black text-foreground leading-none">
+                              {format(new Date(event.start_time), 'HH:mm')}
+                            </span>
+                            <Clock className="h-3 w-3 text-muted-foreground mt-1" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-xs font-bold truncate leading-tight mb-0.5">
+                              {event.title}
+                            </h4>
+                            {event.lead && (
+                              <p className="text-[10px] text-muted-foreground font-medium flex items-center gap-1">
+                                <span className="h-1 w-1 rounded-full bg-primary/50" />
+                                {event.lead.name}
+                              </p>
+                            )}
+                          </div>
+                          {event.status === 'completed' && (
+                            <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="bg-card border border-dashed border-border/60 p-6 rounded-2xl text-center">
+                      <p className="text-xs text-muted-foreground font-medium">
+                        Nenhuma atividade para este dia
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </ScrollArea>
+        </div>
       </div>
-    </AppLayout>;
+
+      {/* Event form dialog */}
+      <EventForm 
+        open={eventFormOpen} 
+        onOpenChange={handleCloseEventForm} 
+        event={editingEvent} 
+        defaultUserId={selectedUserId || profile?.id} 
+        defaultDate={selectedDate} 
+      />
+    </AppLayout>
+  );
 }
