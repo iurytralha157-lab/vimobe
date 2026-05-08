@@ -732,6 +732,16 @@ async function handleMessagesUpsert(
         }
       }
 
+      // Check if message already exists with sender_name 'Automação' to avoid stopping on our own messages
+      const { data: existingAutomationMsg } = await supabase
+        .from("whatsapp_messages")
+        .select("sender_name")
+        .eq("session_id", session.id)
+        .eq("message_id", messageId)
+        .maybeSingle();
+      
+      const isAutomationMessage = existingAutomationMsg?.sender_name === "Automação";
+
       // Insert message (upsert to handle duplicates)
       const { data: insertedMessage, error: msgError } = await supabase
         .from("whatsapp_messages")
@@ -749,7 +759,7 @@ async function handleMessagesUpsert(
           status: fromMe ? "sent" : "received",
           sent_at: messageDate,
           sender_jid: senderJid,
-          sender_name: senderName,
+          sender_name: isAutomationMessage ? "Automação" : senderName,
         }, {
           onConflict: "session_id,message_id",
         })
@@ -839,6 +849,12 @@ async function handleMessagesUpsert(
         
         // ===== FIRST RESPONSE TRACKING: Track when broker sends message via native WhatsApp =====
         if (fromMe && !isGroup && conversation.lead_id) {
+          // If this is a manual message (fromMe = true and not from automation), stop any active automations
+          if (!isAutomationMessage) {
+            console.log(`Manual interaction detected for lead ${conversation.lead_id}, checking for automations to stop`);
+            EdgeRuntime.waitUntil(handleStopFollowUpOnReply(supabase, conversation.id, conversation.lead_id, true));
+          }
+
           try {
             console.log(`Tracking first response for lead ${conversation.lead_id} via native WhatsApp (session owner: ${session.owner_user_id})`);
             
@@ -1952,7 +1968,8 @@ async function fetchAndSaveProfilePicture(
 async function handleStopFollowUpOnReply(
   supabase: any,
   conversationId: string,
-  leadId: string
+  leadId: string,
+  isManualInteraction: boolean = false
 ) {
   try {
     console.log(`Checking for follow-up automations to stop for lead ${leadId}`);
@@ -2001,13 +2018,28 @@ async function handleStopFollowUpOnReply(
     for (const exec of executions) {
       const triggerConfig = exec.automation?.trigger_config || {};
       
-      // Check if this automation should stop on reply
-      if (triggerConfig.stop_on_reply !== true) {
+      // Check if this automation should stop
+      if (!isManualInteraction && triggerConfig.stop_on_reply !== true) {
         console.log(`Automation ${exec.automation?.name || exec.id} does not have stop_on_reply enabled, skipping`);
         continue;
       }
       
-      console.log(`Lead replied during automation "${exec.automation?.name}" - checking for replied branch`);
+      console.log(`${isManualInteraction ? 'Manual interaction' : 'Lead replied'} during automation "${exec.automation?.name}" - checking for ${isManualInteraction ? 'cancellation' : 'replied branch'}`);
+      
+      // If it's a manual interaction, we cancel everything and DON'T follow branches or send auto-replies
+      if (isManualInteraction) {
+        await supabase
+          .from("automation_executions")
+          .update({
+            status: "cancelled",
+            completed_at: new Date().toISOString(),
+            error_message: "Cancelado: intervenção humana",
+          })
+          .eq("id", exec.id);
+        
+        console.log(`Automation ${exec.id} cancelled due to manual intervention`);
+        continue;
+      }
       
       // Keep track of the user to notify (prefer lead owner, fallback to automation creator)
       if (!notifyUserId) {

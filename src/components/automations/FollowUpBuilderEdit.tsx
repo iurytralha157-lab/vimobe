@@ -235,6 +235,9 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
       if (typeof config.stop_on_reply === 'boolean') setStopOnReply(config.stop_on_reply);
       if (config.on_reply_move_to_stage_id) setOnReplyStageId(config.on_reply_move_to_stage_id as string);
       if (config.on_reply_message) setOnReplyMessage(config.on_reply_message as string);
+      // New: load source and meta_form_id from trigger_config
+      const source = config.source as string | undefined;
+      const metaFormId = config.meta_form_id as string | undefined;
       
       // Load nodes and edges
       const flowNodes: Node[] = [];
@@ -245,7 +248,16 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
         const pos = { x: node.position_x || 250, y: node.position_y || 180 };
         
         if (node.node_type === 'trigger') {
-          flowNodes.push({ id: node.id, type: 'start', position: { x: pos.x, y: node.position_y || 50 }, data: { trigger_type: automation.trigger_type } });
+          flowNodes.push({ 
+            id: node.id, 
+            type: 'start', 
+            position: { x: pos.x, y: node.position_y || 50 }, 
+            data: { 
+              trigger_type: automation.trigger_type,
+              source: nodeConfig.source || config.source, // Try both node config and trigger config
+              meta_form_id: nodeConfig.meta_form_id || config.meta_form_id 
+            } 
+          });
           if (nodeConfig.session_id) setSessionId(nodeConfig.session_id as string);
         } else if (node.node_type === 'action' && node.action_type === 'send_whatsapp') {
           flowNodes.push({ id: node.id, type: 'message', position: pos, data: { message: nodeConfig.message || '', day: nodeConfig.day || 1 } });
@@ -541,6 +553,10 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
         ? (waitReplyConfig.onReplyMessage ?? (onReplyMessage?.trim() ? onReplyMessage.trim() : null))
         : null;
 
+      // Find the start node to get its data (source, meta_form_id)
+      const startNode = nodes.find(n => n.type === 'start');
+      const startNodeData = startNode?.data || {};
+
       // Update automation
       await updateAutomation.mutateAsync({
         id: automationId,
@@ -553,6 +569,10 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
           ...(triggerType === 'lead_stage_changed' ? { 
             pipeline_id: pipelineId, 
             to_stage_id: stageId 
+          } : {}),
+          ...(triggerType === 'lead_created' ? {
+            source: startNodeData.source || null,
+            meta_form_id: startNodeData.meta_form_id || null
           } : {}),
           filter_user_id: filterUserId && filterUserId !== "__all__" ? filterUserId : null,
           stop_on_reply: shouldStopOnReply,
@@ -578,7 +598,12 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
           dbNodes.push({
             id: node.id, node_type: 'trigger', action_type: null,
             config: { 
-              trigger_type: triggerType, tag_id: tagId, pipeline_id: pipelineId, to_stage_id: stageId,
+              trigger_type: triggerType, 
+              tag_id: tagId, 
+              pipeline_id: pipelineId, 
+              to_stage_id: stageId,
+              source: node.data.source || null,
+              meta_form_id: node.data.meta_form_id || null,
               filter_user_id: filterUserId && filterUserId !== "__all__" ? filterUserId : null,
               stop_on_reply: stopOnReply,
               on_reply_move_to_stage_id: stopOnReply && onReplyStageId && onReplyStageId !== "__none__" ? onReplyStageId : null,

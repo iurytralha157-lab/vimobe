@@ -16,12 +16,7 @@ export interface FollowUpTemplate {
   onReplyMessage?: string;
 }
 
-export const DEFAULT_ON_REPLY_MESSAGE = `Olá {{lead.name}}! 🎉
-
-Que bom que você se interessou!
-Nossa equipe entrará em contato em breve para te atender.
-
-Enquanto isso, posso te ajudar com algo?`;
+export const DEFAULT_ON_REPLY_MESSAGE = "";
 
 export const FOLLOW_UP_TEMPLATES: FollowUpTemplate[] = [
   {
@@ -30,7 +25,7 @@ export const FOLLOW_UP_TEMPLATES: FollowUpTemplate[] = [
     description: 'Sequência rápida de 3 mensagens para leads quentes',
     days: 3,
     industry: 'real_estate',
-    onReplyMessage: DEFAULT_ON_REPLY_MESSAGE,
+    onReplyMessage: undefined,
     messages: [
       { day: 1, title: 'Primeiro contato', content: `Olá {{lead.name}}! 👋\n\nAqui é da {{organization.name}}. Vi que você demonstrou interesse em nossos imóveis.\n\nPosso ajudar a encontrar o imóvel perfeito para você? Qual região você está procurando?` },
       { day: 2, title: 'Lembrete', content: `Oi {{lead.name}}, tudo bem? \n\nSó passando para lembrar que estamos à disposição para ajudar na sua busca!\n\nTemos ótimas opções disponíveis. Quer que eu envie algumas sugestões?` },
@@ -43,7 +38,7 @@ export const FOLLOW_UP_TEMPLATES: FollowUpTemplate[] = [
     description: 'Sequência completa para nutrir leads interessados',
     days: 6,
     industry: 'real_estate',
-    onReplyMessage: DEFAULT_ON_REPLY_MESSAGE,
+    onReplyMessage: undefined,
     messages: [
       { day: 1, title: 'Boas-vindas', content: `Olá {{lead.name}}! 👋\n\nSeja bem-vindo(a) à {{organization.name}}! \n\nEstou aqui para ajudar você a encontrar o imóvel ideal. Pode me contar um pouco sobre o que você busca? 🏠` },
       { day: 2, title: 'Apresentação', content: `Oi {{lead.name}}! Tudo bem?\n\nAproveitando para me apresentar melhor: sou consultor(a) imobiliário(a) e tenho acesso a diversas opções que podem te interessar.\n\nQual tipo de imóvel você está procurando? Casa, apartamento, terreno?` },
@@ -59,7 +54,7 @@ export const FOLLOW_UP_TEMPLATES: FollowUpTemplate[] = [
     description: 'Sequência estendida para leads que precisam mais tempo',
     days: 10,
     industry: 'real_estate',
-    onReplyMessage: DEFAULT_ON_REPLY_MESSAGE,
+    onReplyMessage: undefined,
     messages: [
       { day: 1, title: 'Primeiro contato', content: `Olá {{lead.name}}! 👋\n\nBem-vindo(a) à {{organization.name}}! \n\nEstou aqui para ajudar você na busca pelo imóvel ideal. O que você está procurando?` },
       { day: 2, title: 'Apresentação', content: `Oi {{lead.name}}! \n\nSou especialista em imóveis na região e posso te ajudar a encontrar opções que combinam com você.\n\nQual seu orçamento e localização de preferência?` },
