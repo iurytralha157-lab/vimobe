@@ -230,13 +230,13 @@ export function CalendarView({
     const dayEvents = eventsByDate[format(pivotDate, 'yyyy-MM-dd')] || [];
 
     return (
-      <ScrollArea className="flex-1 border-0 bg-card">
-        <div className="relative flex">
+      <ScrollArea className="flex-1 border-0 bg-background/50">
+        <div className="relative flex min-h-full">
           {/* Time axis */}
-          <div className="w-16 border-r flex-shrink-0">
+          <div className="w-20 border-r border-border/40 flex-shrink-0 bg-card/50">
             {hours.map(hour => (
-              <div key={hour.toString()} className="h-20 border-b flex justify-center pt-2">
-                <span className="text-[10px] text-muted-foreground font-black uppercase tracking-tighter opacity-50">
+              <div key={hour.toString()} className="h-20 border-b border-border/40 flex justify-center pt-3">
+                <span className="text-[11px] text-muted-foreground/60 font-black uppercase tracking-tighter tabular-nums">
                   {format(hour, 'HH:mm')}
                 </span>
               </div>
@@ -248,7 +248,7 @@ export function CalendarView({
             {hours.map(hour => (
               <div 
                 key={hour.toString()} 
-                className="h-20 border-b w-full cursor-pointer hover:bg-muted/30 transition-colors" 
+                className="h-20 border-b border-border/40 w-full cursor-pointer hover:bg-primary/[0.02] transition-colors" 
                 onClick={() => {
                   const clickDate = new Date(pivotDate);
                   clickDate.setHours(hour.getHours(), 0, 0, 0);
@@ -262,7 +262,7 @@ export function CalendarView({
               const start = parseISO(event.start_time);
               const end = parseISO(event.end_time);
               const top = (start.getHours() * 60 + start.getMinutes()) * (80 / 60);
-              const duration = (end.getTime() - start.getTime()) / (1000 * 60);
+              const duration = Math.max((end.getTime() - start.getTime()) / (1000 * 60), 30);
               const height = duration * (80 / 60);
               const Icon = eventTypeIcons[event.event_type as EventType] || CalendarIcon;
 
@@ -274,25 +274,29 @@ export function CalendarView({
                     onEditEvent?.(event);
                   }}
                   className={cn(
-                    "absolute left-2 right-2 rounded-xl border p-2.5 overflow-hidden shadow-md transition-all hover:scale-[1.01] hover:z-20 z-10 group cursor-pointer",
+                    "absolute left-3 right-3 rounded-[1.25rem] border-2 p-4 overflow-hidden shadow-xl shadow-black/5 transition-all hover:scale-[1.01] hover:z-20 z-10 group cursor-pointer",
                     eventTypeColors[event.event_type as EventType]
                   )}
-                  style={{ top: `${top}px`, height: `${height}px`, minHeight: '40px' }}
+                  style={{ top: `${top}px`, height: `${height}px`, minHeight: '60px' }}
                 >
-                  <div className="flex items-center gap-2 mb-1">
-                    <Icon className="h-3.5 w-3.5" />
-                    <span className="text-xs font-black truncate tracking-tight">{event.title}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-[10px] font-bold opacity-90">
-                    <Clock className="h-3 w-3" />
-                    <span>{format(start, 'HH:mm')} - {format(end, 'HH:mm')}</span>
-                  </div>
-                  {event.lead && (
-                    <div className="flex items-center gap-1.5 mt-1 text-[10px] font-bold opacity-90">
-                      <User className="h-3 w-3" />
-                      <span className="truncate">{event.lead.name}</span>
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="p-1.5 rounded-lg bg-white/40 shadow-sm">
+                      <Icon className="h-4 w-4" />
                     </div>
-                  )}
+                    <span className="text-sm font-black truncate tracking-tight">{event.title}</span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-4 text-[10px] font-bold opacity-80">
+                    <div className="flex items-center gap-1.5">
+                      <Clock className="h-3.5 w-3.5" />
+                      <span>{format(start, 'HH:mm')} - {format(end, 'HH:mm')}</span>
+                    </div>
+                    {event.lead && (
+                      <div className="flex items-center gap-1.5">
+                        <User className="h-3.5 w-3.5" />
+                        <span className="truncate">{event.lead.name}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               );
             })}
