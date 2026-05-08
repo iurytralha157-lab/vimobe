@@ -17,6 +17,7 @@ import {
   addDays,
   subDays,
   startOfDay,
+  endOfDay,
   eachHourOfInterval,
   isSameHour,
   startOfYear,
