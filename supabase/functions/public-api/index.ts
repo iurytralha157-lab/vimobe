@@ -21,7 +21,6 @@ async function sha256Hex(input: string): Promise<string> {
     .join('')
 }
 
-// Sanitiza um imóvel para resposta pública
 function sanitizeProperty(p: any) {
   if (!p) return p
   return {
@@ -111,7 +110,6 @@ serve(async (req) => {
 
     const organizationId = keyData.organization_id
 
-    // Módulo 'api' precisa estar habilitado
     const { data: moduleData } = await supabase
       .from('organization_modules')
       .select('is_enabled')
@@ -123,7 +121,6 @@ serve(async (req) => {
       return json({ error: 'API module is not enabled for this organization', code: 'module_disabled' }, 403)
     }
 
-    // Update last_used_at
     supabase
       .from('organization_api_keys')
       .update({ last_used_at: new Date().toISOString() })
@@ -133,7 +130,6 @@ serve(async (req) => {
     const url = new URL(req.url)
     const path = url.pathname.replace('/public-api', '').replace(/\/$/, '') || '/'
 
-    // ---------- GET /properties ----------
     if (req.method === 'GET' && path === '/properties') {
       const city = url.searchParams.get('city')
       const neighborhood = url.searchParams.get('neighborhood')
@@ -179,7 +175,6 @@ serve(async (req) => {
       })
     }
 
-    // ---------- GET /properties/:id ----------
     const propertyMatch = path.match(/^\/properties\/([0-9a-fA-F-]{36})$/)
     if (req.method === 'GET' && propertyMatch) {
       const propertyId = propertyMatch[1]
@@ -196,18 +191,23 @@ serve(async (req) => {
       return json({ data: sanitizeProperty(data) })
     }
 
-    // ---------- POST /leads ----------
     if (req.method === 'POST' && path === '/leads') {
       const body = await req.json()
-      const { 
-        name, 
-        email, 
-        phone, 
-        message, 
-        property_id, 
-        source,
-        tags
-      } = body
+      
+      const name = body.name || body.nome
+      const phone = body.phone || body.telefone
+      const email = body.email
+      const message = body.message || body.mensagem
+      const property_id = body.property_id || body.imovel_id
+      const source = body.source || body.origem
+      const tags = body.tags
+      const status = body.status
+      const stage_id = body.stage_id || body.etapa_id
+      const pipeline_id = body.pipeline_id
+      const responsible_id = body.responsible_id || body.responsavel_id
+      const company = body.company || body.empresa
+      const city = body.city || body.cidade
+      const state = body.state || body.estado || body.uf
 
       if (!name || !phone) {
         return json({ error: 'Name and phone are required', code: 'bad_request' }, 400)
@@ -215,7 +215,6 @@ serve(async (req) => {
 
       const normalizedPhone = phone.replace(/\D/g, '')
       
-      // Resolve property if provided
       let resolvedPropertyId = null
       let propertyPrice = null
       if (property_id) {
@@ -233,7 +232,6 @@ serve(async (req) => {
         }
       }
 
-      // Check for existing lead (dedup)
       const phoneVariations = [normalizedPhone]
       if (!normalizedPhone.startsWith('55') && normalizedPhone.length <= 11) {
         phoneVariations.push('55' + normalizedPhone)
@@ -254,11 +252,28 @@ serve(async (req) => {
       let leadId: string
       let isReentry = false
 
+      const leadData: Record<string, any> = {
+        organization_id: organizationId,
+        name,
+        email: email || undefined,
+        phone: normalizedPhone,
+        message: message || undefined,
+        source: source || 'API',
+        interest_property_id: resolvedPropertyId || undefined,
+        valor_interesse: propertyPrice || undefined,
+        empresa: company || undefined,
+        cidade: city || undefined,
+        uf: state || undefined,
+        deal_status: status || 'open',
+        pipeline_id: pipeline_id || undefined,
+        stage_id: stage_id || undefined,
+        assigned_user_id: responsible_id || null
+      }
+
       if (existingLead) {
         leadId = existingLead.id
         isReentry = true
         
-        // Use register_lead_reentry RPC if available
         const { error: reentryError } = await supabase.rpc('register_lead_reentry', {
           p_lead_id: leadId,
           p_org_id: organizationId,
@@ -270,45 +285,28 @@ serve(async (req) => {
         })
 
         if (reentryError) {
-          // Fallback update
           await supabase
             .from('leads')
             .update({
-              name: name || undefined,
-              email: email || undefined,
-              message: message || undefined,
-              interest_property_id: resolvedPropertyId || undefined,
-              valor_interesse: propertyPrice || undefined,
-              deal_status: 'open',
+              ...leadData,
               last_entry_at: new Date().toISOString()
             })
             .eq('id', leadId)
         }
         
-        // Trigger redistribution
-        await supabase.rpc('handle_lead_intake', { p_lead_id: leadId })
+        if (!responsible_id) {
+          await supabase.rpc('handle_lead_intake', { p_lead_id: leadId })
+        }
       } else {
-        // Create new lead
         const { data: newLead, error: createError } = await supabase
           .from('leads')
-          .insert({
-            organization_id: organizationId,
-            name,
-            email: email || null,
-            phone: normalizedPhone,
-            message: message || null,
-            source: source || 'API',
-            interest_property_id: resolvedPropertyId,
-            valor_interesse: propertyPrice,
-            assigned_user_id: null // Triggers auto-distribution
-          })
+          .insert(leadData)
           .select('id')
           .single()
         
         if (createError) throw createError
         leadId = newLead.id
 
-        // Log creation activity
         await supabase.from('activities').insert({
           lead_id: leadId,
           type: 'lead_created',
@@ -316,14 +314,12 @@ serve(async (req) => {
         })
       }
 
-      // Save metadata
       await supabase.from('lead_meta').upsert({
         lead_id: leadId,
         source_type: 'api',
         raw_payload: body
       })
 
-      // Apply tags if provided
       if (tags && Array.isArray(tags)) {
         const leadTags = tags.map(tagId => ({ lead_id: leadId, tag_id: tagId }))
         await supabase.from('lead_tags').upsert(leadTags, { onConflict: 'lead_id,tag_id' })
