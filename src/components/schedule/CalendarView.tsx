@@ -203,12 +203,12 @@ export function CalendarView({
                           onEditEvent?.(event);
                         }}
                         className={cn(
-                          "px-1.5 py-0.5 rounded-md text-[10px] font-bold border truncate flex items-center gap-1 shadow-sm transition-transform hover:scale-[1.02]",
+                          "px-2 py-1.5 rounded-xl text-[10px] font-black border truncate flex items-center gap-2 shadow-sm transition-all hover:scale-[1.03] active:scale-95",
                           eventTypeColors[event.event_type as EventType] || "bg-muted border-muted"
                         )}
                       >
-                        <Icon className="h-2.5 w-2.5 flex-shrink-0" />
-                        <span className="truncate">{event.title}</span>
+                        <Icon className="h-3 w-3 flex-shrink-0 opacity-80" />
+                        <span className="truncate tracking-tight">{event.title}</span>
                       </div>
                     );
                   })}
