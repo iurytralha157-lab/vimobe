@@ -314,7 +314,12 @@ export default function AdminOrganizationDetail() {
 
       if (error) throw error;
       
-      toast.success('Usuário criado com sucesso!');
+      if (data?.moved) {
+        toast.success('Usuário já existia e foi vinculado a esta organização!');
+      } else {
+        toast.success('Usuário criado com sucesso!');
+      }
+      
       setAddUserDialogOpen(false);
       setNewUser({ name: '', email: '', password: '', role: 'user' });
       refetchUsers();
