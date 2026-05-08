@@ -11,7 +11,9 @@ import {
   Trash2,
   Info,
   Eye,
-  EyeOff
+  EyeOff,
+  Save,
+  Building
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { AdminLayout } from '@/components/admin/AdminLayout';
@@ -56,6 +58,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogFooter,
 } from '@/components/ui/dialog';
 
 export default function AdminUsers() {
@@ -73,13 +76,17 @@ export default function AdminUsers() {
     user: null,
     loading: false,
   });
+  const [editDialog, setEditDialog] = useState<{ open: boolean; user: any }>({
+    open: false,
+    user: null,
+  });
   const [showCpf, setShowCpf] = useState(false);
 
   const filteredUsers = allUsers?.filter(user => {
     // Search filter
     const matchesSearch = 
-      user.name.toLowerCase().includes(search.toLowerCase()) ||
-      user.email.toLowerCase().includes(search.toLowerCase());
+      user.name?.toLowerCase().includes(search.toLowerCase()) ||
+      user.email?.toLowerCase().includes(search.toLowerCase());
     
     // Organization filter
     const matchesOrg = filterOrg === 'all' || 
@@ -148,6 +155,19 @@ export default function AdminUsers() {
       await deleteUser.mutateAsync(deleteDialog.userId);
       toast.success('Usuário excluído');
       setDeleteDialog({ open: false, userId: '', userName: '' });
+    } catch (error) {
+      toast.error(getFriendlyErrorMessage(error));
+    }
+  };
+
+  const handleUpdateUser = async (data: any) => {
+    try {
+      await updateUser.mutateAsync({
+        userId: editDialog.user.id,
+        ...data
+      });
+      toast.success('Usuário atualizado com sucesso');
+      setEditDialog({ open: false, user: null });
     } catch (error) {
       toast.error(getFriendlyErrorMessage(error));
     }
@@ -293,6 +313,12 @@ export default function AdminUsers() {
                             >
                               <Info className="h-4 w-4 mr-2" />
                               Ver Detalhes
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => setEditDialog({ open: true, user })}
+                            >
+                              <Save className="h-4 w-4 mr-2" />
+                              Editar
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem 
@@ -468,6 +494,76 @@ export default function AdminUsers() {
               Nenhum dado encontrado.
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit User Dialog */}
+      <Dialog open={editDialog.open} onOpenChange={(open) => setEditDialog(prev => ({ ...prev, open }))}>
+        <DialogContent className="max-w-[95vw] sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Editar Usuário</DialogTitle>
+            <DialogDescription>
+              Altere as informações do usuário ou sua organização.
+            </DialogDescription>
+          </DialogHeader>
+
+          {editDialog.user && (
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Nome</Label>
+                <Input 
+                  defaultValue={editDialog.user.name} 
+                  onChange={(e) => editDialog.user.name = e.target.value}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Papel (Role)</Label>
+                <Select 
+                  defaultValue={editDialog.user.role} 
+                  onValueChange={(v) => editDialog.user.role = v}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="user">Usuário</SelectItem>
+                    <SelectItem value="admin">Admin</SelectItem>
+                    <SelectItem value="super_admin">Super Admin</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Organização</Label>
+                <Select 
+                  defaultValue={editDialog.user.organization_id || 'none'} 
+                  onValueChange={(v) => editDialog.user.organization_id = v === 'none' ? null : v}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecionar Organização" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sem Organização</SelectItem>
+                    {organizations?.map(org => (
+                      <SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditDialog({ open: false, user: null })}>
+              Cancelar
+            </Button>
+            <Button onClick={() => handleUpdateUser({
+              name: editDialog.user.name,
+              role: editDialog.user.role,
+              organization_id: editDialog.user.organization_id
+            })}>
+              Salvar Alterações
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </AdminLayout>
