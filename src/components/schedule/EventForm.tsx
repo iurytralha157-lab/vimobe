@@ -58,7 +58,7 @@ interface EventFormProps {
   defaultType?: EventType;
 }
 
-export function EventForm({ open, onOpenChange, event, leadId, leadName, defaultUserId, defaultDate }: EventFormProps) {
+export function EventForm({ open, onOpenChange, event, leadId, leadName, defaultUserId, defaultDate, defaultType }: EventFormProps) {
   const { data: users = [] } = useUsers();
   const createEvent = useCreateScheduleEvent();
   const updateEvent = useUpdateScheduleEvent();
