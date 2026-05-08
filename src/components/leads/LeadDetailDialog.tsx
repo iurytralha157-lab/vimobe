@@ -445,7 +445,7 @@ export function LeadDetailDialog({
     setScheduleFormOpen(false);
     setEditingScheduleEvent(null);
   };
-  if (!lead) return null;
+  if (!lead || !localLead) return null;
 
   const currentStage = lead.stage || stages.find(s => s.id === lead.stage_id);
   const currentStageIndex = stages.findIndex(s => s.id === lead.stage_id);
