@@ -106,13 +106,19 @@ export default function Agenda() {
           <div className="flex items-center gap-3">
             {canFilterUsers && <UserFilter users={users} selectedUserId={selectedUserId} onUserSelect={setSelectedUserId} />}
 
-            <div className="flex items-center border rounded-lg p-1">
-              <Button variant={viewMode === 'calendar' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('calendar')}>
-                <LayoutGrid className="h-4 w-4" />
-              </Button>
-              <Button variant={viewMode === 'list' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('list')}>
-                <List className="h-4 w-4" />
-              </Button>
+            <div className="flex items-center border rounded-xl p-1 bg-muted/30">
+              <Select value={viewMode} onValueChange={(v: any) => setViewMode(v)}>
+                <SelectTrigger className="w-[120px] h-9 border-0 bg-transparent focus:ring-0">
+                  <SelectValue placeholder="Visualização" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="day">Dia</SelectItem>
+                  <SelectItem value="week">Semana</SelectItem>
+                  <SelectItem value="month">Mês</SelectItem>
+                  <SelectItem value="year">Ano</SelectItem>
+                  <SelectItem value="list">Lista</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <Button variant="default" onClick={() => setEventFormOpen(true)}>
