@@ -2924,6 +2924,16 @@ export function LeadDetailDialog({
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Formulário de agendamento (global para o card) */}
+      <EventForm 
+        open={scheduleFormOpen} 
+        onOpenChange={open => !open && handleCloseScheduleForm()} 
+        leadId={lead.id} 
+        leadName={lead.name} 
+        event={editingScheduleEvent}
+        defaultUserId={lead.assigned_user_id}
+      />
     </>
   );
 }
