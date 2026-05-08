@@ -3,15 +3,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
-// Sync with Google Calendar disabled for performance optimization
-async function syncWithGoogleCalendar(
-  action: 'create' | 'update' | 'delete',
-  event: { id?: string; title?: string; description?: string; start_time?: string; end_time?: string; google_event_id?: string }
-) {
-  // Logic disabled
-  return null;
-}
-
 export type EventType = 'call' | 'email' | 'meeting' | 'task' | 'message' | 'visit';
 
 export interface ScheduleEvent {
@@ -63,7 +54,7 @@ export function useScheduleEvents(options: UseScheduleEventsOptions = {}) {
           id, organization_id, user_id, lead_id, property_id, title, 
           event_type, start_time, end_time, is_all_day, status,
           user:users!schedule_events_user_id_fkey(id, name, avatar_url),
-          lead:leads(id, name)
+          lead:leads(id, name, phone)
         `)
         .order('start_time', { ascending: true });
 
@@ -130,15 +121,6 @@ export function useCreateScheduleEvent() {
 
       if (error) throw error;
       
-      // Sync with Google Calendar after creating locally
-      await syncWithGoogleCalendar('create', {
-        id: data.id,
-        title: data.title,
-        description: data.description,
-        start_time: data.start_time,
-        end_time: data.end_time,
-      });
-      
       return data;
     },
     onSuccess: () => {
@@ -166,18 +148,6 @@ export function useUpdateScheduleEvent() {
 
       if (error) throw error;
       
-      // Sync with Google Calendar after updating locally
-      if (data.google_event_id) {
-        await syncWithGoogleCalendar('update', {
-          id: data.id,
-          title: data.title,
-          description: data.description,
-          start_time: data.start_time,
-          end_time: data.end_time,
-          google_event_id: data.google_event_id,
-        });
-      }
-      
       return data;
     },
     onSuccess: () => {
@@ -193,7 +163,6 @@ export function useUpdateScheduleEvent() {
 
 export function useCompleteScheduleEvent() {
   const queryClient = useQueryClient();
-  const { profile } = useAuth();
 
   return useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
@@ -224,12 +193,7 @@ export function useDeleteScheduleEvent() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, google_event_id }: { id: string; google_event_id?: string | null }) => {
-      // First sync deletion with Google Calendar if connected
-      if (google_event_id) {
-        await syncWithGoogleCalendar('delete', { google_event_id });
-      }
-      
+    mutationFn: async ({ id }: { id: string }) => {
       const { error } = await supabase
         .from('schedule_events')
         .delete()
