@@ -41,12 +41,12 @@ const eventTypeIcons: Record<EventType, React.ElementType> = {
 };
 
 const eventTypeColors: Record<EventType, string> = {
-  call: 'bg-[#3b82f6] border-[#2563eb] text-white shadow-blue-500/20',
-  email: 'bg-[#f97316] border-[#ea580c] text-white shadow-orange-500/20',
-  meeting: 'bg-[#a855f7] border-[#9333ea] text-white shadow-purple-500/20',
-  task: 'bg-[#f59e0b] border-[#d97706] text-white shadow-amber-500/20',
-  message: 'bg-[#14b8a6] border-[#0d9488] text-white shadow-teal-500/20',
-  visit: 'bg-[#ec4899] border-[#db2777] text-white shadow-pink-500/20',
+  call: 'bg-[#E3F2FD] border-[#90CAF9] text-[#1976D2] shadow-blue-500/5',
+  email: 'bg-[#FFF3E0] border-[#FFCC80] text-[#E65100] shadow-orange-500/5',
+  meeting: 'bg-[#F3E5F5] border-[#CE93D8] text-[#7B1FA2] shadow-purple-500/5',
+  task: 'bg-[#FFF8E1] border-[#FFE082] text-[#F57F17] shadow-amber-500/5',
+  message: 'bg-[#E0F2F1] border-[#80CBC4] text-[#00796B] shadow-teal-500/5',
+  visit: 'bg-[#FCE4EC] border-[#F48FB1] text-[#C2185B] shadow-pink-500/5',
 };
 
 interface CalendarViewProps {
