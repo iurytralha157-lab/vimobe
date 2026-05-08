@@ -44,17 +44,23 @@ export default function Agenda() {
 
   // Determine date range based on view
   const dateRange = useMemo(() => {
-    const weekStart = startOfWeek(selectedDate, {
-      weekStartsOn: 0
-    });
-    const weekEnd = endOfWeek(selectedDate, {
-      weekStartsOn: 0
-    });
-    return {
-      startDate: weekStart,
-      endDate: weekEnd
-    };
-  }, [selectedDate]);
+    switch (viewMode) {
+      case 'day':
+        return { startDate: startOfDay(pivotDate), endDate: endOfDay(pivotDate) };
+      case 'week':
+        return { startDate: startOfWeek(pivotDate, { weekStartsOn: 0 }), endDate: endOfWeek(pivotDate, { weekStartsOn: 0 }) };
+      case 'month':
+        return { 
+          startDate: startOfWeek(startOfMonth(pivotDate), { weekStartsOn: 0 }), 
+          endDate: endOfWeek(endOfMonth(pivotDate), { weekStartsOn: 0 }) 
+        };
+      case 'year':
+        return { startDate: startOfYear(pivotDate), endDate: endOfYear(pivotDate) };
+      case 'list':
+      default:
+        return { startDate: startOfDay(new Date()), endDate: addDays(new Date(), 30) };
+    }
+  }, [pivotDate, viewMode]);
   const {
     data: events = [],
     isLoading
