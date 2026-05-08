@@ -1835,7 +1835,7 @@ export function LeadDetailDialog({
                         <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
                         <CommandInput placeholder="Buscar..." className="border-none focus:ring-0 h-10" />
                       </div>
-                      <CommandList className="max-h-[350px] p-1">
+                      <CommandList className="max-h-[350px] p-1 overflow-y-auto">
                         <CommandEmpty className="py-4 text-center text-sm text-muted-foreground">
                           Nenhum encontrado.
                         </CommandEmpty>
