@@ -591,8 +591,9 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
               meta_form_id: node.data.meta_form_id || null,
               filter_user_id: filterUserId && filterUserId !== "__all__" ? filterUserId : null,
               stop_on_reply: stopOnReply,
-              on_reply_move_to_stage_id: stopOnReply && onReplyStageId && onReplyStageId !== "__none__" ? onReplyStageId : null,
-              on_reply_message: stopOnReply && onReplyMessage?.trim() ? onReplyMessage.trim() : null,
+              on_reply_move_to_stage_id: null,
+              on_reply_message: null,
+
             },
             ...pos,
           });
