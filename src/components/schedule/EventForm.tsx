@@ -205,12 +205,6 @@ export function EventForm({ open, onOpenChange, event, leadId, leadName, default
             </div>
           )}
 
-          {/* Info banner */}
-          <div className="flex items-start gap-2 p-3 bg-accent/50 rounded-lg text-sm text-muted-foreground">
-            <Info className="h-4 w-4 mt-0.5 flex-shrink-0" />
-            <span>As atividades serão sincronizadas com o Google Calendar quando conectado.</span>
-          </div>
-
           {/* Event type selector */}
           <div className="flex flex-wrap gap-2">
             {eventTypes.map(({ type, label, icon: Icon }) => (
