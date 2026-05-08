@@ -137,23 +137,12 @@ function getWaitReplyConfig(flowNodes: Node[]) {
   const waitNodes = flowNodes.filter((node) => node.type === 'wait');
   const waitNodeWithReply = waitNodes.find((node) => node.data?.stop_on_reply === true);
 
-  const rawStageId = waitNodeWithReply?.data?.on_reply_stage_id || waitNodeWithReply?.data?.on_reply_move_to_stage_id;
-  const normalizedStageId = typeof rawStageId === 'string' && rawStageId && rawStageId !== '__none__'
-    ? rawStageId
-    : null;
-
-  const rawMessage = waitNodeWithReply?.data?.on_reply_message;
-  const normalizedMessage = typeof rawMessage === 'string' && rawMessage.trim()
-    ? rawMessage.trim()
-    : null;
-
   return {
     hasWaitNodes: waitNodes.length > 0,
     stopOnReply: Boolean(waitNodeWithReply),
-    onReplyMoveToStageId: normalizedStageId,
-    onReplyMessage: normalizedMessage,
   };
 }
+
 
 interface FollowUpBuilderEditProps {
   automationId: string;
