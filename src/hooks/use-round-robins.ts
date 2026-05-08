@@ -113,7 +113,9 @@ export function useRoundRobins() {
         return acc;
       }, {} as Record<string, RoundRobinRule[]>);
       
-      const membersByRR = (members || []).reduce((acc, m) => {
+      const membersByRR = (members || [])
+        .filter(m => m.user && (m.user as any).is_active !== false)
+        .reduce((acc, m) => {
         if (!acc[m.round_robin_id]) acc[m.round_robin_id] = [];
         const memberKey = `${m.round_robin_id}_${m.user_id}`;
         acc[m.round_robin_id].push({
