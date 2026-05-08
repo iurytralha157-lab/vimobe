@@ -1140,6 +1140,7 @@ export function LeadDetailDialog({
               <div className="flex justify-end">
                 <Button variant="default" onClick={() => {
                   setEditingScheduleEvent(null);
+                  setScheduleDefaultType('call');
                   setScheduleFormOpen(true);
                 }} className="rounded-xl h-11 px-6">
                   <Plus className="h-4 w-4 mr-2" />
