@@ -148,6 +148,8 @@ export default function Agenda() {
                 events={events} 
                 selectedDate={selectedDate} 
                 onDateSelect={setSelectedDate}
+                pivotDate={pivotDate}
+                onPivotChange={setPivotDate}
                 viewMode={viewMode}
               />
             ) : (
