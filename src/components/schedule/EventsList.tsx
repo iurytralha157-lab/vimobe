@@ -236,5 +236,3 @@ export function EventsList({ events, onEditEvent, onAddEvent, showUser = true, s
     </div>
   );
 }
-  );
-}
