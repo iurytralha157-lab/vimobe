@@ -148,6 +148,8 @@ export function LeadDetailDialog({
   } = useFloatingChat();
   const [tagPopoverOpen, setTagPopoverOpen] = useState(false);
   const [assigneePopoverOpen, setAssigneePopoverOpen] = useState(false);
+  const [localLead, setLocalLead] = useState(lead);
+  const [isUpdatingAssignee, setIsUpdatingAssignee] = useState(false);
   const [isEditingContact, setIsEditingContact] = useState(false);
   const [scheduleFormOpen, setScheduleFormOpen] = useState(false);
   const [editingScheduleEvent, setEditingScheduleEvent] = useState<ScheduleEvent | null>(null);
