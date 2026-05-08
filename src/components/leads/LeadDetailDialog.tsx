@@ -1847,7 +1847,7 @@ export function LeadDetailDialog({
                             }}
                             className={cn(
                               "flex items-center gap-2.5 px-3 py-2.5 cursor-pointer transition-colors rounded-lg",
-                              !lead.assigned_user_id && "bg-accent"
+                              !localLead.assigned_user_id && "bg-accent"
                             )}
                           >
                             <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center shrink-0">
