@@ -73,13 +73,17 @@ export default function AdminUsers() {
     user: null,
     loading: false,
   });
+  const [editDialog, setEditDialog] = useState<{ open: boolean; user: any }>({
+    open: false,
+    user: null,
+  });
   const [showCpf, setShowCpf] = useState(false);
 
   const filteredUsers = allUsers?.filter(user => {
     // Search filter
     const matchesSearch = 
-      user.name.toLowerCase().includes(search.toLowerCase()) ||
-      user.email.toLowerCase().includes(search.toLowerCase());
+      user.name?.toLowerCase().includes(search.toLowerCase()) ||
+      user.email?.toLowerCase().includes(search.toLowerCase());
     
     // Organization filter
     const matchesOrg = filterOrg === 'all' || 
