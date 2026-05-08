@@ -1968,7 +1968,8 @@ async function fetchAndSaveProfilePicture(
 async function handleStopFollowUpOnReply(
   supabase: any,
   conversationId: string,
-  leadId: string
+  leadId: string,
+  isManualInteraction: boolean = false
 ) {
   try {
     console.log(`Checking for follow-up automations to stop for lead ${leadId}`);
