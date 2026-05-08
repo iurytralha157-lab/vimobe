@@ -31,15 +31,6 @@ import { Button } from '@/components/ui/button';
 import { ScheduleEvent, EventType } from '@/hooks/use-schedule-events';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
-const eventTypeColors: Record<EventType, string> = {
-  call: 'bg-blue-500',
-  email: 'bg-orange-500',
-  meeting: 'bg-purple-500',
-  task: 'bg-amber-500',
-  message: 'bg-teal-500',
-  visit: 'bg-pink-500'
-};
-
 const eventTypeIcons: Record<EventType, React.ElementType> = {
   call: Phone,
   email: Mail,
@@ -66,34 +57,35 @@ interface CalendarViewProps {
   onPivotChange: (date: Date) => void;
   viewMode: 'day' | 'week' | 'month' | 'year';
 }
+
 export function CalendarView({
   events,
   selectedDate,
   onDateSelect,
+  pivotDate,
+  onPivotChange,
   viewMode
 }: CalendarViewProps) {
-  const [currentPivot, setCurrentPivot] = useState(new Date());
-
   const handleNavigate = (direction: 'prev' | 'next') => {
     switch (viewMode) {
       case 'day':
-        setCurrentPivot(direction === 'prev' ? subDays(currentPivot, 1) : addDays(currentPivot, 1));
+        onPivotChange(direction === 'prev' ? subDays(pivotDate, 1) : addDays(pivotDate, 1));
         break;
       case 'week':
-        setCurrentPivot(direction === 'prev' ? subWeeks(currentPivot, 1) : addWeeks(currentPivot, 1));
+        onPivotChange(direction === 'prev' ? subWeeks(pivotDate, 1) : addWeeks(pivotDate, 1));
         break;
       case 'month':
-        setCurrentPivot(direction === 'prev' ? subMonths(currentPivot, 1) : addMonths(currentPivot, 1));
+        onPivotChange(direction === 'prev' ? subMonths(pivotDate, 1) : addMonths(pivotDate, 1));
         break;
       case 'year':
-        setCurrentPivot(direction === 'prev' ? startOfYear(subDays(startOfYear(currentPivot), 1)) : startOfYear(addDays(endOfYear(currentPivot), 1)));
+        onPivotChange(direction === 'prev' ? startOfYear(subDays(startOfYear(pivotDate), 1)) : startOfYear(addDays(endOfYear(pivotDate), 1)));
         break;
     }
   };
 
   const handleToday = () => {
     const today = new Date();
-    setCurrentPivot(today);
+    onPivotChange(today);
     onDateSelect(today);
   };
 
@@ -111,18 +103,18 @@ export function CalendarView({
     let label = '';
     switch (viewMode) {
       case 'day':
-        label = format(currentPivot, "dd 'de' MMMM, yyyy", { locale: ptBR });
+        label = format(pivotDate, "dd 'de' MMMM, yyyy", { locale: ptBR });
         break;
       case 'week':
-        const weekStart = startOfWeek(currentPivot, { weekStartsOn: 0 });
-        const weekEnd = endOfWeek(currentPivot, { weekStartsOn: 0 });
+        const weekStart = startOfWeek(pivotDate, { weekStartsOn: 0 });
+        const weekEnd = endOfWeek(pivotDate, { weekStartsOn: 0 });
         label = `${format(weekStart, 'dd')} - ${format(weekEnd, 'dd')} de ${format(weekEnd, 'MMMM, yyyy', { locale: ptBR })}`;
         break;
       case 'month':
-        label = format(currentPivot, 'MMMM yyyy', { locale: ptBR });
+        label = format(pivotDate, 'MMMM yyyy', { locale: ptBR });
         break;
       case 'year':
-        label = format(currentPivot, 'yyyy');
+        label = format(pivotDate, 'yyyy');
         break;
     }
 
@@ -149,8 +141,8 @@ export function CalendarView({
   };
 
   const renderMonthView = () => {
-    const monthStart = startOfMonth(currentPivot);
-    const monthEnd = endOfMonth(currentPivot);
+    const monthStart = startOfMonth(pivotDate);
+    const monthEnd = endOfMonth(pivotDate);
     const calendarStart = startOfWeek(monthStart, { weekStartsOn: 0 });
     const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 0 });
     const calendarDays = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
@@ -169,7 +161,7 @@ export function CalendarView({
           {calendarDays.map(day => {
             const dateKey = format(day, 'yyyy-MM-dd');
             const dayEvents = eventsByDate[dateKey] || [];
-            const isCurrentMonth = isSameMonth(day, currentPivot);
+            const isCurrentMonth = isSameMonth(day, pivotDate);
             const isSelected = isSameDay(day, selectedDate);
             const isDayToday = isToday(day);
 
@@ -218,11 +210,11 @@ export function CalendarView({
 
   const renderDayView = () => {
     const hours = eachHourOfInterval({
-      start: startOfDay(currentPivot),
-      end: endOfDay(currentPivot)
+      start: startOfDay(pivotDate),
+      end: endOfDay(pivotDate)
     });
 
-    const dayEvents = eventsByDate[format(currentPivot, 'yyyy-MM-dd')] || [];
+    const dayEvents = eventsByDate[format(pivotDate, 'yyyy-MM-dd')] || [];
 
     return (
       <ScrollArea className="h-[600px] border rounded-xl bg-card">
@@ -286,7 +278,7 @@ export function CalendarView({
   };
 
   const renderWeekView = () => {
-    const weekStart = startOfWeek(currentPivot, { weekStartsOn: 0 });
+    const weekStart = startOfWeek(pivotDate, { weekStartsOn: 0 });
     const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
     const hours = eachHourOfInterval({
       start: startOfDay(new Date()),
@@ -371,10 +363,10 @@ export function CalendarView({
   };
 
   const renderYearView = () => {
-    const yearStart = startOfYear(currentPivot);
+    const yearStart = startOfYear(pivotDate);
     const months = eachMonthOfInterval({
       start: yearStart,
-      end: endOfYear(currentPivot)
+      end: endOfYear(pivotDate)
     });
 
     return (
@@ -408,7 +400,7 @@ export function CalendarView({
                       key={day.toString()} 
                       onClick={() => {
                         onDateSelect(day);
-                        setCurrentPivot(day);
+                        onPivotChange(day);
                       }}
                       className={cn(
                         "text-[10px] h-6 flex items-center justify-center rounded-full cursor-pointer relative",
