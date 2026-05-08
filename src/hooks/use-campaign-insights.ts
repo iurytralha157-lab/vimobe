@@ -265,6 +265,14 @@ export function useCampaignInsights(filters: DashboardFilters) {
 
       for (const ins of insights) {
         if (ins.fetched_at && (!lastSync || ins.fetched_at > lastSync)) lastSync = ins.fetched_at;
+        
+        // Aggregate conversations from daily insights
+        if (ins.date_start === ins.date_stop) {
+          const dayKey = ins.date_start;
+          const current = dailyDataMap.get(dayKey) || { leads: 0, conversations: 0 };
+          dailyDataMap.set(dayKey, { ...current, conversations: current.conversations + (ins.conversations_count || 0) });
+        }
+
         if (ins.level === "campaign" && ins.campaign_id) spendByCampaign.set(ins.campaign_id, ins);
         if (ins.level === "adset" && ins.adset_id) spendByAdset.set(ins.adset_id, ins);
         if (ins.level === "ad" && ins.ad_id) spendByAd.set(ins.ad_id, ins);
