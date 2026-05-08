@@ -495,6 +495,76 @@ export default function AdminUsers() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Edit User Dialog */}
+      <Dialog open={editDialog.open} onOpenChange={(open) => setEditDialog(prev => ({ ...prev, open }))}>
+        <DialogContent className="max-w-[95vw] sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Editar Usuário</DialogTitle>
+            <DialogDescription>
+              Altere as informações do usuário ou sua organização.
+            </DialogDescription>
+          </DialogHeader>
+
+          {editDialog.user && (
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Nome</Label>
+                <Input 
+                  defaultValue={editDialog.user.name} 
+                  onChange={(e) => editDialog.user.name = e.target.value}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Papel (Role)</Label>
+                <Select 
+                  defaultValue={editDialog.user.role} 
+                  onValueChange={(v) => editDialog.user.role = v}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="user">Usuário</SelectItem>
+                    <SelectItem value="admin">Admin</SelectItem>
+                    <SelectItem value="super_admin">Super Admin</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Organização</Label>
+                <Select 
+                  defaultValue={editDialog.user.organization_id || 'none'} 
+                  onValueChange={(v) => editDialog.user.organization_id = v === 'none' ? null : v}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecionar Organização" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sem Organização</SelectItem>
+                    {organizations?.map(org => (
+                      <SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditDialog({ open: false, user: null })}>
+              Cancelar
+            </Button>
+            <Button onClick={() => handleUpdateUser({
+              name: editDialog.user.name,
+              role: editDialog.user.role,
+              organization_id: editDialog.user.organization_id
+            })}>
+              Salvar Alterações
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 }
