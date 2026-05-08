@@ -394,6 +394,11 @@ export function useCampaignInsights(filters: DashboardFilters) {
       return {
         campaigns,
         topCreatives,
+        dailyData: Array.from(dailyDataMap.entries()).map(([date, data]) => ({
+          date,
+          ...data,
+          total: data.leads + data.conversations
+        })).sort((a, b) => a.date.localeCompare(b.date)),
         summary: {
           totalLeads,
           totalWon,
