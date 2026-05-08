@@ -54,11 +54,12 @@ export function MemberAvailabilityDialog({
     if (open) {
       const initialSchedules: DaySchedule[] = [];
       
+      const hasExisting = existingAvailability.length > 0;
       for (let day = 0; day < 7; day++) {
         const existing = existingAvailability.find(a => a.day_of_week === day);
         initialSchedules.push({
           day_of_week: day,
-          is_active: existing?.is_active ?? (day >= 1 && day <= 5), // Default: Mon-Fri
+          is_active: existing ? existing.is_active : (hasExisting ? false : (day >= 1 && day <= 5)),
           is_all_day: existing?.is_all_day ?? false,
           start_time: existing?.start_time?.slice(0, 5) || DEFAULT_START,
           end_time: existing?.end_time?.slice(0, 5) || DEFAULT_END,
