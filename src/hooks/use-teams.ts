@@ -36,14 +36,16 @@ export function useTeams() {
       
       const { data: members } = await supabase
         .from('team_members')
-        .select('*, user:users(id, name, avatar_url, email)')
+        .select('*, user:users(id, name, avatar_url, email, is_active)')
         .in('team_id', teamIds);
       
-      // Cast the result to include is_leader
-      const membersWithLeader = (members || []).map(m => ({
-        ...m,
-        is_leader: (m as any).is_leader ?? false,
-      }));
+      // Filter only active members and cast the result to include is_leader
+      const membersWithLeader = (members || [])
+        .filter(m => m.user && (m.user as any).is_active !== false)
+        .map(m => ({
+          ...m,
+          is_leader: (m as any).is_leader ?? false,
+        }));
       
       const membersByTeam = membersWithLeader.reduce((acc, m) => {
         if (!acc[m.team_id]) acc[m.team_id] = [];
