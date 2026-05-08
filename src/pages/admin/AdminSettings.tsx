@@ -572,8 +572,8 @@ export default function AdminSettings() {
           </CardContent>
         </Card>
 
-        {/* PWA Icon Settings */}
-        <Card>
+        {/* PWA Icon Settings disabled as requested */}
+        {/* <Card>
           <CardHeader>
             <CardTitle>Ícone do Aplicativo (PWA)</CardTitle>
             <CardDescription>
@@ -631,7 +631,7 @@ export default function AdminSettings() {
               </div>
             </div>
           </CardContent>
-        </Card>
+        </Card> */}
 
         {/* Login Background Image */}
         <Card>

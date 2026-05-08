@@ -116,9 +116,9 @@ function AppLayoutContent({ children, title, disableMainScroll = false }: AppLay
       <FloatingChatButton />
       <FloatingChat />
       
-      {/* PWA Prompts */}
-      <InstallPrompt />
-      <WebPushPrompt />
+      {/* PWA Prompts disabled as requested */}
+      {/* <InstallPrompt />
+      <WebPushPrompt /> */}
     </div>
   );
 }
