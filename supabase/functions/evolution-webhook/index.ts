@@ -259,13 +259,12 @@ async function handleConnectionUpdate(supabase: any, session: any, data: any) {
   const normalizedState = typeof state === "string" ? state.toLowerCase() : "";
   let status = "disconnected";
 
-  if (normalizedState === "open" || normalizedState === "connected") {
+  // Strictly only "open" means connected in Evolution v2
+  if (normalizedState === "open") {
     status = "connected";
-  } else if (normalizedState === "connecting") {
+  } else if (normalizedState === "connecting" || normalizedState === "qrcode") {
     status = "connecting";
-  } else if (normalizedState === "qrcode") {
-    status = "connecting";
-  } else if (normalizedState === "close" || normalizedState === "disconnected" || normalizedState === "logout") {
+  } else {
     status = "disconnected";
   }
 

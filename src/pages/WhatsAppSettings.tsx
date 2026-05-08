@@ -89,14 +89,12 @@ export default function WhatsAppSettings() {
       const result = data.data;
       console.log("checkConnection result:", result);
       
-      // Evolution API returns state: "open" when connected, "connecting" is also healthy
+      // Evolution API returns state: "open" when connected.
+      // We are very strict: only "open" counts as connected.
       const isConnected = 
         result?.state === "open" ||
-        result?.state === "connected" ||
-        result?.state === "connecting" ||
         result?.connected === true ||
-        result?.instance?.state === "open" ||
-        result?.instance?.state === "connecting";
+        result?.instance?.state === "open";
       
       if (isConnected) {
         // Update status in database
@@ -200,8 +198,12 @@ export default function WhatsAppSettings() {
         setQrCode(null);
         queryClient.invalidateQueries({ queryKey: ["whatsapp-sessions"] });
         clearInterval(pollInterval);
+      } else {
+        // If not connected, we keep the QR code visible. 
+        // The checkConnection function already handles the DB update if it's connected.
+        // We only refresh the QR if it's explicitly needed by the user.
       }
-    }, 5000);
+    }, 4000); // Poll every 4 seconds for better responsiveness
     
     // Limpar interval ao fechar o dialog
     return () => clearInterval(pollInterval);
