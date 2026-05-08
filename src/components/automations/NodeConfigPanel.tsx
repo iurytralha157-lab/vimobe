@@ -64,6 +64,29 @@ const NODE_TITLES: Record<string, { icon: React.ComponentType<{ className?: stri
   deal_status: { icon: CircleDot, label: 'Status', color: 'text-pink-600 dark:text-pink-400' },
 };
 
+function MetaFormSelector({ value, onChange }: { value: string | undefined; onChange: (id: string | null) => void }) {
+  const { data: formConfigs, isLoading } = useAllMetaFormConfigs();
+
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-xs">Formulário Meta</Label>
+      <Select value={value || '__all__'} onValueChange={(v) => onChange(v === '__all__' ? null : v)}>
+        <SelectTrigger className="h-9">
+          <SelectValue placeholder={isLoading ? "Carregando..." : "Todos os formulários"} />
+        </SelectTrigger>
+        <SelectContent className="z-[200]">
+          <SelectItem value="__all__">Todos os formulários</SelectItem>
+          {formConfigs?.map((form) => (
+            <SelectItem key={form.form_id} value={form.form_id}>
+              {form.form_name || form.form_id}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
 export function NodeConfigPanel({
   selectedNode, onClose, onNodeDataChange, onDeleteNode, onSaveNode,
   tags, tagId, setTagId, setTriggerType,
