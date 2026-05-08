@@ -614,6 +614,13 @@ export function LeadDetailDialog({
     if (!taskForOutcome) return;
     await handleToggleCadenceTask(taskForOutcome, outcome, notes);
     setOutcomeDialogOpen(false);
+    
+    // Se agendou visita/reunião, abrir o formulário de agenda automaticamente
+    if (outcome === 'scheduled') {
+      setEditingScheduleEvent(null);
+      setScheduleFormOpen(true);
+    }
+    
     setTaskForOutcome(null);
   };
   
