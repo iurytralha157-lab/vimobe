@@ -280,7 +280,7 @@ export function CalendarView({
                   style={{ top: `${top}px`, height: `${height}px`, minHeight: '60px' }}
                 >
                   <div className="flex items-center gap-3 mb-2">
-                    <div className="p-1.5 rounded-lg bg-white/40 shadow-sm">
+                    <div className="p-1.5 rounded-lg bg-white/20 shadow-sm text-white">
                       <Icon className="h-4 w-4" />
                     </div>
                     <span className="text-sm font-black truncate tracking-tight">{event.title}</span>
@@ -386,7 +386,7 @@ export function CalendarView({
                       style={{ top: `${top}px`, height: `${height}px`, minHeight: '45px' }}
                     >
                       <div className="flex items-center gap-2 mb-1">
-                        <div className="p-1 rounded-lg bg-white/40">
+                        <div className="p-1 rounded-lg bg-white/20 text-white">
                           <Icon className="h-3 w-3 flex-shrink-0" />
                         </div>
                         <span className="text-[11px] font-black truncate leading-tight tracking-tight">{event.title}</span>
