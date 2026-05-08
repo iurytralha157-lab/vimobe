@@ -64,35 +64,68 @@ Deno.serve(async (req) => {
 
     switch (action) {
       case 'create':
-        // Create user in auth.users
+        // Check if user already exists
         const { email, password, name, organization_id, role } = data;
-        const { data: createData, error: createError } = await supabaseAdmin.auth.admin.createUser({
-          email,
-          password,
-          email_confirm: true,
-          user_metadata: { name }
-        });
+        
+        // Use listUsers to find by email
+        const { data: { users: existingUsers }, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+        const existingUser = existingUsers?.find(u => u.email?.toLowerCase() === email?.toLowerCase());
 
-        if (createError) {
-          throw new Error(`Failed to create auth user: ${createError.message}`);
+        if (existingUser) {
+          console.log(`[manage-user] User already exists: ${existingUser.id}. Moving to organization: ${organization_id}`);
+          
+          // Update existing user in public.users
+          const { error: moveError } = await supabaseAdmin
+            .from('users')
+            .update({ 
+              organization_id, 
+              role: role || 'user',
+              name: name || existingUser.user_metadata?.name
+            })
+            .eq('id', existingUser.id);
+
+          if (moveError) {
+            throw new Error(`Failed to move existing user: ${moveError.message}`);
+          }
+
+          result = { 
+            success: true, 
+            message: 'User already existed and was moved to this organization', 
+            user: existingUser,
+            moved: true 
+          };
+        } else {
+          // Create new user in auth.users
+          const { data: createData, error: createError } = await supabaseAdmin.auth.admin.createUser({
+            email,
+            password,
+            email_confirm: true,
+            user_metadata: { name }
+          });
+
+          if (createError) {
+            throw new Error(`Failed to create auth user: ${createError.message}`);
+          }
+
+          // Ensure the public.users record has the right org and role
+          // (Wait a bit for the trigger to create the record if needed)
+          await new Promise(resolve => setTimeout(resolve, 500));
+
+          const { error: publicUpdateError } = await supabaseAdmin
+            .from('users')
+            .update({ 
+              organization_id, 
+              role,
+              name
+            })
+            .eq('id', createData.user.id);
+
+          if (publicUpdateError) {
+            console.error('[manage-user] Error updating public user:', publicUpdateError);
+          }
+
+          result = { success: true, message: 'User created successfully', user: createData.user };
         }
-
-        // The public.users record should be created by a trigger, 
-        // but we ensure it has the right org and role
-        const { error: publicUpdateError } = await supabaseAdmin
-          .from('users')
-          .update({ 
-            organization_id, 
-            role,
-            name // Just in case
-          })
-          .eq('id', createData.user.id);
-
-        if (publicUpdateError) {
-          console.error('[manage-user] Error updating public user:', publicUpdateError);
-        }
-
-        result = { success: true, message: 'User created successfully', user: createData.user };
         break;
 
       case 'delete':
