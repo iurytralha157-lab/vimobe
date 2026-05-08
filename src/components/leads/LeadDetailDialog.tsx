@@ -1362,25 +1362,35 @@ export function LeadDetailDialog({
                       <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
                     </button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-[320px] sm:w-[380px] p-0" align="start">
+                  <PopoverContent className="w-[320px] sm:w-[380px] p-0 shadow-2xl border-primary/20" align="start">
                     <Command className="border-none">
-                      <CommandInput placeholder="Buscar responsável..." />
-                      <CommandList className="max-h-[450px]">
-                        <CommandEmpty>Nenhum usuário encontrado.</CommandEmpty>
-                        <CommandGroup>
+                      <div className="flex items-center border-b px-3">
+                        <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+                        <CommandInput placeholder="Buscar responsável..." className="border-none focus:ring-0 h-11" />
+                      </div>
+                      <CommandList className="max-h-[450px] p-1">
+                        <CommandEmpty className="py-6 text-center text-sm text-muted-foreground">
+                          Nenhum usuário encontrado.
+                        </CommandEmpty>
+                        <CommandGroup heading="Ações">
                           <CommandItem 
                             onSelect={() => {
                               handleAssignUser(null);
                               setAssigneePopoverOpen(false);
                             }}
-                            className="flex items-center gap-3 px-3 py-2 cursor-pointer"
+                            className="flex items-center gap-3 px-3 py-2.5 cursor-pointer rounded-lg"
                           >
-                            <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center">
-                              <X className="h-4 w-4 text-muted-foreground" />
+                            <div className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                              <X className="h-5 w-5 text-muted-foreground" />
                             </div>
-                            <span className="text-muted-foreground">Remover responsável</span>
+                            <div className="flex-1">
+                              <p className="font-medium text-sm">Remover responsável</p>
+                              <p className="text-[10px] text-muted-foreground">O lead ficará sem atribuição</p>
+                            </div>
                           </CommandItem>
-                          
+                        </CommandGroup>
+                        
+                        <CommandGroup heading="Usuários">
                           {allUsers.map(user => (
                             <CommandItem 
                               key={user.id} 
@@ -1389,29 +1399,33 @@ export function LeadDetailDialog({
                                 setAssigneePopoverOpen(false);
                               }}
                               className={cn(
-                                "flex items-center gap-3 px-3 py-2 cursor-pointer transition-colors",
-                                user.id === lead.assigned_user_id && "bg-primary/10"
+                                "flex items-center gap-3 px-3 py-2.5 cursor-pointer transition-all rounded-lg my-0.5",
+                                user.id === lead.assigned_user_id && "bg-primary/10 shadow-sm"
                               )}
                             >
-                              <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 border border-primary/5">
                                 {user.avatar_url ? (
-                                  <Avatar className="h-8 w-8 rounded-lg">
+                                  <Avatar className="h-10 w-10 rounded-lg">
                                     <AvatarImage src={user.avatar_url} />
                                     <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
                                       {user.name?.split(' ').map((n: string) => n[0]).join('').substring(0, 2)}
                                     </AvatarFallback>
                                   </Avatar>
                                 ) : (
-                                  <span className="text-xs font-semibold text-primary">
+                                  <span className="text-sm font-semibold text-primary">
                                     {user.name?.split(' ').map((n: string) => n[0]).join('').substring(0, 2)}
                                   </span>
                                 )}
                               </div>
                               <div className="flex-1 min-w-0">
-                                <p className="font-medium truncate text-sm">{user.name}</p>
-                                {user.email && <p className="text-[10px] text-muted-foreground truncate">{user.email}</p>}
+                                <p className="font-semibold truncate text-sm">{user.name}</p>
+                                {user.email && <p className="text-[11px] text-muted-foreground truncate opacity-70">{user.email}</p>}
                               </div>
-                              {user.id === lead.assigned_user_id && <Check className="h-4 w-4 ml-auto text-primary shrink-0" />}
+                              {user.id === lead.assigned_user_id && (
+                                <div className="h-6 w-6 rounded-full bg-primary/20 flex items-center justify-center ml-auto">
+                                  <Check className="h-4 w-4 text-primary shrink-0" />
+                                </div>
+                              )}
                             </CommandItem>
                           ))}
                         </CommandGroup>
