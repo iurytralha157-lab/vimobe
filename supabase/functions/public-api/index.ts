@@ -4,7 +4,7 @@ import { createClient } from "npm:@supabase/supabase-js@2"
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'GET, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
 }
 
 const json = (body: unknown, status = 200) =>
@@ -21,7 +21,6 @@ async function sha256Hex(input: string): Promise<string> {
     .join('')
 }
 
-// Sanitiza um imóvel para resposta pública (omite dados sensíveis e do proprietário)
 function sanitizeProperty(p: any) {
   if (!p) return p
   return {
@@ -31,12 +30,11 @@ function sanitizeProperty(p: any) {
     description: p.descricao,
     description_site: p.descricao_site,
     type: p.tipo_de_imovel,
-    purpose: p.tipo_de_negocio,        // 'venda' | 'locacao' | etc.
+    purpose: p.tipo_de_negocio,
     finalidade: p.finalidade,
     status: p.status,
     featured: p.destaque,
     super_featured: p.super_destaque,
-    // endereço sem número (privacidade)
     address: {
       street: p.endereco,
       neighborhood: p.bairro,
@@ -96,7 +94,6 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    // Valida via hash (a tabela só armazena SHA-256 da chave)
     const keyHash = await sha256Hex(apiKey)
     const { data: keyData, error: keyError } = await supabase
       .from('organization_api_keys')
@@ -113,7 +110,6 @@ serve(async (req) => {
 
     const organizationId = keyData.organization_id
 
-    // Módulo 'api' precisa estar habilitado para a organização
     const { data: moduleData } = await supabase
       .from('organization_modules')
       .select('is_enabled')
@@ -125,7 +121,6 @@ serve(async (req) => {
       return json({ error: 'API module is not enabled for this organization', code: 'module_disabled' }, 403)
     }
 
-    // Atualiza last_used_at (fire-and-forget — não bloqueia a resposta)
     supabase
       .from('organization_api_keys')
       .update({ last_used_at: new Date().toISOString() })
@@ -135,8 +130,7 @@ serve(async (req) => {
     const url = new URL(req.url)
     const path = url.pathname.replace('/public-api', '').replace(/\/$/, '') || '/'
 
-    // ---------- GET /properties ----------
-    if (path === '/properties') {
+    if (req.method === 'GET' && path === '/properties') {
       const city = url.searchParams.get('city')
       const neighborhood = url.searchParams.get('neighborhood')
       const type = url.searchParams.get('type')
@@ -181,9 +175,8 @@ serve(async (req) => {
       })
     }
 
-    // ---------- GET /properties/:id ----------
     const propertyMatch = path.match(/^\/properties\/([0-9a-fA-F-]{36})$/)
-    if (propertyMatch) {
+    if (req.method === 'GET' && propertyMatch) {
       const propertyId = propertyMatch[1]
       const { data, error } = await supabase
         .from('properties')
@@ -196,6 +189,148 @@ serve(async (req) => {
       if (error) throw error
       if (!data) return json({ error: 'Property not found', code: 'not_found' }, 404)
       return json({ data: sanitizeProperty(data) })
+    }
+
+    if (req.method === 'POST' && path === '/leads') {
+      const body = await req.json()
+      
+      const name = body.name || body.nome
+      const phone = body.phone || body.telefone
+      const email = body.email
+      const message = body.message || body.mensagem
+      const property_id = body.property_id || body.imovel_id
+      const source = body.source || body.origem
+      const tags = body.tags
+      const status = body.status
+      const stage_id = body.stage_id || body.etapa_id
+      const pipeline_id = body.pipeline_id
+      const responsible_id = body.responsible_id || body.responsavel_id
+      const company = body.company || body.empresa
+      const city = body.city || body.cidade
+      const state = body.state || body.estado || body.uf
+
+      if (!name || !phone) {
+        return json({ error: 'Name and phone are required', code: 'bad_request' }, 400)
+      }
+
+      const normalizedPhone = phone.replace(/\D/g, '')
+      
+      let resolvedPropertyId = null
+      let propertyPrice = null
+      if (property_id) {
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(property_id)
+        const { data: prop } = await supabase
+          .from('properties')
+          .select('id, preco')
+          .eq(isUuid ? 'id' : 'code', property_id)
+          .eq('organization_id', organizationId)
+          .maybeSingle()
+        
+        if (prop) {
+          resolvedPropertyId = prop.id
+          propertyPrice = prop.preco
+        }
+      }
+
+      const phoneVariations = [normalizedPhone]
+      if (!normalizedPhone.startsWith('55') && normalizedPhone.length <= 11) {
+        phoneVariations.push('55' + normalizedPhone)
+      }
+      if (normalizedPhone.startsWith('55') && normalizedPhone.length > 11) {
+        phoneVariations.push(normalizedPhone.substring(2))
+      }
+
+      const { data: existingLeads } = await supabase
+        .from('leads')
+        .select('id')
+        .eq('organization_id', organizationId)
+        .in('phone', phoneVariations)
+        .limit(1)
+      
+      const existingLead = existingLeads?.[0]
+
+      let leadId: string
+      let isReentry = false
+
+      const leadData: Record<string, any> = {
+        organization_id: organizationId,
+        name,
+        email: email || undefined,
+        phone: normalizedPhone,
+        message: message || undefined,
+        source: source || 'API',
+        interest_property_id: resolvedPropertyId || undefined,
+        valor_interesse: propertyPrice || undefined,
+        empresa: company || undefined,
+        cidade: city || undefined,
+        uf: state || undefined,
+        deal_status: status || 'open',
+        pipeline_id: pipeline_id || undefined,
+        stage_id: stage_id || undefined,
+        assigned_user_id: responsible_id || null
+      }
+
+      if (existingLead) {
+        leadId = existingLead.id
+        isReentry = true
+        
+        const { error: reentryError } = await supabase.rpc('register_lead_reentry', {
+          p_lead_id: leadId,
+          p_org_id: organizationId,
+          p_entry_type: 'api_reentry',
+          p_source: source || 'API',
+          p_property_id: resolvedPropertyId,
+          p_valor_interesse: propertyPrice,
+          p_metadata: { source_api: true, raw_payload: body }
+        })
+
+        if (reentryError) {
+          await supabase
+            .from('leads')
+            .update({
+              ...leadData,
+              last_entry_at: new Date().toISOString()
+            })
+            .eq('id', leadId)
+        }
+        
+        if (!responsible_id) {
+          await supabase.rpc('handle_lead_intake', { p_lead_id: leadId })
+        }
+      } else {
+        const { data: newLead, error: createError } = await supabase
+          .from('leads')
+          .insert(leadData)
+          .select('id')
+          .single()
+        
+        if (createError) throw createError
+        leadId = newLead.id
+
+        await supabase.from('activities').insert({
+          lead_id: leadId,
+          type: 'lead_created',
+          content: `Lead criado via API Pública (${source || 'API'})`
+        })
+      }
+
+      await supabase.from('lead_meta').upsert({
+        lead_id: leadId,
+        source_type: 'api',
+        raw_payload: body
+      })
+
+      if (tags && Array.isArray(tags)) {
+        const leadTags = tags.map(tagId => ({ lead_id: leadId, tag_id: tagId }))
+        await supabase.from('lead_tags').upsert(leadTags, { onConflict: 'lead_id,tag_id' })
+      }
+
+      return json({ 
+        success: true, 
+        lead_id: leadId, 
+        message: isReentry ? 'Lead atualizado (reentrada)' : 'Lead criado com sucesso',
+        reentry: isReentry
+      })
     }
 
     return json({ error: 'Endpoint not found', code: 'not_found' }, 404)
