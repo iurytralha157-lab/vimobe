@@ -248,7 +248,16 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
         const pos = { x: node.position_x || 250, y: node.position_y || 180 };
         
         if (node.node_type === 'trigger') {
-          flowNodes.push({ id: node.id, type: 'start', position: { x: pos.x, y: node.position_y || 50 }, data: { trigger_type: automation.trigger_type } });
+          flowNodes.push({ 
+            id: node.id, 
+            type: 'start', 
+            position: { x: pos.x, y: node.position_y || 50 }, 
+            data: { 
+              trigger_type: automation.trigger_type,
+              source: nodeConfig.source || config.source, // Try both node config and trigger config
+              meta_form_id: nodeConfig.meta_form_id || config.meta_form_id 
+            } 
+          });
           if (nodeConfig.session_id) setSessionId(nodeConfig.session_id as string);
         } else if (node.node_type === 'action' && node.action_type === 'send_whatsapp') {
           flowNodes.push({ id: node.id, type: 'message', position: pos, data: { message: nodeConfig.message || '', day: nodeConfig.day || 1 } });
