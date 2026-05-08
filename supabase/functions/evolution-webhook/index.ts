@@ -2018,13 +2018,28 @@ async function handleStopFollowUpOnReply(
     for (const exec of executions) {
       const triggerConfig = exec.automation?.trigger_config || {};
       
-      // Check if this automation should stop on reply
-      if (triggerConfig.stop_on_reply !== true) {
+      // Check if this automation should stop
+      if (!isManualInteraction && triggerConfig.stop_on_reply !== true) {
         console.log(`Automation ${exec.automation?.name || exec.id} does not have stop_on_reply enabled, skipping`);
         continue;
       }
       
-      console.log(`Lead replied during automation "${exec.automation?.name}" - checking for replied branch`);
+      console.log(`${isManualInteraction ? 'Manual interaction' : 'Lead replied'} during automation "${exec.automation?.name}" - checking for ${isManualInteraction ? 'cancellation' : 'replied branch'}`);
+      
+      // If it's a manual interaction, we cancel everything and DON'T follow branches or send auto-replies
+      if (isManualInteraction) {
+        await supabase
+          .from("automation_executions")
+          .update({
+            status: "cancelled",
+            completed_at: new Date().toISOString(),
+            error_message: "Cancelado: intervenção humana",
+          })
+          .eq("id", exec.id);
+        
+        console.log(`Automation ${exec.id} cancelled due to manual intervention`);
+        continue;
+      }
       
       // Keep track of the user to notify (prefer lead owner, fallback to automation creator)
       if (!notifyUserId) {
