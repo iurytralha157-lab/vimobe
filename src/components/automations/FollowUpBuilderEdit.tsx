@@ -180,7 +180,7 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
   // New: User filter and stop on reply settings
   const [filterUserId, setFilterUserId] = useState<string>('');
   const [stopOnReply, setStopOnReply] = useState<boolean>(true);
-  const [onReplyStageId, setOnReplyStageId] = useState<string>('');
+  
 
   const [isActive, setIsActive] = useState<boolean>(true);
   const [showSimulator, setShowSimulator] = useState(false);
