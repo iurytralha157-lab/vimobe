@@ -8,6 +8,56 @@
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
 
+    <!-- Force Update Script -->
+    <script>
+      (function() {
+        const VERSION_KEY = 'lovable_app_version';
+        
+        async function forceUpdate() {
+          console.log('[VersionCheck] New version detected, clearing cache and reloading...');
+          
+          if ('serviceWorker' in navigator) {
+            const regs = await navigator.serviceWorker.getRegistrations();
+            for (let r of regs) await r.unregister();
+          }
+          
+          if ('caches' in window) {
+            const keys = await caches.keys();
+            for (let k of keys) await caches.delete(k);
+          }
+          
+          localStorage.clear();
+          sessionStorage.clear();
+          
+          // Use a timestamp to bypass any server-side or ISP caching
+          const url = new URL(window.location.href);
+          url.searchParams.set('v_refresh', Date.now());
+          window.location.replace(url.toString());
+        }
+
+        async function checkVersion() {
+          try {
+            const response = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store' });
+            if (!response.ok) return;
+            
+            const data = await response.json();
+            const currentVersion = localStorage.getItem(VERSION_KEY);
+            
+            if (currentVersion && currentVersion !== data.version) {
+              localStorage.setItem(VERSION_KEY, data.version);
+              await forceUpdate();
+            } else if (!currentVersion) {
+              localStorage.setItem(VERSION_KEY, data.version);
+            }
+          } catch (e) {
+            console.warn('[VersionCheck] Failed to check version', e);
+          }
+        }
+
+        checkVersion();
+      })();
+    </script>
+
     <!-- Primary Meta Tags -->
     <title>Vimob Crm</title>
     <meta name="description" content="CRM Imobiliário Inteligente para gestão de leads, vendas e equipe comercial">
