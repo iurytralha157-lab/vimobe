@@ -122,13 +122,18 @@ export default function CampaignDashboard() {
   // For the chart, we'll use campaign data since useCampaignInsights returns aggregated data
   // In a more complete version, we would have daily data
   const chartData = useMemo(() => {
-    if (!campaignStats.length) return [];
-    return campaignStats.slice(0, 10).map(c => ({
-      name: c.name,
-      spend: c.spend,
-      leads: c.leads
-    }));
-  }, [campaignStats]);
+    if (!insightData?.dailyData) return [];
+    return insightData.dailyData;
+  }, [insightData]);
+
+  const formatXAxis = (dateStr: string) => {
+    try {
+      const date = new Date(dateStr + 'T12:00:00');
+      return format(date, "dd, EEE", { locale: ptBR });
+    } catch (e) {
+      return dateStr;
+    }
+  };
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
