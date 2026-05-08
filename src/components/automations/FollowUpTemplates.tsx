@@ -16,12 +16,7 @@ export interface FollowUpTemplate {
   onReplyMessage?: string;
 }
 
-export const DEFAULT_ON_REPLY_MESSAGE = `Olá {{lead.name}}! 🎉
-
-Que bom que você se interessou!
-Nossa equipe entrará em contato em breve para te atender.
-
-Enquanto isso, posso te ajudar com algo?`;
+export const DEFAULT_ON_REPLY_MESSAGE = "";
 
 export const FOLLOW_UP_TEMPLATES: FollowUpTemplate[] = [
   {
