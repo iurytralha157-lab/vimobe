@@ -94,7 +94,7 @@ export function EventForm({ open, onOpenChange, event, leadId, leadName, default
         setIsCompleted(event.status === 'completed');
       } else {
         // Creating new event
-        setSelectedType('call');
+        setSelectedType(defaultType || 'call');
         setTitle('');
         setDescription('');
         setSelectedUserId(defaultUserId || '');
