@@ -2159,97 +2159,10 @@ async function handleStopFollowUpOnReply(
         
         if (!updateError) {
           console.log(`Falling back to cancel behavior for execution ${exec.id}`);
-          
-          // ===== SEND AUTO-REPLY MESSAGE IF CONFIGURED (legacy trigger_config) =====
-          const onReplyMessage = triggerConfig.on_reply_message;
-          if (onReplyMessage && leadInfo?.phone) {
-            try {
-              let messageText = onReplyMessage
-                .replace(/\{\{lead\.name\}\}/gi, leadInfo.name || "")
-                .replace(/\{\{lead\.phone\}\}/gi, leadInfo.phone || "");
-              
-              const { data: sessions } = await supabase
-                .from("whatsapp_sessions")
-                .select("id, instance_name, status")
-                .eq("organization_id", exec.organization_id)
-                .eq("status", "connected")
-                .limit(1);
-              
-              if (sessions && sessions.length > 0) {
-                const session = sessions[0];
-                const EVOLUTION_API_URL = Deno.env.get("EVOLUTION_API_URL");
-                const EVOLUTION_API_KEY = Deno.env.get("EVOLUTION_API_KEY");
-                
-                if (EVOLUTION_API_URL && EVOLUTION_API_KEY) {
-                  const formattedPhone = leadInfo.phone.replace(/\D/g, '');
-                  const phoneWithCode = formattedPhone.startsWith("55") ? formattedPhone : `55${formattedPhone}`;
-                  
-                  const sendResponse = await fetch(`${EVOLUTION_API_URL}/message/sendText/${session.instance_name}`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json", "apikey": EVOLUTION_API_KEY },
-                    body: JSON.stringify({ number: phoneWithCode, text: messageText }),
-                  });
-                  
-                  if (sendResponse.ok) {
-                    const sendData = await sendResponse.json();
-                    const sentMsgId = sendData?.key?.id || sendData?.messageId || crypto.randomUUID();
-                    
-                    let replyConvId = conversationId;
-                    if (!replyConvId) {
-                      const { data: replyConv } = await supabase
-                        .from("whatsapp_conversations")
-                        .select("id")
-                        .eq("lead_id", leadId)
-                        .is("deleted_at", null)
-                        .order("last_message_at", { ascending: false, nullsFirst: false })
-                        .limit(1)
-                        .maybeSingle();
-                      replyConvId = replyConv?.id;
-                    }
-                    
-                    if (replyConvId) {
-                      await supabase.from("whatsapp_messages").upsert({
-                        conversation_id: replyConvId,
-                        session_id: session.id,
-                        message_id: sentMsgId,
-                        from_me: true,
-                        content: messageText,
-                        message_type: "text",
-                        status: "sent",
-                        sent_at: new Date().toISOString(),
-                        sender_name: "Automação",
-                      }, { onConflict: "session_id,message_id" });
-                      
-                      await supabase.from("whatsapp_conversations").update({
-                        last_message: messageText,
-                        last_message_at: new Date().toISOString(),
-                      }).eq("id", replyConvId);
-                    }
-                  }
-                }
-              }
-            } catch (msgError) {
-              console.error("Error sending auto-reply message:", msgError);
-            }
-          }
-          
-          // Move lead to configured stage if specified (legacy)
-          const onReplyStageId = triggerConfig.on_reply_move_to_stage_id;
-          if (onReplyStageId && leadId) {
-            await supabase
-              .from("leads")
-              .update({ stage_id: onReplyStageId, stage_entered_at: new Date().toISOString() })
-              .eq("id", leadId);
-            
-            await supabase.from("activities").insert({
-              lead_id: leadId,
-              type: "stage_change",
-              content: "Lead movido automaticamente (respondeu à automação)",
-              metadata: { reason: "stop_on_reply", new_stage_id: onReplyStageId, automation_id: exec.automation?.id },
-            });
-          }
+          // Legacy auto-reply and stage move logic removed to ensure only explicit flow bubbles are executed.
         }
       }
+
     }
 
     // ===== CREATE CONSOLIDATED "LEAD RECOVERED" NOTIFICATION =====
