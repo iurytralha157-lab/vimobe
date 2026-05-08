@@ -36,6 +36,7 @@ export default function Agenda() {
     data: users = []
   } = useUsers();
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [pivotDate, setPivotDate] = useState(new Date());
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'day' | 'week' | 'month' | 'year' | 'list'>('month');
   const [eventFormOpen, setEventFormOpen] = useState(false);
