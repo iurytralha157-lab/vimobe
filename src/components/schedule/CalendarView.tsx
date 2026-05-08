@@ -153,15 +153,15 @@ export function CalendarView({
     const weekDays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
     return (
-      <div className="flex flex-col h-full overflow-hidden">
-        <div className="grid grid-cols-7 border-b">
+      <div className="flex flex-col h-full overflow-hidden bg-background">
+        <div className="grid grid-cols-7 border-b bg-card">
           {weekDays.map(day => (
-            <div key={day} className="text-center text-[10px] font-black text-muted-foreground py-3 uppercase tracking-widest">
+            <div key={day} className="text-center text-[10px] font-black text-muted-foreground/60 py-4 uppercase tracking-[0.2em]">
               {day}
             </div>
           ))}
         </div>
-        <div className="grid grid-cols-7 gap-px bg-border flex-1 overflow-hidden">
+        <div className="grid grid-cols-7 gap-px bg-border/20 flex-1 overflow-hidden">
           {calendarDays.map(day => {
             const dateKey = format(day, 'yyyy-MM-dd');
             const dayEvents = eventsByDate[dateKey] || [];
@@ -179,20 +179,20 @@ export function CalendarView({
                   }
                 }}
                 className={cn(
-                  "bg-card min-h-[120px] p-2 transition-all cursor-pointer hover:bg-muted/30 group",
-                  !isCurrentMonth && "bg-muted/10 opacity-40",
-                  isSelected && "bg-primary/5 ring-1 ring-primary/20 ring-inset z-10"
+                  "bg-card min-h-[120px] p-3 transition-all cursor-pointer hover:bg-muted/5 group relative",
+                  !isCurrentMonth && "bg-muted/5 opacity-30",
+                  isSelected && "bg-primary/[0.03] ring-1 ring-primary/10 ring-inset z-10"
                 )}
               >
-                <div className="flex justify-between items-center mb-1">
+                <div className="flex justify-between items-center mb-3">
                   <span className={cn(
-                    "text-xs font-black h-6 w-6 flex items-center justify-center rounded-lg transition-colors",
-                    isDayToday ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20" : "text-muted-foreground group-hover:text-foreground"
+                    "text-xs font-black h-8 w-8 flex items-center justify-center rounded-xl transition-all",
+                    isDayToday ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20 scale-110" : "text-muted-foreground group-hover:text-foreground"
                   )}>
                     {format(day, 'd')}
                   </span>
                 </div>
-                <div className="space-y-1 overflow-y-auto max-h-[85px] scrollbar-none">
+                <div className="space-y-1.5 overflow-y-auto max-h-[85px] scrollbar-none pr-1">
                   {dayEvents.map(event => {
                     const Icon = eventTypeIcons[event.event_type as EventType] || CalendarIcon;
                     return (
