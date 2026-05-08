@@ -759,7 +759,7 @@ async function handleMessagesUpsert(
           status: fromMe ? "sent" : "received",
           sent_at: messageDate,
           sender_jid: senderJid,
-          sender_name: senderName,
+          sender_name: isAutomationMessage ? "Automação" : senderName,
         }, {
           onConflict: "session_id,message_id",
         })
