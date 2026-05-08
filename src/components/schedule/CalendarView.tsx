@@ -315,19 +315,19 @@ export function CalendarView({
     });
 
     return (
-      <ScrollArea className="flex-1 border-0 bg-card">
-        <div className="relative flex flex-col min-w-[800px]">
+      <ScrollArea className="flex-1 border-0 bg-background/50">
+        <div className="relative flex flex-col min-w-[1000px] min-h-full">
           {/* Header */}
-          <div className="flex border-b sticky top-0 bg-card z-20">
-            <div className="w-16 border-r flex-shrink-0" />
+          <div className="flex border-b border-border/40 sticky top-0 bg-card z-20 shadow-sm">
+            <div className="w-20 border-r border-border/40 flex-shrink-0 bg-card/50" />
             {weekDays.map(day => (
-              <div key={day.toString()} className="flex-1 border-r last:border-r-0 py-3 text-center">
-                <span className="block text-[10px] text-muted-foreground font-black uppercase tracking-widest opacity-60">
+              <div key={day.toString()} className="flex-1 border-r border-border/40 last:border-r-0 py-4 text-center">
+                <span className="block text-[10px] text-muted-foreground/60 font-black uppercase tracking-[0.2em] mb-2">
                   {format(day, 'EEE', { locale: ptBR })}
                 </span>
                 <span className={cn(
-                  "text-lg font-black h-9 w-9 inline-flex items-center justify-center rounded-xl mt-1 transition-all",
-                  isToday(day) ? "bg-primary text-primary-foreground shadow-md shadow-primary/20" : "text-foreground"
+                  "text-lg font-black h-10 w-10 inline-flex items-center justify-center rounded-2xl transition-all",
+                  isToday(day) ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20 scale-110" : "text-foreground"
                 )}>
                   {format(day, 'd')}
                 </span>
@@ -336,12 +336,12 @@ export function CalendarView({
           </div>
 
           {/* Grid */}
-          <div className="flex relative">
+          <div className="flex relative flex-1">
             {/* Time axis */}
-            <div className="w-16 border-r flex-shrink-0">
+            <div className="w-20 border-r border-border/40 flex-shrink-0 bg-card/50">
               {hours.map(hour => (
-                <div key={hour.toString()} className="h-20 border-b flex justify-center pt-2">
-                  <span className="text-[10px] text-muted-foreground font-black uppercase tracking-tighter opacity-50">
+                <div key={hour.toString()} className="h-20 border-b border-border/40 flex justify-center pt-3">
+                  <span className="text-[11px] text-muted-foreground/60 font-black uppercase tracking-tighter tabular-nums">
                     {format(hour, 'HH:mm')}
                   </span>
                 </div>
@@ -350,11 +350,11 @@ export function CalendarView({
 
             {/* Days columns */}
             {weekDays.map(day => (
-              <div key={day.toString()} className="flex-1 border-r last:border-r-0 relative">
+              <div key={day.toString()} className="flex-1 border-r border-border/40 last:border-r-0 relative">
                 {hours.map(hour => (
                   <div 
                     key={hour.toString()} 
-                    className="h-20 border-b cursor-pointer hover:bg-muted/30 transition-colors" 
+                    className="h-20 border-b border-border/40 cursor-pointer hover:bg-primary/[0.01] transition-colors" 
                     onClick={() => {
                       const clickDate = new Date(day);
                       clickDate.setHours(hour.getHours(), 0, 0, 0);
@@ -368,7 +368,7 @@ export function CalendarView({
                   const start = parseISO(event.start_time);
                   const end = parseISO(event.end_time);
                   const top = (start.getHours() * 60 + start.getMinutes()) * (80 / 60);
-                  const duration = (end.getTime() - start.getTime()) / (1000 * 60);
+                  const duration = Math.max((end.getTime() - start.getTime()) / (1000 * 60), 30);
                   const height = duration * (80 / 60);
                   const Icon = eventTypeIcons[event.event_type as EventType] || CalendarIcon;
 
@@ -380,18 +380,21 @@ export function CalendarView({
                         onEditEvent?.(event);
                       }}
                       className={cn(
-                        "absolute left-1 right-1 rounded-lg border p-1.5 overflow-hidden shadow-md transition-all hover:scale-[1.05] hover:z-20 z-10 cursor-pointer",
+                        "absolute left-1.5 right-1.5 rounded-[1rem] border-2 p-2.5 overflow-hidden shadow-lg shadow-black/5 transition-all hover:scale-[1.03] hover:z-20 z-10 cursor-pointer",
                         eventTypeColors[event.event_type as EventType]
                       )}
-                      style={{ top: `${top}px`, height: `${height}px`, minHeight: '30px' }}
+                      style={{ top: `${top}px`, height: `${height}px`, minHeight: '45px' }}
                     >
-                      <div className="flex items-center gap-1.5 mb-0.5">
-                        <Icon className="h-3 w-3 flex-shrink-0" />
-                        <span className="text-[10px] font-black truncate leading-tight tracking-tighter">{event.title}</span>
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className="p-1 rounded-lg bg-white/40">
+                          <Icon className="h-3 w-3 flex-shrink-0" />
+                        </div>
+                        <span className="text-[11px] font-black truncate leading-tight tracking-tight">{event.title}</span>
                       </div>
-                      <span className="text-[8px] font-bold opacity-90 block leading-tight">
-                        {format(start, 'HH:mm')}
-                      </span>
+                      <div className="flex items-center gap-1 text-[9px] font-bold opacity-80 tabular-nums">
+                        <Clock className="h-2.5 w-2.5" />
+                        <span>{format(start, 'HH:mm')}</span>
+                      </div>
                     </div>
                   );
                 })}
