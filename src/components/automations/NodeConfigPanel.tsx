@@ -155,6 +155,34 @@ export function NodeConfigPanel({
                   </SelectContent>
                 </Select>
               </div>
+
+              {selectedNode.data.trigger_type === 'lead_created' && (
+                <>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Origem do Lead</Label>
+                    <Select 
+                      value={selectedNode.data.source || '__all__'} 
+                      onValueChange={(v) => onNodeDataChange(selectedNode.id, { source: v === '__all__' ? null : v })}
+                    >
+                      <SelectTrigger className="h-9"><SelectValue placeholder="Todas as origens" /></SelectTrigger>
+                      <SelectContent className="z-[200]">
+                        <SelectItem value="__all__">Todas as origens</SelectItem>
+                        <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                        <SelectItem value="meta">Meta (Facebook/Instagram)</SelectItem>
+                        <SelectItem value="website">Site / Website</SelectItem>
+                        <SelectItem value="manual">Manual</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {selectedNode.data.source === 'meta' && (
+                    <MetaFormSelector 
+                      value={selectedNode.data.meta_form_id} 
+                      onChange={(id) => onNodeDataChange(selectedNode.id, { meta_form_id: id })} 
+                    />
+                  )}
+                </>
+              )}
               {selectedNode.data.trigger_type === 'tag_added' && tags && setTagId && (
                 <div className="space-y-1.5">
                   <Label className="text-xs">Tag</Label>
