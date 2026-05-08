@@ -1819,10 +1819,14 @@ export function LeadDetailDialog({
                 {/* Assignee Selector */}
                 <Popover open={assigneePopoverOpen} onOpenChange={setAssigneePopoverOpen}>
                   <PopoverTrigger asChild>
-                    <button className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded-md hover:bg-accent">
+                    <button className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded-md hover:bg-accent relative overflow-hidden">
                       <User className="h-3.5 w-3.5" />
-                      <span>{lead.assignee?.name || 'Sem responsável'}</span>
-                      <ChevronDown className="h-3 w-3" />
+                      <span>{localLead.assignee?.name || 'Sem responsável'}</span>
+                      {isUpdatingAssignee ? (
+                        <Loader2 className="h-3 w-3 animate-spin text-primary" />
+                      ) : (
+                        <ChevronDown className="h-3 w-3" />
+                      )}
                     </button>
                   </PopoverTrigger>
                   <PopoverContent className="w-[300px] p-0 shadow-2xl border-primary/20" align="start">
