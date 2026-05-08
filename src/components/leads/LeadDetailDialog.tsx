@@ -1389,14 +1389,23 @@ export function LeadDetailDialog({
                 <Popover open={assigneePopoverOpen} onOpenChange={setAssigneePopoverOpen}>
                   <PopoverTrigger asChild>
                     <button className="w-full flex items-center gap-3 p-3 rounded-xl border hover:border-primary/30 hover:bg-accent/30 transition-all">
-                      <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                        {lead.assignee?.name ? <span className="text-sm font-semibold text-primary">
-                            {lead.assignee.name.split(' ').map((n: string) => n[0]).join('').substring(0, 2)}
-                          </span> : <User className="h-5 w-5 text-muted-foreground" />}
+                      <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center relative overflow-hidden">
+                        {localLead.assignee?.name ? (
+                          <>
+                            <span className="text-sm font-semibold text-primary">
+                              {localLead.assignee.name.split(' ').map((n: string) => n[0]).join('').substring(0, 2)}
+                            </span>
+                            {isUpdatingAssignee && (
+                              <div className="absolute inset-0 bg-background/50 flex items-center justify-center">
+                                <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                              </div>
+                            )}
+                          </>
+                        ) : <User className="h-5 w-5 text-muted-foreground" />}
                       </div>
                       <div className="flex-1 text-left min-w-0">
-                        <p className="font-medium truncate">{lead.assignee?.name || 'Sem responsável'}</p>
-                        {lead.assignee?.email && <p className="text-xs text-muted-foreground truncate">{lead.assignee.email}</p>}
+                        <p className="font-medium truncate">{localLead.assignee?.name || 'Sem responsável'}</p>
+                        {localLead.assignee?.email && <p className="text-xs text-muted-foreground truncate">{localLead.assignee.email}</p>}
                       </div>
                       <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
                     </button>
