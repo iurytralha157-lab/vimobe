@@ -27,6 +27,8 @@ import { cn, getCurrentTimeForInput, getBrasiliaTime } from '@/lib/utils';
 import { User } from 'lucide-react';
 import { useCreateScheduleEvent, useUpdateScheduleEvent, useDeleteScheduleEvent, EventType, ScheduleEvent } from '@/hooks/use-schedule-events';
 import { useUsers } from '@/hooks/use-users';
+import { useLeads } from '@/hooks/use-leads';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 
 const eventTypes: { type: EventType; label: string; icon: React.ElementType }[] = [
   { type: 'call', label: 'Ligar', icon: Phone },
