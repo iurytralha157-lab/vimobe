@@ -153,6 +153,7 @@ export function LeadDetailDialog({
   const [isEditingContact, setIsEditingContact] = useState(false);
   const [scheduleFormOpen, setScheduleFormOpen] = useState(false);
   const [editingScheduleEvent, setEditingScheduleEvent] = useState<ScheduleEvent | null>(null);
+  const [scheduleDefaultType, setScheduleDefaultType] = useState<EventType>('call');
   const [activeTab, setActiveTab] = useState('activities');
   const [stagePopoverOpen, setStagePopoverOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<any>(null);
