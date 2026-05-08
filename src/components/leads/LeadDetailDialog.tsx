@@ -2935,6 +2935,7 @@ export function LeadDetailDialog({
         leadName={lead.name} 
         event={editingScheduleEvent}
         defaultUserId={lead.assigned_user_id}
+        defaultType={scheduleDefaultType}
       />
     </>
   );
