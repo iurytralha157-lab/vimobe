@@ -1,5 +1,8 @@
 import { useState, useMemo } from 'react';
-import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, addDays, isWithinInterval } from 'date-fns';
+import { 
+  format, startOfDay, endOfDay, startOfWeek, endOfWeek, addDays, isWithinInterval,
+  startOfMonth, endOfMonth, startOfYear, endOfYear
+} from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Plus, Calendar as CalendarIcon, List, LayoutGrid, ChevronLeft, ChevronRight } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
