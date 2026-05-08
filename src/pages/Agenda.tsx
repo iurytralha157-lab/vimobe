@@ -132,13 +132,22 @@ export default function Agenda() {
         {/* Main content */}
         <div className="grid lg:grid-cols-[1fr,350px] gap-6">
           {/* Calendar / List view */}
-          <div>
-            {viewMode === 'calendar' ? <CalendarView events={events} selectedDate={selectedDate} onDateSelect={setSelectedDate} /> : <div className="bg-card rounded-xl border p-4">
+          <div className="min-h-[600px]">
+            {viewMode !== 'list' ? (
+              <CalendarView 
+                events={events} 
+                selectedDate={selectedDate} 
+                onDateSelect={setSelectedDate}
+                viewMode={viewMode}
+              />
+            ) : (
+              <div className="bg-card rounded-xl border p-4">
                 <h3 className="font-semibold mb-4">
                   Próximas atividades
                 </h3>
                 <EventsList events={upcomingEvents} onEditEvent={handleEditEvent} showUser={canFilterUsers} />
-              </div>}
+              </div>
+            )}
           </div>
 
           {/* Sidebar */}
