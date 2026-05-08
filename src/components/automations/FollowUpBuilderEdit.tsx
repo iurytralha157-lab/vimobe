@@ -137,23 +137,12 @@ function getWaitReplyConfig(flowNodes: Node[]) {
   const waitNodes = flowNodes.filter((node) => node.type === 'wait');
   const waitNodeWithReply = waitNodes.find((node) => node.data?.stop_on_reply === true);
 
-  const rawStageId = waitNodeWithReply?.data?.on_reply_stage_id || waitNodeWithReply?.data?.on_reply_move_to_stage_id;
-  const normalizedStageId = typeof rawStageId === 'string' && rawStageId && rawStageId !== '__none__'
-    ? rawStageId
-    : null;
-
-  const rawMessage = waitNodeWithReply?.data?.on_reply_message;
-  const normalizedMessage = typeof rawMessage === 'string' && rawMessage.trim()
-    ? rawMessage.trim()
-    : null;
-
   return {
     hasWaitNodes: waitNodes.length > 0,
     stopOnReply: Boolean(waitNodeWithReply),
-    onReplyMoveToStageId: normalizedStageId,
-    onReplyMessage: normalizedMessage,
   };
 }
+
 
 interface FollowUpBuilderEditProps {
   automationId: string;
@@ -191,7 +180,8 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
   // New: User filter and stop on reply settings
   const [filterUserId, setFilterUserId] = useState<string>('');
   const [stopOnReply, setStopOnReply] = useState<boolean>(true);
-  const [onReplyStageId, setOnReplyStageId] = useState<string>('');
+  
+
   const [isActive, setIsActive] = useState<boolean>(true);
   const [showSimulator, setShowSimulator] = useState(false);
   const [simulatorHighlightNodeId, setSimulatorHighlightNodeId] = useState<string | null>(null);
@@ -209,7 +199,7 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
       );
     }
   }, [setNodes]);
-  const [onReplyMessage, setOnReplyMessage] = useState<string>('');
+  
   const [expandedCategories, setExpandedCategories] = useState<Record<NodeCategory, boolean>>({
     bubbles: true, conditionals: true, actions: true,
   });
@@ -233,8 +223,6 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
       if (config.to_stage_id) setStageId(config.to_stage_id as string);
       if (config.filter_user_id) setFilterUserId(config.filter_user_id as string);
       if (typeof config.stop_on_reply === 'boolean') setStopOnReply(config.stop_on_reply);
-      if (config.on_reply_move_to_stage_id) setOnReplyStageId(config.on_reply_move_to_stage_id as string);
-      if (config.on_reply_message) setOnReplyMessage(config.on_reply_message as string);
       // New: load source and meta_form_id from trigger_config
       const source = config.source as string | undefined;
       const metaFormId = config.meta_form_id as string | undefined;
@@ -340,7 +328,7 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
   useEffect(() => {
     if (isInitialized && pipelineId !== initialPipelineId) {
       setStageId('');
-      setOnReplyStageId('');
+      
     }
     // After first manual change, reset initialPipelineId so subsequent changes also clear
     if (isInitialized && initialPipelineId && pipelineId !== initialPipelineId) {
@@ -546,12 +534,7 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
     try {
       const waitReplyConfig = getWaitReplyConfig(nodes);
       const shouldStopOnReply = waitReplyConfig.hasWaitNodes ? waitReplyConfig.stopOnReply : stopOnReply;
-      const resolvedOnReplyStageId = shouldStopOnReply
-        ? (waitReplyConfig.onReplyMoveToStageId ?? (onReplyStageId && onReplyStageId !== '__none__' ? onReplyStageId : null))
-        : null;
-      const resolvedOnReplyMessage = shouldStopOnReply
-        ? (waitReplyConfig.onReplyMessage ?? (onReplyMessage?.trim() ? onReplyMessage.trim() : null))
-        : null;
+
 
       // Find the start node to get its data (source, meta_form_id)
       const startNode = nodes.find(n => n.type === 'start');
@@ -576,8 +559,9 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
           } : {}),
           filter_user_id: filterUserId && filterUserId !== "__all__" ? filterUserId : null,
           stop_on_reply: shouldStopOnReply,
-          on_reply_move_to_stage_id: resolvedOnReplyStageId,
-          on_reply_message: resolvedOnReplyMessage,
+          on_reply_move_to_stage_id: null,
+          on_reply_message: null,
+
         } as any,
       });
 
@@ -606,8 +590,9 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
               meta_form_id: node.data.meta_form_id || null,
               filter_user_id: filterUserId && filterUserId !== "__all__" ? filterUserId : null,
               stop_on_reply: stopOnReply,
-              on_reply_move_to_stage_id: stopOnReply && onReplyStageId && onReplyStageId !== "__none__" ? onReplyStageId : null,
-              on_reply_message: stopOnReply && onReplyMessage?.trim() ? onReplyMessage.trim() : null,
+              on_reply_move_to_stage_id: null,
+              on_reply_message: null,
+
             },
             ...pos,
           });
@@ -636,13 +621,6 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
             ...pos,
           });
         } else if (node.type === 'wait') {
-          const waitRawStageId = node.data.on_reply_stage_id || node.data.on_reply_move_to_stage_id;
-          const waitStageId = typeof waitRawStageId === 'string' && waitRawStageId && waitRawStageId !== '__none__'
-            ? waitRawStageId
-            : null;
-          const waitReplyMessage = typeof node.data.on_reply_message === 'string' && node.data.on_reply_message.trim()
-            ? node.data.on_reply_message.trim()
-            : null;
 
           dbNodes.push({
             id: node.id, node_type: 'delay', action_type: null,
@@ -650,9 +628,10 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
               delay_type: node.data.wait_type || 'days',
               delay_value: node.data.wait_value || 1,
               stop_on_reply: node.data.stop_on_reply || false,
-              on_reply_message: waitReplyMessage,
-              on_reply_stage_id: waitStageId,
-              on_reply_move_to_stage_id: waitStageId,
+              on_reply_message: null,
+              on_reply_stage_id: null,
+              on_reply_move_to_stage_id: null,
+
               nodeType: 'delay',
             },
             ...pos,

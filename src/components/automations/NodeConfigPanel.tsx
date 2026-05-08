@@ -323,35 +323,8 @@ export function NodeConfigPanel({
                 <p className="text-[10px] text-muted-foreground">
                   Cria duas saídas: "Respondeu" e "Timeout". Configure ações diferentes para cada caminho.
                 </p>
-                {selectedNode.data.stop_on_reply && (
-                  <div className="space-y-2">
-                    <div className="space-y-1.5">
-                      <Label className="text-xs">Mensagem ao responder</Label>
-                      <Textarea 
-                        value={selectedNode.data.on_reply_message || ''} 
-                        onChange={(e) => onNodeDataChange(selectedNode.id, { on_reply_message: e.target.value })} 
-                        placeholder="Mensagem automática ao responder..."
-                        rows={2}
-                        className="text-xs"
-                      />
-                    </div>
-                    {stages && stages.length > 0 && (
-                      <div className="space-y-1.5">
-                        <Label className="text-xs">Mover para etapa</Label>
-                        <Select 
-                          value={selectedNode.data.on_reply_stage_id || '__none__'} 
-                          onValueChange={(v) => onNodeDataChange(selectedNode.id, { on_reply_stage_id: v === '__none__' ? '' : v })}
-                        >
-                          <SelectTrigger className="h-9"><SelectValue placeholder="Não mover" /></SelectTrigger>
-                          <SelectContent className="z-[200]">
-                            <SelectItem value="__none__">Não mover</SelectItem>
-                            {stages.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
-                  </div>
-                )}
+                {/* Legacy auto-reply message and stage move fields removed */}
+
               </div>
             </div>
           )}
