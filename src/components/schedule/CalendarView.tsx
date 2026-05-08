@@ -41,12 +41,12 @@ const eventTypeIcons: Record<EventType, React.ElementType> = {
 };
 
 const eventTypeColors: Record<EventType, string> = {
-  call: 'bg-[#E3F2FD] border-[#90CAF9] text-[#1976D2] shadow-blue-500/5',
-  email: 'bg-[#FFF3E0] border-[#FFCC80] text-[#E65100] shadow-orange-500/5',
-  meeting: 'bg-[#F3E5F5] border-[#CE93D8] text-[#7B1FA2] shadow-purple-500/5',
-  task: 'bg-[#FFF8E1] border-[#FFE082] text-[#F57F17] shadow-amber-500/5',
-  message: 'bg-[#E0F2F1] border-[#80CBC4] text-[#00796B] shadow-teal-500/5',
-  visit: 'bg-[#FCE4EC] border-[#F48FB1] text-[#C2185B] shadow-pink-500/5',
+  call: 'bg-blue-600 border-blue-700 text-white shadow-blue-500/20',
+  email: 'bg-orange-500 border-orange-600 text-white shadow-orange-500/20',
+  meeting: 'bg-purple-600 border-purple-700 text-white shadow-purple-500/20',
+  task: 'bg-amber-500 border-amber-600 text-white shadow-amber-500/20',
+  message: 'bg-emerald-600 border-emerald-700 text-white shadow-emerald-500/20',
+  visit: 'bg-pink-600 border-pink-700 text-white shadow-pink-500/20',
 };
 
 interface CalendarViewProps {
@@ -230,7 +230,7 @@ export function CalendarView({
     const dayEvents = eventsByDate[format(pivotDate, 'yyyy-MM-dd')] || [];
 
     return (
-      <ScrollArea className="flex-1 border-0 bg-background/50">
+      <ScrollArea className="h-full border-0 bg-background/50">
         <div className="relative flex min-h-full">
           {/* Time axis */}
           <div className="w-20 border-r border-border/40 flex-shrink-0 bg-card/50">
@@ -280,7 +280,7 @@ export function CalendarView({
                   style={{ top: `${top}px`, height: `${height}px`, minHeight: '60px' }}
                 >
                   <div className="flex items-center gap-3 mb-2">
-                    <div className="p-1.5 rounded-lg bg-white/40 shadow-sm">
+                    <div className="p-1.5 rounded-lg bg-white/20 shadow-sm text-white">
                       <Icon className="h-4 w-4" />
                     </div>
                     <span className="text-sm font-black truncate tracking-tight">{event.title}</span>
@@ -315,7 +315,7 @@ export function CalendarView({
     });
 
     return (
-      <ScrollArea className="flex-1 border-0 bg-background/50">
+      <ScrollArea className="h-full border-0 bg-background/50">
         <div className="relative flex flex-col min-w-[1000px] min-h-full">
           {/* Header */}
           <div className="flex border-b border-border/40 sticky top-0 bg-card z-20 shadow-sm">
@@ -386,7 +386,7 @@ export function CalendarView({
                       style={{ top: `${top}px`, height: `${height}px`, minHeight: '45px' }}
                     >
                       <div className="flex items-center gap-2 mb-1">
-                        <div className="p-1 rounded-lg bg-white/40">
+                        <div className="p-1 rounded-lg bg-white/20 text-white">
                           <Icon className="h-3 w-3 flex-shrink-0" />
                         </div>
                         <span className="text-[11px] font-black truncate leading-tight tracking-tight">{event.title}</span>

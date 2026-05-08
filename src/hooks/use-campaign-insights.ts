@@ -94,6 +94,8 @@ interface InsightRow {
   budget_type: string | null;
   objective: string | null;
   fetched_at: string;
+  date_start: string;
+  date_stop: string;
   creative_url?: string | null;
   creative_video_url?: string | null;
 }
@@ -142,6 +144,7 @@ export function useCampaignInsights(filters: DashboardFilters) {
       const validLeadIds = new Set<string>();
       const wonLeadIds = new Set<string>();
       const leadRevenueMap = new Map<string, number>();
+      const dailyDataMap = new Map<string, { leads: number; conversations: number }>();
 
       // 2. Filter leads by date range (if any exist)
       if (leadMetaRaw && leadMetaRaw.length > 0) {
@@ -151,7 +154,7 @@ export function useCampaignInsights(filters: DashboardFilters) {
           const batch = leadIds.slice(i, i + batchSize);
           let query = supabase
             .from("leads")
-            .select("id, deal_status, valor_interesse")
+            .select("id, deal_status, valor_interesse, created_at")
             .in("id", batch)
             .eq("organization_id", orgId)
             .gte("created_at", dateFrom)
@@ -162,12 +165,17 @@ export function useCampaignInsights(filters: DashboardFilters) {
           if (filters.source && filters.source !== "all") query = query.eq("source", filters.source);
 
           const { data: leadsInRange } = await query;
-          ((leadsInRange || []) as LeadRow[]).forEach(l => {
+          ((leadsInRange || []) as any[]).forEach(l => {
             validLeadIds.add(l.id);
             if (l.deal_status === 'won') {
               wonLeadIds.add(l.id);
               leadRevenueMap.set(l.id, l.valor_interesse || 0);
             }
+            
+            // Daily aggregation for leads
+            const dayKey = l.created_at.split('T')[0];
+            const current = dailyDataMap.get(dayKey) || { leads: 0, conversations: 0 };
+            dailyDataMap.set(dayKey, { ...current, leads: current.leads + 1 });
           });
         }
       }
@@ -241,7 +249,7 @@ export function useCampaignInsights(filters: DashboardFilters) {
 
       const { data: insightsRaw } = await (supabase as any)
         .from("meta_campaign_insights")
-        .select("campaign_id, campaign_name, adset_id, adset_name, ad_id, ad_name, level, spend, impressions, reach, leads_count, conversations_count, cpl, status, budget, budget_type, fetched_at, creative_url, creative_video_url")
+        .select("campaign_id, campaign_name, adset_id, adset_name, ad_id, ad_name, level, spend, impressions, reach, leads_count, conversations_count, cpl, status, budget, budget_type, fetched_at, creative_url, creative_video_url, date_start, date_stop")
         .eq("organization_id", orgId)
         .gte("date_start", dateFromDate)
         .lte("date_stop", dateToDate);
@@ -257,6 +265,14 @@ export function useCampaignInsights(filters: DashboardFilters) {
 
       for (const ins of insights) {
         if (ins.fetched_at && (!lastSync || ins.fetched_at > lastSync)) lastSync = ins.fetched_at;
+        
+        // Aggregate conversations from daily insights
+        if (ins.date_start === ins.date_stop) {
+          const dayKey = ins.date_start;
+          const current = dailyDataMap.get(dayKey) || { leads: 0, conversations: 0 };
+          dailyDataMap.set(dayKey, { ...current, conversations: current.conversations + (ins.conversations_count || 0) });
+        }
+
         if (ins.level === "campaign" && ins.campaign_id) spendByCampaign.set(ins.campaign_id, ins);
         if (ins.level === "adset" && ins.adset_id) spendByAdset.set(ins.adset_id, ins);
         if (ins.level === "ad" && ins.ad_id) spendByAd.set(ins.ad_id, ins);
@@ -378,6 +394,11 @@ export function useCampaignInsights(filters: DashboardFilters) {
       return {
         campaigns,
         topCreatives,
+        dailyData: Array.from(dailyDataMap.entries()).map(([date, data]) => ({
+          date,
+          ...data,
+          total: data.leads + data.conversations
+        })).sort((a, b) => a.date.localeCompare(b.date)),
         summary: {
           totalLeads,
           totalWon,
@@ -404,6 +425,7 @@ function emptyResult() {
   return {
     campaigns: [],
     topCreatives: [],
+    dailyData: [],
     summary: {
       totalLeads: 0,
       totalWon: 0,

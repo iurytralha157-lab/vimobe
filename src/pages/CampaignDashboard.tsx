@@ -122,13 +122,18 @@ export default function CampaignDashboard() {
   // For the chart, we'll use campaign data since useCampaignInsights returns aggregated data
   // In a more complete version, we would have daily data
   const chartData = useMemo(() => {
-    if (!campaignStats.length) return [];
-    return campaignStats.slice(0, 10).map(c => ({
-      name: c.name,
-      spend: c.spend,
-      leads: c.leads
-    }));
-  }, [campaignStats]);
+    if (!insightData?.dailyData) return [];
+    return insightData.dailyData;
+  }, [insightData]);
+
+  const formatXAxis = (dateStr: string) => {
+    try {
+      const date = new Date(dateStr + 'T12:00:00');
+      return format(date, "dd, EEE", { locale: ptBR });
+    } catch (e) {
+      return dateStr;
+    }
+  };
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
@@ -217,7 +222,7 @@ export default function CampaignDashboard() {
             <CardHeader>
               <CardTitle className="text-sm font-medium flex items-center gap-2">
                 <TrendingUp className="h-4 w-4 text-primary" />
-                Evolução de Leads e Investimento
+                Evolução de Conversões (Leads e Conversas)
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -228,40 +233,30 @@ export default function CampaignDashboard() {
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={chartData}>
                       <defs>
-                        <linearGradient id="colorSpend" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1}/>
-                          <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                        </linearGradient>
                         <linearGradient id="colorLeads" x1="0" y1="0" x2="0" y2="1">
                           <stop offset="5%" stopColor="#10b981" stopOpacity={0.1}/>
                           <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
                         </linearGradient>
+                        <linearGradient id="colorConversations" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1}/>
+                          <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                        </linearGradient>
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
                       <XAxis 
-                        dataKey="name" 
+                        dataKey="date" 
                         axisLine={false}
                         tickLine={false}
                         fontSize={10}
                         tick={{ fill: '#888' }}
+                        tickFormatter={formatXAxis}
                       />
-                      <YAxis yAxisId="left" axisLine={false} tickLine={false} fontSize={12} tick={{ fill: '#888' }} />
-                      <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} fontSize={12} tick={{ fill: '#888' }} />
+                      <YAxis axisLine={false} tickLine={false} fontSize={12} tick={{ fill: '#888' }} />
                       <RechartsTooltip 
                         contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                        labelFormatter={formatXAxis}
                       />
                       <Area 
-                        yAxisId="left"
-                        type="monotone" 
-                        dataKey="spend" 
-                        name="Investimento" 
-                        stroke="#3b82f6" 
-                        fillOpacity={1} 
-                        fill="url(#colorSpend)" 
-                        strokeWidth={2}
-                      />
-                      <Area 
-                        yAxisId="right"
                         type="monotone" 
                         dataKey="leads" 
                         name="Leads" 
@@ -269,6 +264,17 @@ export default function CampaignDashboard() {
                         fillOpacity={1} 
                         fill="url(#colorLeads)" 
                         strokeWidth={2}
+                        stackId="1"
+                      />
+                      <Area 
+                        type="monotone" 
+                        dataKey="conversations" 
+                        name="Conversas" 
+                        stroke="#3b82f6" 
+                        fillOpacity={1} 
+                        fill="url(#colorConversations)" 
+                        strokeWidth={2}
+                        stackId="1"
                       />
                     </AreaChart>
                   </ResponsiveContainer>

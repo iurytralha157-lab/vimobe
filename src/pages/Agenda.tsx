@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { 
   format, startOfDay, endOfDay, startOfWeek, endOfWeek, addDays, isWithinInterval,
   startOfMonth, endOfMonth, startOfYear, endOfYear
@@ -43,7 +43,15 @@ export default function Agenda() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [pivotDate, setPivotDate] = useState(new Date());
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<'day' | 'week' | 'month' | 'year' | 'list'>('month');
+  const [viewMode, setViewMode] = useState<'day' | 'week' | 'month' | 'year' | 'list'>(() => {
+    const savedMode = localStorage.getItem('agendaViewMode');
+    return (savedMode as any) || 'week';
+  });
+
+  // Salva a preferência de visualização
+  useEffect(() => {
+    localStorage.setItem('agendaViewMode', viewMode);
+  }, [viewMode]);
   const [eventFormOpen, setEventFormOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<ScheduleEvent | null>(null);
 
