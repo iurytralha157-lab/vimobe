@@ -11,7 +11,11 @@ import {
   MapPin,
   X,
   Info,
-  Trash2
+  Trash2,
+  Edit2,
+  User,
+  Search,
+  Clock
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -24,7 +28,6 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { cn, getCurrentTimeForInput, getBrasiliaTime } from '@/lib/utils';
-import { User } from 'lucide-react';
 import { useCreateScheduleEvent, useUpdateScheduleEvent, useDeleteScheduleEvent, EventType, ScheduleEvent } from '@/hooks/use-schedule-events';
 import { useUsers } from '@/hooks/use-users';
 import { useLeads } from '@/hooks/use-leads';
@@ -80,6 +83,7 @@ export function EventForm({ open, onOpenChange, event, leadId, leadName, default
   const [leadSearch, setLeadSearch] = useState('');
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
   const [selectedLeadName, setSelectedLeadName] = useState<string | null>(null);
+  const [showLeadSelector, setShowLeadSelector] = useState(false);
 
   const { data: searchedLeads = [] } = useLeads({ search: leadSearch, limit: 5 });
 
@@ -87,14 +91,17 @@ export function EventForm({ open, onOpenChange, event, leadId, leadName, default
   useEffect(() => {
     if (open) {
       if (event) {
-        // Editing existing event
+        // Editing existing event - Start in View Mode
+        setIsViewMode(true);
         setSelectedType((event.event_type as EventType) || 'call');
         setTitle(event.title || '');
         setDescription(event.description || '');
         setSelectedUserId(event.user_id || defaultUserId || '');
         setDate(event.start_time ? new Date(event.start_time) : getBrasiliaTime());
         setTime(event.start_time ? format(new Date(event.start_time), 'HH:mm') : getCurrentTimeForInput());
-        // Calculate duration from start and end time
+        setSelectedLeadId(event.lead_id || null);
+        setSelectedLeadName(event.lead?.name || null);
+        
         if (event.start_time && event.end_time) {
           const calculatedDuration = differenceInMinutes(new Date(event.end_time), new Date(event.start_time));
           setDuration(calculatedDuration > 0 ? calculatedDuration : 30);
@@ -103,21 +110,24 @@ export function EventForm({ open, onOpenChange, event, leadId, leadName, default
         }
         setIsCompleted(event.status === 'completed');
       } else {
-        // Creating new event
+        // Creating new event - Start in Edit Mode
+        setIsViewMode(false);
         setSelectedType(defaultType || 'call');
         setTitle('');
         setDescription('');
         setSelectedUserId(defaultUserId || '');
         setDate(defaultDate || getBrasiliaTime());
         setTime(defaultDate ? format(defaultDate, 'HH:mm') : getCurrentTimeForInput());
+        setSelectedLeadId(leadId || null);
+        setSelectedLeadName(leadName || null);
         setDuration(30);
         setIsCompleted(false);
       }
     }
-  }, [open, event, defaultUserId, defaultDate]);
+  }, [open, event, defaultUserId, defaultDate, leadId, leadName, defaultType]);
 
   const maxDescriptionLength = 280;
-  const remainingChars = maxDescriptionLength - description.length;
+  const remainingChars = maxDescriptionLength - (description?.length || 0);
 
   const handleSubmit = async () => {
     if (!title.trim() || !date || !selectedUserId) return;
@@ -127,48 +137,6 @@ export function EventForm({ open, onOpenChange, event, leadId, leadName, default
     startTime.setHours(hours, minutes, 0, 0);
     const endTime = addMinutes(startTime, duration);
 
-    // Check user availability for the selected time
-    try {
-      const eventDay = startTime.getDay();
-      const eventTime = format(startTime, 'HH:mm:ss');
-      
-      const { data: teamMember } = await supabase
-        .from('team_members')
-        .select('id')
-        .eq('user_id', selectedUserId)
-        .maybeSingle();
-
-      if (teamMember) {
-        const { data: availability } = await supabase
-          .from('member_availability')
-          .select('*')
-          .eq('team_member_id', teamMember.id)
-          .eq('day_of_week', eventDay)
-          .eq('is_active', true)
-          .maybeSingle();
-
-        if (availability) {
-          const isOutsideSchedule = !availability.is_all_day && 
-            (eventTime < (availability.start_time || '00:00:00') || 
-             eventTime > (availability.end_time || '23:59:59'));
-
-          if (isOutsideSchedule) {
-            const confirmAssign = window.confirm(
-              `Conflito de escala: O usuário não está disponível no horário selecionado (${availability.start_time?.slice(0, 5)} - ${availability.end_time?.slice(0, 5)}). Deseja salvar mesmo assim?`
-            );
-            if (!confirmAssign) return;
-          }
-        } else {
-          const confirmAssign = window.confirm(
-            'Conflito de escala: O usuário não tem escala ativa para este dia. Deseja salvar mesmo assim?'
-          );
-          if (!confirmAssign) return;
-        }
-      }
-    } catch (err) {
-      console.error('Error checking availability:', err);
-    }
-
     const eventData = {
       title: title.trim(),
       description: description.trim() || undefined,
@@ -177,7 +145,7 @@ export function EventForm({ open, onOpenChange, event, leadId, leadName, default
       end_time: endTime.toISOString(),
       is_all_day: false,
       user_id: selectedUserId,
-      lead_id: leadId,
+      lead_id: selectedLeadId,
     };
 
     if (event) {
@@ -196,200 +164,357 @@ export function EventForm({ open, onOpenChange, event, leadId, leadName, default
   };
 
   const isLoading = createEvent.isPending || updateEvent.isPending || deleteEvent.isPending;
+  const currentEventType = eventTypes.find(t => t.type === selectedType);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[90%] sm:max-w-[500px] sm:w-full rounded-lg">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            {event ? 'Editar atividade' : 'Nova atividade'}
-          </DialogTitle>
+      <DialogContent className="w-[90%] sm:max-w-[550px] sm:w-full rounded-3xl p-0 overflow-hidden border-none shadow-2xl">
+        <DialogHeader className={cn(
+          "px-8 py-6 text-white",
+          isViewMode ? "bg-slate-800" : "bg-primary"
+        )}>
+          <div className="flex items-center justify-between">
+            <DialogTitle className="text-xl font-black uppercase tracking-tight flex items-center gap-3">
+              {isViewMode ? (
+                <>
+                  <Clock className="h-6 w-6" />
+                  Detalhes da Atividade
+                </>
+              ) : (
+                <>
+                  {event ? <Edit2 className="h-6 w-6" /> : <Plus className="h-6 w-6" />}
+                  {event ? 'Editar Atividade' : 'Novo Agendamento'}
+                </>
+              )}
+            </DialogTitle>
+            {isViewMode && (
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setIsViewMode(false)}
+                className="text-white hover:bg-white/10 rounded-xl font-bold gap-2"
+              >
+                <Edit2 className="h-4 w-4" />
+                Editar
+              </Button>
+            )}
+          </div>
         </DialogHeader>
 
-        <div className="space-y-5">
-          {/* Lead info if present */}
-          {leadName && (
-            <div className="flex items-center gap-2 p-3 bg-primary/10 rounded-lg text-sm">
-              <User className="h-4 w-4 text-primary" />
-              <span>Lead: <strong>{leadName}</strong></span>
-            </div>
-          )}
-
-          {/* Event type selector */}
-          <div className="flex flex-wrap gap-2">
-            {eventTypes.map(({ type, label, icon: Icon }) => (
-              <Button
-                key={type}
-                type="button"
-                variant={selectedType === type ? 'default' : 'outline'}
-                size="sm"
-                className="gap-2"
-                onClick={() => setSelectedType(type)}
-              >
-                <Icon className="h-4 w-4" />
-                {label}
-              </Button>
-            ))}
+        <div className="p-8 space-y-6 bg-background">
+          {/* Lead Selection */}
+          <div className="space-y-2">
+            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">
+              Lead Relacionado
+            </Label>
+            {isViewMode ? (
+              <div className="flex items-center gap-3 p-4 bg-muted/30 rounded-2xl border border-border/40">
+                <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <User className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm font-black">{selectedLeadName || 'Sem lead vinculado'}</p>
+                  <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-tighter">Atribuído ao lead</p>
+                </div>
+              </div>
+            ) : (
+              <div className="relative">
+                {selectedLeadId ? (
+                  <div className="flex items-center justify-between p-4 bg-primary/5 border border-primary/20 rounded-2xl">
+                    <div className="flex items-center gap-3">
+                      <User className="h-5 w-5 text-primary" />
+                      <span className="text-sm font-bold">{selectedLeadName}</span>
+                    </div>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-8 w-8 rounded-full hover:bg-primary/10" 
+                      onClick={() => {
+                        setSelectedLeadId(null);
+                        setSelectedLeadName(null);
+                      }}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <Popover open={showLeadSelector} onOpenChange={setShowLeadSelector}>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="w-full justify-start rounded-2xl h-12 border-dashed border-2 hover:border-primary/50 hover:bg-primary/5 text-muted-foreground font-bold">
+                        <Search className="mr-2 h-4 w-4" />
+                        Vincular um lead...
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="p-0 w-[400px]" align="start">
+                      <Command className="rounded-xl">
+                        <CommandInput 
+                          placeholder="Buscar por nome, telefone ou email..." 
+                          value={leadSearch}
+                          onValueChange={setLeadSearch}
+                        />
+                        <CommandList>
+                          <CommandEmpty>Nenhum lead encontrado.</CommandEmpty>
+                          <CommandGroup>
+                            {searchedLeads.map((lead) => (
+                              <CommandItem
+                                key={lead.id}
+                                onSelect={() => {
+                                  setSelectedLeadId(lead.id);
+                                  setSelectedLeadName(lead.name);
+                                  setShowLeadSelector(false);
+                                }}
+                                className="flex items-center gap-3 p-3 cursor-pointer"
+                              >
+                                <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center">
+                                  <User className="h-4 w-4 text-muted-foreground" />
+                                </div>
+                                <div className="flex flex-col">
+                                  <span className="font-bold text-sm">{lead.name}</span>
+                                  <span className="text-[10px] text-muted-foreground">{lead.phone || lead.email}</span>
+                                </div>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                )}
+              </div>
+            )}
           </div>
 
-          {/* Title and User */}
-          <div className="grid grid-cols-2 gap-4">
+          {/* Event Type */}
+          <div className="space-y-3">
+            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">
+              Tipo de Atividade
+            </Label>
+            {isViewMode ? (
+              <div className="flex items-center gap-3 p-2">
+                <div className={cn(
+                  "h-12 w-12 rounded-2xl flex items-center justify-center text-white shadow-lg",
+                  selectedType === 'call' && "bg-blue-600 shadow-blue-500/20",
+                  selectedType === 'meeting' && "bg-purple-600 shadow-purple-500/20",
+                  selectedType === 'message' && "bg-emerald-600 shadow-emerald-500/20",
+                  selectedType === 'visit' && "bg-pink-600 shadow-pink-500/20",
+                  selectedType === 'task' && "bg-amber-500 shadow-amber-500/20",
+                  selectedType === 'email' && "bg-orange-500 shadow-orange-500/20",
+                )}>
+                  {currentEventType && <currentEventType.icon className="h-6 w-6" />}
+                </div>
+                <span className="text-lg font-black">{currentEventType?.label}</span>
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {eventTypes.map(({ type, label, icon: Icon }) => (
+                  <Button
+                    key={type}
+                    type="button"
+                    variant={selectedType === type ? 'default' : 'outline'}
+                    size="sm"
+                    className={cn(
+                      "rounded-xl h-10 font-bold gap-2 transition-all",
+                      selectedType === type ? "shadow-md scale-105" : "bg-card border-border/40 hover:bg-accent"
+                    )}
+                    onClick={() => setSelectedType(type)}
+                  >
+                    <Icon className="h-4 w-4" />
+                    {label}
+                  </Button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <Label htmlFor="title">Assunto</Label>
-              <Input
-                id="title"
-                placeholder="Ex: Ligar para cliente"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-              />
+              <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Assunto</Label>
+              {isViewMode ? (
+                <p className="text-base font-bold p-1">{title}</p>
+              ) : (
+                <Input
+                  placeholder="Ex: Ligar para cliente"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="rounded-xl h-12 border-border/40 font-bold"
+                />
+              )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="user">Atribuído a *</Label>
-              <Select value={selectedUserId} onValueChange={setSelectedUserId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {users.map((user) => (
-                    <SelectItem key={user.id} value={user.id}>
-                      {user.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Responsável</Label>
+              {isViewMode ? (
+                <p className="text-base font-bold p-1">
+                  {users.find(u => u.id === selectedUserId)?.name || 'Nenhum'}
+                </p>
+              ) : (
+                <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+                  <SelectTrigger className="rounded-xl h-12 border-border/40 font-bold">
+                    <SelectValue placeholder="Selecione..." />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl">
+                    {users.map((user) => (
+                      <SelectItem key={user.id} value={user.id} className="font-bold">
+                        {user.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
           </div>
 
-          {/* Date, Time, Duration */}
           <div className="grid grid-cols-3 gap-4">
             <div className="space-y-2">
-              <Label>Data *</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !date && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {date ? format(date, 'dd/MM/yyyy', { locale: ptBR }) : 'Selecione'}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={date}
-                    onSelect={setDate}
-                    locale={ptBR}
-                  />
-                </PopoverContent>
-              </Popover>
+              <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Data</Label>
+              {isViewMode ? (
+                <p className="text-sm font-bold p-1">{date ? format(date, 'dd/MM/yyyy') : '-'}</p>
+              ) : (
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start rounded-xl h-12 border-border/40 font-bold",
+                        !date && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {date ? format(date, 'dd/MM/yy') : 'Selecione'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0 rounded-2xl overflow-hidden" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={date}
+                      onSelect={setDate}
+                      locale={ptBR}
+                    />
+                  </PopoverContent>
+                </Popover>
+              )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="time">Hora *</Label>
-              <div className="relative">
+              <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Hora</Label>
+              {isViewMode ? (
+                <p className="text-sm font-bold p-1">{time}</p>
+              ) : (
                 <Input
-                  id="time"
                   type="time"
                   value={time}
                   onChange={(e) => setTime(e.target.value)}
+                  className="rounded-xl h-12 border-border/40 font-bold"
                 />
-                {time && (
-                  <button
-                    type="button"
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    onClick={() => setTime('')}
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                )}
-              </div>
+              )}
             </div>
             <div className="space-y-2">
-              <Label>Duração (min)</Label>
-              <Select value={duration.toString()} onValueChange={(v) => setDuration(Number(v))}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {durationOptions.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value.toString()}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Duração</Label>
+              {isViewMode ? (
+                <p className="text-sm font-bold p-1">{durationOptions.find(o => o.value === duration)?.label}</p>
+              ) : (
+                <Select value={duration.toString()} onValueChange={(v) => setDuration(Number(v))}>
+                  <SelectTrigger className="rounded-xl h-12 border-border/40 font-bold">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl">
+                    {durationOptions.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value.toString()} className="font-bold">
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
           </div>
 
-          {/* Description */}
           <div className="space-y-2">
-            <Label htmlFor="description">Descrição</Label>
-            <Textarea
-              id="description"
-              placeholder="Adicione uma descrição..."
-              value={description}
-              onChange={(e) => setDescription(e.target.value.slice(0, maxDescriptionLength))}
-              rows={3}
-            />
-            <p className="text-xs text-muted-foreground text-right">
-              {remainingChars} caracteres restantes
-            </p>
+            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Descrição</Label>
+            {isViewMode ? (
+              <p className="text-sm font-medium p-1 text-muted-foreground italic">
+                {description || 'Sem descrição'}
+              </p>
+            ) : (
+              <>
+                <Textarea
+                  placeholder="Adicione observações importantes..."
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value.slice(0, maxDescriptionLength))}
+                  rows={3}
+                  className="rounded-2xl border-border/40 font-medium"
+                />
+                <p className="text-[10px] text-muted-foreground text-right font-black uppercase tracking-tighter">
+                  {remainingChars} caracteres restantes
+                </p>
+              </>
+            )}
           </div>
 
-          {/* Mark as completed */}
-          <div className="flex items-center gap-2">
-            <Checkbox
-              id="completed"
-              checked={isCompleted}
-              onCheckedChange={(checked) => setIsCompleted(checked as boolean)}
-            />
-            <Label htmlFor="completed" className="font-normal cursor-pointer">
-              Marcar como concluída
-            </Label>
-          </div>
+          {!isViewMode && (
+            <div className="flex items-center gap-3 p-4 bg-muted/20 rounded-2xl border border-dashed">
+              <Checkbox
+                id="completed"
+                checked={isCompleted}
+                onCheckedChange={(checked) => setIsCompleted(checked as boolean)}
+                className="h-5 w-5 rounded-md"
+              />
+              <Label htmlFor="completed" className="text-sm font-bold cursor-pointer">
+                Marcar esta atividade como concluída agora
+              </Label>
+            </div>
+          )}
 
-          {/* Actions */}
-          <div className="flex justify-between pt-2">
-            {event ? (
+          <div className="flex items-center justify-between pt-4 gap-4">
+            {event && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button variant="ghost" className="text-destructive hover:text-destructive hover:bg-destructive/10" disabled={isLoading}>
-                    <Trash2 className="h-4 w-4 mr-2" />
+                  <Button variant="ghost" className="text-destructive hover:text-destructive hover:bg-destructive/10 rounded-xl font-bold gap-2">
+                    <Trash2 className="h-4 w-4" />
                     Excluir
                   </Button>
                 </AlertDialogTrigger>
-                <AlertDialogContent>
+                <AlertDialogContent className="rounded-3xl">
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Excluir atividade?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Esta ação não pode ser desfeita. A atividade será removida permanentemente.
+                    <AlertDialogTitle className="font-black uppercase tracking-tight">Excluir atividade?</AlertDialogTitle>
+                    <AlertDialogDescription className="font-medium">
+                      Esta ação não pode ser desfeita. A atividade será removida permanentemente da agenda.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
-                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                      Excluir
+                    <AlertDialogCancel className="rounded-xl font-bold">Cancelar</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl font-bold">
+                      Confirmar Exclusão
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
-            ) : (
-              <div />
             )}
-            <div className="flex gap-2">
-              <Button variant="outline" className="w-[40%] rounded-xl" onClick={() => onOpenChange(false)} disabled={isLoading}>
-                Cancelar
-              </Button>
-              <Button className="w-[60%] rounded-xl" onClick={handleSubmit} disabled={isLoading || !title.trim() || !selectedUserId}>
-                {isLoading ? 'Salvando...' : 'Salvar'}
-              </Button>
-            </div>
+            
+            {!isViewMode && (
+              <div className="flex gap-3 ml-auto w-full md:w-auto">
+                <Button 
+                  variant="outline" 
+                  className="flex-1 md:flex-none md:min-w-[120px] rounded-xl font-bold" 
+                  onClick={() => event ? setIsViewMode(true) : onOpenChange(false)}
+                  disabled={isLoading}
+                >
+                  Cancelar
+                </Button>
+                <Button 
+                  className="flex-1 md:flex-none md:min-w-[150px] rounded-xl font-black uppercase tracking-tight shadow-lg shadow-primary/20" 
+                  onClick={handleSubmit} 
+                  disabled={isLoading || !title.trim() || !selectedUserId}
+                >
+                  {isLoading ? 'Salvando...' : 'Salvar'}
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       </DialogContent>
     </Dialog>
   );
 }
+
+const Plus = ({ className }: { className?: string }) => (
+  <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+);
