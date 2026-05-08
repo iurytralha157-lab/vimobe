@@ -142,6 +142,7 @@ export function useCampaignInsights(filters: DashboardFilters) {
       const validLeadIds = new Set<string>();
       const wonLeadIds = new Set<string>();
       const leadRevenueMap = new Map<string, number>();
+      const dailyDataMap = new Map<string, { leads: number; conversations: number }>();
 
       // 2. Filter leads by date range (if any exist)
       if (leadMetaRaw && leadMetaRaw.length > 0) {
@@ -162,12 +163,17 @@ export function useCampaignInsights(filters: DashboardFilters) {
           if (filters.source && filters.source !== "all") query = query.eq("source", filters.source);
 
           const { data: leadsInRange } = await query;
-          ((leadsInRange || []) as LeadRow[]).forEach(l => {
+          ((leadsInRange || []) as any[]).forEach(l => {
             validLeadIds.add(l.id);
             if (l.deal_status === 'won') {
               wonLeadIds.add(l.id);
               leadRevenueMap.set(l.id, l.valor_interesse || 0);
             }
+            
+            // Daily aggregation for leads
+            const dayKey = l.created_at.split('T')[0];
+            const current = dailyDataMap.get(dayKey) || { leads: 0, conversations: 0 };
+            dailyDataMap.set(dayKey, { ...current, leads: current.leads + 1 });
           });
         }
       }
