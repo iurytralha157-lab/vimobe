@@ -133,22 +133,21 @@ export function useBulkUpdateMemberAvailability() {
         is_active?: boolean;
       }>;
     }) => {
-      // Delete all existing availability for this member
+      // Delete all existing availability for this member to replace with new set
       await supabase
         .from('member_availability')
         .delete()
         .eq('team_member_id', teamMemberId);
 
-      // Insert new availability records
+      // Insert new availability records for all 7 days
       const records = availability
-        .filter(a => a.is_active !== false)
         .map(a => ({
           team_member_id: teamMemberId,
           day_of_week: a.day_of_week,
           start_time: a.is_all_day ? null : a.start_time,
           end_time: a.is_all_day ? null : a.end_time,
           is_all_day: a.is_all_day ?? false,
-          is_active: true,
+          is_active: a.is_active ?? false,
         }));
 
       if (records.length > 0) {
