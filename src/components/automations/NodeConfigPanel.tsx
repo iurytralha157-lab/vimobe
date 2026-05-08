@@ -192,7 +192,8 @@ export function NodeConfigPanel({
                         <SelectItem value="__all__">Todas as origens</SelectItem>
                         <SelectItem value="whatsapp">WhatsApp</SelectItem>
                         <SelectItem value="meta">Meta (Facebook/Instagram)</SelectItem>
-                        <SelectItem value="website">Site / Website</SelectItem>
+                        <SelectItem value="site">Site Interno</SelectItem>
+                        <SelectItem value="website">Website Externo / Formulário</SelectItem>
                         <SelectItem value="manual">Manual</SelectItem>
                       </SelectContent>
                     </Select>
