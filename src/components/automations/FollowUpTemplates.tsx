@@ -54,7 +54,7 @@ export const FOLLOW_UP_TEMPLATES: FollowUpTemplate[] = [
     description: 'Sequência estendida para leads que precisam mais tempo',
     days: 10,
     industry: 'real_estate',
-    onReplyMessage: DEFAULT_ON_REPLY_MESSAGE,
+    onReplyMessage: undefined,
     messages: [
       { day: 1, title: 'Primeiro contato', content: `Olá {{lead.name}}! 👋\n\nBem-vindo(a) à {{organization.name}}! \n\nEstou aqui para ajudar você na busca pelo imóvel ideal. O que você está procurando?` },
       { day: 2, title: 'Apresentação', content: `Oi {{lead.name}}! \n\nSou especialista em imóveis na região e posso te ajudar a encontrar opções que combinam com você.\n\nQual seu orçamento e localização de preferência?` },
