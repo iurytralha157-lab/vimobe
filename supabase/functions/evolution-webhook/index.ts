@@ -2222,7 +2222,7 @@ async function handleStopFollowUpOnReply(
             await supabase.from("activities").insert({
               lead_id: leadId,
               type: "stage_change",
-              content: "Lead movido automaticamente (respondeu follow-up)",
+              content: "Lead movido automaticamente (respondeu à automação)",
               metadata: { reason: "stop_on_reply", new_stage_id: onReplyStageId, automation_id: exec.automation?.id },
             });
           }
