@@ -560,8 +560,9 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
           } : {}),
           filter_user_id: filterUserId && filterUserId !== "__all__" ? filterUserId : null,
           stop_on_reply: shouldStopOnReply,
-          on_reply_move_to_stage_id: resolvedOnReplyStageId,
-          on_reply_message: resolvedOnReplyMessage,
+          on_reply_move_to_stage_id: null,
+          on_reply_message: null,
+
         } as any,
       });
 
