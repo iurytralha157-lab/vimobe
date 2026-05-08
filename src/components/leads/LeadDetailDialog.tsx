@@ -241,6 +241,12 @@ export function LeadDetailDialog({
   const isInitialMount = useState(true);
   
   useEffect(() => {
+    if (lead && !isUpdatingAssignee) {
+      setLocalLead(lead);
+    }
+  }, [lead, isUpdatingAssignee]);
+
+  useEffect(() => {
     if (lead) {
       setEditForm({
         name: lead.name || '',
