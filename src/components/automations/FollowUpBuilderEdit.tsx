@@ -553,6 +553,10 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
         ? (waitReplyConfig.onReplyMessage ?? (onReplyMessage?.trim() ? onReplyMessage.trim() : null))
         : null;
 
+      // Find the start node to get its data (source, meta_form_id)
+      const startNode = nodes.find(n => n.type === 'start');
+      const startNodeData = startNode?.data || {};
+
       // Update automation
       await updateAutomation.mutateAsync({
         id: automationId,
@@ -565,6 +569,10 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
           ...(triggerType === 'lead_stage_changed' ? { 
             pipeline_id: pipelineId, 
             to_stage_id: stageId 
+          } : {}),
+          ...(triggerType === 'lead_created' ? {
+            source: startNodeData.source || null,
+            meta_form_id: startNodeData.meta_form_id || null
           } : {}),
           filter_user_id: filterUserId && filterUserId !== "__all__" ? filterUserId : null,
           stop_on_reply: shouldStopOnReply,
