@@ -282,7 +282,7 @@ export function SdrDistributionButton({ lead, refetchStages }: SdrDistributionBu
                 />
               </div>
 
-              <ScrollArea className="h-64">
+              <ScrollArea className="h-[400px]">
                 <div className="space-y-1 py-1">
                   {filteredUsers.length === 0 ? (
                     <div className="p-4 text-center text-sm text-muted-foreground">
