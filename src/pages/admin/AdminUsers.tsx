@@ -149,11 +149,14 @@ export default function AdminUsers() {
     }
   };
 
-  const handleDeleteUser = async () => {
+  const handleUpdateUser = async (data: any) => {
     try {
-      await deleteUser.mutateAsync(deleteDialog.userId);
-      toast.success('Usuário excluído');
-      setDeleteDialog({ open: false, userId: '', userName: '' });
+      await updateUser.mutateAsync({
+        userId: editDialog.user.id,
+        ...data
+      });
+      toast.success('Usuário atualizado com sucesso');
+      setEditDialog({ open: false, user: null });
     } catch (error) {
       toast.error(getFriendlyErrorMessage(error));
     }
