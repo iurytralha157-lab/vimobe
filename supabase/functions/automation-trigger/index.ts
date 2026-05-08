@@ -260,24 +260,28 @@ Deno.serve(async (req) => {
         // Check trigger conditions
         const triggerConfig = automation.trigger_config || {};
         
-        // Fetch lead data for user filter validation if needed
-        let leadAssignedUserId: string | null = null;
-        if (data.lead_id && triggerConfig.filter_user_id) {
+        // Fetch lead data for validation (user filter, source filter, meta form filter)
+        let leadDataForValidation = null;
+        if (data.lead_id && (triggerConfig.filter_user_id || triggerConfig.source || triggerConfig.meta_form_id)) {
           const { data: lead } = await supabaseAdmin
             .from("leads")
-            .select("assigned_user_id")
+            .select("assigned_user_id, source, meta_form_id")
             .eq("id", data.lead_id)
             .single();
-          leadAssignedUserId = lead?.assigned_user_id || null;
+          leadDataForValidation = lead;
         }
         
         // Validate conditions based on trigger type
         if (!validateTriggerConditions(
           automation.trigger_type, 
           triggerConfig, 
-          data,
+          {
+            ...data,
+            source: data.source || leadDataForValidation?.source,
+            meta_form_id: data.meta_form_id || leadDataForValidation?.meta_form_id
+          },
           automation.created_by,
-          leadAssignedUserId
+          leadDataForValidation?.assigned_user_id
         )) {
           console.log(`Automation ${automation.id} conditions not met, skipping`);
           continue;
