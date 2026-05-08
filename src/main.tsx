@@ -67,4 +67,4 @@ createRoot(document.getElementById("root")!).render(
   </React.StrictMode>
 );
 
-// SW registration is handled by vite-plugin-pwa via usePwaUpdate hook.
+// PWA and Service Worker registration removed to ensure fresh updates.
