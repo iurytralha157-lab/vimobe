@@ -298,6 +298,12 @@ export default function AdminUsers() {
                               <Info className="h-4 w-4 mr-2" />
                               Ver Detalhes
                             </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => setEditDialog({ open: true, user })}
+                            >
+                              <Save className="h-4 w-4 mr-2" />
+                              Editar
+                            </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem 
                               onClick={() => handleToggleStatus(user.id, user.is_active)}
