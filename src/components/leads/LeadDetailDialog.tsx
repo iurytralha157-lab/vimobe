@@ -1864,7 +1864,7 @@ export function LeadDetailDialog({
                               }}
                               className={cn(
                                 "flex items-center gap-2.5 px-3 py-2.5 cursor-pointer transition-all rounded-lg my-0.5",
-                                lead.assigned_user_id === user.id && "bg-primary/10 shadow-sm"
+                                localLead.assigned_user_id === user.id && "bg-primary/10 shadow-sm"
                               )}
                             >
                               <Avatar className="h-8 w-8 shrink-0 border border-primary/5 shadow-sm">
@@ -1874,7 +1874,7 @@ export function LeadDetailDialog({
                                 </AvatarFallback>
                               </Avatar>
                               <span className="text-sm font-medium truncate">{user.name}</span>
-                              {lead.assigned_user_id === user.id && (
+                              {localLead.assigned_user_id === user.id && (
                                 <div className="h-5 w-5 rounded-full bg-primary/20 flex items-center justify-center ml-auto">
                                   <Check className="h-3.5 w-3.5 text-primary shrink-0" />
                                 </div>
