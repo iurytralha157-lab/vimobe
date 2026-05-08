@@ -732,6 +732,16 @@ async function handleMessagesUpsert(
         }
       }
 
+      // Check if message already exists with sender_name 'Automação' to avoid stopping on our own messages
+      const { data: existingAutomationMsg } = await supabase
+        .from("whatsapp_messages")
+        .select("sender_name")
+        .eq("session_id", session.id)
+        .eq("message_id", messageId)
+        .maybeSingle();
+      
+      const isAutomationMessage = existingAutomationMsg?.sender_name === "Automação";
+
       // Insert message (upsert to handle duplicates)
       const { data: insertedMessage, error: msgError } = await supabase
         .from("whatsapp_messages")
