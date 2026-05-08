@@ -45,12 +45,12 @@ const eventTypeLabels: Record<EventType, string> = {
 };
 
 const eventTypeColors: Record<EventType, string> = {
-  call: 'text-blue-700 bg-blue-50 border-blue-100 dark:bg-blue-900/30 dark:border-blue-800',
-  email: 'text-orange-700 bg-orange-50 border-orange-100 dark:bg-orange-900/30 dark:border-orange-800',
-  meeting: 'text-purple-700 bg-purple-50 border-purple-100 dark:bg-purple-900/30 dark:border-purple-800',
-  task: 'text-amber-700 bg-amber-50 border-amber-100 dark:bg-amber-900/30 dark:border-amber-800',
-  message: 'text-teal-700 bg-teal-50 border-teal-100 dark:bg-teal-900/30 dark:border-teal-800',
-  visit: 'text-pink-700 bg-pink-50 border-pink-100 dark:bg-pink-900/30 dark:border-pink-800',
+  call: 'text-white bg-blue-600 border-blue-700 shadow-blue-500/20',
+  email: 'text-white bg-orange-500 border-orange-600 shadow-orange-500/20',
+  meeting: 'text-white bg-purple-600 border-purple-700 shadow-purple-500/20',
+  task: 'text-white bg-amber-500 border-amber-600 shadow-amber-500/20',
+  message: 'text-white bg-emerald-600 border-emerald-700 shadow-emerald-500/20',
+  visit: 'text-white bg-pink-600 border-pink-700 shadow-pink-500/20',
 };
 
 interface EventsListProps {
