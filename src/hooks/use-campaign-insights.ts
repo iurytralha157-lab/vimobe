@@ -151,7 +151,7 @@ export function useCampaignInsights(filters: DashboardFilters) {
           const batch = leadIds.slice(i, i + batchSize);
           let query = supabase
             .from("leads")
-            .select("id, deal_status, valor_interesse")
+            .select("id, deal_status, valor_interesse, created_at")
             .in("id", batch)
             .eq("organization_id", orgId)
             .gte("created_at", dateFrom)
