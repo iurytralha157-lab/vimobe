@@ -19,7 +19,21 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AnimatedTabNav, AnimatedTabItem } from '@/components/ui/animated-tab-nav';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Phone, Mail, MessageCircle, Building2, Loader2, CheckCircle, X, Plus, Save, User, Briefcase, MapPin, DollarSign, Clock, ChevronRight, Calendar, Target, Facebook, Instagram, Lightbulb, FileEdit, Zap, Bot, Check, Activity, ListTodo, Contact, Handshake, History, Timer, ChevronDown, Trophy, XCircle, CircleDot, UserCheck, RotateCcw, ChevronUp, RotateCw, FileText, Download, Paperclip, BarChart3 } from 'lucide-react';
+import { 
+  Phone, Mail, MessageCircle, Building2, Loader2, CheckCircle, X, Plus, Save, User, 
+  Briefcase, MapPin, DollarSign, Clock, ChevronRight, Calendar, Target, Facebook, 
+  Instagram, Lightbulb, FileEdit, Zap, Bot, Check, Activity, ListTodo, Contact, 
+  Handshake, History, Timer, ChevronDown, Trophy, XCircle, CircleDot, UserCheck, 
+  RotateCcw, ChevronUp, RotateCw, FileText, Download, Paperclip, BarChart3, Search
+} from 'lucide-react';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow, format } from 'date-fns';
@@ -1348,24 +1362,75 @@ export function LeadDetailDialog({
                       <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
                     </button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-64 p-2" align="start">
-                    <div className="space-y-1 max-h-60 overflow-y-auto">
-                      <button onClick={() => handleAssignUser(null)} className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-accent text-left text-sm">
-                        <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center">
-                          <X className="h-4 w-4 text-muted-foreground" />
-                        </div>
-                        <span className="text-muted-foreground">Remover responsável</span>
-                      </button>
-                      {allUsers.map(user => <button key={user.id} onClick={() => handleAssignUser(user.id)} className={cn("w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-accent text-left text-sm", user.id === lead.assigned_user_id && "bg-primary/10")}>
-                          <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                            <span className="text-xs font-medium text-primary">
-                              {user.name?.split(' ').map((n: string) => n[0]).join('').substring(0, 2)}
-                            </span>
-                          </div>
-                          <span className="truncate">{user.name}</span>
-                          {user.id === lead.assigned_user_id && <Check className="h-4 w-4 ml-auto text-primary shrink-0" />}
-                        </button>)}
-                    </div>
+                  <PopoverContent className="w-[320px] sm:w-[380px] p-0 shadow-2xl border-primary/20" align="start">
+                    <Command className="border-none">
+                      <div className="flex items-center border-b px-3">
+                        <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+                        <CommandInput placeholder="Buscar responsável..." className="border-none focus:ring-0 h-11" />
+                      </div>
+                      <CommandList className="max-h-[450px] p-1">
+                        <CommandEmpty className="py-6 text-center text-sm text-muted-foreground">
+                          Nenhum usuário encontrado.
+                        </CommandEmpty>
+                        <CommandGroup heading="Ações">
+                          <CommandItem 
+                            onSelect={() => {
+                              handleAssignUser(null);
+                              setAssigneePopoverOpen(false);
+                            }}
+                            className="flex items-center gap-3 px-3 py-2.5 cursor-pointer rounded-lg"
+                          >
+                            <div className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                              <X className="h-5 w-5 text-muted-foreground" />
+                            </div>
+                            <div className="flex-1">
+                              <p className="font-medium text-sm">Remover responsável</p>
+                              <p className="text-[10px] text-muted-foreground">O lead ficará sem atribuição</p>
+                            </div>
+                          </CommandItem>
+                        </CommandGroup>
+                        
+                        <CommandGroup heading="Usuários">
+                          {allUsers.map(user => (
+                            <CommandItem 
+                              key={user.id} 
+                              onSelect={() => {
+                                handleAssignUser(user.id);
+                                setAssigneePopoverOpen(false);
+                              }}
+                              className={cn(
+                                "flex items-center gap-3 px-3 py-2.5 cursor-pointer transition-all rounded-lg my-0.5",
+                                user.id === lead.assigned_user_id && "bg-primary/10 shadow-sm"
+                              )}
+                            >
+                              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 border border-primary/5">
+                                {user.avatar_url ? (
+                                  <Avatar className="h-10 w-10 rounded-lg">
+                                    <AvatarImage src={user.avatar_url} />
+                                    <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
+                                      {user.name?.split(' ').map((n: string) => n[0]).join('').substring(0, 2)}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                ) : (
+                                  <span className="text-sm font-semibold text-primary">
+                                    {user.name?.split(' ').map((n: string) => n[0]).join('').substring(0, 2)}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="font-semibold truncate text-sm">{user.name}</p>
+                                {user.email && <p className="text-[11px] text-muted-foreground truncate opacity-70">{user.email}</p>}
+                              </div>
+                              {user.id === lead.assigned_user_id && (
+                                <div className="h-6 w-6 rounded-full bg-primary/20 flex items-center justify-center ml-auto">
+                                  <Check className="h-4 w-4 text-primary shrink-0" />
+                                </div>
+                              )}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
                   </PopoverContent>
                 </Popover>
                 <div className="mt-2">
@@ -1712,39 +1777,61 @@ export function LeadDetailDialog({
                       <ChevronDown className="h-3 w-3" />
                     </button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-52 p-2" align="start">
-                    <div className="space-y-1 max-h-60 overflow-y-auto">
-                      <button
-                        onClick={() => handleAssignUser(null)}
-                        className={cn(
-                          "w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-accent text-left text-sm transition-colors",
-                          !lead.assigned_user_id && "bg-accent"
-                        )}
-                      >
-                        <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center">
-                          <User className="h-3 w-3 text-muted-foreground" />
-                        </div>
-                        <span className="text-muted-foreground">Sem responsável</span>
-                      </button>
-                      {allUsers.map((user: any) => (
-                        <button
-                          key={user.id}
-                          onClick={() => handleAssignUser(user.id)}
-                          className={cn(
-                            "w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-accent text-left text-sm transition-colors",
-                            lead.assigned_user_id === user.id && "bg-accent"
-                          )}
-                        >
-                          <Avatar className="h-6 w-6">
-                            <AvatarImage src={user.avatar_url} alt={user.name} />
-                            <AvatarFallback className="text-xs">
-                              {user.name?.[0]?.toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span>{user.name}</span>
-                        </button>
-                      ))}
-                    </div>
+                  <PopoverContent className="w-[300px] p-0 shadow-2xl border-primary/20" align="start">
+                    <Command className="border-none">
+                      <div className="flex items-center border-b px-3">
+                        <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+                        <CommandInput placeholder="Buscar..." className="border-none focus:ring-0 h-10" />
+                      </div>
+                      <CommandList className="max-h-[350px] p-1">
+                        <CommandEmpty className="py-4 text-center text-sm text-muted-foreground">
+                          Nenhum encontrado.
+                        </CommandEmpty>
+                        <CommandGroup>
+                          <CommandItem
+                            onSelect={() => {
+                              handleAssignUser(null);
+                              setAssigneePopoverOpen(false);
+                            }}
+                            className={cn(
+                              "flex items-center gap-2.5 px-3 py-2.5 cursor-pointer transition-colors rounded-lg",
+                              !lead.assigned_user_id && "bg-accent"
+                            )}
+                          >
+                            <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center shrink-0">
+                              <User className="h-3.5 w-3.5 text-muted-foreground" />
+                            </div>
+                            <span className="text-muted-foreground text-sm font-medium">Sem responsável</span>
+                          </CommandItem>
+                          {allUsers.map((user: any) => (
+                            <CommandItem
+                              key={user.id}
+                              onSelect={() => {
+                                handleAssignUser(user.id);
+                                setAssigneePopoverOpen(false);
+                              }}
+                              className={cn(
+                                "flex items-center gap-2.5 px-3 py-2.5 cursor-pointer transition-all rounded-lg my-0.5",
+                                lead.assigned_user_id === user.id && "bg-primary/10 shadow-sm"
+                              )}
+                            >
+                              <Avatar className="h-8 w-8 shrink-0 border border-primary/5 shadow-sm">
+                                <AvatarImage src={user.avatar_url} alt={user.name} />
+                                <AvatarFallback className="text-[10px] bg-primary/10 text-primary font-bold">
+                                  {user.name?.[0]?.toUpperCase()}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className="text-sm font-medium truncate">{user.name}</span>
+                              {lead.assigned_user_id === user.id && (
+                                <div className="h-5 w-5 rounded-full bg-primary/20 flex items-center justify-center ml-auto">
+                                  <Check className="h-3.5 w-3.5 text-primary shrink-0" />
+                                </div>
+                              )}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
                   </PopoverContent>
                 </Popover>
 

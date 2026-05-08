@@ -157,7 +157,7 @@ export function SdrDistributionButton({ lead, refetchStages }: SdrDistributionBu
           Distribuir SDR
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-72 p-0" align="start">
+      <PopoverContent className="w-[320px] sm:w-[380px] p-0" align="start">
         <div className="p-3 border-b bg-muted/30">
           <div className="flex items-center gap-2">
             {step !== 'pipeline' && (
@@ -282,7 +282,7 @@ export function SdrDistributionButton({ lead, refetchStages }: SdrDistributionBu
                 />
               </div>
 
-              <ScrollArea className="h-64">
+              <ScrollArea className="h-[400px]">
                 <div className="space-y-1 py-1">
                   {filteredUsers.length === 0 ? (
                     <div className="p-4 text-center text-sm text-muted-foreground">
