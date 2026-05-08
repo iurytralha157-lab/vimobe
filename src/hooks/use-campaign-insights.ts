@@ -425,6 +425,7 @@ function emptyResult() {
   return {
     campaigns: [],
     topCreatives: [],
+    dailyData: [],
     summary: {
       totalLeads: 0,
       totalWon: 0,
