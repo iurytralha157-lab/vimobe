@@ -181,7 +181,7 @@ export function EventForm({ open, onOpenChange, event, leadId, leadName, default
 
   const handleDelete = async () => {
     if (!event) return;
-    await deleteEvent.mutateAsync({ id: event.id, google_event_id: event.google_event_id });
+    await deleteEvent.mutateAsync({ id: event.id });
     onOpenChange(false);
   };
 
@@ -204,12 +204,6 @@ export function EventForm({ open, onOpenChange, event, leadId, leadName, default
               <span>Lead: <strong>{leadName}</strong></span>
             </div>
           )}
-
-          {/* Info banner */}
-          <div className="flex items-start gap-2 p-3 bg-accent/50 rounded-lg text-sm text-muted-foreground">
-            <Info className="h-4 w-4 mt-0.5 flex-shrink-0" />
-            <span>As atividades serão sincronizadas com o Google Calendar quando conectado.</span>
-          </div>
 
           {/* Event type selector */}
           <div className="flex flex-wrap gap-2">

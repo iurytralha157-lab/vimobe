@@ -45,12 +45,12 @@ const eventTypeLabels: Record<EventType, string> = {
 };
 
 const eventTypeColors: Record<EventType, string> = {
-  call: 'text-blue-600 bg-blue-100 dark:bg-blue-900/30',
-  email: 'text-orange-600 bg-orange-100 dark:bg-orange-900/30',
-  meeting: 'text-purple-600 bg-purple-100 dark:bg-purple-900/30',
-  task: 'text-orange-600 bg-orange-100 dark:bg-orange-900/30',
-  message: 'text-orange-600 bg-orange-100 dark:bg-orange-900/30',
-  visit: 'text-pink-600 bg-pink-100 dark:bg-pink-900/30',
+  call: 'text-blue-700 bg-blue-50 border-blue-100 dark:bg-blue-900/30 dark:border-blue-800',
+  email: 'text-orange-700 bg-orange-50 border-orange-100 dark:bg-orange-900/30 dark:border-orange-800',
+  meeting: 'text-purple-700 bg-purple-50 border-purple-100 dark:bg-purple-900/30 dark:border-purple-800',
+  task: 'text-amber-700 bg-amber-50 border-amber-100 dark:bg-amber-900/30 dark:border-amber-800',
+  message: 'text-teal-700 bg-teal-50 border-teal-100 dark:bg-teal-900/30 dark:border-teal-800',
+  visit: 'text-pink-700 bg-pink-50 border-pink-100 dark:bg-pink-900/30 dark:border-pink-800',
 };
 
 interface EventsListProps {
@@ -187,7 +187,7 @@ export function EventsList({ events, onEditEvent, onAddEvent, showUser = true, s
                             Editar
                           </DropdownMenuItem>
                           <DropdownMenuItem
-                            onClick={() => deleteEvent.mutate({ id: event.id, google_event_id: event.google_event_id })}
+                            onClick={() => deleteEvent.mutate({ id: event.id })}
                             className="text-destructive focus:text-destructive"
                           >
                             <Trash2 className="h-4 w-4 mr-2" />

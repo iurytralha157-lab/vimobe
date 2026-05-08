@@ -1,13 +1,17 @@
 import { useState, useMemo } from 'react';
-import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, addDays, isWithinInterval } from 'date-fns';
+import { 
+  format, startOfDay, endOfDay, startOfWeek, endOfWeek, addDays, isWithinInterval,
+  startOfMonth, endOfMonth, startOfYear, endOfYear
+} from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Plus, Calendar as CalendarIcon, List, LayoutGrid } from 'lucide-react';
+import { Plus, Calendar as CalendarIcon, List, LayoutGrid, ChevronLeft, ChevronRight } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CalendarView } from '@/components/schedule/CalendarView';
 import { EventsList } from '@/components/schedule/EventsList';
 import { EventForm } from '@/components/schedule/EventForm';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 // Google Calendar integration removed temporarily
 import { UserFilter } from '@/components/schedule/UserFilter';
 import { useScheduleEvents, ScheduleEvent } from '@/hooks/use-schedule-events';
@@ -35,24 +39,31 @@ export default function Agenda() {
     data: users = []
   } = useUsers();
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [pivotDate, setPivotDate] = useState(new Date());
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar');
+  const [viewMode, setViewMode] = useState<'day' | 'week' | 'month' | 'year' | 'list'>('month');
   const [eventFormOpen, setEventFormOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<ScheduleEvent | null>(null);
 
   // Determine date range based on view
   const dateRange = useMemo(() => {
-    const weekStart = startOfWeek(selectedDate, {
-      weekStartsOn: 0
-    });
-    const weekEnd = endOfWeek(selectedDate, {
-      weekStartsOn: 0
-    });
-    return {
-      startDate: weekStart,
-      endDate: weekEnd
-    };
-  }, [selectedDate]);
+    switch (viewMode) {
+      case 'day':
+        return { startDate: startOfDay(pivotDate), endDate: endOfDay(pivotDate) };
+      case 'week':
+        return { startDate: startOfWeek(pivotDate, { weekStartsOn: 0 }), endDate: endOfWeek(pivotDate, { weekStartsOn: 0 }) };
+      case 'month':
+        return { 
+          startDate: startOfWeek(startOfMonth(pivotDate), { weekStartsOn: 0 }), 
+          endDate: endOfWeek(endOfMonth(pivotDate), { weekStartsOn: 0 }) 
+        };
+      case 'year':
+        return { startDate: startOfYear(pivotDate), endDate: endOfYear(pivotDate) };
+      case 'list':
+      default:
+        return { startDate: startOfDay(new Date()), endDate: addDays(new Date(), 30) };
+    }
+  }, [pivotDate, viewMode]);
   const {
     data: events = [],
     isLoading
@@ -106,13 +117,19 @@ export default function Agenda() {
           <div className="flex items-center gap-3">
             {canFilterUsers && <UserFilter users={users} selectedUserId={selectedUserId} onUserSelect={setSelectedUserId} />}
 
-            <div className="flex items-center border rounded-lg p-1">
-              <Button variant={viewMode === 'calendar' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('calendar')}>
-                <LayoutGrid className="h-4 w-4" />
-              </Button>
-              <Button variant={viewMode === 'list' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('list')}>
-                <List className="h-4 w-4" />
-              </Button>
+            <div className="flex items-center border rounded-xl p-1 bg-muted/30">
+              <Select value={viewMode} onValueChange={(v: any) => setViewMode(v)}>
+                <SelectTrigger className="w-[120px] h-9 border-0 bg-transparent focus:ring-0">
+                  <SelectValue placeholder="Visualização" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="day">Dia</SelectItem>
+                  <SelectItem value="week">Semana</SelectItem>
+                  <SelectItem value="month">Mês</SelectItem>
+                  <SelectItem value="year">Ano</SelectItem>
+                  <SelectItem value="list">Lista</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <Button variant="default" onClick={() => setEventFormOpen(true)}>
@@ -125,13 +142,24 @@ export default function Agenda() {
         {/* Main content */}
         <div className="grid lg:grid-cols-[1fr,350px] gap-6">
           {/* Calendar / List view */}
-          <div>
-            {viewMode === 'calendar' ? <CalendarView events={events} selectedDate={selectedDate} onDateSelect={setSelectedDate} /> : <div className="bg-card rounded-xl border p-4">
+          <div className="min-h-[600px]">
+            {viewMode !== 'list' ? (
+              <CalendarView 
+                events={events} 
+                selectedDate={selectedDate} 
+                onDateSelect={setSelectedDate}
+                pivotDate={pivotDate}
+                onPivotChange={setPivotDate}
+                viewMode={viewMode}
+              />
+            ) : (
+              <div className="bg-card rounded-xl border p-4">
                 <h3 className="font-semibold mb-4">
                   Próximas atividades
                 </h3>
                 <EventsList events={upcomingEvents} onEditEvent={handleEditEvent} showUser={canFilterUsers} />
-              </div>}
+              </div>
+            )}
           </div>
 
           {/* Sidebar */}
