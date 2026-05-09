@@ -34,12 +34,14 @@ interface KPIData {
   overdueReceivables?: number;
   overduePayables?: number;
   paidCommissions?: number;
+  scheduledVisits?: number;
 }
 
 interface KPICardsProps {
   data: KPIData;
   isLoading?: boolean;
   periodLabel?: string;
+  scheduledVisits?: number;
 }
 
 interface KPICardItemProps {
@@ -166,7 +168,7 @@ function KPICardSkeleton() {
   );
 }
 
-export function KPICards({ data, isLoading, periodLabel = 'Últimos 30 dias' }: KPICardsProps) {
+export function KPICards({ data, isLoading, periodLabel = 'Últimos 30 dias', scheduledVisits }: KPICardsProps) {
   if (isLoading) {
     return (
       <div className="space-y-3">
@@ -219,6 +221,14 @@ export function KPICards({ data, isLoading, periodLabel = 'Últimos 30 dias' }: 
       format: 'time',
       accentColor: 'chart-4',
     },
+    {
+      title: 'Visitas',
+      value: scheduledVisits ?? 0,
+      icon: CalendarCheck,
+      tooltip: `Visitas agendadas - ${periodLabel}`,
+      format: 'number',
+      accentColor: 'chart-1',
+    },
   ];
 
   const salesKpi: KPICardItemProps = {
@@ -233,7 +243,7 @@ export function KPICards({ data, isLoading, periodLabel = 'Últimos 30 dias' }: 
   return (
     <div className="space-y-3 lg:space-y-0">
       {/* Desktop: 5 colunas, todos juntos */}
-      <div className="hidden lg:grid lg:grid-cols-5 gap-3">
+      <div className="hidden lg:grid lg:grid-cols-6 gap-3">
         {kpis.map((kpi) => (
           <KPICardItem key={kpi.title} {...kpi} />
         ))}
@@ -242,7 +252,7 @@ export function KPICards({ data, isLoading, periodLabel = 'Últimos 30 dias' }: 
       
       {/* Mobile: Layout original com VGV destacado */}
       <div className="lg:hidden space-y-3">
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {kpis.map((kpi) => (
             <KPICardItem key={kpi.title} {...kpi} />
           ))}
