@@ -185,6 +185,20 @@ export function useCreateScheduleEvent() {
 
       if (error) throw error;
       
+      // Log to timeline if lead is present
+      if (data.lead_id && profile) {
+        logScheduleEventToTimeline({
+          lead_id: data.lead_id,
+          organization_id: data.organization_id,
+          actor_id: profile.id,
+          assigned_user_id: data.user_id,
+          event_title: data.title,
+          event_type: data.event_type || 'task',
+          start_time: data.start_time,
+          action_type: 'created'
+        });
+      }
+
       return data;
     },
     onSuccess: () => {
@@ -200,9 +214,17 @@ export function useCreateScheduleEvent() {
 
 export function useUpdateScheduleEvent() {
   const queryClient = useQueryClient();
+  const { profile } = useAuth();
 
   return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<ScheduleEvent> & { id: string }) => {
+      // Get current event data for timeline logging
+      const { data: currentEvent } = await (supabase as any)
+        .from('schedule_events')
+        .select('*')
+        .eq('id', id)
+        .single();
+
       const { data, error } = await (supabase as any)
         .from('schedule_events')
         .update(updates)
@@ -212,6 +234,25 @@ export function useUpdateScheduleEvent() {
 
       if (error) throw error;
       
+      // Log to timeline if lead is present and something relevant changed
+      if (data.lead_id && profile) {
+        const timeChanged = updates.start_time && updates.start_time !== currentEvent?.start_time;
+        const statusChangedToCompleted = updates.status === 'completed' && currentEvent?.status !== 'completed';
+        
+        if (timeChanged || statusChangedToCompleted) {
+          logScheduleEventToTimeline({
+            lead_id: data.lead_id,
+            organization_id: data.organization_id,
+            actor_id: profile.id,
+            assigned_user_id: data.user_id,
+            event_title: data.title,
+            event_type: data.event_type || 'task',
+            start_time: data.start_time,
+            action_type: statusChangedToCompleted ? 'completed' : 'rescheduled'
+          });
+        }
+      }
+
       return data;
     },
     onSuccess: () => {
@@ -227,6 +268,7 @@ export function useUpdateScheduleEvent() {
 
 export function useCompleteScheduleEvent() {
   const queryClient = useQueryClient();
+  const { profile } = useAuth();
 
   return useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
@@ -240,6 +282,21 @@ export function useCompleteScheduleEvent() {
         .single();
 
       if (error) throw error;
+
+      // Log to timeline if lead is present and status is completed
+      if (data.lead_id && status === 'completed' && profile) {
+        logScheduleEventToTimeline({
+          lead_id: data.lead_id,
+          organization_id: data.organization_id,
+          actor_id: profile.id,
+          assigned_user_id: data.user_id,
+          event_title: data.title,
+          event_type: data.event_type || 'task',
+          start_time: data.start_time,
+          action_type: 'completed'
+        });
+      }
+
       return data;
     },
     onSuccess: (data) => {
