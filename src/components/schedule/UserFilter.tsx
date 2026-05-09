@@ -42,7 +42,7 @@ export function UserFilter({ users, selectedUserId, onUserSelect, showAllOption 
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-[200px] justify-between"
+          className="w-full justify-between h-10 rounded-2xl bg-card border-border/40 hover:bg-accent hover:text-accent-foreground transition-all px-3"
         >
           {selectedUser ? (
             <div className="flex items-center gap-2">
