@@ -11,7 +11,7 @@ import { CalendarView } from '@/components/schedule/CalendarView';
 import { EventsList } from '@/components/schedule/EventsList';
 import { EventForm } from '@/components/schedule/EventForm';
 import { UserFilter } from '@/components/schedule/UserFilter';
-import { useScheduleEvents, ScheduleEvent } from '@/hooks/use-schedule-events';
+import { useScheduleEvents, ScheduleEvent, useUpdateScheduleEvent } from '@/hooks/use-schedule-events';
 import { useUsers } from '@/hooks/use-users';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
@@ -54,6 +54,7 @@ export default function Agenda() {
   }, [viewMode]);
   const [eventFormOpen, setEventFormOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<ScheduleEvent | null>(null);
+  const updateEventMutation = useUpdateScheduleEvent();
 
   // Determine date range based on view
   const dateRange = useMemo(() => {
@@ -132,6 +133,10 @@ export default function Agenda() {
     setEditingEvent(null);
   };
 
+  const handleEventUpdate = (id: string, updates: Partial<ScheduleEvent>) => {
+    updateEventMutation.mutate({ id, ...updates });
+  };
+
   // Check if user is admin or team leader
   const canFilterUsers = profile?.role === 'admin' || isTeamLeader;
 
@@ -150,6 +155,7 @@ export default function Agenda() {
                 onPivotChange={setPivotDate}
                 viewMode={viewMode as any}
                 onEditEvent={handleEditEvent}
+                onEventUpdate={handleEventUpdate}
                 onQuickCreate={(date) => {
                   setSelectedDate(date);
                   setEventFormOpen(true);
