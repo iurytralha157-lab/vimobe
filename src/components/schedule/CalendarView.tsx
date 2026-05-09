@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { 
   format, 
   startOfMonth, 
@@ -22,7 +22,11 @@ import {
   isSameHour,
   startOfYear,
   endOfYear,
-  eachMonthOfInterval
+  eachMonthOfInterval,
+  differenceInMinutes,
+  addMinutes,
+  setHours,
+  setMinutes
 } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight, Phone, Mail, Calendar as CalendarIcon, CheckSquare, MessageSquare, MapPin, Clock, User } from 'lucide-react';
@@ -30,6 +34,16 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ScheduleEvent, EventType } from '@/hooks/use-schedule-events';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { 
+  DndContext, 
+  DragEndEvent, 
+  useDraggable, 
+  useDroppable,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragOverlay
+} from '@dnd-kit/core';
 
 const eventTypeIcons: Record<EventType, React.ElementType> = {
   call: Phone,
@@ -49,6 +63,122 @@ const eventTypeColors: Record<EventType, string> = {
   visit: 'bg-pink-600 border-pink-700/50 text-white shadow-sm',
 };
 
+interface ActivityCardProps {
+  event: ScheduleEvent;
+  onEditEvent?: (event: ScheduleEvent) => void;
+  isDragging?: boolean;
+  style?: React.CSSProperties;
+  className?: string;
+}
+
+function ActivityCard({ event, onEditEvent, isDragging, style, className }: ActivityCardProps) {
+  const { attributes, listeners, setNodeRef, transform } = useDraggable({
+    id: event.id,
+    data: event
+  });
+
+  const start = parseISO(event.start_time);
+  const end = parseISO(event.end_time);
+  const duration = differenceInMinutes(end, start);
+  const Icon = eventTypeIcons[event.event_type as EventType] || CalendarIcon;
+  
+  // Compact mode for short activities (less than 45 mins)
+  const isCompact = duration < 45;
+
+  const dragStyle = transform ? {
+    transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+    zIndex: 100,
+    opacity: 0.8,
+  } : undefined;
+
+  return (
+    <div 
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      onClick={(e) => {
+        e.stopPropagation();
+        onEditEvent?.(event);
+      }}
+      className={cn(
+        "absolute left-1 right-1 rounded-[4px] border-2 overflow-hidden shadow-sm transition-shadow hover:shadow-md z-10 cursor-grab active:cursor-grabbing group",
+        eventTypeColors[event.event_type as EventType],
+        isDragging && "opacity-50 grayscale",
+        className
+      )}
+      style={{ ...style, ...dragStyle }}
+    >
+      <div className={cn(
+        "flex h-full",
+        isCompact ? "flex-row items-center gap-2 px-2 py-1" : "flex-col p-2"
+      )}>
+        <div className={cn(
+          "flex items-center gap-2",
+          !isCompact && "mb-1.5"
+        )}>
+          <div className={cn(
+            "rounded bg-white/20 text-white shrink-0",
+            isCompact ? "p-0.5" : "p-1"
+          )}>
+            <Icon className={cn(isCompact ? "h-3 w-3" : "h-3.5 w-3.5")} />
+          </div>
+          <span className={cn(
+            "font-black truncate tracking-tight",
+            isCompact ? "text-[10px]" : "text-[11px] leading-tight"
+          )}>
+            {event.title}
+          </span>
+        </div>
+
+        <div className={cn(
+          "flex items-center gap-2 text-[9px] font-bold opacity-80 tabular-nums shrink-0",
+          isCompact ? "ml-auto" : "mt-auto"
+        )}>
+          <div className="flex items-center gap-1">
+            <Clock className="h-2.5 w-2.5" />
+            <span>{format(start, 'HH:mm')}{!isCompact && ` - ${format(end, 'HH:mm')}`}</span>
+          </div>
+          {!isCompact && event.lead && (
+            <div className="flex items-center gap-1 max-w-[80px]">
+              <User className="h-2.5 w-2.5" />
+              <span className="truncate">{event.lead.name}</span>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DroppableSlot({ 
+  id, 
+  onQuickCreate, 
+  className, 
+  children 
+}: { 
+  id: string; 
+  onQuickCreate?: () => void;
+  className?: string;
+  children?: React.ReactNode;
+}) {
+  const { isOver, setNodeRef } = useDroppable({
+    id: id,
+  });
+
+  return (
+    <div 
+      ref={setNodeRef}
+      className={cn(
+        className,
+        isOver && "bg-primary/[0.05] ring-2 ring-primary/20 ring-inset z-0"
+      )}
+      onClick={onQuickCreate}
+    >
+      {children}
+    </div>
+  );
+}
+
 interface CalendarViewProps {
   events: ScheduleEvent[];
   selectedDate: Date;
@@ -57,6 +187,7 @@ interface CalendarViewProps {
   onPivotChange: (date: Date) => void;
   viewMode: 'day' | 'week' | 'month' | 'year';
   onEditEvent?: (event: ScheduleEvent) => void;
+  onEventUpdate?: (id: string, updates: Partial<ScheduleEvent>) => void;
   onQuickCreate?: (date: Date) => void;
 }
 
@@ -68,8 +199,21 @@ export function CalendarView({
   onPivotChange,
   viewMode,
   onEditEvent,
+  onEventUpdate,
   onQuickCreate
 }: CalendarViewProps) {
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    })
+  );
+  const [activeEvent, setActiveEvent] = useState<ScheduleEvent | null>(null);
+
+  const handleDragStart = (event: any) => {
+    setActiveEvent(event.active.data.current);
+  };
   const handleNavigate = (direction: 'prev' | 'next') => {
     switch (viewMode) {
       case 'day':
@@ -91,6 +235,28 @@ export function CalendarView({
     const today = new Date();
     onPivotChange(today);
     onDateSelect(today);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    setActiveEvent(null);
+    const { active, over } = event;
+    
+    if (over && active.id !== over.id) {
+      const scheduleEvent = active.data.current as ScheduleEvent;
+      const [dateStr, hourStr] = (over.id as string).split('|');
+      
+      const newStart = parseISO(`${dateStr}T${hourStr}:00`);
+      const originalStart = parseISO(scheduleEvent.start_time);
+      const originalEnd = parseISO(scheduleEvent.end_time);
+      const duration = differenceInMinutes(originalEnd, originalStart);
+      
+      const newEnd = addMinutes(newStart, duration);
+      
+      onEventUpdate?.(scheduleEvent.id, {
+        start_time: newStart.toISOString(),
+        end_time: newEnd.toISOString()
+      });
+    }
   };
 
   const eventsByDate = useMemo(() => {
@@ -230,79 +396,68 @@ export function CalendarView({
     const dayEvents = eventsByDate[format(pivotDate, 'yyyy-MM-dd')] || [];
 
     return (
-      <ScrollArea className="h-full border-0 bg-background/50">
-        <div className="relative flex min-h-full">
-          {/* Time axis */}
-          <div className="w-16 border-r border-border/40 flex-shrink-0 bg-card/50">
-            {hours.map(hour => (
-              <div key={hour.toString()} className="h-14 border-b border-border/40 flex items-center justify-center">
-                <span className="text-[10px] text-muted-foreground/60 font-black uppercase tracking-tighter tabular-nums">
-                  {format(hour, 'HH:mm')}
-                </span>
-              </div>
-            ))}
-          </div>
-
-          {/* Grid content */}
-          <div className="flex-1 relative">
-            {hours.map(hour => (
-              <div 
-                key={hour.toString()} 
-                className="h-14 border-b border-border/40 w-full cursor-pointer hover:bg-primary/[0.02] transition-colors" 
-                onClick={() => {
-                  const clickDate = new Date(pivotDate);
-                  clickDate.setHours(hour.getHours(), 0, 0, 0);
-                  onQuickCreate?.(clickDate);
-                }}
-              />
-            ))}
-
-            {/* Events */}
-            {dayEvents.map(event => {
-              const start = parseISO(event.start_time);
-              const end = parseISO(event.end_time);
-              const top = (start.getHours() * 60 + start.getMinutes()) * (56 / 60);
-              const duration = Math.max((end.getTime() - start.getTime()) / (1000 * 60), 15);
-              const height = duration * (56 / 60);
-              const Icon = eventTypeIcons[event.event_type as EventType] || CalendarIcon;
-
-              return (
-                <div 
-                  key={event.id}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onEditEvent?.(event);
-                  }}
-                  className={cn(
-                    "absolute left-2 right-2 rounded-lg border-2 p-3 overflow-hidden shadow-sm transition-all hover:scale-[1.01] hover:z-20 z-10 group cursor-pointer",
-                    eventTypeColors[event.event_type as EventType]
-                  )}
-                  style={{ top: `${top}px`, height: `${height}px`, minHeight: '40px' }}
-                >
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="p-1.5 rounded-lg bg-white/20 shadow-sm text-white">
-                      <Icon className="h-4 w-4" />
-                    </div>
-                    <span className="text-sm font-black truncate tracking-tight">{event.title}</span>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-4 text-[10px] font-bold opacity-80">
-                    <div className="flex items-center gap-1.5">
-                      <Clock className="h-3.5 w-3.5" />
-                      <span>{format(start, 'HH:mm')} - {format(end, 'HH:mm')}</span>
-                    </div>
-                    {event.lead && (
-                      <div className="flex items-center gap-1.5">
-                        <User className="h-3.5 w-3.5" />
-                        <span className="truncate">{event.lead.name}</span>
-                      </div>
-                    )}
-                  </div>
+      <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+        <ScrollArea className="h-full border-0 bg-background/50">
+          <div className="relative flex min-h-full">
+            {/* Time axis */}
+            <div className="w-16 border-r border-border/40 flex-shrink-0 bg-card/50">
+              {hours.map(hour => (
+                <div key={hour.toString()} className="h-14 border-b border-border/40 flex items-center justify-center">
+                  <span className="text-[10px] text-muted-foreground/60 font-black uppercase tracking-tighter tabular-nums">
+                    {format(hour, 'HH:mm')}
+                  </span>
                 </div>
-              );
-            })}
+              ))}
+            </div>
+
+            {/* Grid content */}
+            <div className="flex-1 relative">
+              {hours.map(hour => {
+                const slotId = `${format(pivotDate, 'yyyy-MM-dd')}|${format(hour, 'HH:mm')}`;
+                return (
+                  <DroppableSlot 
+                    key={slotId} 
+                    id={slotId}
+                    className="h-14 border-b border-border/40 w-full cursor-pointer hover:bg-primary/[0.02] transition-colors" 
+                    onQuickCreate={() => {
+                      const clickDate = new Date(pivotDate);
+                      clickDate.setHours(hour.getHours(), 0, 0, 0);
+                      onQuickCreate?.(clickDate);
+                    }}
+                  />
+                );
+              })}
+
+              {/* Events */}
+              {dayEvents.map(event => {
+                const start = parseISO(event.start_time);
+                const end = parseISO(event.end_time);
+                const top = (start.getHours() * 60 + start.getMinutes()) * (56 / 60);
+                const duration = Math.max((end.getTime() - start.getTime()) / (1000 * 60), 15);
+                const height = duration * (56 / 60);
+
+                return (
+                  <ActivityCard
+                    key={event.id}
+                    event={event}
+                    onEditEvent={onEditEvent}
+                    style={{ top: `${top}px`, height: `${height}px`, minHeight: '32px' }}
+                  />
+                );
+              })}
+            </div>
           </div>
-        </div>
-      </ScrollArea>
+        </ScrollArea>
+        <DragOverlay>
+          {activeEvent ? (
+            <ActivityCard 
+              event={activeEvent} 
+              className="w-[150px] relative left-0 right-0" 
+              style={{ position: 'relative', top: 0, height: '56px' }} 
+            />
+          ) : null}
+        </DragOverlay>
+      </DndContext>
     );
   };
 
@@ -315,94 +470,91 @@ export function CalendarView({
     });
 
     return (
-      <ScrollArea className="h-full border-0 bg-background/50">
-        <div className="relative flex flex-col min-w-[1000px] min-h-full">
-          {/* Header */}
-          <div className="flex border-b border-border/40 sticky top-0 bg-card z-20 shadow-sm">
-            <div className="w-16 border-r border-border/40 flex-shrink-0 bg-card/50" />
-            {weekDays.map(day => (
-              <div key={day.toString()} className="flex-1 border-r border-border/40 last:border-r-0 py-2.5 text-center">
-                <span className="block text-[10px] text-muted-foreground/60 font-black uppercase tracking-[0.2em] mb-1">
-                  {format(day, 'EEE', { locale: ptBR })}
-                </span>
-                <span className={cn(
-                  "text-base font-black h-8 w-8 inline-flex items-center justify-center rounded-xl transition-all",
-                  isToday(day) ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20 scale-105" : "text-foreground"
-                )}>
-                  {format(day, 'd')}
-                </span>
-              </div>
-            ))}
-          </div>
-
-          {/* Grid */}
-          <div className="flex relative flex-1">
-            {/* Time axis */}
-            <div className="w-16 border-r border-border/40 flex-shrink-0 bg-card/50">
-              {hours.map(hour => (
-                <div key={hour.toString()} className="h-14 border-b border-border/40 flex items-center justify-center">
-                  <span className="text-[10px] text-muted-foreground/60 font-black uppercase tracking-tighter tabular-nums">
-                    {format(hour, 'HH:mm')}
+      <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+        <ScrollArea className="h-full border-0 bg-background/50">
+          <div className="relative flex flex-col min-w-[1000px] min-h-full">
+            {/* Header */}
+            <div className="flex border-b border-border/40 sticky top-0 bg-card z-20 shadow-sm">
+              <div className="w-16 border-r border-border/40 flex-shrink-0 bg-card/50" />
+              {weekDays.map(day => (
+                <div key={day.toString()} className="flex-1 border-r border-border/40 last:border-r-0 py-2.5 text-center">
+                  <span className="block text-[10px] text-muted-foreground/60 font-black uppercase tracking-[0.2em] mb-1">
+                    {format(day, 'EEE', { locale: ptBR })}
+                  </span>
+                  <span className={cn(
+                    "text-base font-black h-8 w-8 inline-flex items-center justify-center rounded-xl transition-all",
+                    isToday(day) ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20 scale-105" : "text-foreground"
+                  )}>
+                    {format(day, 'd')}
                   </span>
                 </div>
               ))}
             </div>
 
-            {/* Days columns */}
-            {weekDays.map(day => (
-              <div key={day.toString()} className="flex-1 border-r border-border/40 last:border-r-0 relative">
+            {/* Grid */}
+            <div className="flex relative flex-1">
+              {/* Time axis */}
+              <div className="w-16 border-r border-border/40 flex-shrink-0 bg-card/50">
                 {hours.map(hour => (
-                  <div 
-                    key={hour.toString()} 
-                    className="h-14 border-b border-border/40 cursor-pointer hover:bg-primary/[0.01] transition-colors" 
-                    onClick={() => {
-                      const clickDate = new Date(day);
-                      clickDate.setHours(hour.getHours(), 0, 0, 0);
-                      onQuickCreate?.(clickDate);
-                    }}
-                  />
+                  <div key={hour.toString()} className="h-14 border-b border-border/40 flex items-center justify-center">
+                    <span className="text-[10px] text-muted-foreground/60 font-black uppercase tracking-tighter tabular-nums">
+                      {format(hour, 'HH:mm')}
+                    </span>
+                  </div>
                 ))}
-
-                {/* Events for this day */}
-                {(eventsByDate[format(day, 'yyyy-MM-dd')] || []).map(event => {
-                  const start = parseISO(event.start_time);
-                  const end = parseISO(event.end_time);
-                  const top = (start.getHours() * 60 + start.getMinutes()) * (56 / 60);
-                  const duration = Math.max((end.getTime() - start.getTime()) / (1000 * 60), 15);
-                  const height = duration * (56 / 60);
-                  const Icon = eventTypeIcons[event.event_type as EventType] || CalendarIcon;
-
-                  return (
-                    <div 
-                      key={event.id}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onEditEvent?.(event);
-                      }}
-                      className={cn(
-                        "absolute left-1 right-1 rounded-md border-2 p-1.5 overflow-hidden shadow-sm transition-all hover:scale-[1.03] hover:z-20 z-10 cursor-pointer",
-                        eventTypeColors[event.event_type as EventType]
-                      )}
-                      style={{ top: `${top}px`, height: `${height}px`, minHeight: '32px' }}
-                    >
-                      <div className="flex items-center gap-2 mb-1">
-                        <div className="p-1 rounded-lg bg-white/20 text-white">
-                          <Icon className="h-3 w-3 flex-shrink-0" />
-                        </div>
-                        <span className="text-[11px] font-black truncate leading-tight tracking-tight">{event.title}</span>
-                      </div>
-                      <div className="flex items-center gap-1 text-[9px] font-bold opacity-80 tabular-nums">
-                        <Clock className="h-2.5 w-2.5" />
-                        <span>{format(start, 'HH:mm')}</span>
-                      </div>
-                    </div>
-                  );
-                })}
               </div>
-            ))}
+
+              {/* Days columns */}
+              {weekDays.map(day => (
+                <div key={day.toString()} className="flex-1 border-r border-border/40 last:border-r-0 relative">
+                  {hours.map(hour => {
+                    const slotId = `${format(day, 'yyyy-MM-dd')}|${format(hour, 'HH:mm')}`;
+                    return (
+                      <DroppableSlot 
+                        key={slotId}
+                        id={slotId}
+                        className="h-14 border-b border-border/40 cursor-pointer hover:bg-primary/[0.01] transition-colors" 
+                        onQuickCreate={() => {
+                          const clickDate = new Date(day);
+                          clickDate.setHours(hour.getHours(), 0, 0, 0);
+                          onQuickCreate?.(clickDate);
+                        }}
+                      />
+                    );
+                  })}
+
+                  {/* Events for this day */}
+                  {(eventsByDate[format(day, 'yyyy-MM-dd')] || []).map(event => {
+                    const start = parseISO(event.start_time);
+                    const end = parseISO(event.end_time);
+                    const top = (start.getHours() * 60 + start.getMinutes()) * (56 / 60);
+                    const duration = Math.max((end.getTime() - start.getTime()) / (1000 * 60), 15);
+                    const height = duration * (56 / 60);
+
+                    return (
+                      <ActivityCard
+                        key={event.id}
+                        event={event}
+                        onEditEvent={onEditEvent}
+                        style={{ top: `${top}px`, height: `${height}px`, minHeight: '32px' }}
+                      />
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-      </ScrollArea>
+        </ScrollArea>
+        <DragOverlay>
+          {activeEvent ? (
+            <ActivityCard 
+              event={activeEvent} 
+              className="w-[150px] relative left-0 right-0" 
+              style={{ position: 'relative', top: 0, height: '56px' }} 
+            />
+          ) : null}
+        </DragOverlay>
+      </DndContext>
     );
   };
 
