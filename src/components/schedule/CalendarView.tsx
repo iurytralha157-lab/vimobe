@@ -209,6 +209,11 @@ export function CalendarView({
       },
     })
   );
+  const [activeEvent, setActiveEvent] = useState<ScheduleEvent | null>(null);
+
+  const handleDragStart = (event: any) => {
+    setActiveEvent(event.active.data.current);
+  };
   const handleNavigate = (direction: 'prev' | 'next') => {
     switch (viewMode) {
       case 'day':
@@ -233,6 +238,7 @@ export function CalendarView({
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
+    setActiveEvent(null);
     const { active, over } = event;
     
     if (over && active.id !== over.id) {
@@ -390,7 +396,7 @@ export function CalendarView({
     const dayEvents = eventsByDate[format(pivotDate, 'yyyy-MM-dd')] || [];
 
     return (
-      <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+      <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
         <ScrollArea className="h-full border-0 bg-background/50">
           <div className="relative flex min-h-full">
             {/* Time axis */}
@@ -442,6 +448,15 @@ export function CalendarView({
             </div>
           </div>
         </ScrollArea>
+        <DragOverlay>
+          {activeEvent ? (
+            <ActivityCard 
+              event={activeEvent} 
+              className="w-[150px] relative left-0 right-0" 
+              style={{ position: 'relative', top: 0, height: '56px' }} 
+            />
+          ) : null}
+        </DragOverlay>
       </DndContext>
     );
   };
@@ -455,7 +470,7 @@ export function CalendarView({
     });
 
     return (
-      <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+      <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
         <ScrollArea className="h-full border-0 bg-background/50">
           <div className="relative flex flex-col min-w-[1000px] min-h-full">
             {/* Header */}
@@ -530,6 +545,15 @@ export function CalendarView({
             </div>
           </div>
         </ScrollArea>
+        <DragOverlay>
+          {activeEvent ? (
+            <ActivityCard 
+              event={activeEvent} 
+              className="w-[150px] relative left-0 right-0" 
+              style={{ position: 'relative', top: 0, height: '56px' }} 
+            />
+          ) : null}
+        </DragOverlay>
       </DndContext>
     );
   };
