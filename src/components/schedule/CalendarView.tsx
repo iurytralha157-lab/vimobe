@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { 
   format, 
   startOfMonth, 
@@ -22,7 +22,11 @@ import {
   isSameHour,
   startOfYear,
   endOfYear,
-  eachMonthOfInterval
+  eachMonthOfInterval,
+  differenceInMinutes,
+  addMinutes,
+  setHours,
+  setMinutes
 } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight, Phone, Mail, Calendar as CalendarIcon, CheckSquare, MessageSquare, MapPin, Clock, User } from 'lucide-react';
@@ -30,6 +34,16 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ScheduleEvent, EventType } from '@/hooks/use-schedule-events';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { 
+  DndContext, 
+  DragEndEvent, 
+  useDraggable, 
+  useDroppable,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragOverlay
+} from '@dnd-kit/core';
 
 const eventTypeIcons: Record<EventType, React.ElementType> = {
   call: Phone,
@@ -49,6 +63,122 @@ const eventTypeColors: Record<EventType, string> = {
   visit: 'bg-pink-600 border-pink-700/50 text-white shadow-sm',
 };
 
+interface ActivityCardProps {
+  event: ScheduleEvent;
+  onEditEvent?: (event: ScheduleEvent) => void;
+  isDragging?: boolean;
+  style?: React.CSSProperties;
+  className?: string;
+}
+
+function ActivityCard({ event, onEditEvent, isDragging, style, className }: ActivityCardProps) {
+  const { attributes, listeners, setNodeRef, transform } = useDraggable({
+    id: event.id,
+    data: event
+  });
+
+  const start = parseISO(event.start_time);
+  const end = parseISO(event.end_time);
+  const duration = differenceInMinutes(end, start);
+  const Icon = eventTypeIcons[event.event_type as EventType] || CalendarIcon;
+  
+  // Compact mode for short activities (less than 45 mins)
+  const isCompact = duration < 45;
+
+  const dragStyle = transform ? {
+    transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+    zIndex: 100,
+    opacity: 0.8,
+  } : undefined;
+
+  return (
+    <div 
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      onClick={(e) => {
+        e.stopPropagation();
+        onEditEvent?.(event);
+      }}
+      className={cn(
+        "absolute left-1 right-1 rounded-[4px] border-2 overflow-hidden shadow-sm transition-shadow hover:shadow-md z-10 cursor-grab active:cursor-grabbing group",
+        eventTypeColors[event.event_type as EventType],
+        isDragging && "opacity-50 grayscale",
+        className
+      )}
+      style={{ ...style, ...dragStyle }}
+    >
+      <div className={cn(
+        "flex h-full",
+        isCompact ? "flex-row items-center gap-2 px-2 py-1" : "flex-col p-2"
+      )}>
+        <div className={cn(
+          "flex items-center gap-2",
+          !isCompact && "mb-1.5"
+        )}>
+          <div className={cn(
+            "rounded bg-white/20 text-white shrink-0",
+            isCompact ? "p-0.5" : "p-1"
+          )}>
+            <Icon className={cn(isCompact ? "h-3 w-3" : "h-3.5 w-3.5")} />
+          </div>
+          <span className={cn(
+            "font-black truncate tracking-tight",
+            isCompact ? "text-[10px]" : "text-[11px] leading-tight"
+          )}>
+            {event.title}
+          </span>
+        </div>
+
+        <div className={cn(
+          "flex items-center gap-2 text-[9px] font-bold opacity-80 tabular-nums shrink-0",
+          isCompact ? "ml-auto" : "mt-auto"
+        )}>
+          <div className="flex items-center gap-1">
+            <Clock className="h-2.5 w-2.5" />
+            <span>{format(start, 'HH:mm')}{!isCompact && ` - ${format(end, 'HH:mm')}`}</span>
+          </div>
+          {!isCompact && event.lead && (
+            <div className="flex items-center gap-1 max-w-[80px]">
+              <User className="h-2.5 w-2.5" />
+              <span className="truncate">{event.lead.name}</span>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DroppableSlot({ 
+  id, 
+  onQuickCreate, 
+  className, 
+  children 
+}: { 
+  id: string; 
+  onQuickCreate?: () => void;
+  className?: string;
+  children?: React.ReactNode;
+}) {
+  const { isOver, setNodeRef } = useDroppable({
+    id: id,
+  });
+
+  return (
+    <div 
+      ref={setNodeRef}
+      className={cn(
+        className,
+        isOver && "bg-primary/[0.05] ring-2 ring-primary/20 ring-inset z-0"
+      )}
+      onClick={onQuickCreate}
+    >
+      {children}
+    </div>
+  );
+}
+
 interface CalendarViewProps {
   events: ScheduleEvent[];
   selectedDate: Date;
@@ -57,6 +187,7 @@ interface CalendarViewProps {
   onPivotChange: (date: Date) => void;
   viewMode: 'day' | 'week' | 'month' | 'year';
   onEditEvent?: (event: ScheduleEvent) => void;
+  onEventUpdate?: (id: string, updates: Partial<ScheduleEvent>) => void;
   onQuickCreate?: (date: Date) => void;
 }
 
@@ -68,8 +199,16 @@ export function CalendarView({
   onPivotChange,
   viewMode,
   onEditEvent,
+  onEventUpdate,
   onQuickCreate
 }: CalendarViewProps) {
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    })
+  );
   const handleNavigate = (direction: 'prev' | 'next') => {
     switch (viewMode) {
       case 'day':
@@ -91,6 +230,27 @@ export function CalendarView({
     const today = new Date();
     onPivotChange(today);
     onDateSelect(today);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    
+    if (over && active.id !== over.id) {
+      const scheduleEvent = active.data.current as ScheduleEvent;
+      const [dateStr, hourStr] = (over.id as string).split('|');
+      
+      const newStart = parseISO(`${dateStr}T${hourStr}:00`);
+      const originalStart = parseISO(scheduleEvent.start_time);
+      const originalEnd = parseISO(scheduleEvent.end_time);
+      const duration = differenceInMinutes(originalEnd, originalStart);
+      
+      const newEnd = addMinutes(newStart, duration);
+      
+      onEventUpdate?.(scheduleEvent.id, {
+        start_time: newStart.toISOString(),
+        end_time: newEnd.toISOString()
+      });
+    }
   };
 
   const eventsByDate = useMemo(() => {
