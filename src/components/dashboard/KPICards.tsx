@@ -6,6 +6,7 @@ import {
   DollarSign,
   TrendingUp,
   TrendingDown,
+  CalendarCheck,
   LucideIcon
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
