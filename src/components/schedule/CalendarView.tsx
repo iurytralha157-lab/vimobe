@@ -41,12 +41,12 @@ const eventTypeIcons: Record<EventType, React.ElementType> = {
 };
 
 const eventTypeColors: Record<EventType, string> = {
-  call: 'bg-blue-600 border-blue-700 text-white shadow-blue-500/20',
-  email: 'bg-orange-500 border-orange-600 text-white shadow-orange-500/20',
-  meeting: 'bg-purple-600 border-purple-700 text-white shadow-purple-500/20',
-  task: 'bg-amber-500 border-amber-600 text-white shadow-amber-500/20',
-  message: 'bg-emerald-600 border-emerald-700 text-white shadow-emerald-500/20',
-  visit: 'bg-pink-600 border-pink-700 text-white shadow-pink-500/20',
+  call: 'bg-blue-600 border-blue-700/50 text-white shadow-sm',
+  email: 'bg-orange-500 border-orange-600/50 text-white shadow-sm',
+  meeting: 'bg-purple-600 border-purple-700/50 text-white shadow-sm',
+  task: 'bg-amber-500 border-amber-600/50 text-white shadow-sm',
+  message: 'bg-emerald-600 border-emerald-700/50 text-white shadow-sm',
+  visit: 'bg-pink-600 border-pink-700/50 text-white shadow-sm',
 };
 
 interface CalendarViewProps {
@@ -233,10 +233,10 @@ export function CalendarView({
       <ScrollArea className="h-full border-0 bg-background/50">
         <div className="relative flex min-h-full">
           {/* Time axis */}
-          <div className="w-20 border-r border-border/40 flex-shrink-0 bg-card/50">
+          <div className="w-16 border-r border-border/40 flex-shrink-0 bg-card/50">
             {hours.map(hour => (
-              <div key={hour.toString()} className="h-20 border-b border-border/40 flex justify-center pt-3">
-                <span className="text-[11px] text-muted-foreground/60 font-black uppercase tracking-tighter tabular-nums">
+              <div key={hour.toString()} className="h-14 border-b border-border/40 flex items-center justify-center">
+                <span className="text-[10px] text-muted-foreground/60 font-black uppercase tracking-tighter tabular-nums">
                   {format(hour, 'HH:mm')}
                 </span>
               </div>
@@ -248,7 +248,7 @@ export function CalendarView({
             {hours.map(hour => (
               <div 
                 key={hour.toString()} 
-                className="h-20 border-b border-border/40 w-full cursor-pointer hover:bg-primary/[0.02] transition-colors" 
+                className="h-14 border-b border-border/40 w-full cursor-pointer hover:bg-primary/[0.02] transition-colors" 
                 onClick={() => {
                   const clickDate = new Date(pivotDate);
                   clickDate.setHours(hour.getHours(), 0, 0, 0);
@@ -261,9 +261,9 @@ export function CalendarView({
             {dayEvents.map(event => {
               const start = parseISO(event.start_time);
               const end = parseISO(event.end_time);
-              const top = (start.getHours() * 60 + start.getMinutes()) * (80 / 60);
-              const duration = Math.max((end.getTime() - start.getTime()) / (1000 * 60), 30);
-              const height = duration * (80 / 60);
+              const top = (start.getHours() * 60 + start.getMinutes()) * (56 / 60);
+              const duration = Math.max((end.getTime() - start.getTime()) / (1000 * 60), 15);
+              const height = duration * (56 / 60);
               const Icon = eventTypeIcons[event.event_type as EventType] || CalendarIcon;
 
               return (
@@ -274,10 +274,10 @@ export function CalendarView({
                     onEditEvent?.(event);
                   }}
                   className={cn(
-                    "absolute left-3 right-3 rounded-[1.25rem] border-2 p-4 overflow-hidden shadow-xl shadow-black/5 transition-all hover:scale-[1.01] hover:z-20 z-10 group cursor-pointer",
+                    "absolute left-2 right-2 rounded-lg border-2 p-3 overflow-hidden shadow-sm transition-all hover:scale-[1.01] hover:z-20 z-10 group cursor-pointer",
                     eventTypeColors[event.event_type as EventType]
                   )}
-                  style={{ top: `${top}px`, height: `${height}px`, minHeight: '60px' }}
+                  style={{ top: `${top}px`, height: `${height}px`, minHeight: '40px' }}
                 >
                   <div className="flex items-center gap-3 mb-2">
                     <div className="p-1.5 rounded-lg bg-white/20 shadow-sm text-white">
@@ -319,7 +319,7 @@ export function CalendarView({
         <div className="relative flex flex-col min-w-[1000px] min-h-full">
           {/* Header */}
           <div className="flex border-b border-border/40 sticky top-0 bg-card z-20 shadow-sm">
-            <div className="w-20 border-r border-border/40 flex-shrink-0 bg-card/50" />
+            <div className="w-16 border-r border-border/40 flex-shrink-0 bg-card/50" />
             {weekDays.map(day => (
               <div key={day.toString()} className="flex-1 border-r border-border/40 last:border-r-0 py-2.5 text-center">
                 <span className="block text-[10px] text-muted-foreground/60 font-black uppercase tracking-[0.2em] mb-1">
@@ -338,10 +338,10 @@ export function CalendarView({
           {/* Grid */}
           <div className="flex relative flex-1">
             {/* Time axis */}
-            <div className="w-20 border-r border-border/40 flex-shrink-0 bg-card/50">
+            <div className="w-16 border-r border-border/40 flex-shrink-0 bg-card/50">
               {hours.map(hour => (
-                <div key={hour.toString()} className="h-20 border-b border-border/40 flex justify-center pt-3">
-                  <span className="text-[11px] text-muted-foreground/60 font-black uppercase tracking-tighter tabular-nums">
+                <div key={hour.toString()} className="h-14 border-b border-border/40 flex items-center justify-center">
+                  <span className="text-[10px] text-muted-foreground/60 font-black uppercase tracking-tighter tabular-nums">
                     {format(hour, 'HH:mm')}
                   </span>
                 </div>
@@ -354,7 +354,7 @@ export function CalendarView({
                 {hours.map(hour => (
                   <div 
                     key={hour.toString()} 
-                    className="h-20 border-b border-border/40 cursor-pointer hover:bg-primary/[0.01] transition-colors" 
+                    className="h-14 border-b border-border/40 cursor-pointer hover:bg-primary/[0.01] transition-colors" 
                     onClick={() => {
                       const clickDate = new Date(day);
                       clickDate.setHours(hour.getHours(), 0, 0, 0);
@@ -367,9 +367,9 @@ export function CalendarView({
                 {(eventsByDate[format(day, 'yyyy-MM-dd')] || []).map(event => {
                   const start = parseISO(event.start_time);
                   const end = parseISO(event.end_time);
-                  const top = (start.getHours() * 60 + start.getMinutes()) * (80 / 60);
-                  const duration = Math.max((end.getTime() - start.getTime()) / (1000 * 60), 30);
-                  const height = duration * (80 / 60);
+                  const top = (start.getHours() * 60 + start.getMinutes()) * (56 / 60);
+                  const duration = Math.max((end.getTime() - start.getTime()) / (1000 * 60), 15);
+                  const height = duration * (56 / 60);
                   const Icon = eventTypeIcons[event.event_type as EventType] || CalendarIcon;
 
                   return (
@@ -380,10 +380,10 @@ export function CalendarView({
                         onEditEvent?.(event);
                       }}
                       className={cn(
-                        "absolute left-1.5 right-1.5 rounded-[1rem] border-2 p-2.5 overflow-hidden shadow-lg shadow-black/5 transition-all hover:scale-[1.03] hover:z-20 z-10 cursor-pointer",
+                        "absolute left-1 right-1 rounded-md border-2 p-1.5 overflow-hidden shadow-sm transition-all hover:scale-[1.03] hover:z-20 z-10 cursor-pointer",
                         eventTypeColors[event.event_type as EventType]
                       )}
-                      style={{ top: `${top}px`, height: `${height}px`, minHeight: '45px' }}
+                      style={{ top: `${top}px`, height: `${height}px`, minHeight: '32px' }}
                     >
                       <div className="flex items-center gap-2 mb-1">
                         <div className="p-1 rounded-lg bg-white/20 text-white">
