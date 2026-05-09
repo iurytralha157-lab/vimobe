@@ -168,7 +168,7 @@ export default function Agenda() {
                     <List className="h-5 w-5 text-primary" />
                     Próximas atividades
                   </h3>
-                  <EventsList events={upcomingEvents} onEditEvent={handleEditEvent} showUser={canFilterUsers} />
+                  <EventsList events={upcomingEvents} onEditEvent={handleEditEvent} showUser={true} />
                 </div>
               </div>
             )}
@@ -193,19 +193,17 @@ export default function Agenda() {
 
               {/* 2. Filters & View */}
               <div className="space-y-5">
-                {canFilterUsers && (
-                  <div className="space-y-2.5">
-                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2 ml-1">
-                      <div className="h-1 w-1 rounded-full bg-primary" />
-                      Filtro por Equipe
-                    </label>
-                    <UserFilter 
-                      users={users} 
-                      selectedUserId={selectedUserId} 
-                      onUserSelect={setSelectedUserId} 
-                    />
-                  </div>
-                )}
+                <div className="space-y-2.5">
+                  <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2 ml-1">
+                    <div className="h-1 w-1 rounded-full bg-primary" />
+                    Filtro por Equipe
+                  </label>
+                  <UserFilter 
+                    users={users} 
+                    selectedUserId={selectedUserId} 
+                    onUserSelect={setSelectedUserId} 
+                  />
+                </div>
 
                 <div className="space-y-2.5">
                   <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2 ml-1">
