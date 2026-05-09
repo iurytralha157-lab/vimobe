@@ -2,6 +2,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 export type EventType = 'call' | 'email' | 'meeting' | 'task' | 'message' | 'visit';
 
@@ -33,6 +35,68 @@ export interface ScheduleEvent {
     name: string;
     phone: string | null;
   } | null;
+}
+
+async function logScheduleEventToTimeline(params: {
+  lead_id: string;
+  organization_id: string;
+  actor_id: string;
+  action_type: 'created' | 'rescheduled' | 'completed' | 'cancelled';
+  event_title: string;
+  event_type: string;
+  start_time: string;
+  assigned_user_id: string;
+}) {
+  try {
+    // Fetch names for description
+    const [
+      { data: actor },
+      { data: assignedUser },
+      { data: lead }
+    ] = await Promise.all([
+      supabase.from('users').select('name').eq('id', params.actor_id).single(),
+      supabase.from('users').select('name').eq('id', params.assigned_user_id).single(),
+      supabase.from('leads').select('name').eq('id', params.lead_id).single()
+    ]);
+
+    const formattedDate = format(new Date(params.start_time), "dd/MM 'às' HH:mm", { locale: ptBR });
+    const eventLabel = params.event_type === 'call' ? 'uma ligação' :
+                      params.event_type === 'meeting' ? 'uma reunião' :
+                      params.event_type === 'visit' ? 'uma visita' :
+                      params.event_type === 'task' ? 'uma tarefa' :
+                      params.event_type === 'message' ? 'uma mensagem' :
+                      params.event_type === 'email' ? 'um e-mail' : 'uma atividade';
+
+    let description = '';
+    let title = '';
+
+    if (params.action_type === 'created') {
+      title = 'Atividade Agendada';
+      description = `${actor?.name || 'Usuário'} agendou ${eventLabel} para ${assignedUser?.name || 'ele mesmo'} com o lead ${lead?.name || 'Lead'} para o dia ${formattedDate}.`;
+    } else if (params.action_type === 'rescheduled') {
+      title = 'Atividade Remarcada';
+      description = `${actor?.name || 'Usuário'} remarcou ${eventLabel} com o lead ${lead?.name || 'Lead'} para o dia ${formattedDate}.`;
+    } else if (params.action_type === 'completed') {
+      title = 'Atividade Concluída';
+      description = `${actor?.name || 'Usuário'} concluiu a atividade "${params.event_title}" com o lead ${lead?.name || 'Lead'}.`;
+    }
+
+    await supabase.from('lead_timeline_events').insert({
+      organization_id: params.organization_id,
+      lead_id: params.lead_id,
+      user_id: params.actor_id,
+      event_type: `agenda_${params.action_type}`,
+      title,
+      description,
+      metadata: {
+        event_type: params.event_type,
+        start_time: params.start_time,
+        assigned_to: params.assigned_user_id
+      }
+    });
+  } catch (error) {
+    console.error('Error logging schedule event to timeline:', error);
+  }
 }
 
 interface UseScheduleEventsOptions {
