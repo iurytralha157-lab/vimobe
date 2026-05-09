@@ -168,7 +168,7 @@ export default function Agenda() {
                     <List className="h-5 w-5 text-primary" />
                     Próximas atividades
                   </h3>
-                  <EventsList events={upcomingEvents} onEditEvent={handleEditEvent} showUser={canFilterUsers} />
+                  <EventsList events={upcomingEvents} onEditEvent={handleEditEvent} showUser={true} />
                 </div>
               </div>
             )}
