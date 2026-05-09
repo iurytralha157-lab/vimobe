@@ -169,166 +169,175 @@ export default function Agenda() {
           </div>
         </div>
 
-        {/* Sidebar - Right */}
-        <div className="w-[340px] flex-shrink-0 flex flex-col bg-muted/5 overflow-hidden">
+        <div className="w-[320px] flex-shrink-0 flex flex-col bg-muted/20 border-l overflow-hidden backdrop-blur-sm">
           <ScrollArea className="flex-1">
-            <div className="p-6 space-y-8">
-              {/* 1. User Filter (Selector) */}
-              {canFilterUsers && (
-                <div className="space-y-3">
-                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest ml-1">
-                    Equipe
-                  </label>
-                  <UserFilter 
-                    users={users} 
-                    selectedUserId={selectedUserId} 
-                    onUserSelect={setSelectedUserId} 
-                  />
-                </div>
-              )}
-
-              {/* 2. View Selector (dia, semana, mês, etc) */}
-              <div className="space-y-3">
-                <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest ml-1">
-                  Visualização
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  {[
-                    { value: 'day', label: 'Dia', icon: Clock },
-                    { value: 'week', label: 'Semana', icon: LayoutGrid },
-                    { value: 'month', label: 'Mês', icon: CalendarIcon },
-                    { value: 'list', label: 'Lista', icon: List }
-                  ].map((mode) => (
-                    <Button
-                      key={mode.value}
-                      variant={viewMode === mode.value ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setViewMode(mode.value as any)}
-                      className={cn(
-                        "rounded-2xl h-10 font-bold transition-all gap-2",
-                        viewMode === mode.value ? "shadow-md shadow-primary/20" : "bg-card hover:bg-accent border-border/40"
-                      )}
-                    >
-                      <mode.icon className="h-3.5 w-3.5" />
-                      {mode.label}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-
-              {/* 3. Button: Novo Agendamento */}
+            <div className="p-5 space-y-6">
+              {/* 1. Primary Action */}
               <Button 
                 variant="default" 
                 size="lg"
                 onClick={() => setEventFormOpen(true)}
-                className="w-full rounded-2xl h-14 shadow-xl shadow-primary/10 gap-3 font-black text-base uppercase tracking-tight"
+                className="w-full rounded-2xl h-12 shadow-lg shadow-primary/20 gap-2 font-bold text-sm uppercase tracking-wider group"
               >
-                <Plus className="h-6 w-6" />
+                <Plus className="h-5 w-5 group-hover:rotate-90 transition-transform duration-300" />
                 Novo agendamento
               </Button>
 
               <Separator className="bg-border/40" />
 
-              {/* 4. Weekly Summary (Resumo da Semana) */}
-              <div className="space-y-4">
-                <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest ml-1">
-                  Resumo da Semana
-                </label>
-                
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-card border border-border/40 p-4 rounded-3xl shadow-sm">
-                    <div className="text-3xl font-black text-amber-500 mb-1">{weekStats.pending}</div>
-                    <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-tighter">Pendentes</div>
+              {/* 2. Filters & View */}
+              <div className="space-y-5">
+                {canFilterUsers && (
+                  <div className="space-y-2.5">
+                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2 ml-1">
+                      <div className="h-1 w-1 rounded-full bg-primary" />
+                      Filtro por Equipe
+                    </label>
+                    <UserFilter 
+                      users={users} 
+                      selectedUserId={selectedUserId} 
+                      onUserSelect={setSelectedUserId} 
+                    />
                   </div>
-                  <div className="bg-card border border-border/40 p-4 rounded-3xl shadow-sm">
-                    <div className="text-3xl font-black text-emerald-500 mb-1">{weekStats.completed}</div>
-                    <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-tighter">Concluídos</div>
-                  </div>
-                </div>
+                )}
 
-                <div className="bg-card border border-border/40 p-4 rounded-3xl shadow-sm space-y-3">
-                  <div className="flex items-center justify-between text-xs font-bold text-muted-foreground">
-                    <span className="flex items-center gap-2">
-                      <div className="h-2 w-2 rounded-full bg-purple-500" />
-                      Reuniões
-                    </span>
-                    <span className="text-foreground">{weekStats.meetings}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-xs font-bold text-muted-foreground">
-                    <span className="flex items-center gap-2">
-                      <div className="h-2 w-2 rounded-full bg-pink-500" />
-                      Visitas
-                    </span>
-                    <span className="text-foreground">{weekStats.visits}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-xs font-bold text-muted-foreground">
-                    <span className="flex items-center gap-2">
-                      <div className="h-2 w-2 rounded-full bg-blue-500" />
-                      Tarefas
-                    </span>
-                    <span className="text-foreground">{weekStats.tasks}</span>
+                <div className="space-y-2.5">
+                  <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2 ml-1">
+                    <div className="h-1 w-1 rounded-full bg-primary" />
+                    Visualização
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { value: 'day', label: 'Dia', icon: Clock },
+                      { value: 'week', label: 'Semana', icon: LayoutGrid },
+                      { value: 'month', label: 'Mês', icon: CalendarIcon },
+                      { value: 'list', label: 'Lista', icon: List }
+                    ].map((mode) => (
+                      <Button
+                        key={mode.value}
+                        variant={viewMode === mode.value ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setViewMode(mode.value as any)}
+                        className={cn(
+                          "rounded-xl h-9 text-xs font-semibold transition-all gap-2",
+                          viewMode === mode.value 
+                            ? "shadow-sm shadow-primary/20" 
+                            : "bg-card border-border/40 hover:bg-accent"
+                        )}
+                      >
+                        <mode.icon className={cn("h-3.5 w-3.5", viewMode === mode.value ? "text-primary-foreground" : "text-primary")} />
+                        {mode.label}
+                      </Button>
+                    ))}
                   </div>
                 </div>
               </div>
 
-              {/* 5. Daily Activities (Atividades do Dia Selecionado) */}
+              <Separator className="bg-border/40" />
+
+              {/* 3. Weekly Summary */}
               <div className="space-y-4">
+                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2 ml-1">
+                  <div className="h-1 w-1 rounded-full bg-primary" />
+                  Resumo da Semana
+                </label>
+                
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div className="bg-card/50 border border-border/40 p-3.5 rounded-2xl shadow-sm hover:shadow-md transition-shadow group">
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="text-2xl font-black text-amber-500">{weekStats.pending}</div>
+                      <div className="h-6 w-6 rounded-lg bg-amber-500/10 flex items-center justify-center">
+                        <Clock className="h-3.5 w-3.5 text-amber-500" />
+                      </div>
+                    </div>
+                    <div className="text-[9px] font-bold text-muted-foreground uppercase tracking-tight">Pendentes</div>
+                  </div>
+                  <div className="bg-card/50 border border-border/40 p-3.5 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="text-2xl font-black text-emerald-500">{weekStats.completed}</div>
+                      <div className="h-6 w-6 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                      </div>
+                    </div>
+                    <div className="text-[9px] font-bold text-muted-foreground uppercase tracking-tight">Concluídos</div>
+                  </div>
+                </div>
+
+                <div className="bg-card/50 border border-border/40 p-3 rounded-2xl shadow-sm space-y-2.5">
+                  {[
+                    { label: 'Reuniões', value: weekStats.meetings, color: 'bg-purple-500' },
+                    { label: 'Visitas', value: weekStats.visits, color: 'bg-pink-500' },
+                    { label: 'Tarefas', value: weekStats.tasks, color: 'bg-blue-500' }
+                  ].map((stat) => (
+                    <div key={stat.label} className="flex items-center justify-between text-[11px] font-bold">
+                      <span className="flex items-center gap-2 text-muted-foreground">
+                        <div className={cn("h-1.5 w-1.5 rounded-full", stat.color)} />
+                        {stat.label}
+                      </span>
+                      <span className="text-foreground/80">{stat.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* 4. Selected Day Activities */}
+              <div className="space-y-4 pb-4">
                 <div className="flex items-center justify-between ml-1">
-                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
-                    {startOfDay(selectedDate).getTime() === startOfDay(new Date()).getTime() ? 'Atividades de Hoje' : 'Atividades do Dia'}
+                  <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+                    <div className="h-1 w-1 rounded-full bg-primary" />
+                    {startOfDay(selectedDate).getTime() === startOfDay(new Date()).getTime() ? 'Hoje' : format(selectedDate, 'dd/MM')}
                   </label>
-                  <span className="text-[10px] font-black text-primary bg-primary/10 px-3 py-1 rounded-full uppercase">
+                  <span className="text-[9px] font-black text-primary bg-primary/10 px-2.5 py-0.5 rounded-full uppercase tracking-tighter">
                     {selectedDayEvents.length} atividades
                   </span>
                 </div>
                 
-                <div className="space-y-3">
+                <div className="space-y-2.5">
                   {selectedDayEvents.length > 0 ? (
                     selectedDayEvents.map(event => (
                       <div 
                         key={event.id} 
-                        className="group bg-card border border-border/40 p-4 rounded-3xl hover:border-primary/50 hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer relative overflow-hidden"
+                        className="group bg-card/80 border border-border/40 p-3.5 rounded-2xl hover:border-primary/40 hover:bg-card hover:shadow-lg hover:-translate-y-0.5 transition-all cursor-pointer relative overflow-hidden"
                         onClick={() => handleEditEvent(event)}
                       >
-                        <div className="absolute top-0 left-0 w-1.5 h-full bg-primary/10 group-hover:bg-primary transition-colors" />
-                        <div className="flex items-start gap-4">
-                          <div className="flex flex-col items-center">
-                            <span className="text-xs font-black text-foreground leading-none">
+                        <div className="absolute top-0 left-0 w-1 h-full bg-primary/10 group-hover:bg-primary transition-colors" />
+                        <div className="flex items-start gap-3">
+                          <div className="flex flex-col items-center pt-0.5">
+                            <span className="text-[10px] font-black text-foreground/80 leading-none">
                               {format(new Date(event.start_time), 'HH:mm')}
                             </span>
-                            <Clock className="h-4 w-4 text-muted-foreground mt-2 opacity-50" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <h4 className="text-sm font-black truncate leading-tight mb-1.5 group-hover:text-primary transition-colors">
+                            <h4 className="text-xs font-black truncate leading-tight mb-1 group-hover:text-primary transition-colors">
                               {event.title}
                             </h4>
-                            <div className="flex flex-col gap-1">
+                            <div className="flex flex-col gap-0.5">
                               {event.lead && (
-                                <p className="text-[11px] text-muted-foreground font-bold flex items-center gap-2">
-                                  <span className="h-2 w-2 rounded-full bg-primary/30" />
-                                  Lead: {event.lead.name}
+                                <p className="text-[10px] text-muted-foreground font-semibold flex items-center gap-1.5">
+                                  <span className="h-1 w-1 rounded-full bg-primary/40" />
+                                  {event.lead.name}
                                 </p>
                               )}
                               {event.user && (
-                                <p className="text-[11px] text-muted-foreground font-bold flex items-center gap-2">
-                                  <span className="h-2 w-2 rounded-full bg-emerald-500/30" />
-                                  Responsável: {event.user.name}
+                                <p className="text-[10px] text-muted-foreground font-semibold flex items-center gap-1.5">
+                                  <span className="h-1 w-1 rounded-full bg-emerald-500/40" />
+                                  {event.user.name}
                                 </p>
                               )}
                             </div>
                           </div>
                           {event.status === 'completed' && (
-                            <div className="h-6 w-6 rounded-full bg-emerald-500/10 flex items-center justify-center">
-                              <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                            <div className="h-5 w-5 rounded-full bg-emerald-500/10 flex items-center justify-center shrink-0 mt-0.5">
+                              <CheckCircle2 className="h-3 w-3 text-emerald-500" />
                             </div>
                           )}
                         </div>
                       </div>
                     ))
                   ) : (
-                    <div className="bg-card border border-dashed border-border/60 p-10 rounded-[2.5rem] text-center">
-                      <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest">
-                        Sem atividades
+                    <div className="bg-card/30 border border-dashed border-border/60 p-8 rounded-2xl text-center">
+                      <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest opacity-60">
+                        Nenhuma atividade
                       </p>
                     </div>
                   )}
