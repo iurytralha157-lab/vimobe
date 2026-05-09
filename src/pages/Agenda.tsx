@@ -193,19 +193,17 @@ export default function Agenda() {
 
               {/* 2. Filters & View */}
               <div className="space-y-5">
-                {canFilterUsers && (
-                  <div className="space-y-2.5">
-                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2 ml-1">
-                      <div className="h-1 w-1 rounded-full bg-primary" />
-                      Filtro por Equipe
-                    </label>
-                    <UserFilter 
-                      users={users} 
-                      selectedUserId={selectedUserId} 
-                      onUserSelect={setSelectedUserId} 
-                    />
-                  </div>
-                )}
+                <div className="space-y-2.5">
+                  <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2 ml-1">
+                    <div className="h-1 w-1 rounded-full bg-primary" />
+                    Filtro por Equipe
+                  </label>
+                  <UserFilter 
+                    users={users} 
+                    selectedUserId={selectedUserId} 
+                    onUserSelect={setSelectedUserId} 
+                  />
+                </div>
 
                 <div className="space-y-2.5">
                   <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2 ml-1">
