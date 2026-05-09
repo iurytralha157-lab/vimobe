@@ -67,7 +67,8 @@ export function MemberAvailabilityDialog({
       }
       
       setSchedules(initialSchedules);
-      setGlobalAllDay(initialSchedules.every(s => s.is_all_day || !s.is_active));
+      const activeSchedules = initialSchedules.filter(s => s.is_active);
+      setGlobalAllDay(activeSchedules.length > 0 && activeSchedules.every(s => s.is_all_day));
     }
   }, [existingAvailability, open]);
 
