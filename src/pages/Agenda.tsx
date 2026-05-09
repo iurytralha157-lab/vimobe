@@ -175,7 +175,7 @@ export default function Agenda() {
           </div>
         </div>
 
-        <div className="w-[320px] flex-shrink-0 flex flex-col bg-muted/20 border-l overflow-hidden backdrop-blur-sm">
+        <div className="w-[320px] flex-shrink-0 flex flex-col bg-muted/20 border-l border-border/40 overflow-hidden backdrop-blur-sm">
           <ScrollArea className="flex-1">
             <div className="p-5 space-y-6">
               {/* 1. Primary Action */}
