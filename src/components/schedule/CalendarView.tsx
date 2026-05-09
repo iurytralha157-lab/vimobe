@@ -156,7 +156,7 @@ export function CalendarView({
       <div className="flex flex-col h-full overflow-hidden bg-background">
         <div className="grid grid-cols-7 border-b bg-card">
           {weekDays.map(day => (
-            <div key={day} className="text-center text-[10px] font-black text-muted-foreground/60 py-4 uppercase tracking-[0.2em]">
+            <div key={day} className="text-center text-[10px] font-black text-muted-foreground/60 py-2.5 uppercase tracking-[0.2em]">
               {day}
             </div>
           ))}
@@ -321,13 +321,13 @@ export function CalendarView({
           <div className="flex border-b border-border/40 sticky top-0 bg-card z-20 shadow-sm">
             <div className="w-20 border-r border-border/40 flex-shrink-0 bg-card/50" />
             {weekDays.map(day => (
-              <div key={day.toString()} className="flex-1 border-r border-border/40 last:border-r-0 py-4 text-center">
-                <span className="block text-[10px] text-muted-foreground/60 font-black uppercase tracking-[0.2em] mb-2">
+              <div key={day.toString()} className="flex-1 border-r border-border/40 last:border-r-0 py-2.5 text-center">
+                <span className="block text-[10px] text-muted-foreground/60 font-black uppercase tracking-[0.2em] mb-1">
                   {format(day, 'EEE', { locale: ptBR })}
                 </span>
                 <span className={cn(
-                  "text-lg font-black h-10 w-10 inline-flex items-center justify-center rounded-2xl transition-all",
-                  isToday(day) ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20 scale-110" : "text-foreground"
+                  "text-base font-black h-8 w-8 inline-flex items-center justify-center rounded-xl transition-all",
+                  isToday(day) ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20 scale-105" : "text-foreground"
                 )}>
                   {format(day, 'd')}
                 </span>
