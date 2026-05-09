@@ -18,6 +18,7 @@ import {
 } from '@/hooks/use-dashboard-stats';
 
 import { useAuth } from '@/contexts/AuthContext';
+import { useLeadVisibility, applyVisibilityFilter } from '@/hooks/use-lead-visibility';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -28,7 +29,7 @@ export default function Dashboard() {
   const isMobile = useIsMobile();
   const [mobileChartTab, setMobileChartTab] = useState('funnel');
   const { organization, user } = useAuth();
-  
+  const { data: visibility } = useLeadVisibility(user?.id);
 
   // Property count query
   const { data: propertyCount = 0 } = useQuery({
@@ -90,6 +91,29 @@ export default function Dashboard() {
       return uniqueSessions.size;
     },
     enabled: !!organization?.id,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+
+  // Scheduled visits count
+  const { data: scheduledVisitsCount = 0 } = useQuery({
+    queryKey: ['dashboard-scheduled-visits', organization?.id, filters.dateRange.from.toISOString(), filters.dateRange.to.toISOString(), filters.userId, visibility],
+    queryFn: async () => {
+      if (!organization?.id || !visibility) return 0;
+      let query = supabase
+        .from('schedule_events')
+        .select('*', { count: 'exact', head: true })
+        .eq('organization_id', organization.id)
+        .eq('event_type', 'visit')
+        .gte('start_time', filters.dateRange.from.toISOString())
+        .lte('start_time', filters.dateRange.to.toISOString());
+      
+      query = applyVisibilityFilter(query, visibility, 'user_id', filters.userId);
+      
+      const { count, error } = await query;
+      if (error) throw error;
+      return count || 0;
+    },
+    enabled: !!organization?.id && !!visibility,
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
@@ -190,6 +214,7 @@ export default function Dashboard() {
             data={kpiData} 
             isLoading={statsLoading} 
             periodLabel={periodLabel}
+            scheduledVisits={scheduledVisitsCount}
           />
 
           {/* Charts Tabs */}
@@ -222,6 +247,7 @@ import {
   Eye,
   TrendingUp,
   TrendingDown,
+  CalendarCheck,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -255,10 +281,11 @@ interface KPICardsGridProps {
   periodLabel: string;
   propertyCount?: number;
   siteVisits?: number;
+  scheduledVisits?: number;
   layout?: 'top' | 'side';
 }
 
-function KPICardsGrid({ data, isLoading, periodLabel, propertyCount, siteVisits, layout = 'top' }: KPICardsGridProps) {
+function KPICardsGrid({ data, isLoading, periodLabel, propertyCount, siteVisits, scheduledVisits, layout = 'top' }: KPICardsGridProps) {
   if (isLoading) {
     const isSide = layout === 'side';
     return (
@@ -307,6 +334,7 @@ function KPICardsGrid({ data, isLoading, periodLabel, propertyCount, siteVisits,
     { title: 'VGV', value: data.totalSalesValue, icon: DollarSign, tooltip: `Valor em vendas - ${periodLabel}`, format: 'currency', color: 'chart-5' },
     { title: 'Imóveis', value: propertyCount ?? 0, icon: Building2, tooltip: 'Total de imóveis cadastrados', format: 'number', color: 'chart-1' },
     { title: 'Visitas no site', value: siteVisits ?? 0, icon: Eye, tooltip: `Visitas ao site no período - ${periodLabel}`, format: 'number', color: 'chart-2' },
+    { title: 'Visitas Agendadas', value: scheduledVisits ?? 0, icon: CalendarCheck, tooltip: `Visitas agendadas no período - ${periodLabel}`, format: 'number', color: 'chart-4' },
   ];
 
   const renderKPI = (kpi: any) => {
@@ -362,10 +390,10 @@ function KPICardsGrid({ data, isLoading, periodLabel, propertyCount, siteVisits,
   return (
     <div className="space-y-3">
       <div className={cn("grid gap-3", isSide ? "grid-cols-2" : "grid-cols-4")}>
-        {allKpis.slice(0, isSide ? 6 : 4).map(renderKPI)}
+        {allKpis.slice(0, 4).map(renderKPI)}
       </div>
-      <div className={cn("grid gap-3", isSide ? "grid-cols-1" : "grid-cols-3")}>
-        {allKpis.slice(isSide ? 6 : 4).map(renderKPI)}
+      <div className={cn("grid gap-3", isSide ? "grid-cols-1" : "grid-cols-4")}>
+        {allKpis.slice(4).map(renderKPI)}
       </div>
     </div>
   );
