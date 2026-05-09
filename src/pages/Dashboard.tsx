@@ -390,10 +390,10 @@ function KPICardsGrid({ data, isLoading, periodLabel, propertyCount, siteVisits,
   return (
     <div className="space-y-3">
       <div className={cn("grid gap-3", isSide ? "grid-cols-2" : "grid-cols-4")}>
-        {allKpis.slice(0, isSide ? 6 : 4).map(renderKPI)}
+        {allKpis.slice(0, 4).map(renderKPI)}
       </div>
-      <div className={cn("grid gap-3", isSide ? "grid-cols-1" : "grid-cols-3")}>
-        {allKpis.slice(isSide ? 6 : 4).map(renderKPI)}
+      <div className={cn("grid gap-3", isSide ? "grid-cols-1" : "grid-cols-4")}>
+        {allKpis.slice(4).map(renderKPI)}
       </div>
     </div>
   );
