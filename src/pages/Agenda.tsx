@@ -142,9 +142,9 @@ export default function Agenda() {
 
   return (
     <AppLayout title="Agenda" disableMainScroll={true}>
-      <div className="flex h-full overflow-hidden bg-background -m-4 md:-m-6">
+      <div className="flex h-full overflow-hidden bg-card rounded-2xl border shadow-sm">
         {/* Main Content Area - Left */}
-        <div className="flex-1 flex flex-col min-w-0 overflow-hidden border-r">
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden border-r border-border/40">
           <div className="flex-1 overflow-hidden">
             {viewMode !== 'list' ? (
               <CalendarView 
@@ -175,7 +175,7 @@ export default function Agenda() {
           </div>
         </div>
 
-        <div className="w-[320px] flex-shrink-0 flex flex-col bg-muted/20 border-l overflow-hidden backdrop-blur-sm">
+        <div className="w-[320px] flex-shrink-0 flex flex-col bg-muted/20 border-l border-border/40 overflow-hidden backdrop-blur-sm">
           <ScrollArea className="flex-1">
             <div className="p-5 space-y-6">
               {/* 1. Primary Action */}

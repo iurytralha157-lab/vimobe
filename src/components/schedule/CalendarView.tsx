@@ -319,7 +319,7 @@ export function CalendarView({
     const weekDays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
     return (
-      <div className="flex flex-col h-full overflow-hidden bg-background">
+      <div className="flex flex-col h-full overflow-hidden bg-transparent">
         <div className="grid grid-cols-7 border-b bg-card">
           {weekDays.map(day => (
             <div key={day} className="text-center text-[10px] font-black text-muted-foreground/60 py-2.5 uppercase tracking-[0.2em]">
@@ -397,7 +397,7 @@ export function CalendarView({
 
     return (
       <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-        <ScrollArea className="h-full border-0 bg-background/50">
+        <ScrollArea className="h-full border-0 bg-transparent">
           <div className="relative flex min-h-full">
             {/* Time axis */}
             <div className="w-16 border-r border-border/40 flex-shrink-0 bg-card/50">
@@ -471,7 +471,7 @@ export function CalendarView({
 
     return (
       <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-        <ScrollArea className="h-full border-0 bg-background/50">
+        <ScrollArea className="h-full border-0 bg-transparent">
           <div className="relative flex flex-col min-w-[1000px] min-h-full">
             {/* Header */}
             <div className="flex border-b border-border/40 sticky top-0 bg-card z-20 shadow-sm">
