@@ -123,7 +123,7 @@ export function CalendarView({
     }
 
     return (
-      <div className="flex items-center justify-between px-6 py-5 border-b bg-card">
+      <div className="flex items-center justify-between px-6 py-4 border-b bg-card">
         <div className="flex items-center gap-4">
           <Button variant="outline" size="sm" onClick={handleToday} className="font-black rounded-2xl h-10 px-6 border-border/60 hover:bg-accent transition-all text-xs uppercase tracking-widest">
             Hoje
