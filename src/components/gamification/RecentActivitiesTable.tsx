@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/table";
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Star, TrendingUp, Phone, MessageSquare, UserCheck, Trophy, FileText, Presentation, Users2 } from 'lucide-react';
+import { Star, TrendingUp, Phone, MessageSquare, UserCheck, Trophy, FileText, Presentation, Users2, Calendar } from 'lucide-react';
 
 const ACTION_ICONS: Record<string, any> = {
   call_made: Phone,
@@ -22,9 +22,12 @@ const ACTION_ICONS: Record<string, any> = {
   prospecting_report: Star,
   mission_bonus: Star,
   meeting_held: Presentation,
+  meeting_scheduled: Calendar,
   proposal_sent: FileText,
   contract_signed: Trophy,
   visit_confirmed: Users2,
+  lead_created_manual: Star,
+  property_created: Star,
 };
 
 const ACTION_LABELS: Record<string, string> = {
@@ -35,10 +38,13 @@ const ACTION_LABELS: Record<string, string> = {
   sale_closed: 'Venda',
   prospecting_report: 'Relatório de Prospecção',
   mission_bonus: 'Bônus de Missão',
-  meeting_held: 'Reunião',
+  meeting_held: 'Reunião Realizada',
+  meeting_scheduled: 'Reunião Agendada',
   proposal_sent: 'Proposta',
   contract_signed: 'Contrato Assinado',
-  visit_confirmed: 'Visita Confirmada',
+  visit_confirmed: 'Visita Realizada',
+  lead_created_manual: 'Cadastro de Lead',
+  property_created: 'Captação de Imóvel',
 };
 
 export function RecentActivitiesTable() {
@@ -49,7 +55,7 @@ export function RecentActivitiesTable() {
     queryFn: async () => {
       if (!user?.id) return [];
       const { data, error } = await supabase
-        .from('gamification_activity_logs' as any)
+        .from('gamification_events')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
@@ -76,13 +82,14 @@ export function RecentActivitiesTable() {
         </TableHeader>
         <TableBody>
           {activities.map((activity) => {
-            const Icon = ACTION_ICONS[activity.action_type] || Star;
+            const actionType = (activity.event_type || activity.action_type) as string;
+            const Icon = ACTION_ICONS[actionType] || Star;
             return (
               <TableRow key={activity.id}>
                 <TableCell className="font-medium">
                   <div className="flex items-center gap-2">
                     <Icon className="h-4 w-4 text-primary shrink-0" />
-                    <span>{ACTION_LABELS[activity.action_type] || activity.action_type}</span>
+                    <span>{ACTION_LABELS[actionType] || actionType}</span>
                   </div>
                 </TableCell>
                 <TableCell className="text-xs text-muted-foreground">

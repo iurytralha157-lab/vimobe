@@ -108,7 +108,8 @@ const activityTypeLabels: Record<string, string> = {
   stage_change: 'Movido de estágio',
   assignee_changed: 'Responsável alterado',
   status_change: 'Status alterado',
-  lead_reentry: 'Lead reentrou'
+  lead_reentry: 'Lead reentrou',
+  proposal_sent: 'Proposta enviada'
 };
 const activityTypeIcons: Record<string, typeof Phone> = {
   call: Phone,
@@ -119,7 +120,8 @@ const activityTypeIcons: Record<string, typeof Phone> = {
   stage_change: ChevronRight,
   assignee_changed: UserCheck,
   status_change: Target,
-  lead_reentry: RotateCcw
+  lead_reentry: RotateCcw,
+  proposal_sent: FileText
 };
 interface LeadDetailDialogProps {
   lead: any;
@@ -252,6 +254,7 @@ export function LeadDetailDialog({
 
   useEffect(() => {
     if (lead) {
+      const valorStr = lead.valor_interesse ? lead.valor_interesse.toString() : '';
       setEditForm({
         name: lead.name || '',
         phone: lead.phone || '',
@@ -265,7 +268,7 @@ export function LeadDetailDialog({
         cidade: lead.cidade || '',
         uf: lead.uf || '',
         cep: lead.cep || '',
-        valor_interesse: lead.valor_interesse?.toString() || '',
+        valor_interesse: valorStr,
         commission_percentage: lead.commission_percentage?.toString() || '',
         property_id: lead.interest_property_id || lead.property_id || '',
         message: lead.message || '',
@@ -277,19 +280,9 @@ export function LeadDetailDialog({
         procura_financiamento: lead.procura_financiamento || false,
         is_own_resource: (lead as any).is_own_resource || false
       });
-
-      // Only sync lost_reason from server if it actually changed on the server
-      // This prevents overwriting user's typing when refetch happens
-      if (lead.lost_reason !== undefined) {
-        setLostReasonLocal(prev => {
-          // If the server value matches what we expect, keep local state
-          // This happens after a successful save
-          return lead.lost_reason || '';
-        });
-      }
     }
-  }, [lead?.id]); // Only re-sync on lead ID change, not every lead update
-  
+  }, [lead?.id, lead?.valor_interesse]); // Re-sync if ID or value changes (e.g. from Plan selection)
+
   // Separate effect to initialize lost_reason when lead first loads
   useEffect(() => {
     if (lead?.lost_reason !== undefined && lostReasonLocal === '') {
@@ -754,10 +747,23 @@ export function LeadDetailDialog({
     setStagePopoverOpen(false);
     
     try {
+      const stage = stages.find(s => s.id === stageId);
+      const isProposal = stage?.name?.toLowerCase().includes('proposta');
+      
       await updateLead.mutateAsync({
         id: lead.id,
         stage_id: stageId
       });
+      
+      // Se moveu para estágio de Proposta, registrar atividade de gamificação
+      if (isProposal) {
+        await createActivityMutation.mutateAsync({
+          lead_id: lead.id,
+          type: 'proposal_sent',
+          content: 'Lead movido para estágio de Proposta',
+        });
+      }
+
       refetchStages();
       toast.success('Lead movido!');
     } catch (error) {
@@ -1550,6 +1556,21 @@ export function LeadDetailDialog({
 
             </div>
             )
+          )}
+
+          {/* Messages Tab */}
+          {activeTab === 'messages' && (
+            <div className="space-y-4">
+              <div className="rounded-xl bg-gradient-to-br from-card to-muted/30 border p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="h-7 w-7 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                    <MessageCircle className="h-4 w-4 text-emerald-500" />
+                  </div>
+                  <Label className="text-sm font-medium">Histórico de Mensagens WhatsApp</Label>
+                </div>
+                <LeadMessagesTab leadId={lead.id} leadName={lead.name} />
+              </div>
+            </div>
           )}
 
           {/* Deal Tab */}

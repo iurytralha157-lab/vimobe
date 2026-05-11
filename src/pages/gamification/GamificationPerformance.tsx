@@ -98,6 +98,8 @@ export default function GamificationPerformance() {
           { label: 'Ligações', value: thisMonthEvents.filter(e => e.event_type === 'call_made').length },
           { label: 'Propostas/Vendas', value: thisMonthEvents.filter(e => ['sale_closed', 'contract_signed', 'proposal_sent'].includes(e.event_type)).length },
           { label: 'Reuniões/Visitas', value: thisMonthEvents.filter(e => ['visit_scheduled', 'visit_confirmed', 'meeting_held'].includes(e.event_type)).length },
+          { label: 'Missões/Outros', value: thisMonthEvents.filter(e => ['mission_bonus', 'prospecting_report', 'lead_created_manual', 'property_created'].includes(e.event_type)).length },
+          { label: 'Missões/Outros', value: thisMonthEvents.filter(e => ['mission_bonus', 'prospecting_report', 'lead_created_manual', 'property_created'].includes(e.event_type)).length },
         ]
       };
     },
@@ -261,7 +263,7 @@ export default function GamificationPerformance() {
             {performanceData?.distribution.map((item) => {
               const total = performanceData.metrics.totalActions || 1;
               const percentage = Math.round((item.value / total) * 100);
-              const color = item.label === 'Ligações' ? 'bg-indigo-500' : item.label === 'Propostas/Vendas' ? 'bg-emerald-500' : 'bg-orange-500';
+              const color = item.label === 'Ligações' ? 'bg-indigo-500' : item.label === 'Propostas/Vendas' ? 'bg-emerald-500' : item.label === 'Reuniões/Visitas' ? 'bg-orange-500' : 'bg-purple-500';
 
               return (
                 <div key={item.label} className="space-y-2">
