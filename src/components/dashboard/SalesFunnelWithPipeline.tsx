@@ -42,13 +42,13 @@ interface SalesFunnelWithPipelineProps {
 
 function FunnelSkeleton() {
   return (
-    <div className="flex flex-col items-center space-y-1 py-2">
+    <div className="flex flex-col items-center space-y-2 py-4">
       {Array.from({ length: 5 }).map((_, i) => {
         const width = 100 - i * 12;
         return (
           <Skeleton
             key={i}
-            className="h-7 rounded"
+            className="h-8 rounded"
             style={{ width: `${width}%` }}
           />
         );
@@ -73,47 +73,49 @@ export function SalesFunnelWithPipeline({ filters }: SalesFunnelWithPipelineProp
   const maxStages = Math.max(funnelData.length, 1);
 
   return (
-    <Card className="overflow-hidden h-full flex flex-col">
-      <CardHeader className="pb-3">
+    <Card className="overflow-hidden h-full flex flex-col shadow-sm border-border/50 bg-card/50 backdrop-blur-sm">
+      <CardHeader className="pb-3 pt-4 px-4 shrink-0">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-          <CardTitle className="text-sm font-medium flex items-center gap-2">
-            <TrendingDown className="h-4 w-4 text-primary" />
+          <CardTitle className="text-xs font-semibold flex items-center gap-2 uppercase tracking-widest text-muted-foreground">
+            <TrendingDown className="h-3.5 w-3.5 text-primary" />
             Funil de Vendas
           </CardTitle>
           <div className="flex items-center gap-2">
             {pipelines.length > 1 && (
               <Select value={selectedPipelineId || ''} onValueChange={setManualPipelineId}>
-                <SelectTrigger className="h-8 w-[180px] text-xs">
-                  <SelectValue placeholder="Selecione pipeline" />
+                <SelectTrigger className="h-7 w-[140px] text-[10px] font-medium bg-background/50 border-border/50">
+                  <SelectValue placeholder="Pipeline" />
                 </SelectTrigger>
                 <SelectContent>
                   {pipelines.map((pipeline) => (
-                    <SelectItem key={pipeline.id} value={pipeline.id} className="text-xs">
+                    <SelectItem key={pipeline.id} value={pipeline.id} className="text-[10px]">
                       {pipeline.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             )}
-            <span className="text-xs text-muted-foreground whitespace-nowrap">
-              {total} leads
-            </span>
+            <div className="bg-primary/10 text-primary px-2 py-0.5 rounded text-[10px] font-bold">
+              {total} LEADS
+            </div>
           </div>
         </div>
       </CardHeader>
-      <CardContent className="pt-0 pb-2 flex-1 min-h-0 overflow-y-auto">
+      
+      <CardContent className="pt-0 pb-4 flex-1 min-h-0 overflow-y-auto px-4 scrollbar-thin scrollbar-thumb-primary/10 hover:scrollbar-thumb-primary/20 transition-colors">
         {isLoading ? (
           <FunnelSkeleton />
         ) : funnelData.length === 0 ? (
-          <div className="h-[180px] flex items-center justify-center text-muted-foreground text-sm">
-            Nenhum dado disponível
+          <div className="h-full min-h-[180px] flex items-center justify-center text-muted-foreground text-sm flex-col gap-2">
+            <TrendingDown className="h-8 w-8 opacity-20" />
+            <p className="font-medium text-xs">Nenhum dado para este pipeline</p>
           </div>
         ) : (
           <TooltipProvider delayDuration={100}>
-            <div className="flex flex-col items-center space-y-0.5">
+            <div className="flex flex-col items-center space-y-1.5 py-2">
               {funnelData.map((item, index) => {
                 const baseWidth = 100 - (index * (55 / maxStages));
-                const width = Math.max(baseWidth, 40);
+                const width = Math.max(baseWidth, 35);
 
                 return (
                   <Tooltip key={item.stage_key || item.name}>
@@ -121,46 +123,48 @@ export function SalesFunnelWithPipeline({ filters }: SalesFunnelWithPipelineProp
                       <div
                         className={cn(
                           'relative group cursor-default transition-all duration-300',
-                          'hover:scale-[1.02] hover:z-10'
+                          'hover:scale-[1.03] hover:z-10'
                         )}
                         style={{ width: `${width}%` }}
                       >
                         <div
                           className={cn(
-                            'w-full rounded flex items-center justify-between px-3 py-1.5',
+                            'w-full rounded flex items-center justify-between px-4 py-2',
                             'bg-gradient-to-r text-white text-sm',
                             'border shadow-sm transition-all duration-200',
-                            'group-hover:shadow-md',
+                            'group-hover:shadow-md group-hover:brightness-110',
                             funnelGradients[index % funnelGradients.length],
                             funnelBorderColors[index % funnelBorderColors.length]
                           )}
                         >
-                          <span className="text-xs font-medium truncate max-w-[50%] drop-shadow-sm">
+                          <span className="text-[11px] font-bold truncate max-w-[60%] drop-shadow-sm uppercase tracking-tight">
                             {item.name}
                           </span>
 
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-sm font-bold drop-shadow-sm">{item.value}</span>
-                            <span className="text-[9px] opacity-80 font-medium bg-white/20 px-1 py-0.5 rounded-full">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-black drop-shadow-sm">{item.value}</span>
+                            <span className="text-[9px] font-bold bg-black/10 backdrop-blur-sm px-1.5 py-0.5 rounded-full">
                               {item.percentage}%
                             </span>
                           </div>
                         </div>
 
                         {index < funnelData.length - 1 && (
-                          <div className="absolute -bottom-0.5 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-t-[4px] border-t-white/20 z-10" />
+                          <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[5px] border-t-white/20 z-10" />
                         )}
                       </div>
                     </TooltipTrigger>
-                    <TooltipContent side="right" className="bg-popover/95 backdrop-blur-sm">
-                      <div className="text-xs space-y-1">
-                        <p className="font-semibold text-foreground">{item.name}</p>
-                        <p className="text-muted-foreground">
-                          <span className="text-foreground font-medium">{item.value}</span> leads
-                        </p>
-                        <p className="text-muted-foreground">
-                          <span className="text-foreground font-medium">{item.percentage}%</span> do total
-                        </p>
+                    <TooltipContent side="right" className="bg-popover/95 backdrop-blur-sm border-primary/20 p-3 shadow-xl">
+                      <div className="text-xs space-y-1.5">
+                        <p className="font-bold text-primary uppercase tracking-wider">{item.name}</p>
+                        <div className="space-y-1 border-t border-border pt-1.5">
+                          <p className="text-muted-foreground flex justify-between gap-4">
+                            Quantidade: <span className="text-foreground font-bold">{item.value} leads</span>
+                          </p>
+                          <p className="text-muted-foreground flex justify-between gap-4">
+                            Percentual: <span className="text-foreground font-bold">{item.percentage}% do funil</span>
+                          </p>
+                        </div>
                       </div>
                     </TooltipContent>
                   </Tooltip>
@@ -171,21 +175,21 @@ export function SalesFunnelWithPipeline({ filters }: SalesFunnelWithPipelineProp
         )}
 
         {funnelData.length > 0 && (
-          <div className="mt-2 pt-2 border-t border-border/40">
-            <div className="flex flex-wrap gap-x-3 gap-y-0.5 justify-center">
-              {funnelData.slice(0, 5).map((item, index) => (
-                <div key={item.stage_key || item.name} className="flex items-center gap-1">
+          <div className="mt-4 pt-3 border-t border-border/40">
+            <div className="flex flex-wrap gap-x-3 gap-y-1.5 justify-center">
+              {funnelData.slice(0, 6).map((item, index) => (
+                <div key={item.stage_key || item.name} className="flex items-center gap-1.5">
                   <div
                     className={cn(
-                      'w-2 h-2 rounded-full bg-gradient-to-r',
-                      funnelGradients[index % funnelGradients.length]
+                      'w-2 h-2 rounded-full shadow-sm',
+                      funnelGradients[index % funnelGradients.length].split(' ')[0].replace('from-', 'bg-')
                     )}
                   />
-                  <span className="text-[9px] text-muted-foreground">{item.name}</span>
+                  <span className="text-[10px] font-medium text-muted-foreground">{item.name}</span>
                 </div>
               ))}
-              {funnelData.length > 5 && (
-                <span className="text-[9px] text-muted-foreground">+{funnelData.length - 5}</span>
+              {funnelData.length > 6 && (
+                <span className="text-[10px] font-bold text-primary">+{funnelData.length - 6}</span>
               )}
             </div>
           </div>

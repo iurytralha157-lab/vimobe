@@ -382,16 +382,31 @@ export function useLeadSourcesData(filters?: DashboardFilters, pipelineId?: stri
       // Map source names to friendly labels
       const sourceLabels: Record<string, string> = {
         'meta': 'Meta Ads',
+        'facebook': 'Meta Ads',
+        'instagram': 'Meta Ads',
+        'google': 'Google Ads',
+        'google_ads': 'Google Ads',
         'site': 'Site',
+        'website': 'Site',
+        'landing_page': 'Landing Page',
         'whatsapp': 'WhatsApp',
         'manual': 'Manual',
-        'webhook': 'Webhook',
+        'webhook': 'API / Integração',
+        'api': 'API',
+        'indicacao': 'Indicação',
+        'import': 'Importação',
       };
       
-      return (data || []).map((item: any) => ({
-        name: sourceLabels[item.source_name] || item.source_name || 'Outros',
-        value: Number(item.lead_count) || 0,
-      })) as SourceDataPoint[];
+      const aggregatedData: Record<string, number> = {};
+      
+      (data || []).forEach((item: any) => {
+        const label = sourceLabels[item.source_name] || item.source_name || 'Outros';
+        aggregatedData[label] = (aggregatedData[label] || 0) + (Number(item.lead_count) || 0);
+      });
+      
+      return Object.entries(aggregatedData)
+        .map(([name, value]) => ({ name, value }))
+        .sort((a, b) => b.value - a.value) as SourceDataPoint[];
     },
     staleTime: 1000 * 60 * 5, // 5 minutos
   });

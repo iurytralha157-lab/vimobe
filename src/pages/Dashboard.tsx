@@ -10,11 +10,13 @@ import { DashboardFilters } from '@/components/dashboard/DashboardFilters';
 import { KPICards } from '@/components/dashboard/KPICards';
 import { SalesFunnelWithPipeline } from '@/components/dashboard/SalesFunnelWithPipeline';
 import { DealsEvolutionChart } from '@/components/dashboard/DealsEvolutionChart';
+import { LeadSourcesChart } from '@/components/dashboard/LeadSourcesChart';
 
 import { useDashboardFilters, datePresetOptions } from '@/hooks/use-dashboard-filters';
 import { 
   useEnhancedDashboardStats, 
   useDealsEvolutionData,
+  useLeadSourcesData,
 } from '@/hooks/use-dashboard-stats';
 
 import { useAuth } from '@/contexts/AuthContext';
@@ -72,6 +74,7 @@ export default function Dashboard() {
   // Data hooks - Imobiliário
   const { data: stats, isLoading: statsLoading } = useEnhancedDashboardStats(filters);
   const { data: evolutionData = [], isLoading: evolutionLoading } = useDealsEvolutionData(filters);
+  const { data: sourcesData = [], isLoading: sourcesLoading } = useLeadSourcesData(filters);
 
 
   // Site visits count - unique sessions (respects date filters)
@@ -175,7 +178,7 @@ export default function Dashboard() {
         />
 
         {/* ===== DESKTOP LAYOUT ===== */}
-        <div className="hidden lg:grid lg:grid-cols-12 gap-2 md:gap-3 flex-1 min-h-0">
+        <div className="hidden lg:grid lg:grid-cols-12 gap-2 md:gap-3 flex-1 min-h-0 overflow-hidden">
           {/* Left column (col 1-8): KPIs + Evolution Chart */}
           <div className="col-span-8 flex flex-col gap-3 min-h-0">
             {/* KPIs on top */}
@@ -197,17 +200,20 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Right column (col 9-12): Sales Funnel */}
-          <div className="col-span-4 min-h-0 flex flex-col">
-            <div className="flex-1 min-h-0 overflow-hidden">
+          {/* Right column (col 9-12): Sales Funnel + Lead Sources */}
+          <div className="col-span-4 min-h-0 flex flex-col gap-3">
+            <div className="h-[48%] min-h-0">
               {funnelComponent}
+            </div>
+            <div className="h-[52%] min-h-0">
+              <LeadSourcesChart data={sourcesData} isLoading={sourcesLoading} />
             </div>
           </div>
         </div>
 
         {/* ===== MOBILE LAYOUT ===== */}
         <div className={cn(
-          "lg:hidden flex flex-col gap-4",
+          "lg:hidden flex flex-col gap-4 overflow-y-auto",
           !isMobile ? "flex-1 min-h-0" : ""
         )}>
           {/* KPIs */}
@@ -220,15 +226,25 @@ export default function Dashboard() {
 
           {/* Charts Tabs */}
           <Tabs value={mobileChartTab} onValueChange={setMobileChartTab} className={cn(!isMobile ? "flex-1 flex flex-col min-h-0" : "")}>
-            <TabsList className="w-full grid grid-cols-2">
+            <TabsList className="w-full grid grid-cols-3">
               <TabsTrigger value="funnel" className="text-xs">Funil</TabsTrigger>
               <TabsTrigger value="evolution" className="text-xs">Evolução</TabsTrigger>
+              <TabsTrigger value="sources" className="text-xs">Origem</TabsTrigger>
             </TabsList>
             <TabsContent value="funnel" className={cn("mt-3", !isMobile ? "flex-1 min-h-0" : "")}>
-              {funnelComponent}
+              <div className="h-[400px]">
+                {funnelComponent}
+              </div>
             </TabsContent>
             <TabsContent value="evolution" className={cn("mt-3", !isMobile ? "flex-1 min-h-0" : "")}>
+              <div className="h-[400px]">
                 <DealsEvolutionChart data={evolutionData} isLoading={evolutionLoading} />
+              </div>
+            </TabsContent>
+            <TabsContent value="sources" className={cn("mt-3", !isMobile ? "flex-1 min-h-0" : "")}>
+              <div className="h-[450px]">
+                <LeadSourcesChart data={sourcesData} isLoading={sourcesLoading} />
+              </div>
             </TabsContent>
           </Tabs>
         </div>
