@@ -120,20 +120,17 @@ export default function ConstructionProjectForm() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Imóvel / Localização</Label>
+                  <Label>Tipo de Projeto</Label>
                   <Select 
-                    value={selectedPropertyId} 
-                    onValueChange={(v) => setValue("property_id", v)}
+                    value={watch("project_type")} 
+                    onValueChange={(v) => setValue("project_type", v)}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Selecione um imóvel" />
+                      <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {properties?.map((prop) => (
-                        <SelectItem key={prop.id} value={prop.id}>
-                          {prop.title} ({prop.code})
-                        </SelectItem>
-                      ))}
+                      <SelectItem value="construction">Obra / Construção</SelectItem>
+                      <SelectItem value="architecture">Arquitetura / Projeto</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -157,6 +154,26 @@ export default function ConstructionProjectForm() {
                   </Select>
                 </div>
               </div>
+
+              <div className="space-y-2">
+                <Label>Imóvel / Localização</Label>
+                <Select 
+                  value={selectedPropertyId} 
+                  onValueChange={(v) => setValue("property_id", v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um imóvel" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {properties?.map((prop) => (
+                      <SelectItem key={prop.id} value={prop.id}>
+                        {prop.title} ({prop.code})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
 
               <div className="space-y-2">
                 <Label htmlFor="description">Descrição / Escopo</Label>
