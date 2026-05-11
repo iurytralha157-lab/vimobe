@@ -93,6 +93,7 @@ const PreviewSiteWrapper = lazy(() => import("./pages/public/PreviewSiteWrapper"
 const APIDocs = lazy(() => import("./pages/public/APIDocs"));
 const OperationalDashboard = lazy(() => import("./pages/OperationalDashboard"));
 const StageOperationalManagement = lazy(() => import("./pages/StageOperationalManagement"));
+const ExecutiveDRE = lazy(() => import("./pages/financial/ExecutiveDRE"));
 
 
 // Trial expired modal
@@ -268,6 +269,7 @@ function AppRoutes() {
             <Route path="/financeiro/corretor" element={<ProtectedRoute><BrokerFinancialPanel /></ProtectedRoute>} />
             <Route path="/financeiro/relatorios" element={<ProtectedRoute><AdminRoute><FinancialReports /></AdminRoute></ProtectedRoute>} />
             <Route path="/financeiro/dre" element={<ProtectedRoute><AdminRoute><FinancialDRE /></AdminRoute></ProtectedRoute>} />
+            <Route path="/financeiro/dre-executivo" element={<ProtectedRoute><AdminRoute><ExecutiveDRE /></AdminRoute></ProtectedRoute>} />
 
             {/* Engineering Module */}
             <Route path="/engenharia/obras" element={<ProtectedRoute><PermissionGuard permission="module_engineering"><ConstructionProjects /></PermissionGuard></ProtectedRoute>} />

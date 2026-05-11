@@ -88,6 +88,10 @@ const allNavItems: NavItem[] = [{
     icon: BarChart3,
     labelKey: 'dre',
     path: '/financeiro/dre'
+  }, {
+    icon: BarChart3,
+    labelKey: 'dreExecutive',
+    path: '/financeiro/dre-executivo'
   }]
 }, {
   icon: Trophy,
