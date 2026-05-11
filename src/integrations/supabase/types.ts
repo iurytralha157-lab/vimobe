@@ -2189,6 +2189,57 @@ export type Database = {
           },
         ]
       }
+      gamification_events: {
+        Row: {
+          created_at: string | null
+          event_type: string
+          id: string
+          metadata: Json | null
+          organization_id: string
+          points_earned: number | null
+          source_id: string | null
+          source_module: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          event_type: string
+          id?: string
+          metadata?: Json | null
+          organization_id: string
+          points_earned?: number | null
+          source_id?: string | null
+          source_module?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+          organization_id?: string
+          points_earned?: number | null
+          source_id?: string | null
+          source_module?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gamification_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gamification_events_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       gamification_missions: {
         Row: {
           action_type: string
@@ -2239,6 +2290,47 @@ export type Database = {
           },
         ]
       }
+      gamification_rankings: {
+        Row: {
+          created_at: string | null
+          event_types: string[] | null
+          icon: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          organization_id: string
+          slug: string
+        }
+        Insert: {
+          created_at?: string | null
+          event_types?: string[] | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          organization_id: string
+          slug: string
+        }
+        Update: {
+          created_at?: string | null
+          event_types?: string[] | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          organization_id?: string
+          slug?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gamification_rankings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       gamification_rules: {
         Row: {
           action_type: string
@@ -2273,6 +2365,92 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gamification_seasons: {
+        Row: {
+          created_at: string | null
+          end_date: string
+          id: string
+          is_active: boolean | null
+          name: string
+          organization_id: string
+          start_date: string
+        }
+        Insert: {
+          created_at?: string | null
+          end_date: string
+          id?: string
+          is_active?: boolean | null
+          name: string
+          organization_id: string
+          start_date: string
+        }
+        Update: {
+          created_at?: string | null
+          end_date?: string
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          organization_id?: string
+          start_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gamification_seasons_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gamification_streaks: {
+        Row: {
+          created_at: string | null
+          current_streak: number | null
+          highest_streak: number | null
+          id: string
+          last_activity_at: string | null
+          organization_id: string
+          streak_type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          current_streak?: number | null
+          highest_streak?: number | null
+          id?: string
+          last_activity_at?: string | null
+          organization_id: string
+          streak_type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          current_streak?: number | null
+          highest_streak?: number | null
+          id?: string
+          last_activity_at?: string | null
+          organization_id?: string
+          streak_type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gamification_streaks_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gamification_streaks_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -6731,32 +6909,41 @@ export type Database = {
         Row: {
           created_at: string | null
           current_level: number | null
+          current_rank: string | null
           id: string
           last_activity_at: string | null
           organization_id: string | null
+          streak_days: number | null
           total_points: number | null
           updated_at: string | null
           user_id: string | null
+          xp: number | null
         }
         Insert: {
           created_at?: string | null
           current_level?: number | null
+          current_rank?: string | null
           id?: string
           last_activity_at?: string | null
           organization_id?: string | null
+          streak_days?: number | null
           total_points?: number | null
           updated_at?: string | null
           user_id?: string | null
+          xp?: number | null
         }
         Update: {
           created_at?: string | null
           current_level?: number | null
+          current_rank?: string | null
           id?: string
           last_activity_at?: string | null
           organization_id?: string | null
+          streak_days?: number | null
           total_points?: number | null
           updated_at?: string | null
           user_id?: string | null
+          xp?: number | null
         }
         Relationships: [
           {
