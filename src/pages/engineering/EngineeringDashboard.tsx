@@ -1,5 +1,6 @@
 import { AppLayout } from "@/components/layout/AppLayout";
-import { useConstructionProjects } from "@/hooks/use-construction";
+import { useConstructionProjects, useAllMilestones } from "@/hooks/use-construction";
+import { useOperationalRequests } from "@/hooks/use-operational";
 import { 
   Card, 
   CardContent, 
@@ -26,17 +27,23 @@ import {
   Legend
 } from 'recharts';
 import { Badge } from "@/components/ui/badge";
+import { format, addMonths } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 export default function EngineeringDashboard() {
-  const { data: projects, isLoading } = useConstructionProjects();
+  const { data: projects, isLoading: projectsLoading } = useConstructionProjects();
+  const { data: milestones, isLoading: milestonesLoading } = useAllMilestones();
+  const { data: engineeringRequests } = useOperationalRequests({ type: 'engineering' });
+
+  const isLoading = projectsLoading || milestonesLoading;
 
   const mockSData = [
-    { name: 'Mês 1', previsto: 5, realizado: 4 },
-    { name: 'Mês 2', previsto: 15, realizado: 12 },
-    { name: 'Mês 3', previsto: 30, realizado: 28 },
-    { name: 'Mês 4', previsto: 45, realizado: 42 },
-    { name: 'Mês 5', previsto: 60, realizado: 58 },
-    { name: 'Mês 6', previsto: 75, realizado: 70 },
+    { name: 'Jan', previsto: 5, realizado: 4 },
+    { name: 'Fev', previsto: 15, realizado: 12 },
+    { name: 'Mar', previsto: 30, realizado: 28 },
+    { name: 'Abr', previsto: 45, realizado: 42 },
+    { name: 'Mai', previsto: 60, realizado: 58 },
+    { name: 'Jun', previsto: 75, realizado: 70 },
   ];
 
   if (isLoading) {
@@ -49,14 +56,18 @@ export default function EngineeringDashboard() {
     );
   }
 
+  const plannedProjects = projects?.filter(p => p.status === 'planned' || p.status === 'waiting') || [];
+  const inProgressProjects = projects?.filter(p => p.status === 'in_progress' || p.status === 'active') || [];
+  const finishedProjects = projects?.filter(p => p.status === 'completed' || p.status === 'finished') || [];
+
   return (
     <AppLayout title="Dashboard de Engenharia">
       <div className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <StatCard title="Obras a Iniciar" value="2" icon={Calendar} color="text-blue-600" />
-          <StatCard title="Em Execução" value={projects?.filter(p => p.status === 'in_progress' || p.status === 'active').length || 0} icon={HardHat} color="text-orange-600" />
-          <StatCard title="Projetos Técnicos" value="12" icon={Layers} color="text-purple-600" />
-          <StatCard title="Atraso Médio" value="2 dias" icon={AlertTriangle} color="text-red-600" />
+          <StatCard title="Obras a Iniciar" value={plannedProjects.length} icon={Calendar} color="text-blue-600" />
+          <StatCard title="Em Execução" value={inProgressProjects.length} icon={HardHat} color="text-orange-600" />
+          <StatCard title="Projetos Técnicos" value={engineeringRequests?.length || 0} icon={Layers} color="text-purple-600" />
+          <StatCard title="Obras Finalizadas" value={finishedProjects.length} icon={CheckCircle2} color="text-emerald-600" />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -84,16 +95,17 @@ export default function EngineeringDashboard() {
           {/* Projetos Complementares */}
           <Card>
             <CardHeader>
-              <CardTitle>Projetos Técnicos</CardTitle>
-              <CardDescription>Status por disciplina</CardDescription>
+              <CardTitle>Solicitações de Engenharia</CardTitle>
+              <CardDescription>Status das solicitações operacionais</CardDescription>
             </CardHeader>
             <CardContent>
                <div className="space-y-4">
-                  <ProjectStatusItem label="Estrutural" status="approved" />
-                  <ProjectStatusItem label="Elétrica" status="in_review" />
-                  <ProjectStatusItem label="Hidráulica" status="pending" />
-                  <ProjectStatusItem label="Ar Condicionado" status="approved" />
-                  <ProjectStatusItem label="Interiores" status="in_review" />
+                  {engineeringRequests?.slice(0, 6).map((req: any) => (
+                    <ProjectStatusItem key={req.id} label={req.title} status={req.status} />
+                  ))}
+                  {(!engineeringRequests || engineeringRequests.length === 0) && (
+                    <p className="text-sm text-muted-foreground text-center py-4">Nenhuma solicitação encontrada</p>
+                  )}
                </div>
             </CardContent>
           </Card>
@@ -107,10 +119,16 @@ export default function EngineeringDashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-8 py-4">
-              {projects?.map((project: any, idx: number) => (
+              {inProgressProjects.map((project: any, idx: number) => (
                 <div key={idx} className="space-y-3">
                   <div className="flex justify-between items-center">
-                    <h4 className="text-sm font-bold">{project.name}</h4>
+                    <div>
+                      <h4 className="text-sm font-bold">{project.name}</h4>
+                      <p className="text-[10px] text-muted-foreground">
+                        Início: {project.start_date_planned ? format(new Date(project.start_date_planned), 'dd/MM/yyyy') : 'N/A'} | 
+                        Fim: {project.end_date_planned ? format(new Date(project.end_date_planned), 'dd/MM/yyyy') : 'N/A'}
+                      </p>
+                    </div>
                     <Badge variant="outline">{project.physical_progress_percent}% Concluído</Badge>
                   </div>
                   <div className="relative h-10 bg-muted/30 rounded-lg flex items-center px-2">
@@ -121,11 +139,23 @@ export default function EngineeringDashboard() {
                       {project.physical_progress_percent}%
                     </div>
                     {/* Marcos (Milestones) seriam mapeados aqui */}
-                    <div className="absolute left-[20%] top-[-8px] h-20 w-px bg-slate-300 pointer-events-none" />
-                    <div className="absolute left-[60%] top-[-8px] h-20 w-px bg-slate-300 pointer-events-none" />
+                    {milestones?.filter((m: any) => m.project_id === project.id).map((m: any, midx: number) => {
+                      // Cálculo simplificado de posição baseado no tempo
+                      return (
+                        <div 
+                          key={m.id} 
+                          className={`absolute h-2 w-2 rounded-full ${m.status === 'completed' ? 'bg-emerald-500' : 'bg-slate-300'}`}
+                          style={{ left: `${(midx + 1) * 20}%`, top: '16px' }}
+                          title={m.name}
+                        />
+                      );
+                    })}
                   </div>
                 </div>
               ))}
+              {inProgressProjects.length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-4">Nenhuma obra em andamento</p>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -152,18 +182,21 @@ function StatCard({ title, value, icon: Icon, color }: any) {
   );
 }
 
-function ProjectStatusItem({ label, status }: { label: string, status: 'pending' | 'in_review' | 'approved' }) {
+function ProjectStatusItem({ label, status }: { label: string, status: string }) {
   const getBadge = () => {
     switch (status) {
-      case 'approved': return <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-none">Aprovado</Badge>;
-      case 'in_review': return <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 border-none">Em Análise</Badge>;
-      default: return <Badge className="bg-slate-100 text-slate-600 hover:bg-slate-100 border-none">Pendente</Badge>;
+      case 'completed': 
+      case 'approved': return <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-none text-[10px]">Aprovado</Badge>;
+      case 'in_analysis':
+      case 'in_progress': return <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 border-none text-[10px]">Em Análise</Badge>;
+      case 'rejected': return <Badge className="bg-red-100 text-red-700 hover:bg-red-100 border-none text-[10px]">Rejeitado</Badge>;
+      default: return <Badge className="bg-slate-100 text-slate-600 hover:bg-slate-100 border-none text-[10px]">Pendente</Badge>;
     }
   };
 
   return (
     <div className="flex items-center justify-between py-1">
-      <span className="text-sm font-medium">{label}</span>
+      <span className="text-xs font-medium truncate max-w-[150px]">{label}</span>
       {getBadge()}
     </div>
   );
