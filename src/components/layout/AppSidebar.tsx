@@ -187,29 +187,38 @@ const allNavItems: NavItem[] = [{
   module: 'automations'
 }, {
   icon: HardHat,
-  labelKey: 'engineering',
-  path: '/engenharia/obras',
+  labelKey: 'obras',
+  path: '/obras',
   module: 'engineering',
   children: [{
+    icon: LayoutDashboard,
+    labelKey: 'overview',
+    path: '/obras/overview'
+  }, {
     icon: Building2,
     labelKey: 'construction',
-    path: '/engenharia/obras'
+    path: '/obras/obras'
   }, {
-    icon: LayoutDashboard,
-    labelKey: 'cockpit',
-    path: '/engenharia/cockpit'
+    icon: HardHat,
+    labelKey: 'engineering',
+    path: '/obras/engenharia'
+  }, {
+    icon: Compass,
+    labelKey: 'architecture',
+    path: '/obras/arquitetura'
+  }, {
+    icon: ShoppingCart,
+    labelKey: 'purchase',
+    path: '/obras/compras'
+  }, {
+    icon: DollarSign,
+    labelKey: 'financial',
+    path: '/obras/financeiro'
+  }, {
+    icon: Inbox,
+    labelKey: 'queues',
+    path: '/obras/filas'
   }]
-}];
-const bottomItems: NavItem[] = [{
-  icon: Globe,
-  labelKey: 'mySite',
-  path: '/settings/site',
-  adminOnly: true,
-  module: 'site'
-}, {
-  icon: Settings,
-  labelKey: 'settings',
-  path: '/settings'
 }];
 
 function SidebarIcon({ item, size = 20, className }: { item: NavItem; size?: number; className?: string }) {
