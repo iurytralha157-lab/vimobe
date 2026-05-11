@@ -939,9 +939,16 @@ export function LeadDetailDialog({
         </div>
 
         {/* Row 3 — Estágio + Deal Status lado a lado */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          {lead.is_own_resource && (
+            <Badge variant="secondary" className="bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border-none px-2 rounded-full text-[10px] font-bold">
+              <DollarSign className="h-3 w-3 mr-0.5" />
+              Recurso Próprio
+            </Badge>
+          )}
           {/* Stage pill */}
           <Popover open={stagePopoverOpen} onOpenChange={setStagePopoverOpen}>
+
             <PopoverTrigger asChild>
               <button className="flex-1 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-medium min-w-0 overflow-hidden">
                 <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse shrink-0" />
