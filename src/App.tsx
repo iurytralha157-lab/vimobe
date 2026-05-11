@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect } from "react"; // refreshed
+import { lazy, Suspense, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -47,7 +47,9 @@ const Agenda = lazy(() => import("./pages/Agenda"));
 const FinancialDashboard = lazy(() => import("./pages/FinancialDashboard"));
 const FinancialEntries = lazy(() => import("./pages/FinancialEntries"));
 const Contracts = lazy(() => import("./pages/Contracts"));
+const ContractDetails = lazy(() => import("./pages/ContractDetails"));
 const Commissions = lazy(() => import("./pages/Commissions"));
+const BrokerFinancialPanel = lazy(() => import("./pages/BrokerFinancialPanel"));
 const FinancialReports = lazy(() => import("./pages/FinancialReports"));
 const FinancialDRE = lazy(() => import("./pages/FinancialDRE"));
 const MetaSettings = lazy(() => import("./pages/MetaSettings"));
@@ -253,10 +255,12 @@ function AppRoutes() {
             <Route path="/financeiro" element={<ProtectedRoute><AdminRoute><FinancialDashboard /></AdminRoute></ProtectedRoute>} />
             <Route path="/financeiro/contas" element={<ProtectedRoute><AdminRoute><FinancialEntries /></AdminRoute></ProtectedRoute>} />
             <Route path="/financeiro/contratos" element={<ProtectedRoute><AdminRoute><Contracts /></AdminRoute></ProtectedRoute>} />
+            <Route path="/financeiro/contratos/:id" element={<ProtectedRoute><AdminRoute><ContractDetails /></AdminRoute></ProtectedRoute>} />
             <Route path="/financeiro/comissoes" element={<ProtectedRoute><AdminRoute><Commissions /></AdminRoute></ProtectedRoute>} />
+            <Route path="/financeiro/corretor" element={<ProtectedRoute><BrokerFinancialPanel /></ProtectedRoute>} />
             <Route path="/financeiro/relatorios" element={<ProtectedRoute><AdminRoute><FinancialReports /></AdminRoute></ProtectedRoute>} />
             <Route path="/financeiro/dre" element={<ProtectedRoute><AdminRoute><FinancialDRE /></AdminRoute></ProtectedRoute>} />
-            
+
             {/* Telecom Module */}
             <Route path="/plans" element={<ProtectedRoute><ServicePlans /></ProtectedRoute>} />
             <Route path="/coverage" element={<ProtectedRoute><CoverageAreas /></ProtectedRoute>} />

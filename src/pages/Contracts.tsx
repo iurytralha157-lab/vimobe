@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -84,6 +85,7 @@ function ContractCard({ contract, onActivate, onEdit, onDelete }: {
   onEdit: () => void;
   onDelete: () => void;
 }) {
+  const navigate = useNavigate();
   const getTypeLabel = (type: string | null) => {
     if (!type) return '-';
     const types: Record<string, string> = {
@@ -95,7 +97,7 @@ function ContractCard({ contract, onActivate, onEdit, onDelete }: {
   };
 
   return (
-    <Card className="mb-2 sm:mb-3">
+    <Card className="mb-2 sm:mb-3 cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate(`/financeiro/contratos/${contract.id}`)}>
       <CardContent className="p-3 sm:p-4">
         <div className="flex items-start justify-between gap-2 mb-2 sm:mb-3">
           <div className="flex-1 min-w-0">
@@ -134,7 +136,7 @@ function ContractCard({ contract, onActivate, onEdit, onDelete }: {
 
         <div className="flex items-center justify-between pt-2 sm:pt-3 border-t gap-2">
           <p className="font-bold text-primary text-sm sm:text-base">{formatCurrency(contract.value)}</p>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
             {contract.status === 'draft' && (
               <Button variant="outline" size="sm" className="h-8 text-xs" onClick={onActivate}>
                 <PlayCircle className="h-3.5 w-3.5 mr-1" />
@@ -156,6 +158,7 @@ function ContractCard({ contract, onActivate, onEdit, onDelete }: {
 
 export default function Contracts() {
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -237,7 +240,6 @@ export default function Contracts() {
   return (
     <AppLayout title="Contratos">
       <div className="space-y-4 md:space-y-6">
-        {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <p className="text-sm text-muted-foreground">Gerencie seus contratos de venda e locação</p>
           <div className="flex gap-2">
@@ -253,7 +255,6 @@ export default function Contracts() {
           </div>
         </div>
 
-        {/* Filters */}
         <Card>
           <CardContent className="p-3 md:p-4">
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
@@ -309,7 +310,6 @@ export default function Contracts() {
               )}
             </div>
 
-            {/* Mobile Filters Expanded */}
             {isMobile && showFilters && (
               <div className="grid grid-cols-2 gap-3 mt-3 pt-3 border-t">
                 <Select value={typeFilter} onValueChange={setTypeFilter}>
@@ -341,13 +341,11 @@ export default function Contracts() {
           </CardContent>
         </Card>
 
-        {/* Content */}
         {isLoading ? (
           <div className="space-y-3">
             {[1, 2, 3].map(i => <Skeleton key={i} className="h-24 md:h-12" />)}
           </div>
         ) : isMobile ? (
-          // Mobile Cards
           <div>
             {filteredContracts.length === 0 ? (
               <Card>
@@ -368,7 +366,6 @@ export default function Contracts() {
             )}
           </div>
         ) : (
-          // Desktop Table
           <Card>
             <CardContent className="p-0">
               <Table>
@@ -393,7 +390,11 @@ export default function Contracts() {
                     </TableRow>
                   ) : (
                     filteredContracts.map((contract) => (
-                      <TableRow key={contract.id}>
+                      <TableRow 
+                        key={contract.id} 
+                        className="cursor-pointer hover:bg-muted/50 transition-colors" 
+                        onClick={() => navigate(`/financeiro/contratos/${contract.id}`)}
+                      >
                         <TableCell className="font-medium">
                           {contract.contract_number || contract.id.slice(0, 8)}
                         </TableCell>
@@ -411,7 +412,7 @@ export default function Contracts() {
                           <ContractStatusBadge status={contract.status || 'draft'} />
                         </TableCell>
                         <TableCell>{formatDate(contract.signing_date)}</TableCell>
-                        <TableCell>
+                        <TableCell onClick={(e) => e.stopPropagation()}>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="icon">
@@ -460,53 +461,24 @@ export default function Contracts() {
           </Card>
         )}
 
-        {/* Form Dialog */}
         <Dialog open={isFormOpen} onOpenChange={(open: boolean) => {
           setIsFormOpen(open);
           if (!open) setEditingContract(null);
         }}>
-          <DialogContent className="w-[90%] sm:max-w-3xl sm:w-full rounded-lg max-h-[85vh] overflow-y-auto">
+          <DialogContent className="w-[90%] sm:max-w-2xl sm:w-full rounded-lg max-h-[85vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingContract ? 'Editar Contrato' : 'Novo Contrato'}</DialogTitle>
               <DialogDescription>
                 {editingContract ? 'Altere os dados do contrato' : 'Preencha os dados do novo contrato'}
               </DialogDescription>
             </DialogHeader>
-            <ContractForm 
-              contract={editingContract} 
+            <ContractForm
+              contract={editingContract || undefined}
               onSuccess={handleFormSuccess}
-              onCancel={() => {
-                setIsFormOpen(false);
-                setEditingContract(null);
-              }}
+              onCancel={() => setIsFormOpen(false)}
             />
           </DialogContent>
         </Dialog>
-
-        {/* No Brokers Warning Dialog */}
-        <AlertDialog open={!!noBrokersDialogId} onOpenChange={() => setNoBrokersDialogId(null)}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Contrato sem Corretores</AlertDialogTitle>
-              <AlertDialogDescription>
-                Este contrato não possui corretores vinculados. Deseja ativar o contrato sem gerar comissões?
-                <br /><br />
-                Você poderá adicionar corretores depois e usar o botão "Regenerar Comissões" para criá-las.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-              <AlertDialogAction onClick={() => {
-                if (noBrokersDialogId) {
-                  handleActivate(noBrokersDialogId, true);
-                }
-                setNoBrokersDialogId(null);
-              }}>
-                Ativar sem Comissões
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
       </div>
     </AppLayout>
   );

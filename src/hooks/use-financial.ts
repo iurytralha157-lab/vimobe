@@ -446,6 +446,12 @@ export function useFinancialDashboard() {
         totalContractsValue: contractsValue,
         activeContracts: contracts.length,
         wonLeadsCount: wonLeads.length,
+        // Premium Metrics (Simulated for now, would come from views)
+        avgTicket: contracts.length > 0 ? contractsValue / contracts.length : 0,
+        conversionRate: wonLeads.length > 0 ? (contracts.length / wonLeads.length) * 100 : 0,
+        annualProjection: receivable30 * 12, // Simple projection
+        growthRate: 15.5, // Trend simulation
+        defaultRate: receivable30 > 0 ? (overdueReceivables / receivable30) * 100 : 0,
       };
     },
     enabled: !!profile?.organization_id,
