@@ -91,6 +91,7 @@ const Checkout = lazy(() => import("./pages/Checkout"));
 // Public site preview (used inside CRM)
 const PreviewSiteWrapper = lazy(() => import("./pages/public/PreviewSiteWrapper"));
 const APIDocs = lazy(() => import("./pages/public/APIDocs"));
+const OperationalDashboard = lazy(() => import("./pages/OperationalDashboard"));
 
 
 // Trial expired modal
@@ -271,6 +272,7 @@ function AppRoutes() {
             <Route path="/engenharia/obras/nova" element={<ProtectedRoute><PermissionGuard permission="module_engineering"><ConstructionProjectForm /></PermissionGuard></ProtectedRoute>} />
             <Route path="/engenharia/obras/:id" element={<ProtectedRoute><PermissionGuard permission="module_engineering"><ConstructionProjectDetail /></PermissionGuard></ProtectedRoute>} />
             <Route path="/engenharia/obras/:id/editar" element={<ProtectedRoute><PermissionGuard permission="module_engineering"><ConstructionProjectForm /></PermissionGuard></ProtectedRoute>} />
+            <Route path="/engenharia/cockpit" element={<ProtectedRoute><OperationalDashboard /></ProtectedRoute>} />
 
             {/* Telecom Module */}
             <Route path="/plans" element={<ProtectedRoute><ServicePlans /></ProtectedRoute>} />
