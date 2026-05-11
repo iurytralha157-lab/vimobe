@@ -375,7 +375,7 @@ export default function Pipelines() {
       return;
     }
 
-    executeLeadMove(result);
+    if (executeLeadMove) executeLeadMove(result);
   }, [stages]);
 
   const executeLeadMove = useCallback(async (result: DropResult) => {
