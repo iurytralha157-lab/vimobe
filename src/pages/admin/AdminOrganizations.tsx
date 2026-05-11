@@ -59,7 +59,7 @@ export default function AdminOrganizations() {
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
   const [newOrg, setNewOrg] = useState({
     name: '',
-    segment: 'imobiliario' as 'imobiliario' | 'telecom' | 'servicos',
+    segment: 'imobiliario' as 'imobiliario' | 'telecom' | 'servicos' | 'engenharia',
     adminEmail: '',
     adminName: '',
     adminPassword: ''
@@ -170,11 +170,13 @@ export default function AdminOrganizations() {
                     <option value="imobiliario">Imobiliária</option>
                     <option value="telecom">Telecom / Internet</option>
                     <option value="servicos">Serviços Gerais</option>
+                    <option value="engenharia">Engenharia / Obras</option>
                   </select>
                   <p className="text-xs text-muted-foreground">
                     {newOrg.segment === 'imobiliario' && 'Módulos: Imóveis, Cadências, CRM Imobiliário'}
                     {newOrg.segment === 'telecom' && 'Módulos: Planos, Localidades, Clientes Telecom'}
                     {newOrg.segment === 'servicos' && 'Módulos: CRM Básico, Financeiro, Agenda'}
+                    {newOrg.segment === 'engenharia' && 'Módulos: Obras, Marcos, Pedidos de Compra'}
                   </p>
                 </div>
                 <div className="space-y-2">

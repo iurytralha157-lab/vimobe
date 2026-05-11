@@ -59,6 +59,7 @@ const AVAILABLE_MODULES = [
   { value: 'reports', label: 'Relatórios' },
   { value: 'site', label: 'Site Integrado' },
   { value: 'telecom', label: 'Telecom' },
+  { value: 'engineering', label: 'Engenharia e Obras' },
 ];
 
 const initialFormData = {

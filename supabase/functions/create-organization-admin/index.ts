@@ -90,7 +90,7 @@ Deno.serve(async (req) => {
     }
 
     // Validate segment
-    const validSegments = ['imobiliario', 'telecom', 'servicos'];
+    const validSegments = ['imobiliario', 'telecom', 'servicos', 'engenharia'];
     if (!validSegments.includes(segment)) {
       return new Response(JSON.stringify({ error: 'Invalid segment' }), {
         status: 400,
@@ -187,6 +187,9 @@ Deno.serve(async (req) => {
     } else if (segment === 'imobiliario') {
       enabledModules = ['crm', 'financial', 'properties', 'whatsapp', 'agenda', 'cadences', 'tags', 'round_robin', 'reports'];
       disabledModules = ['plans', 'coverage', 'telecom', 'automations', 'performance', 'webhooks', 'site'];
+    } else if (segment === 'engenharia') {
+      enabledModules = ['crm', 'financial', 'engineering', 'whatsapp', 'agenda', 'tags', 'round_robin', 'reports'];
+      disabledModules = ['properties', 'plans', 'coverage', 'telecom', 'cadences', 'automations', 'performance', 'webhooks', 'site'];
     } else {
       // servicos - basic modules
       enabledModules = ['crm', 'financial', 'whatsapp', 'agenda', 'tags', 'round_robin', 'reports'];
@@ -232,6 +235,14 @@ Deno.serve(async (req) => {
           { name: 'Agendado', stage_key: 'agendado', color: '#8B5CF6', position: 2 },
           { name: 'Instalação', stage_key: 'instalacao', color: '#EC4899', position: 3 },
           { name: 'Ativado', stage_key: 'ativado', color: '#10B981', position: 4 },
+        ];
+      } else if (segment === 'engenharia') {
+        stages = [
+          { name: 'Novo Orçamento', stage_key: 'novo', color: '#3B82F6', position: 0 },
+          { name: 'Visita Técnica', stage_key: 'visita', color: '#F59E0B', position: 1 },
+          { name: 'Em Elaboração', stage_key: 'elaboracao', color: '#8B5CF6', position: 2 },
+          { name: 'Proposta Enviada', stage_key: 'proposta', color: '#EC4899', position: 3 },
+          { name: 'Obra Iniciada', stage_key: 'obra', color: '#10B981', position: 4 },
         ];
       } else {
         stages = [
