@@ -1,5 +1,7 @@
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useOperationalRequests } from "@/hooks/use-operational";
+import { useConstructionProjects } from "@/hooks/use-construction";
+
 import { 
   Card, 
   CardContent, 
