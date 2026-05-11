@@ -139,7 +139,9 @@ export default function Pipelines() {
   
   // Ref para bloquear refetch durante drag-and-drop (evita race condition)
   const isDraggingRef = useRef(false);
-  
+  const [confirmationDialogOpen, setConfirmationDialogOpen] = useState(false);
+  const [pendingDragResult, setPendingDragResult] = useState<DropResult | null>(null);
+
   const { data: pipelines = [], isLoading: pipelinesLoading } = usePipelines();
   const createPipeline = useCreatePipeline();
   const updatePipeline = useUpdatePipeline();
