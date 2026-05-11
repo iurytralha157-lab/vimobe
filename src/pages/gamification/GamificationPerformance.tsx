@@ -38,6 +38,7 @@ export default function GamificationPerformance() {
       const startOfThisWeek = startOfWeek(now, { weekStartsOn: 1 });
       const endOfThisWeek = endOfWeek(now, { weekStartsOn: 1 });
       const startOfLastMonth = startOfMonth(subMonths(now, 1));
+      const startOfCurrentMonth = startOfMonth(now);
 
       // Fetch all events since last month to compare
       const { data: events, error } = await supabase
@@ -60,15 +61,28 @@ export default function GamificationPerformance() {
       });
 
       // Metrics
-      const thisMonthEvents = events.filter(e => new Date(e.created_at) >= startOfMonth(now));
-      const lastMonthEvents = events.filter(e => new Date(e.created_at) >= startOfLastMonth && new Date(e.created_at) < startOfMonth(now));
+      const thisMonthEvents = events.filter(e => new Date(e.created_at) >= startOfCurrentMonth);
+      const lastMonthEvents = events.filter(e => {
+        const date = new Date(e.created_at);
+        return date >= startOfLastMonth && date < startOfCurrentMonth;
+      });
 
       const thisMonthPoints = thisMonthEvents.reduce((acc, curr) => acc + (curr.points_earned || 0), 0);
       const lastMonthPoints = lastMonthEvents.reduce((acc, curr) => acc + (curr.points_earned || 0), 0);
       
       const growth = lastMonthPoints === 0 ? 100 : Math.round(((thisMonthPoints - lastMonthPoints) / lastMonthPoints) * 100);
 
-      const avgActionsPerDay = Math.round((thisMonthEvents.length / (now.getDate())) * 10) / 10;
+      const daysInMonthSoFar = now.getDate();
+      const avgActionsPerDay = Math.round((thisMonthEvents.length / daysInMonthSoFar) * 10) / 10;
+
+      // Real Efficiency calculation: (Positive outcomes / total actions)
+      const positiveTypes = ['sale_closed', 'contract_signed', 'proposal_sent', 'visit_scheduled', 'visit_confirmed', 'meeting_held'];
+      const positiveEvents = thisMonthEvents.filter(e => positiveTypes.includes(e.event_type)).length;
+      const efficiency = thisMonthEvents.length > 0 ? Math.round((positiveEvents / thisMonthEvents.length) * 100) : 0;
+
+      // Real Consistency calculation: (Days with at least one action / days passed in month)
+      const activeDays = new Set(thisMonthEvents.map(e => format(new Date(e.created_at), 'yyyy-MM-dd'))).size;
+      const consistency = Math.round((activeDays / daysInMonthSoFar) * 100);
 
       return {
         chartData,
@@ -77,13 +91,13 @@ export default function GamificationPerformance() {
           growth,
           avgActionsPerDay,
           totalActions: thisMonthEvents.length,
-          efficiency: 87, // Mock efficiency for now as it needs complex calc
-          consistency: 94 // Mock consistency
+          efficiency,
+          consistency
         },
         distribution: [
           { label: 'Ligações', value: thisMonthEvents.filter(e => e.event_type === 'call_made').length },
-          { label: 'Mensagens', value: thisMonthEvents.filter(e => e.event_type === 'message_sent').length },
-          { label: 'Vendas/Leads', value: thisMonthEvents.filter(e => ['sale_closed', 'lead_created_manual'].includes(e.event_type)).length },
+          { label: 'Propostas/Vendas', value: thisMonthEvents.filter(e => ['sale_closed', 'contract_signed', 'proposal_sent'].includes(e.event_type)).length },
+          { label: 'Reuniões/Visitas', value: thisMonthEvents.filter(e => ['visit_scheduled', 'visit_confirmed', 'meeting_held'].includes(e.event_type)).length },
         ]
       };
     },
@@ -114,9 +128,9 @@ export default function GamificationPerformance() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Eficiência</p>
-                <h3 className="text-2xl font-bold">{metrics?.efficiency}%</h3>
+                <h3 className="text-2xl font-bold">{metrics?.efficiency > 0 ? `${metrics?.efficiency}%` : '—'}</h3>
                 <p className="text-[10px] text-emerald-600 flex items-center gap-1 mt-1">
-                  <ArrowUpRight className="h-3 w-3" /> +12% vs mês ant.
+                  {metrics?.efficiency > 0 && <><ArrowUpRight className="h-3 w-3" /> Baseado em conversão</>}
                 </p>
               </div>
               <div className="bg-emerald-500 p-2 rounded-lg">
@@ -165,9 +179,9 @@ export default function GamificationPerformance() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs font-medium text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">Consistência</p>
-                <h3 className="text-2xl font-bold">{metrics?.consistency}%</h3>
+                <h3 className="text-2xl font-bold">{metrics?.consistency > 0 ? `${metrics?.consistency}%` : '—'}</h3>
                 <p className="text-[10px] text-indigo-600 flex items-center gap-1 mt-1">
-                  <ArrowUpRight className="h-3 w-3" /> Estável
+                  {metrics?.consistency > 0 && <><Clock className="h-3 w-3" /> Frequência de atividade</>}
                 </p>
               </div>
               <div className="bg-indigo-500 p-2 rounded-lg">
@@ -247,7 +261,7 @@ export default function GamificationPerformance() {
             {performanceData?.distribution.map((item) => {
               const total = performanceData.metrics.totalActions || 1;
               const percentage = Math.round((item.value / total) * 100);
-              const color = item.label === 'Ligações' ? 'bg-indigo-500' : item.label === 'Mensagens' ? 'bg-emerald-500' : 'bg-orange-500';
+              const color = item.label === 'Ligações' ? 'bg-indigo-500' : item.label === 'Propostas/Vendas' ? 'bg-emerald-500' : 'bg-orange-500';
 
               return (
                 <div key={item.label} className="space-y-2">
