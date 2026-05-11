@@ -22,6 +22,7 @@ export type ModuleName =
   | 'site'         // Site Integrado
   | 'ai_agent'    // Agente de IA
   | 'campaigns'   // Campanhas (Dashboard Meta)
+  | 'engineering' // Engenharia e Obras
   | 'api';         // API Pública
 
 // Default modules that are enabled if no explicit record exists

@@ -63,6 +63,8 @@ export const en = {
     more: 'More',
     summary: 'Summary',
     campaigns: 'Campaigns',
+    engineering: 'Engineering',
+    construction: 'Projects',
   },
 
   // Settings
