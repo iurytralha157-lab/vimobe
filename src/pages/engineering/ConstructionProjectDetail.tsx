@@ -25,7 +25,7 @@ import { ProjectStatusBadge } from "@/components/engineering/EngineeringBadges";
 import { ConstructionProgress } from "@/components/engineering/ConstructionProgress";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { 
   Dialog, 
   DialogContent, 
