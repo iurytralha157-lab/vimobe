@@ -65,6 +65,7 @@ export const en = {
     campaigns: 'Campaigns',
     engineering: 'Engineering',
     construction: 'Projects',
+    cockpit: 'Operational Cockpit',
   },
 
   // Settings

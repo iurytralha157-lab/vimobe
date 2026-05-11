@@ -181,6 +181,10 @@ const allNavItems: NavItem[] = [{
     icon: Building2,
     labelKey: 'construction',
     path: '/engenharia/obras'
+  }, {
+    icon: LayoutDashboard,
+    labelKey: 'cockpit',
+    path: '/engenharia/cockpit'
   }]
 }];
 const bottomItems: NavItem[] = [{
