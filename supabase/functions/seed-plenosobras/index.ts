@@ -26,10 +26,10 @@ Deno.serve(async (req) => {
     const { data: property, error: propErr } = await supabase.from('properties').insert({
       organization_id: v_org_id,
       title: 'Terreno Teste - Loteamento Alpha',
-      description: 'Lote plano pronto para construir',
+      descricao: 'Lote plano pronto para construir',
       code: 'TR-' + Math.floor(Math.random() * 1000),
-      type: 'land',
-      business_type: 'sale',
+      tipo_de_imovel: 'land',
+      tipo_de_negocio: 'sale',
       preco: 150000,
       status: 'available'
     }).select().single();
