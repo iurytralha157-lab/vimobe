@@ -63,6 +63,7 @@ const GamificationHistory = lazy(() => import("./pages/gamification/Gamification
 
 // Engineering pages
 const ConstructionProjects = lazy(() => import("./pages/engineering/ConstructionProjects"));
+const ConstructionProjectDetail = lazy(() => import("./pages/engineering/ConstructionProjectDetail"));
 
 // Telecom pages
 const ServicePlans = lazy(() => import("./pages/ServicePlans"));
