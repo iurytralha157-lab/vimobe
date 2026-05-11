@@ -38,15 +38,6 @@ export function useForceRefreshListener() {
   }, []);
 }
 
-      .subscribe((status) => {
-        console.log('[ForceRefresh] Channel status:', status);
-      });
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
-}
 
 /**
  * Hook that provides a function to broadcast force refresh to all users.
