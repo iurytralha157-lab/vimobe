@@ -149,13 +149,14 @@ export default function ArchitectureDashboard() {
           </CardHeader>
           <CardContent>
              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {completedProjects.slice(0, 3).map((cp) => (
-                  <FileItem 
-                    key={cp.id} 
-                    name={cp.title} 
-                    date={format(new Date(cp.completed_at || cp.updated_at), 'dd/MM/yyyy')} 
-                    size="-" 
-                  />
+                 {completedProjects.slice(0, 3).map((cp) => (
+                   <FileItem 
+                     key={cp.id} 
+                     name={cp.name} 
+                     date={format(new Date(cp.delivery_date_actual || cp.updated_at), 'dd/MM/yyyy')} 
+                     size="-" 
+                   />
+
                 ))}
                 {completedProjects.length === 0 && (
                   <p className="col-span-3 text-sm text-muted-foreground text-center py-4">Nenhum projeto entregue recentemente</p>
