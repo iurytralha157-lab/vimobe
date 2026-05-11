@@ -105,26 +105,27 @@ function TelecomFinancialDashboard({ data }: { data: ReturnType<typeof useTeleco
 
         {/* KPI Cards Row 1 - A Receber */}
         <div className="grid grid-cols-2 gap-2 sm:gap-3 md:gap-4 lg:grid-cols-4">
-          <FinancialCard
+          <PremiumFinancialCard
             title="A Receber (30d)"
             value={formatCurrency(data?.receivable30 || 0)}
             description="Projeção MRR"
             icon={TrendingUp}
             variant="success"
+            chartData={data?.monthlyData?.map(m => ({ value: m.receitas }))}
           />
-          <FinancialCard
+          <PremiumFinancialCard
             title="A Receber (60d)"
             value={formatCurrency(data?.receivable60 || 0)}
             description="2x MRR"
             icon={Calendar}
           />
-          <FinancialCard
+          <PremiumFinancialCard
             title="A Receber (90d)"
             value={formatCurrency(data?.receivable90 || 0)}
             description="3x MRR"
             icon={Calendar}
           />
-          <FinancialCard
+          <PremiumFinancialCard
             title="A Pagar"
             value={formatCurrency(data?.totalPayable || 0)}
             icon={TrendingDown}
@@ -134,23 +135,23 @@ function TelecomFinancialDashboard({ data }: { data: ReturnType<typeof useTeleco
 
         {/* KPI Cards Row 2 - Comissões e Vencidos */}
         <div className="grid grid-cols-2 gap-2 sm:gap-3 md:gap-4 lg:grid-cols-4">
-          <FinancialCard
+          <PremiumFinancialCard
             title="Comissões Pend."
             value={formatCurrency(data?.pendingCommissions || 0)}
             icon={DollarSign}
           />
-          <FinancialCard
+          <PremiumFinancialCard
             title="Comissões Prev."
             value={formatCurrency(data?.forecastCommissions || 0)}
             icon={Clock}
           />
-          <FinancialCard
+          <PremiumFinancialCard
             title="Comissões Pagas"
             value={formatCurrency(data?.paidCommissions || 0)}
             icon={CheckCircle2}
             variant="success"
           />
-          <FinancialCard
+          <PremiumFinancialCard
             title="Vencidos"
             value={formatCurrency(totalOverdue)}
             icon={AlertTriangle}
@@ -160,27 +161,27 @@ function TelecomFinancialDashboard({ data }: { data: ReturnType<typeof useTeleco
 
         {/* KPI Cards Row 3 - Risco e Churn */}
         <div className="grid grid-cols-2 gap-2 sm:gap-3 md:gap-4 lg:grid-cols-4">
-          <FinancialCard
+          <PremiumFinancialCard
             title="Inadimplentes"
             value={`${data?.defaultingCustomers || 0} clientes`}
             description={formatCurrency(data?.defaultingValue || 0)}
             icon={UserMinus}
             variant="destructive"
           />
-          <FinancialCard
+          <PremiumFinancialCard
             title="Cancelados"
             value={`${data?.canceledCustomers || 0} clientes`}
             description={formatCurrency(data?.churnValue || 0)}
             icon={UserX}
             variant="destructive"
           />
-          <FinancialCard
+          <PremiumFinancialCard
             title="Suspensos"
             value={`${data?.suspendedCustomers || 0} clientes`}
             icon={Clock}
             variant="warning"
           />
-          <FinancialCard
+          <PremiumFinancialCard
             title="Aguardando"
             value={`${data?.pendingCustomers || 0} clientes`}
             description="Aguardando + Em Análise"
