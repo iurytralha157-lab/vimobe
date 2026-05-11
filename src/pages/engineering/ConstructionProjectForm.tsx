@@ -58,11 +58,14 @@ export default function ConstructionProjectForm() {
         description: project.description || "",
         property_id: project.property_id || "",
         status: project.status || "planned",
+        project_type: (project as any).project_type || "construction",
         budget_estimated: project.budget_estimated || 0,
         start_date_planned: project.start_date_planned ? project.start_date_planned.split('T')[0] : "",
-        end_date_planned: project.end_date_planned ? project.end_date_planned.split('T')[0] : ""
+        end_date_planned: project.end_date_planned ? project.end_date_planned.split('T')[0] : "",
+        city_hall_approval_date: (project as any).city_hall_approval_date ? (project as any).city_hall_approval_date.split('T')[0] : ""
       });
     }
+
   }, [project, isEditing, reset]);
 
   const onSubmit = async (values: any) => {
