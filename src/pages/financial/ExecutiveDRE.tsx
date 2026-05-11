@@ -220,7 +220,7 @@ export default function ExecutiveDRE() {
                    <div className="relative h-40 w-40 flex items-center justify-center rounded-full border-8 border-slate-100">
                       <div className="text-center">
                         <p className="text-3xl font-black text-blue-600">
-                          {((dreData.totals.ebitda / (dreData.totals.grossRevenue || 1)) * 100).toFixed(1)}%
+                          {((dreData.totals.netResult / (dreData.totals.grossRevenue || 1)) * 100).toFixed(1)}%
                         </p>
                         <p className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Margem Líquida</p>
                       </div>
