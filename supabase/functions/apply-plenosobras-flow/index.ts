@@ -57,12 +57,18 @@ Deno.serve(async (req) => {
     ];
 
     for (const s of stages) {
+      const stage_key = s.name.toLowerCase().replace(/ /g, '_').normalize("NFD").replace(/[\u0300-\u036f]/g, "");
       const { data: stage, error: sError } = await supabase
         .from('stages')
-        .insert({ pipeline_id: v_pipeline_id, name: s.name, position: s.pos })
+        .insert({ 
+          pipeline_id: v_pipeline_id, 
+          name: s.name, 
+          position: s.pos,
+          stage_key: stage_key
+        })
         .select()
         .single()
-      
+
       if (sError) throw sError;
 
       if (s.context) {
