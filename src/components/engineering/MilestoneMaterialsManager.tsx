@@ -1,10 +1,7 @@
 import React, { useState } from 'react';
 import { 
   Card, 
-  CardContent, 
-  CardHeader, 
-  CardTitle, 
-  CardDescription 
+  CardContent 
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { 
@@ -15,10 +12,8 @@ import {
 import { 
   ShoppingCart, 
   Plus, 
-  ChevronRight, 
   CheckCircle2, 
   Package,
-  AlertTriangle,
   Loader2
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -28,7 +23,7 @@ import {
   DialogHeader, 
   DialogTitle, 
   DialogTrigger,
-  DialogFooter
+  DialogDescription
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -56,7 +51,7 @@ export function MilestoneMaterialsManager({ projectId }: { projectId: string }) 
   const handleAddMaterial = async () => {
     if (!selectedMilestone) return;
     
-    const currentMaterials = selectedMilestone.material_list || [];
+    const currentMaterials = (selectedMilestone as any).material_list || [];
     const updatedMaterials = [...currentMaterials, newMaterial];
     
     await updateMilestone.mutateAsync({
@@ -70,7 +65,7 @@ export function MilestoneMaterialsManager({ projectId }: { projectId: string }) 
   };
 
   const handleGeneratePurchaseOrder = async (milestone: any) => {
-    const materials = milestone.material_list || [];
+    const materials = (milestone as any).material_list || [];
     if (materials.length === 0) {
       toast.error("Nenhum material cadastrado nesta etapa.");
       return;
@@ -92,7 +87,7 @@ export function MilestoneMaterialsManager({ projectId }: { projectId: string }) 
     }
   };
 
-  if (isLoading) return <div className="flex justify-center p-8"><Loader2 className="animate-spin" /></div>;
+  if (isLoading) return <div className="flex justify-center p-8"><Loader2 className="animate-spin text-primary" /></div>;
 
   return (
     <div className="space-y-4">
@@ -110,15 +105,15 @@ export function MilestoneMaterialsManager({ projectId }: { projectId: string }) 
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
                   <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
-                    {milestone.order_index}
+                    {(milestone as any).order_index}
                   </div>
                   <div>
-                    <h4 className="font-medium">{milestone.name}</h4>
+                    <h4 className="font-medium">{(milestone as any).name}</h4>
                     <div className="flex items-center gap-2 mt-1">
                       <Badge variant="secondary" className="text-[10px]">
-                        {milestone.material_list?.length || 0} materiais
+                        {(milestone as any).material_list?.length || 0} materiais
                       </Badge>
-                      {milestone.status === 'completed' && (
+                      {(milestone as any).status === 'completed' && (
                         <CheckCircle2 className="h-3 w-3 text-emerald-500" />
                       )}
                     </div>
@@ -135,7 +130,7 @@ export function MilestoneMaterialsManager({ projectId }: { projectId: string }) 
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-[500px]">
                       <DialogHeader>
-                        <DialogTitle>Materiais: {milestone.name}</DialogTitle>
+                        <DialogTitle>Materiais: {(milestone as any).name}</DialogTitle>
                         <DialogDescription>
                           Liste os insumos necessários para concluir esta etapa da obra.
                         </DialogDescription>
@@ -143,14 +138,14 @@ export function MilestoneMaterialsManager({ projectId }: { projectId: string }) 
 
                       <div className="space-y-4 py-4">
                         <div className="max-h-[300px] overflow-y-auto space-y-2 pr-2">
-                          {milestone.material_list?.map((item: any, idx: number) => (
+                          {(milestone as any).material_list?.map((item: any, idx: number) => (
                             <div key={idx} className="flex items-center justify-between p-2 bg-muted/50 rounded-lg text-sm">
                               <span>{item.description}</span>
                               <span className="font-mono">{item.quantity} {item.unit}</span>
                             </div>
                           ))}
-                          {(!milestone.material_list || milestone.material_list.length === 0) && (
-                            <p className="text-center text-muted-foreground py-4 italic">Nenhum material adicionado.</p>
+                          {(!(milestone as any).material_list || (milestone as any).material_list.length === 0) && (
+                            <p className="text-center text-muted-foreground py-4 italic text-sm">Nenhum material adicionado.</p>
                           )}
                         </div>
 
@@ -200,7 +195,7 @@ export function MilestoneMaterialsManager({ projectId }: { projectId: string }) 
                     size="sm" 
                     className="bg-purple-600 hover:bg-purple-700"
                     onClick={() => handleGeneratePurchaseOrder(milestone)}
-                    disabled={!milestone.material_list || milestone.material_list.length === 0}
+                    disabled={!(milestone as any).material_list || (milestone as any).material_list.length === 0}
                   >
                     <ShoppingCart className="h-4 w-4 mr-2" />
                     Gerar Compra
