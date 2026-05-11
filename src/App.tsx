@@ -96,7 +96,7 @@ const EngineeringDashboard = lazy(() => import("./pages/engineering/EngineeringD
 const ArchitectureDashboard = lazy(() => import("./pages/architecture/ArchitectureDashboard"));
 const PurchaseDashboard = lazy(() => import("./pages/purchase/PurchaseDashboard"));
 const OperationalQueues = lazy(() => import("./pages/operational/OperationalQueues"));
-const StageOperationalManagement = lazy(() => import("./pages/StageOperationalManagement"));
+const StageOperationalManagement = lazy(() => import("./pages/StageOperationalManagement")); // Pode ser removido depois se não for usado em outro lugar
 const ExecutiveDRE = lazy(() => import("./pages/financial/ExecutiveDRE"));
 
 
@@ -249,7 +249,6 @@ function AppRoutes() {
             <Route path="/crm/pipelines" element={<ProtectedRoute><Pipelines /></ProtectedRoute>} />
             <Route path="/crm/contacts" element={<ProtectedRoute><Contacts /></ProtectedRoute>} />
             <Route path="/crm/management" element={<ProtectedRoute><AdminRoute><CRMManagement /></AdminRoute></ProtectedRoute>} />
-            <Route path="/crm/management/operacional" element={<ProtectedRoute><AdminRoute><StageOperationalManagement /></AdminRoute></ProtectedRoute>} />
             <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
             <Route path="/agenda" element={<ProtectedRoute><Agenda /></ProtectedRoute>} />
             <Route path="/properties" element={<ProtectedRoute><Properties /></ProtectedRoute>} />
