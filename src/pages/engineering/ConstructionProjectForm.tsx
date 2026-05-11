@@ -67,7 +67,7 @@ export default function ConstructionProjectForm() {
       if (isEditing) {
         await updateProject.mutateAsync({ id, ...values });
       } else {
-        const result = await createProject.mutateAsync(values);
+        const result: any = await createProject.mutateAsync(values);
         navigate(`/engenharia/obras/${result.id}`);
       }
       if (isEditing) navigate(`/engenharia/obras/${id}`);
