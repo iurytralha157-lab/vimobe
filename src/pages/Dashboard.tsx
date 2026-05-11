@@ -186,6 +186,7 @@ export default function Dashboard() {
                 periodLabel={periodLabel} 
                 propertyCount={propertyCount}
                 siteVisits={siteVisits}
+                scheduledVisits={scheduledVisitsCount}
                 layout="top"
               />
             </div>
