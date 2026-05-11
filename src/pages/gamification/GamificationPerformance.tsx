@@ -42,7 +42,7 @@ export default function GamificationPerformance() {
 
       // Fetch all events since last month to compare
       const { data: events, error } = await supabase
-        .from('gamification_events')
+        .from('gamification_activity_logs')
         .select('*')
         .eq('organization_id', organization.id)
         .gte('created_at', startOfLastMonth.toISOString());
