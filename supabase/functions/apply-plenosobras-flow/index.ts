@@ -33,7 +33,7 @@ Deno.serve(async (req) => {
     const v_pipeline_id = pipeline.id;
 
     const stages = [
-      { name: 'Lead Entrou', pos: 1, context: 'comercial', sector: 'SDR', sla: 0.25, reqs: [{title: "Primeiro Contato", description: "Realizar contato inicial em até 15 minutos", priority: "high", type: "finance"}] },
+      { name: 'Lead Entrou', pos: 1, context: 'comercial', sector: 'SDR', sla: 1, reqs: [{title: "Primeiro Contato", description: "Realizar contato inicial em até 15 minutos", priority: "high", type: "finance"}] },
       { name: 'Tentando Contato', pos: 2, context: 'comercial', sector: 'SDR' },
       { name: 'Em Atendimento', pos: 3, context: 'comercial', sector: 'SDR', checklist: [{task: "Nome do Cliente", required: true}, {task: "CPF do Cliente", required: true}, {task: "Renda Declarada", required: true}, {task: "Interesse Principal", required: true}] },
       { name: 'Não Qualificado', pos: 4, context: 'comercial', sector: 'SDR' },
