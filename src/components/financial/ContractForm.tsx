@@ -74,14 +74,14 @@ export function ContractForm({ contract, onSuccess, onCancel }: ContractFormProp
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      type: contract?.contract_type || 'sale', // Lê 'contract_type' do banco
+      type: contract?.contract_type || 'sale',
       client_name: contract?.client_name || '',
       client_email: contract?.client_email || '',
       client_phone: contract?.client_phone || '',
       client_document: contract?.client_document || '',
       property_id: contract?.property_id || '',
       lead_id: contract?.lead_id || '',
-      total_value: contract?.value || 0, // Lê 'value' do banco
+      total_value: contract?.value || 0,
       down_payment: contract?.down_payment || 0,
       installments: contract?.installments || 1,
       payment_conditions: contract?.payment_conditions || '',
@@ -89,6 +89,9 @@ export function ContractForm({ contract, onSuccess, onCancel }: ContractFormProp
       end_date: contract?.end_date?.split('T')[0] || '',
       signing_date: contract?.signing_date?.split('T')[0] || '',
       notes: contract?.notes || '',
+      client_has_own_resources: (contract?.client_has_own_resources as 'yes' | 'no' | 'partial') || 'no',
+      available_resource_value: contract?.available_resource_value || 0,
+      expected_entry_value: contract?.expected_entry_value || 0,
     },
   });
 
