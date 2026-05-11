@@ -1,79 +1,9 @@
 import { useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { performFullCacheClear } from '@/lib/cache-utils';
 
 const CHANNEL_NAME = 'system-updates-v4'; // Bumped version to v4
-
-/**
- * Performs a complete cache clear including Service Worker and all browser caches
- */
-async function performFullCacheClear(): Promise<void> {
-  console.log('[ForceRefresh] Starting full cache clear...');
-
-  // 1. Unregister all Service Workers
-  if ('serviceWorker' in navigator) {
-    try {
-      const registrations = await navigator.serviceWorker.getRegistrations();
-      console.log(`[ForceRefresh] Found ${registrations.length} service workers to unregister`);
-      
-      for (const registration of registrations) {
-        const success = await registration.unregister();
-        console.log(`[ForceRefresh] Service worker unregistered: ${success}`);
-      }
-    } catch (err) {
-      console.error('[ForceRefresh] Error unregistering service workers:', err);
-    }
-  }
-
-  // 2. Clear all Cache Storage (PWA caches)
-  if ('caches' in window) {
-    try {
-      const cacheNames = await caches.keys();
-      console.log(`[ForceRefresh] Found ${cacheNames.length} caches to clear:`, cacheNames);
-      
-      await Promise.all(
-        cacheNames.map(async (cacheName) => {
-          const deleted = await caches.delete(cacheName);
-          console.log(`[ForceRefresh] Cache "${cacheName}" deleted: ${deleted}`);
-        })
-      );
-    } catch (err) {
-      console.error('[ForceRefresh] Error clearing caches:', err);
-    }
-  }
-
-  // 3. Clear localStorage (except auth tokens)
-  const authKeysToKeep = ['sb-iemalzlfnbouobyjwlwi-auth-token', 'impersonate_session'];
-  const keysToRemove: string[] = [];
-  
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (key && !authKeysToKeep.some(authKey => key.includes(authKey))) {
-      keysToRemove.push(key);
-    }
-  }
-  
-  keysToRemove.forEach(key => {
-    localStorage.removeItem(key);
-    console.log(`[ForceRefresh] Removed localStorage key: ${key}`);
-  });
-
-  // 4. Clear sessionStorage (except auth tokens)
-  const sessionKeysToRemove: string[] = [];
-  for (let i = 0; i < sessionStorage.length; i++) {
-    const key = sessionStorage.key(i);
-    if (key && !authKeysToKeep.some(authKey => key.includes(authKey))) {
-      sessionKeysToRemove.push(key);
-    }
-  }
-  
-  sessionKeysToRemove.forEach(key => {
-    sessionStorage.removeItem(key);
-    console.log(`[ForceRefresh] Removed sessionStorage key: ${key}`);
-  });
-
-  console.log('[ForceRefresh] Full cache clear completed');
-}
 
 /**
  * Hook that listens for force refresh broadcasts and reloads the page
@@ -92,18 +22,11 @@ export function useForceRefreshListener() {
           duration: 3000,
         });
 
-        // Perform full cache clear
-        await performFullCacheClear();
-
-        // Wait a moment to ensure caches are cleared, then hard reload
-        setTimeout(() => {
-          // Use cache-busting query param and force reload
-          const url = new URL(window.location.href);
-          url.searchParams.set('_refresh', Date.now().toString());
-          
-          // Force a hard reload bypassing cache
-          window.location.replace(url.toString());
-        }, 1500);
+        // Perform full cache clear without removing auth, then reload
+        await performFullCacheClear({ 
+          clearAuth: false, 
+          reload: true 
+        });
       })
       .subscribe((status) => {
         console.log('[ForceRefresh] Channel status:', status);
@@ -114,6 +37,7 @@ export function useForceRefreshListener() {
     };
   }, []);
 }
+
 
 /**
  * Hook that provides a function to broadcast force refresh to all users.

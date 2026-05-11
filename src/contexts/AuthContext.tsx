@@ -3,6 +3,7 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { logAuditAction } from '@/hooks/use-audit-logs';
 import { performanceTracker } from '@/lib/performance';
+import { performFullCacheClear } from '@/lib/cache-utils';
 interface UserProfile {
   id: string;
   organization_id: string | null;
@@ -285,7 +286,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Logout ou sessão expirada - limpar tudo e NÃO processar mais nada
         if (event === 'SIGNED_OUT') {
           clearAllStates();
-          window.location.href = '/auth';
+          // Perform full cache clear and redirect to login
+          performFullCacheClear({ 
+            clearAuth: true, 
+            redirectTo: '/auth' 
+          });
           return;
         }
 
@@ -381,30 +386,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       logAuditAction('logout', 'session', currentUserId).catch(console.error);
     }
 
-    // Limpar estados PRIMEIRO (antes de qualquer await)
-    // Isso garante que o logout funcione mesmo se a sessão já expirou no servidor
-    setUser(null);
-    setSession(null);
-    setProfile(null);
-    setOrganization(null);
-    setIsSuperAdmin(false);
-    setImpersonating(null);
-    localStorage.removeItem('impersonating');
-
-    // Limpar storage do Supabase manualmente para garantir que tokens sejam removidos
-    const storageKey = `sb-iemalzlfnbouobyjwlwi-auth-token`;
-    localStorage.removeItem(storageKey);
-    sessionStorage.removeItem(storageKey);
-
     // Tentar signOut global (invalida refresh token no servidor)
-    // Se falhar (sessão já expirada), não importa - tokens já foram limpos
     try {
       await supabase.auth.signOut({ scope: 'global' });
-      window.location.href = '/auth';
     } catch (error) {
       console.log('Logout server-side falhou (sessão provavelmente já expirada):', error);
-      window.location.href = '/auth';
     }
+
+    // Executar limpeza profunda e redirecionar para login com cache bust
+    await performFullCacheClear({ 
+      clearAuth: true, 
+      redirectTo: '/auth' 
+    });
   };
 
   const refreshProfile = async () => {
