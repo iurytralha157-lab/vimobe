@@ -16,20 +16,28 @@ export type KPIData = {
   };
 };
 
-export function useEnterpriseKPIs() {
+export function useEnterpriseKPIs(dateRange?: { from: Date; to: Date }) {
   const { organization } = useAuth();
 
   return useQuery({
-    queryKey: ["enterprise-kpis", organization?.id],
+    queryKey: ["enterprise-kpis", organization?.id, dateRange?.from?.toISOString(), dateRange?.to?.toISOString()],
     queryFn: async () => {
       if (!organization?.id) return null;
 
       // 1. Fetch Financial Data
-      const { data: entries } = await supabase
+      let query = supabase
         .from('financial_entries')
-        .select('amount, type, status')
+        .select('amount, type, status, due_date, paid_date')
         .eq('organization_id', organization.id)
         .in('status', ['paid']);
+
+      if (dateRange) {
+        query = query
+          .gte('paid_date', dateRange.from.toISOString())
+          .lte('paid_date', dateRange.to.toISOString());
+      }
+
+      const { data: entries } = await query;
 
       const revenue = entries?.filter(e => e.type === 'revenue').reduce((s, e) => s + (Number(e.amount) || 0), 0) || 0;
       const expense = entries?.filter(e => e.type === 'expense').reduce((s, e) => s + (Number(e.amount) || 0), 0) || 0;

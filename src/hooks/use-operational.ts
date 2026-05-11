@@ -25,7 +25,7 @@ export interface OperationalRequest {
   assignee?: { name: string; avatar_url: string | null };
 }
 
-export function useOperationalRequests(filters?: { type?: string; status?: string; leadId?: string }) {
+export function useOperationalRequests(filters?: { type?: string; status?: string; leadId?: string; dateRange?: { from: Date; to: Date } }) {
   const { organization } = useAuth();
 
   return useQuery({
@@ -39,8 +39,13 @@ export function useOperationalRequests(filters?: { type?: string; status?: strin
           project:construction_projects(id, name),
           assignee:users!assignee_id(id, name, avatar_url)
         `)
-        .eq("organization_id", organization?.id)
-        .order("created_at", { ascending: false });
+        .eq("organization_id", organization?.id);
+
+      if (filters?.dateRange) {
+        query = query
+          .gte('created_at', filters.dateRange.from.toISOString())
+          .lte('created_at', filters.dateRange.to.toISOString());
+      }
 
       if (filters?.type) query = query.eq("type", filters.type);
       if (filters?.status) query = query.eq("status", filters.status);

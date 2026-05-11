@@ -15,7 +15,9 @@ import {
   MapPin,
   MoreVertical,
   Edit,
-  Trash2
+  Trash2,
+  DollarSign,
+  ShoppingCart
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -169,6 +171,14 @@ export default function ConstructionProjectDetail() {
                   <CheckCircle2 className="h-4 w-4" />
                   Marcos e Cronograma
                 </TabsTrigger>
+                <TabsTrigger value="finance" className="gap-2">
+                  <DollarSign className="h-4 w-4" />
+                  Financeiro
+                </TabsTrigger>
+                <TabsTrigger value="purchases" className="gap-2">
+                  <ShoppingCart className="h-4 w-4" />
+                  Suprimentos
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="diaries" className="mt-6 space-y-4">
@@ -308,6 +318,34 @@ export default function ConstructionProjectDetail() {
 
               <TabsContent value="milestones" className="mt-6">
                 <MilestoneMaterialsManager projectId={id!} />
+              </TabsContent>
+
+              <TabsContent value="finance" className="mt-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Lançamentos Financeiros</CardTitle>
+                    <CardDescription>Entradas e saídas vinculadas a esta obra</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground italic text-center py-8">
+                      Funcionalidade de extrato financeiro por obra em processamento.
+                    </p>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="purchases" className="mt-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Ordens de Compra</CardTitle>
+                    <CardDescription>Suprimentos solicitados para esta obra</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground italic text-center py-8">
+                      Carregando histórico de suprimentos...
+                    </p>
+                  </CardContent>
+                </Card>
               </TabsContent>
             </Tabs>
           </div>

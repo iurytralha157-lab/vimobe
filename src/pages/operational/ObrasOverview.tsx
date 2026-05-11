@@ -16,7 +16,8 @@ import {
   ShoppingCart,
   TrendingUp,
   BarChart3,
-  Clock
+  Clock,
+  ChevronRight
 } from "lucide-react";
 import { 
   BarChart,
@@ -31,8 +32,13 @@ import {
   Cell
 } from 'recharts';
 
+import { DashboardFilters } from "@/components/dashboard/DashboardFilters";
+import { useDashboardFilters } from "@/hooks/use-dashboard-filters";
+import { DashboardAlertBar } from "@/components/dashboard/DashboardAlertBar";
+
 export default function ObrasOverview() {
-  const { data: kpis, isLoading: isLoadingKPIs } = useEnterpriseKPIs();
+  const { filters, ...filterHelpers } = useDashboardFilters();
+  const { data: kpis, isLoading: isLoadingKPIs } = useEnterpriseKPIs(filters.dateRange);
   const { data: requests, isLoading: isLoadingRequests } = useOperationalRequests();
 
   const formatCurrency = (value: number) => {
@@ -64,6 +70,32 @@ export default function ObrasOverview() {
   return (
     <AppLayout title="Visão Geral - Obras">
       <div className="space-y-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <DashboardAlertBar />
+          <div className="flex-1" />
+          <DashboardFilters 
+            {...filterHelpers}
+            datePreset={filterHelpers.datePreset}
+            onDatePresetChange={filterHelpers.setDatePreset}
+            customDateRange={filterHelpers.customDateRange}
+            onCustomDateRangeChange={filterHelpers.setCustomDateRange}
+            teamId={filterHelpers.teamId}
+            onTeamChange={filterHelpers.setTeamId}
+            userId={filterHelpers.userId}
+            onUserChange={filterHelpers.setUserId}
+            source={filterHelpers.source}
+            onSourceChange={filterHelpers.setSource}
+            campaignId={filterHelpers.campaignId}
+            onCampaignChange={filterHelpers.setCampaignId}
+            adSetId={filterHelpers.adSetId}
+            onAdSetChange={filterHelpers.setAdSetId}
+            adId={filterHelpers.adId}
+            onAdChange={filterHelpers.setAdId}
+            hasActiveFilters={filterHelpers.hasActiveFilters}
+            onClear={filterHelpers.clearFilters}
+          />
+        </div>
+
         {/* KPI Row */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <KPICard 
@@ -165,8 +197,15 @@ export default function ObrasOverview() {
           <CardContent>
             <div className="space-y-4">
               {kpis?.engineering?.projects?.map((project: any, idx: number) => (
-                <div key={idx} className="flex items-center gap-4">
-                  <div className="w-48 shrink-0 font-medium truncate">{project.name}</div>
+                <div 
+                  key={idx} 
+                  className="flex items-center gap-4 cursor-pointer hover:bg-slate-50 p-2 rounded-lg transition-colors"
+                  onClick={() => window.location.href = `/obras/obras/${project.id}`}
+                >
+                  <div className="w-48 shrink-0 font-medium truncate flex items-center gap-2">
+                    {project.name}
+                    <ChevronRight className="h-3 w-3 text-slate-400" />
+                  </div>
                   <div className="flex-1 h-3 bg-muted rounded-full overflow-hidden">
                     <div 
                       className="h-full bg-orange-500 transition-all duration-1000" 

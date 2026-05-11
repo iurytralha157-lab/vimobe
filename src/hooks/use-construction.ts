@@ -232,21 +232,28 @@ export function useCreatePurchaseOrder() {
   });
 }
 
-export function useAllPurchaseOrders() {
+export function useAllPurchaseOrders(dateRange?: { from: Date; to: Date }) {
   const { organization } = useAuth();
 
   return useQuery({
-    queryKey: ["all-purchase-orders", organization?.id],
+    queryKey: ["all-purchase-orders", organization?.id, dateRange?.from?.toISOString(), dateRange?.to?.toISOString()],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("construction_purchase_orders")
         .select(`
           *,
           project:construction_projects(id, name),
           supplier:suppliers(id, name)
         `)
-        .eq("organization_id", organization?.id)
-        .order("created_at", { ascending: false });
+        .eq("organization_id", organization?.id);
+
+      if (dateRange) {
+        query = query
+          .gte('created_at', dateRange.from.toISOString())
+          .lte('created_at', dateRange.to.toISOString());
+      }
+
+      const { data, error } = await query.order("created_at", { ascending: false });
 
       if (error) throw error;
       return data;
@@ -255,20 +262,27 @@ export function useAllPurchaseOrders() {
   });
 }
 
-export function useAllMilestones() {
+export function useAllMilestones(dateRange?: { from: Date; to: Date }) {
   const { organization } = useAuth();
 
   return useQuery({
-    queryKey: ["all-milestones", organization?.id],
+    queryKey: ["all-milestones", organization?.id, dateRange?.from?.toISOString(), dateRange?.to?.toISOString()],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("construction_milestones")
         .select(`
           *,
           project:construction_projects(id, name)
         `)
-        .eq("organization_id", organization?.id)
-        .order("start_date", { ascending: true });
+        .eq("organization_id", organization?.id);
+
+      if (dateRange) {
+        query = query
+          .gte('start_date', dateRange.from.toISOString())
+          .lte('start_date', dateRange.to.toISOString());
+      }
+
+      const { data, error } = await query.order("start_date", { ascending: true });
 
       if (error) throw error;
       return data;

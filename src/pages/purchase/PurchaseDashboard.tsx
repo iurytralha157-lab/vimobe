@@ -31,9 +31,14 @@ import {
 } from 'recharts';
 import { format, isAfter, addDays, isBefore } from "date-fns";
 
+import { DashboardFilters } from "@/components/dashboard/DashboardFilters";
+import { useDashboardFilters } from "@/hooks/use-dashboard-filters";
+import { DashboardAlertBar } from "@/components/dashboard/DashboardAlertBar";
+
 export default function PurchaseDashboard() {
-  const { data: orders, isLoading: ordersLoading } = useAllPurchaseOrders();
-  const { data: milestones, isLoading: milestonesLoading } = useAllMilestones();
+  const { filters, ...filterHelpers } = useDashboardFilters();
+  const { data: orders, isLoading: ordersLoading } = useAllPurchaseOrders(filters.dateRange);
+  const { data: milestones, isLoading: milestonesLoading } = useAllMilestones(filters.dateRange);
 
   const isLoading = ordersLoading || milestonesLoading;
 
@@ -108,6 +113,31 @@ export default function PurchaseDashboard() {
   return (
     <AppLayout title="Dashboard de Compras">
       <div className="space-y-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <DashboardAlertBar />
+          <div className="flex-1" />
+          <DashboardFilters 
+            {...filterHelpers}
+            datePreset={filterHelpers.datePreset}
+            onDatePresetChange={filterHelpers.setDatePreset}
+            customDateRange={filterHelpers.customDateRange}
+            onCustomDateRangeChange={filterHelpers.setCustomDateRange}
+            teamId={filterHelpers.teamId}
+            onTeamChange={filterHelpers.setTeamId}
+            userId={filterHelpers.userId}
+            onUserChange={filterHelpers.setUserId}
+            source={filterHelpers.source}
+            onSourceChange={filterHelpers.setSource}
+            campaignId={filterHelpers.campaignId}
+            onCampaignChange={filterHelpers.setCampaignId}
+            adSetId={filterHelpers.adSetId}
+            onAdSetChange={filterHelpers.setAdSetId}
+            adId={filterHelpers.adId}
+            onAdChange={filterHelpers.setAdId}
+            hasActiveFilters={filterHelpers.hasActiveFilters}
+            onClear={filterHelpers.clearFilters}
+          />
+        </div>
         <div className="flex justify-between items-center">
           <h2 className="text-xl font-bold">Visão Geral de Suprimentos</h2>
           <Button onClick={() => window.location.href = '/obras/compras/novo'}>
