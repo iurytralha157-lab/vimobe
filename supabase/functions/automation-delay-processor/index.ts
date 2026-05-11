@@ -32,6 +32,20 @@ Deno.serve(async (req) => {
 
     console.log("🕐 Automation delay processor started");
 
+    // --- Process Schedule Notifications ---
+    try {
+      console.log("🔔 Triggering notification-scheduler...");
+      const schedulerRes = await fetch(`${SUPABASE_URL}/functions/v1/notification-scheduler`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        },
+      });
+      console.log(`🔔 Notification scheduler response: ${schedulerRes.status}`);
+    } catch (schedErr) {
+      console.error("❌ Error triggering notification-scheduler:", schedErr);
+    }
+
     // ─── Recovery sweep: mark stuck executions as failed ───────────────
     try {
       const { data: recovered, error: recErr } = await supabase.rpc("recover_stuck_executions", {
