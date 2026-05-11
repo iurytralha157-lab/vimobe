@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -206,6 +207,7 @@ function RuleCard({ rule, onEdit, onDelete }: {
 
 export default function Commissions() {
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('pending');
   const [searchQuery, setSearchQuery] = useState('');
   const [payDialog, setPayDialog] = useState<{ open: boolean; commission: any | null }>({ open: false, commission: null });
