@@ -146,3 +146,88 @@ export function useCreateConstructionDiary() {
     }
   });
 }
+
+export function useConstructionMilestones(projectId: string) {
+  return useQuery({
+    queryKey: ["construction-milestones", projectId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("construction_milestones")
+        .select("*")
+        .eq("project_id", projectId)
+        .order("order_index", { ascending: true });
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!projectId,
+  });
+}
+
+export function useUpdateMilestone() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, ...values }: any) => {
+      const { data, error } = await supabase
+        .from("construction_milestones")
+        .update(values)
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["construction-milestones", data.project_id] });
+      toast.success("Milestone atualizada!");
+    },
+  });
+}
+
+export function useCreatePurchaseOrder() {
+  const queryClient = useQueryClient();
+  const { organization, profile } = useAuth();
+
+  return useMutation({
+    mutationFn: async ({ items, ...orderData }: any) => {
+      // 1. Criar a Ordem de Compra
+      const { data: order, error: orderError } = await supabase
+        .from("construction_purchase_orders")
+        .insert([{
+          ...orderData,
+          organization_id: organization?.id,
+          created_by: profile?.id,
+          status: 'pending'
+        }])
+        .select()
+        .single();
+
+      if (orderError) throw orderError;
+
+      // 2. Criar os itens da Ordem
+      if (items && items.length > 0) {
+        const itemsWithOrder = items.map((item: any) => ({
+          ...item,
+          purchase_order_id: order.id
+        }));
+
+        const { error: itemsError } = await supabase
+          .from("construction_purchase_order_items")
+          .insert(itemsWithOrder);
+
+        if (itemsError) throw itemsError;
+      }
+
+      return order;
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["construction-purchase-orders", data.project_id] });
+      toast.success("Ordem de compra gerada com sucesso!");
+    },
+    onError: (error: any) => {
+      toast.error(`Erro ao gerar ordem de compra: ${error.message}`);
+    }
+  });
+}

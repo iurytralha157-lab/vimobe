@@ -23,9 +23,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { ProjectStatusBadge } from "@/components/engineering/EngineeringBadges";
 import { ConstructionProgress } from "@/components/engineering/ConstructionProgress";
+import { MilestoneMaterialsManager } from "@/components/engineering/MilestoneMaterialsManager";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { 
   Dialog, 
   DialogContent, 
@@ -157,7 +158,6 @@ export default function ConstructionProjectDetail() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
             <Tabs defaultValue="diaries">
               <TabsList>
@@ -307,16 +307,11 @@ export default function ConstructionProjectDetail() {
               </TabsContent>
 
               <TabsContent value="milestones" className="mt-6">
-                <Card className="py-12 text-center">
-                  <CheckCircle2 className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-20" />
-                  <CardTitle className="text-muted-foreground">Em breve</CardTitle>
-                  <CardDescription>Gestão detalhada de cronograma e marcos da obra.</CardDescription>
-                </Card>
+                <MilestoneMaterialsManager projectId={id!} />
               </TabsContent>
             </Tabs>
           </div>
 
-          {/* Sidebar Info */}
           <div className="space-y-6">
             <Card>
               <CardHeader>
