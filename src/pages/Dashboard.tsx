@@ -178,7 +178,7 @@ export default function Dashboard() {
         />
 
         {/* ===== DESKTOP LAYOUT ===== */}
-        <div className="hidden lg:grid lg:grid-cols-12 gap-2 md:gap-3 flex-1 min-h-0">
+        <div className="hidden lg:grid lg:grid-cols-12 gap-2 md:gap-3 flex-1 min-h-0 overflow-hidden">
           {/* Left column (col 1-8): KPIs + Evolution Chart */}
           <div className="col-span-8 flex flex-col gap-3 min-h-0">
             {/* KPIs on top */}
@@ -209,10 +209,11 @@ export default function Dashboard() {
               <LeadSourcesChart data={sourcesData} isLoading={sourcesLoading} />
             </div>
           </div>
+        </div>
 
         {/* ===== MOBILE LAYOUT ===== */}
         <div className={cn(
-          "lg:hidden flex flex-col gap-4",
+          "lg:hidden flex flex-col gap-4 overflow-y-auto",
           !isMobile ? "flex-1 min-h-0" : ""
         )}>
           {/* KPIs */}
@@ -225,15 +226,25 @@ export default function Dashboard() {
 
           {/* Charts Tabs */}
           <Tabs value={mobileChartTab} onValueChange={setMobileChartTab} className={cn(!isMobile ? "flex-1 flex flex-col min-h-0" : "")}>
-            <TabsList className="w-full grid grid-cols-2">
+            <TabsList className="w-full grid grid-cols-3">
               <TabsTrigger value="funnel" className="text-xs">Funil</TabsTrigger>
               <TabsTrigger value="evolution" className="text-xs">Evolução</TabsTrigger>
+              <TabsTrigger value="sources" className="text-xs">Origem</TabsTrigger>
             </TabsList>
             <TabsContent value="funnel" className={cn("mt-3", !isMobile ? "flex-1 min-h-0" : "")}>
-              {funnelComponent}
+              <div className="h-[400px]">
+                {funnelComponent}
+              </div>
             </TabsContent>
             <TabsContent value="evolution" className={cn("mt-3", !isMobile ? "flex-1 min-h-0" : "")}>
+              <div className="h-[400px]">
                 <DealsEvolutionChart data={evolutionData} isLoading={evolutionLoading} />
+              </div>
+            </TabsContent>
+            <TabsContent value="sources" className={cn("mt-3", !isMobile ? "flex-1 min-h-0" : "")}>
+              <div className="h-[450px]">
+                <LeadSourcesChart data={sourcesData} isLoading={sourcesLoading} />
+              </div>
             </TabsContent>
           </Tabs>
         </div>
