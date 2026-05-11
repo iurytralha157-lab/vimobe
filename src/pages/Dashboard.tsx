@@ -200,13 +200,15 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Right column (col 9-12): Sales Funnel */}
-          <div className="col-span-4 min-h-0 flex flex-col">
-            <div className="flex-1 min-h-0 overflow-hidden">
+          {/* Right column (col 9-12): Sales Funnel + Lead Sources */}
+          <div className="col-span-4 min-h-0 flex flex-col gap-3">
+            <div className="h-[48%] min-h-0">
               {funnelComponent}
             </div>
+            <div className="h-[52%] min-h-0">
+              <LeadSourcesChart data={sourcesData} isLoading={sourcesLoading} />
+            </div>
           </div>
-        </div>
 
         {/* ===== MOBILE LAYOUT ===== */}
         <div className={cn(
