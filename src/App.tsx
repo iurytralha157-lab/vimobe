@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect } from "react"; // refreshed
+import { lazy, Suspense, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -47,7 +47,9 @@ const Agenda = lazy(() => import("./pages/Agenda"));
 const FinancialDashboard = lazy(() => import("./pages/FinancialDashboard"));
 const FinancialEntries = lazy(() => import("./pages/FinancialEntries"));
 const Contracts = lazy(() => import("./pages/Contracts"));
+const ContractDetails = lazy(() => import("./pages/ContractDetails"));
 const Commissions = lazy(() => import("./pages/Commissions"));
+const BrokerFinancialPanel = lazy(() => import("./pages/BrokerFinancialPanel"));
 const FinancialReports = lazy(() => import("./pages/FinancialReports"));
 const FinancialDRE = lazy(() => import("./pages/FinancialDRE"));
 const MetaSettings = lazy(() => import("./pages/MetaSettings"));
