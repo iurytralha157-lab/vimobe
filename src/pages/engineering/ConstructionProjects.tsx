@@ -131,7 +131,7 @@ function ProjectCard({ project, viewMode }: { project: any, viewMode: 'grid' | '
       <div className="h-32 bg-muted relative overflow-hidden">
         {(project as any).property?.main_image_url ? (
           <img 
-            src={project.property.main_image_url} 
+            src={(project as any).property.main_image_url} 
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
             alt={project.name}
           />
