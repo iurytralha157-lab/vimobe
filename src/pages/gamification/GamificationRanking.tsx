@@ -77,8 +77,8 @@ export default function GamificationRanking() {
       
       // Query events instead of stats for filtered/period points
       let query = supabase
-        .from('gamification_events')
-        .select('user_id, points_earned, event_type')
+        .from('gamification_activity_logs')
+        .select('user_id, points_earned, action_type')
         .eq('organization_id', organization.id)
         .gte('created_at', dateRange.from.toISOString())
         .lte('created_at', dateRange.to.toISOString());
@@ -94,7 +94,7 @@ export default function GamificationRanking() {
         };
         const types = typeMap[rankingType] || [];
         if (types.length > 0) {
-          query = query.in('event_type', types);
+          query = query.in('action_type', types);
         }
       }
 
@@ -104,7 +104,7 @@ export default function GamificationRanking() {
 
       // Aggregate points by user
       const pointsByUser: Record<string, number> = {};
-      events?.forEach(event => {
+      events?.forEach((event: any) => {
         pointsByUser[event.user_id] = (pointsByUser[event.user_id] || 0) + (event.points_earned || 0);
       });
 
@@ -142,7 +142,7 @@ export default function GamificationRanking() {
         {
           event: 'INSERT',
           schema: 'public',
-          table: 'gamification_events',
+          table: 'gamification_activity_logs',
           filter: `organization_id=eq.${organization.id}`
         },
         () => {

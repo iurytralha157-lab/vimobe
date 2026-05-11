@@ -42,7 +42,7 @@ export default function GamificationPerformance() {
 
       // Fetch all events since last month to compare
       const { data: events, error } = await supabase
-        .from('gamification_events')
+        .from('gamification_activity_logs')
         .select('*')
         .eq('organization_id', organization.id)
         .gte('created_at', startOfLastMonth.toISOString());
@@ -77,7 +77,7 @@ export default function GamificationPerformance() {
 
       // Real Efficiency calculation: (Positive outcomes / total actions)
       const positiveTypes = ['sale_closed', 'contract_signed', 'proposal_sent', 'visit_scheduled', 'visit_confirmed', 'meeting_held'];
-      const positiveEvents = thisMonthEvents.filter(e => positiveTypes.includes(e.event_type)).length;
+      const positiveEvents = thisMonthEvents.filter(e => positiveTypes.includes(e.action_type)).length;
       const efficiency = thisMonthEvents.length > 0 ? Math.round((positiveEvents / thisMonthEvents.length) * 100) : 0;
 
       // Real Consistency calculation: (Days with at least one action / days passed in month)
@@ -95,11 +95,11 @@ export default function GamificationPerformance() {
           consistency
         },
         distribution: [
-          { label: 'Ligações', value: thisMonthEvents.filter(e => e.event_type === 'call_made').length },
-          { label: 'Propostas/Vendas', value: thisMonthEvents.filter(e => ['sale_closed', 'contract_signed', 'proposal_sent'].includes(e.event_type)).length },
-          { label: 'Reuniões/Visitas', value: thisMonthEvents.filter(e => ['visit_scheduled', 'visit_confirmed', 'meeting_held'].includes(e.event_type)).length },
-          { label: 'Missões/Outros', value: thisMonthEvents.filter(e => ['mission_bonus', 'prospecting_report', 'lead_created_manual', 'property_created'].includes(e.event_type)).length },
-          { label: 'Missões/Outros', value: thisMonthEvents.filter(e => ['mission_bonus', 'prospecting_report', 'lead_created_manual', 'property_created'].includes(e.event_type)).length },
+          { label: 'Ligações', value: thisMonthEvents.filter(e => e.action_type === 'call_made').length },
+          { label: 'Propostas/Vendas', value: thisMonthEvents.filter(e => ['sale_closed', 'contract_signed', 'proposal_sent'].includes(e.action_type)).length },
+          { label: 'Reuniões/Visitas', value: thisMonthEvents.filter(e => ['visit_scheduled', 'visit_confirmed', 'meeting_held'].includes(e.action_type)).length },
+          { label: 'Missões/Outros', value: thisMonthEvents.filter(e => ['mission_bonus', 'prospecting_report', 'lead_created_manual', 'property_created'].includes(e.action_type)).length },
+          { label: 'Missões/Outros', value: thisMonthEvents.filter(e => ['mission_bonus', 'prospecting_report', 'lead_created_manual', 'property_created'].includes(e.action_type)).length },
         ]
       };
     },
