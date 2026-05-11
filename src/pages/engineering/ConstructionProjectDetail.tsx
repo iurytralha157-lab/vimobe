@@ -123,7 +123,7 @@ export default function ConstructionProjectDetail() {
           <div className="flex-1">
             <div className="flex items-center gap-2">
               <h1 className="text-2xl font-bold">{project.name}</h1>
-              <ProjectStatusBadge status={project.status} />
+              <ProjectStatusBadge status={project.status as any} />
             </div>
             <p className="text-muted-foreground text-sm flex items-center gap-1">
               <MapPin className="h-3 w-3" />
