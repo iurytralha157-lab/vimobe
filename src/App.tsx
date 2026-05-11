@@ -269,6 +269,7 @@ function AppRoutes() {
             <Route path="/financeiro/corretor" element={<ProtectedRoute><BrokerFinancialPanel /></ProtectedRoute>} />
             <Route path="/financeiro/relatorios" element={<ProtectedRoute><AdminRoute><FinancialReports /></AdminRoute></ProtectedRoute>} />
             <Route path="/financeiro/dre" element={<ProtectedRoute><AdminRoute><FinancialDRE /></AdminRoute></ProtectedRoute>} />
+            <Route path="/financeiro/dre-executivo" element={<ProtectedRoute><AdminRoute><ExecutiveDRE /></AdminRoute></ProtectedRoute>} />
 
             {/* Engineering Module */}
             <Route path="/engenharia/obras" element={<ProtectedRoute><PermissionGuard permission="module_engineering"><ConstructionProjects /></PermissionGuard></ProtectedRoute>} />
