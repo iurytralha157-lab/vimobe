@@ -756,10 +756,23 @@ export function LeadDetailDialog({
     setStagePopoverOpen(false);
     
     try {
+      const stage = stages.find(s => s.id === stageId);
+      const isProposal = stage?.name?.toLowerCase().includes('proposta');
+      
       await updateLead.mutateAsync({
         id: lead.id,
         stage_id: stageId
       });
+      
+      // Se moveu para estágio de Proposta, registrar atividade de gamificação
+      if (isProposal) {
+        await createActivityMutation.mutateAsync({
+          lead_id: lead.id,
+          type: 'proposal_sent',
+          content: 'Lead movido para estágio de Proposta',
+        });
+      }
+
       refetchStages();
       toast.success('Lead movido!');
     } catch (error) {
