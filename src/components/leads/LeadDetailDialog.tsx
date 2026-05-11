@@ -108,7 +108,8 @@ const activityTypeLabels: Record<string, string> = {
   stage_change: 'Movido de estágio',
   assignee_changed: 'Responsável alterado',
   status_change: 'Status alterado',
-  lead_reentry: 'Lead reentrou'
+  lead_reentry: 'Lead reentrou',
+  proposal_sent: 'Proposta enviada'
 };
 const activityTypeIcons: Record<string, typeof Phone> = {
   call: Phone,
