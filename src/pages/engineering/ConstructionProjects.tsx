@@ -81,7 +81,9 @@ export default function ConstructionProjects() {
         ) : (
           <div className={viewMode === 'grid' ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" : "space-y-4"}>
             {filteredProjects?.map((project: any) => (
-              <ProjectCard key={project.id} project={project} viewMode={viewMode} />
+              <div key={project.id} onClick={() => navigate(`/engenharia/obras/${project.id}`)}>
+                <ProjectCard project={project} viewMode={viewMode} />
+              </div>
             ))}
           </div>
         )}
