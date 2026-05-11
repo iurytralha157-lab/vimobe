@@ -22,9 +22,12 @@ const ACTION_ICONS: Record<string, any> = {
   prospecting_report: Star,
   mission_bonus: Star,
   meeting_held: Presentation,
+  meeting_scheduled: Calendar,
   proposal_sent: FileText,
   contract_signed: Trophy,
   visit_confirmed: Users2,
+  lead_created_manual: Star,
+  property_created: Star,
 };
 
 const ACTION_LABELS: Record<string, string> = {
