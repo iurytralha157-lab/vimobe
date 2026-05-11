@@ -236,6 +236,14 @@ Deno.serve(async (req) => {
           { name: 'Instalação', stage_key: 'instalacao', color: '#EC4899', position: 3 },
           { name: 'Ativado', stage_key: 'ativado', color: '#10B981', position: 4 },
         ];
+      } else if (segment === 'engenharia') {
+        stages = [
+          { name: 'Novo Orçamento', stage_key: 'novo', color: '#3B82F6', position: 0 },
+          { name: 'Visita Técnica', stage_key: 'visita', color: '#F59E0B', position: 1 },
+          { name: 'Em Elaboração', stage_key: 'elaboracao', color: '#8B5CF6', position: 2 },
+          { name: 'Proposta Enviada', stage_key: 'proposta', color: '#EC4899', position: 3 },
+          { name: 'Obra Iniciada', stage_key: 'obra', color: '#10B981', position: 4 },
+        ];
       } else {
         stages = [
           { name: 'Novo', stage_key: 'novo', color: '#3B82F6', position: 0 },
