@@ -36,9 +36,11 @@ export default function ArchitectureDashboard() {
     );
   }
 
-  const activeProjects = requests?.filter(r => r.status !== 'completed' && r.status !== 'rejected') || [];
-  const cityHallProtocols = requests?.filter(r => r.title.toLowerCase().includes('prefeitura') || r.description?.toLowerCase().includes('prefeitura')) || [];
-  const completedProjects = requests?.filter(r => r.status === 'completed') || [];
+  const architectureProjects = allProjects?.filter(p => (p as any).project_type === 'architecture') || [];
+  const activeProjects = architectureProjects.filter(p => p.status !== 'completed' && p.status !== 'cancelled');
+  const cityHallProtocols = architectureProjects.filter(p => (p as any).city_hall_approval_date);
+  const completedProjects = architectureProjects.filter(p => p.status === 'completed');
+
 
   // Cálculo de SLA médio (dias entre criação e conclusão ou hoje)
   const totalDays = requests?.reduce((acc, r) => {
