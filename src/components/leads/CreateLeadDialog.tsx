@@ -107,7 +107,9 @@ export function CreateLeadDialog({
     stage_id: defaultStageId || '',
     property_id: '',
     deal_status: 'open',
+    is_own_resource: false,
     tag_ids: [] as string[],
+
   }), [profile?.id, defaultPipelineId, defaultStageId]);
 
   const [formData, setFormData] = useState(getEmptyFormData);
