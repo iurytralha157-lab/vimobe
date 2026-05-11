@@ -487,7 +487,7 @@ function RealEstateFinancialDashboard({ data }: { data: ReturnType<typeof useFin
                 <p className="text-sm font-semibold text-primary mb-2">Previsão Anual (Forecast)</p>
                 <h3 className="text-3xl font-bold">{formatCurrency(data?.annualProjection || 0)}</h3>
                 <p className="text-xs text-muted-foreground mt-2">Baseado no volume de recebimentos recorrentes atuais.</p>
-                <Button className="w-full mt-6" variant="primary">Ver Relatório Detalhado</Button>
+                <Button className="w-full mt-6">Ver Relatório Detalhado</Button>
               </CardContent>
             </Card>
           </div>
