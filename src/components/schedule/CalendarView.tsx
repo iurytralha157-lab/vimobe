@@ -214,51 +214,76 @@ export function CalendarView({
   const handleDragStart = (event: any) => {
     setActiveEvent(event.active.data.current);
   };
-  const handleNavigate = (direction: 'prev' | 'next') => {
-    switch (viewMode) {
-      case 'day':
-        onPivotChange(direction === 'prev' ? subDays(pivotDate, 1) : addDays(pivotDate, 1));
-        break;
-      case 'week':
-        onPivotChange(direction === 'prev' ? subWeeks(pivotDate, 1) : addWeeks(pivotDate, 1));
-        break;
-      case 'month':
-        onPivotChange(direction === 'prev' ? subMonths(pivotDate, 1) : addMonths(pivotDate, 1));
-        break;
-      case 'year':
-        onPivotChange(direction === 'prev' ? startOfYear(subDays(startOfYear(pivotDate), 1)) : startOfYear(addDays(endOfYear(pivotDate), 1)));
-        break;
-    }
-  };
 
-  const handleToday = () => {
-    const today = new Date();
-    onPivotChange(today);
-    onDateSelect(today);
-  };
+  const calculateEventLayouts = useCallback((dayEvents: ScheduleEvent[]) => {
+    if (dayEvents.length === 0) return [];
 
-  const handleDragEnd = (event: DragEndEvent) => {
-    setActiveEvent(null);
-    const { active, over } = event;
-    
-    if (over && active.id !== over.id) {
-      const scheduleEvent = active.data.current as ScheduleEvent;
-      const [dateStr, hourStr] = (over.id as string).split('|');
+    // Sort events by start time, then duration
+    const sorted = [...dayEvents].sort((a, b) => {
+      const startA = new Date(a.start_time).getTime();
+      const startB = new Date(b.start_time).getTime();
+      if (startA !== startB) return startA - startB;
       
-      const newStart = parseISO(`${dateStr}T${hourStr}:00`);
-      const originalStart = parseISO(scheduleEvent.start_time);
-      const originalEnd = parseISO(scheduleEvent.end_time);
-      const duration = differenceInMinutes(originalEnd, originalStart);
-      
-      const newEnd = addMinutes(newStart, duration);
-      
-      onEventUpdate?.(scheduleEvent.id, {
-        start_time: newStart.toISOString(),
-        end_time: newEnd.toISOString()
+      const durA = new Date(a.end_time).getTime() - startA;
+      const durB = new Date(b.end_time).getTime() - startB;
+      return durB - durA;
+    });
+
+    const layouts: { event: ScheduleEvent; column: number; totalColumns: number }[] = [];
+    let currentCluster: ScheduleEvent[] = [];
+    let clusterMaxEnd = 0;
+
+    const processCluster = (cluster: ScheduleEvent[]) => {
+      if (cluster.length === 0) return;
+
+      const columns: ScheduleEvent[][] = [];
+      cluster.forEach(event => {
+        let placed = false;
+        const eventStart = new Date(event.start_time).getTime();
+
+        for (let i = 0; i < columns.length; i++) {
+          const lastEventInCol = columns[i][columns[i].length - 1];
+          if (eventStart >= new Date(lastEventInCol.end_time).getTime()) {
+            columns[i].push(event);
+            layouts.push({ event, column: i, totalColumns: 0 });
+            placed = true;
+            break;
+          }
+        }
+
+        if (!placed) {
+          columns.push([event]);
+          layouts.push({ event, column: columns.length - 1, totalColumns: 0 });
+        }
       });
-    }
-  };
 
+      // Update totalColumns for all events in this cluster
+      cluster.forEach(event => {
+        const layout = layouts.find(l => l.event.id === event.id);
+        if (layout) layout.totalColumns = columns.length;
+      });
+    };
+
+    sorted.forEach(event => {
+      const eventStart = new Date(event.start_time).getTime();
+      
+      if (eventStart >= clusterMaxEnd && currentCluster.length > 0) {
+        processCluster(currentCluster);
+        currentCluster = [];
+        clusterMaxEnd = 0;
+      }
+
+      currentCluster.push(event);
+      const eventEnd = new Date(event.end_time).getTime();
+      if (eventEnd > clusterMaxEnd) clusterMaxEnd = eventEnd;
+    });
+
+    processCluster(currentCluster);
+    return layouts;
+  }, []);
+
+  const handleNavigate = (direction: 'prev' | 'next') => {
+...
   const eventsByDate = useMemo(() => {
     const map: Record<string, ScheduleEvent[]> = {};
     events.forEach(event => {
