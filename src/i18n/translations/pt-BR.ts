@@ -65,6 +65,7 @@ export const ptBR = {
     campaigns: 'Campanhas',
     engineering: 'Engenharia',
     construction: 'Obras',
+    cockpit: 'Cockpit Operacional',
   },
 
   // Settings
