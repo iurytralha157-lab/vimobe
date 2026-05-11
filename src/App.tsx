@@ -96,7 +96,7 @@ const EngineeringDashboard = lazy(() => import("./pages/engineering/EngineeringD
 const ArchitectureDashboard = lazy(() => import("./pages/architecture/ArchitectureDashboard"));
 const PurchaseDashboard = lazy(() => import("./pages/purchase/PurchaseDashboard"));
 const OperationalQueues = lazy(() => import("./pages/operational/OperationalQueues"));
-const StageOperationalManagement = lazy(() => import("./pages/StageOperationalManagement")); // Pode ser removido depois se não for usado em outro lugar
+
 const ExecutiveDRE = lazy(() => import("./pages/financial/ExecutiveDRE"));
 
 
