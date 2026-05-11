@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import { 
   Download, 
   TrendingUp, 
@@ -200,7 +201,7 @@ export default function ExecutiveDRE() {
                       </div>
                       <div 
                         className="absolute inset-0 rounded-full border-8 border-blue-500 border-t-transparent border-l-transparent rotate-45"
-                        style={{ clipPath: 'polygon(0 0, 100% 0, 100% 100%, 0 100%)' }} // Placeholder for actual progress
+                        style={{ clipPath: 'polygon(0 0, 100% 0, 100% 100%, 0 100%)' }}
                       />
                    </div>
                    <div className="w-full space-y-2">
@@ -255,7 +256,7 @@ export default function ExecutiveDRE() {
                                ) : null}
                                <span className={line.variation && line.variation > 0 ? 'text-emerald-600' : 'text-red-500'}>
                                   {line.variation ? `${line.variation.toFixed(1)}%` : '-'}
-                               </span>
+                                </span>
                             </div>
                           </td>
                         </tr>
