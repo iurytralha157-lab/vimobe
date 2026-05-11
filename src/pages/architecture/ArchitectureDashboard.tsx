@@ -74,13 +74,14 @@ export default function ArchitectureDashboard() {
                    <div key={p.id} className="space-y-2">
                       <div className="flex justify-between items-center">
                         <div className="min-w-0">
-                          <h4 className="font-bold text-sm truncate">{p.title}</h4>
+                          <h4 className="font-bold text-sm truncate">{p.name}</h4>
                           <p className="text-[11px] text-muted-foreground">
-                            {p.project?.name || 'Sem obra'} | Prazo: {p.due_date ? format(new Date(p.due_date), 'dd/MM/yyyy') : 'N/A'}
+                            {p.property?.title || 'Sem imóvel'} | Entrega: {p.end_date_planned ? format(new Date(p.end_date_planned), 'dd/MM/yyyy') : 'N/A'}
                           </p>
                         </div>
                         <Badge variant="secondary" className="text-[10px] whitespace-nowrap">{getStatusLabel(p.status)}</Badge>
                       </div>
+
                       <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
                         <div className={`h-full transition-all ${getProgressColor(p.status)}`} style={{ width: `${getProgressValue(p.status)}%` }} />
                       </div>
