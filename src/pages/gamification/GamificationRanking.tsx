@@ -155,17 +155,56 @@ export default function GamificationRanking() {
   const others = leaderboard?.slice(3) || [];
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 h-auto lg:h-[calc(100vh-180px)] min-h-[500px] animate-in fade-in duration-700 overflow-visible lg:overflow-hidden pb-10 lg:pb-0">
+    <div className="flex flex-col gap-6 animate-in fade-in duration-700 pb-10">
       
-      {/* LEFT SIDE: PODIUM (Arena) */}
-      <div className="lg:col-span-8 flex flex-col gap-6 h-full overflow-hidden">
-        <div className="relative flex-1 bg-gradient-to-b from-indigo-900/10 via-background to-background border rounded-2xl p-4 lg:p-8 flex flex-col items-center justify-end overflow-hidden shadow-none min-h-[400px] lg:min-h-0">
-          <div className="absolute top-4 lg:top-8 left-4 lg:left-8 flex items-center gap-2">
-            <div className="bg-yellow-500/20 p-1.5 lg:p-2 rounded-full">
-              <Trophy className="h-5 w-5 lg:h-6 lg:w-6 text-yellow-500" />
+      {/* HEADER: Filters and Segmented Rankings */}
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center bg-card p-4 rounded-xl border shadow-sm">
+        <div className="md:col-span-8 flex flex-wrap gap-2">
+          <Tabs value={rankingType} onValueChange={setRankingType} className="w-full">
+            <TabsList className="bg-muted/50 w-full justify-start overflow-x-auto h-auto p-1 gap-1">
+              <TabsTrigger value="general" className="gap-2 px-4 py-2">
+                <Trophy className="h-4 w-4" /> Geral
+              </TabsTrigger>
+              <TabsTrigger value="calls" className="gap-2 px-4 py-2">
+                <Phone className="h-4 w-4" /> Ligações
+              </TabsTrigger>
+              <TabsTrigger value="messages" className="gap-2 px-4 py-2">
+                <MessageSquare className="h-4 w-4" /> Mensagens
+              </TabsTrigger>
+              <TabsTrigger value="sales" className="gap-2 px-4 py-2">
+                <BadgeDollarSign className="h-4 w-4" /> Vendas
+              </TabsTrigger>
+              <TabsTrigger value="leads" className="gap-2 px-4 py-2">
+                <Target className="h-4 w-4" /> Leads
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+        
+        <div className="md:col-span-4 flex justify-end gap-2">
+          <Tabs value={period} onValueChange={setPeriod}>
+            <TabsList className="bg-muted/50">
+              <TabsTrigger value="today" className="text-xs px-3">Hoje</TabsTrigger>
+              <TabsTrigger value="week" className="text-xs px-3">Semana</TabsTrigger>
+              <TabsTrigger value="month" className="text-xs px-3">Mês</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 h-auto lg:h-[calc(100vh-280px)] min-h-[500px] overflow-visible lg:overflow-hidden">
+        
+        {/* LEFT SIDE: PODIUM (Arena) */}
+        <div className="lg:col-span-8 flex flex-col gap-6 h-full overflow-hidden">
+          <div className="relative flex-1 bg-gradient-to-b from-indigo-900/10 via-background to-background border rounded-2xl p-4 lg:p-8 flex flex-col items-center justify-end overflow-hidden shadow-none min-h-[400px] lg:min-h-0">
+            <div className="absolute top-4 lg:top-8 left-4 lg:left-8 flex items-center gap-2">
+              <div className="bg-yellow-500/20 p-1.5 lg:p-2 rounded-full">
+                <Trophy className="h-5 w-5 lg:h-6 lg:w-6 text-yellow-500" />
+              </div>
+              <h2 className="text-lg lg:text-2xl font-black italic uppercase tracking-tighter text-indigo-900 dark:text-indigo-100">
+                Arena {rankingType === 'general' ? 'de Elite' : `de ${rankingType.charAt(0).toUpperCase() + rankingType.slice(1)}`}
+              </h2>
             </div>
-            <h2 className="text-lg lg:text-2xl font-black italic uppercase tracking-tighter text-indigo-900 dark:text-indigo-100">Arena de Elite</h2>
-          </div>
 
           <div className="absolute top-4 lg:top-8 right-4 lg:right-8 text-right">
             <div className="flex items-center gap-1 text-emerald-500 text-[10px] lg:text-base font-bold animate-pulse">
