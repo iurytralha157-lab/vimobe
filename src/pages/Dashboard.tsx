@@ -16,6 +16,7 @@ import { useDashboardFilters, datePresetOptions } from '@/hooks/use-dashboard-fi
 import { 
   useEnhancedDashboardStats, 
   useDealsEvolutionData,
+  useLeadSourcesData,
 } from '@/hooks/use-dashboard-stats';
 
 import { useAuth } from '@/contexts/AuthContext';
