@@ -20,7 +20,9 @@ import {
   UserPlus,
   Home,
   FileCheck,
-  ClipboardCheck
+  ClipboardCheck,
+  Presentation,
+  FileText
 } from 'lucide-react';
 
 const RULE_ICONS: Record<string, any> = {
@@ -31,9 +33,10 @@ const RULE_ICONS: Record<string, any> = {
   sale_closed: BadgeDollarSign,
   lead_created_manual: UserPlus,
   property_created: Home,
-  proposal_sent: MessageSquare,
+  proposal_sent: FileText,
   contract_signed: FileCheck,
   visit_confirmed: ClipboardCheck,
+  meeting_held: Presentation,
 };
 
 const RULE_LABELS: Record<string, string> = {
@@ -47,6 +50,7 @@ const RULE_LABELS: Record<string, string> = {
   proposal_sent: 'Proposta Enviada',
   contract_signed: 'Contrato Assinado',
   visit_confirmed: 'Visita Confirmada',
+  meeting_held: 'Reunião Realizada',
 };
 
 const DEFAULT_RULES = Object.keys(RULE_LABELS).map(type => ({

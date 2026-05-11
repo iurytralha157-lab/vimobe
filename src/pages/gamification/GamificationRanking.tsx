@@ -16,14 +16,16 @@ import {
   Target,
   Calendar,
   ChevronDown,
-  Filter
+  Filter,
+  FileText,
+  Users2,
+  Presentation
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import confetti from 'canvas-confetti';
 import { toast } from 'sonner';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -31,7 +33,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { startOfMonth, startOfWeek, endOfMonth, endOfWeek, format } from 'date-fns';
+import { startOfDay, endOfDay } from 'date-fns';
+import { DateFilterPopover } from '@/components/ui/date-filter-popover';
+import { DatePreset, getDateRangeFromPreset } from '@/hooks/use-dashboard-filters';
 
 interface LeaderboardUser {
   id: string;
@@ -56,35 +60,36 @@ export default function GamificationRanking() {
   const { organization } = useAuth();
   const [prevTopUserId, setPrevTopUserId] = useState<string | null>(null);
   const [rankingType, setRankingType] = useState('general');
-  const [period, setPeriod] = useState('month'); // 'week' or 'month'
+  const [datePreset, setDatePreset] = useState<DatePreset>('thisMonth');
+  const [customDateRange, setCustomDateRange] = useState<{ from: Date; to: Date } | null>(null);
+
+  const dateRange = useMemo(() => {
+    if (datePreset === 'custom' && customDateRange) {
+      return customDateRange;
+    }
+    return getDateRangeFromPreset(datePreset);
+  }, [datePreset, customDateRange]);
 
   const { data: leaderboard, isLoading, refetch } = useQuery({
-    queryKey: ['gamification-leaderboard-full', organization?.id, rankingType, period],
+    queryKey: ['gamification-leaderboard-full', organization?.id, rankingType, datePreset, customDateRange],
     queryFn: async () => {
       if (!organization?.id) return [];
       
-      let startDate: Date;
-      const now = new Date();
-      
-      if (period === 'week') {
-        startDate = startOfWeek(now, { weekStartsOn: 1 }); // Monday
-      } else {
-        startDate = startOfMonth(now);
-      }
-
       // Query events instead of stats for filtered/period points
       let query = supabase
         .from('gamification_events')
         .select('user_id, points_earned, event_type')
         .eq('organization_id', organization.id)
-        .gte('created_at', startDate.toISOString());
+        .gte('created_at', dateRange.from.toISOString())
+        .lte('created_at', dateRange.to.toISOString());
 
       if (rankingType !== 'general') {
         const typeMap: Record<string, string[]> = {
           calls: ['call_made'],
-          messages: ['message_sent'],
-          sales: ['sale_closed'],
-          leads: ['lead_created_manual', 'contact_made']
+          proposals: ['proposal_sent'],
+          sales: ['sale_closed', 'contract_signed'],
+          meetings: ['meeting_held'],
+          visits: ['visit_scheduled', 'visit_confirmed']
         };
         query = query.in('event_type', typeMap[rankingType] || []);
       }
@@ -191,7 +196,15 @@ export default function GamificationRanking() {
                 <Trophy className="h-5 w-5 lg:h-6 lg:w-6 text-yellow-500" />
               </div>
               <h2 className="text-lg lg:text-2xl font-black italic uppercase tracking-tighter text-indigo-900 dark:text-indigo-100">
-                Arena {rankingType === 'general' ? 'de Elite' : `de ${rankingType.charAt(0).toUpperCase() + rankingType.slice(1)}`}
+                Arena {
+                  rankingType === 'general' ? 'de Elite' : 
+                  rankingType === 'calls' ? 'de Ligações' :
+                  rankingType === 'proposals' ? 'de Propostas' :
+                  rankingType === 'sales' ? 'de Vendas' :
+                  rankingType === 'meetings' ? 'de Reuniões' :
+                  rankingType === 'visits' ? 'de Visitas' :
+                  'de Elite'
+                }
               </h2>
             </div>
 
@@ -279,66 +292,56 @@ export default function GamificationRanking() {
             <div className="flex items-center justify-between">
               <h3 className="text-base lg:text-lg font-bold flex items-center gap-2">
                 Classificação 
-                <span className="text-xs font-normal text-muted-foreground bg-muted px-2 py-0.5 rounded">
-                  {period === 'week' ? 'Semana' : 'Mês'}
-                </span>
               </h3>
               
               <div className="flex items-center gap-1">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="icon" className="h-8 w-8">
-                      <Calendar className="h-4 w-4 text-indigo-600" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => setPeriod('week')} className={cn(period === 'week' && "bg-muted")}>
-                      Semana Atual
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setPeriod('month')} className={cn(period === 'month' && "bg-muted")}>
-                      Mês Atual
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <DateFilterPopover
+                  datePreset={datePreset}
+                  onDatePresetChange={(p) => p && setDatePreset(p)}
+                  customDateRange={customDateRange}
+                  onCustomDateRangeChange={setCustomDateRange}
+                  align="end"
+                />
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="icon" className="h-8 w-8">
+                    <Button variant="outline" size="sm" className="h-9 gap-2">
                       <Filter className="h-4 w-4 text-indigo-600" />
+                      <span className="hidden sm:inline">
+                        {rankingType === 'general' ? 'Geral' : 
+                         rankingType === 'calls' ? 'Ligações' :
+                         rankingType === 'proposals' ? 'Propostas' :
+                         rankingType === 'sales' ? 'Vendas' :
+                         rankingType === 'meetings' ? 'Reuniões' :
+                         rankingType === 'visits' ? 'Visitas' : 'Filtrar'}
+                      </span>
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem onClick={() => setRankingType('general')} className={cn(rankingType === 'general' && "bg-muted")}>
-                      Geral
+                      <Target className="mr-2 h-4 w-4" /> Geral
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setRankingType('calls')} className={cn(rankingType === 'calls' && "bg-muted")}>
-                      Ligações
+                      <Phone className="mr-2 h-4 w-4" /> Ligações
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setRankingType('messages')} className={cn(rankingType === 'messages' && "bg-muted")}>
-                      Mensagens
+                    <DropdownMenuItem onClick={() => setRankingType('proposals')} className={cn(rankingType === 'proposals' && "bg-muted")}>
+                      <FileText className="mr-2 h-4 w-4" /> Propostas
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setRankingType('sales')} className={cn(rankingType === 'sales' && "bg-muted")}>
-                      Vendas
+                      <BadgeDollarSign className="mr-2 h-4 w-4" /> Vendas
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setRankingType('leads')} className={cn(rankingType === 'leads' && "bg-muted")}>
-                      Leads
+                    <DropdownMenuItem onClick={() => setRankingType('meetings')} className={cn(rankingType === 'meetings' && "bg-muted")}>
+                      <Presentation className="mr-2 h-4 w-4" /> Reuniões
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setRankingType('visits')} className={cn(rankingType === 'visits' && "bg-muted")}>
+                      <Users2 className="mr-2 h-4 w-4" /> Visitas
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
             </div>
-
-            <Tabs value={rankingType} onValueChange={setRankingType} className="w-full">
-              <TabsList className="bg-muted/50 w-full justify-start overflow-x-auto h-auto p-1 gap-1">
-                <TabsTrigger value="general" className="text-[10px] px-2 py-1">Geral</TabsTrigger>
-                <TabsTrigger value="calls" className="text-[10px] px-2 py-1">Ligações</TabsTrigger>
-                <TabsTrigger value="messages" className="text-[10px] px-2 py-1">Msgs</TabsTrigger>
-                <TabsTrigger value="sales" className="text-[10px] px-2 py-1">Vendas</TabsTrigger>
-                <TabsTrigger value="leads" className="text-[10px] px-2 py-1">Leads</TabsTrigger>
-              </TabsList>
-            </Tabs>
           </div>
-          
+
           <div className="flex-1 overflow-y-auto p-4 space-y-2 scrollbar-thin scrollbar-thumb-muted-foreground/20 scrollbar-track-transparent">
             {leaderboard?.map((user, index) => {
               const isTop3 = index < 3;
