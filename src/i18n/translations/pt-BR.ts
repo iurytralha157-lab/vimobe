@@ -66,6 +66,7 @@ export const ptBR = {
     engineering: 'Engenharia',
     construction: 'Obras',
     cockpit: 'Cockpit Operacional',
+    operationalMapping: 'Mapeamento Operacional',
   },
 
   // Settings

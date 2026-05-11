@@ -92,6 +92,7 @@ const Checkout = lazy(() => import("./pages/Checkout"));
 const PreviewSiteWrapper = lazy(() => import("./pages/public/PreviewSiteWrapper"));
 const APIDocs = lazy(() => import("./pages/public/APIDocs"));
 const OperationalDashboard = lazy(() => import("./pages/OperationalDashboard"));
+const StageOperationalManagement = lazy(() => import("./pages/StageOperationalManagement"));
 
 
 // Trial expired modal
