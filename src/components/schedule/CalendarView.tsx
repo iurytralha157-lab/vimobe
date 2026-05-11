@@ -497,19 +497,28 @@ export function CalendarView({
               })}
 
               {/* Events */}
-              {dayEvents.map(event => {
+              {calculateEventLayouts(dayEvents).map(({ event, column, totalColumns }) => {
                 const start = parseISO(event.start_time);
                 const end = parseISO(event.end_time);
                 const top = (start.getHours() * 60 + start.getMinutes()) * (56 / 60);
                 const duration = Math.max((end.getTime() - start.getTime()) / (1000 * 60), 15);
                 const height = duration * (56 / 60);
+                
+                const width = 100 / totalColumns;
+                const left = column * width;
 
                 return (
                   <ActivityCard
                     key={event.id}
                     event={event}
                     onEditEvent={onEditEvent}
-                    style={{ top: `${top}px`, height: `${height}px`, minHeight: '32px' }}
+                    style={{ 
+                      top: `${top}px`, 
+                      height: `${height}px`, 
+                      minHeight: '32px',
+                      width: `calc(${width}% - 4px)`,
+                      left: `calc(${left}% + 2px)`
+                    }}
                   />
                 );
               })}
