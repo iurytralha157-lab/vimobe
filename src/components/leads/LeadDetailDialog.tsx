@@ -222,8 +222,10 @@ export function LeadDetailDialog({
     profissao: '',
     faixa_valor_imovel: '',
     finalidade_compra: '',
-    procura_financiamento: false
+    procura_financiamento: false,
+    is_own_resource: false
   });
+
 
   // Currency formatting helpers
   const formatCurrencyDisplay = (value: string): string => {
