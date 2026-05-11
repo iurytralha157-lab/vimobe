@@ -63,6 +63,8 @@ export const ptBR = {
     more: 'Mais',
     summary: 'Geral',
     campaigns: 'Campanhas',
+    engineering: 'Engenharia',
+    construction: 'Obras',
   },
 
   // Settings
