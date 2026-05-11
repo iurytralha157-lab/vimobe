@@ -1,4 +1,5 @@
 import { AppLayout } from "@/components/layout/AppLayout";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Plus, Building2, LayoutGrid, List, Search, Filter, Loader2, Calendar, TrendingUp } from "lucide-react";
@@ -13,6 +14,7 @@ import { ptBR } from "date-fns/locale";
 export default function ConstructionProjects() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchTerm, setSearchTerm] = useState("");
+  const navigate = useNavigate();
   const { data: projects, isLoading } = useConstructionProjects();
 
   const filteredProjects = projects?.filter((p: any) => 
@@ -81,7 +83,9 @@ export default function ConstructionProjects() {
         ) : (
           <div className={viewMode === 'grid' ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" : "space-y-4"}>
             {filteredProjects?.map((project: any) => (
-              <ProjectCard key={project.id} project={project} viewMode={viewMode} />
+              <div key={project.id} onClick={() => navigate(`/engenharia/obras/${project.id}`)}>
+                <ProjectCard project={project} viewMode={viewMode} />
+              </div>
             ))}
           </div>
         )}
@@ -125,9 +129,9 @@ function ProjectCard({ project, viewMode }: { project: any, viewMode: 'grid' | '
   return (
     <Card className="overflow-hidden hover:border-primary/50 transition-colors cursor-pointer group">
       <div className="h-32 bg-muted relative overflow-hidden">
-        {project.property?.main_image_url ? (
+        {(project as any).property?.main_image_url ? (
           <img 
-            src={project.property.main_image_url} 
+            src={(project as any).property.main_image_url} 
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
             alt={project.name}
           />

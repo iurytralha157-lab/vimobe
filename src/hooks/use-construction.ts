@@ -10,10 +10,10 @@ export function useConstructionProjects() {
     queryKey: ["construction-projects", organization?.id],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("construction_projects" as any)
+        .from("construction_projects")
         .select(`
           *,
-          property:properties(id, title, main_image_url)
+          property:properties(id, title)
         `)
         .order("created_at", { ascending: false });
 
@@ -29,10 +29,10 @@ export function useConstructionProject(id: string) {
     queryKey: ["construction-project", id],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("construction_projects" as any)
+        .from("construction_projects")
         .select(`
           *,
-          property:properties(id, title, main_image_url)
+          property:properties(id, title)
         `)
         .eq("id", id)
         .single();
@@ -69,6 +69,54 @@ export function useCreateConstructionProject() {
     },
     onError: (error: any) => {
       toast.error(`Erro ao criar obra: ${error.message}`);
+    }
+  });
+}
+
+export function useConstructionDiaries(projectId: string) {
+  return useQuery({
+    queryKey: ["construction-diaries", projectId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("construction_diaries" as any)
+        .select(`
+          *,
+          created_by_profile:users!created_by(id, name, avatar_url)
+        `)
+        .eq("project_id", projectId)
+        .order("entry_date", { ascending: false });
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!projectId,
+  });
+}
+
+export function useCreateConstructionDiary() {
+  const queryClient = useQueryClient();
+  const { profile } = useAuth();
+
+  return useMutation({
+    mutationFn: async (values: any) => {
+      const { data, error } = await supabase
+        .from("construction_diaries" as any)
+        .insert([{
+          ...values,
+          created_by: profile?.id
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["construction-diaries", variables.project_id] });
+      toast.success("Diário registrado com sucesso!");
+    },
+    onError: (error: any) => {
+      toast.error(`Erro ao registrar diário: ${error.message}`);
     }
   });
 }
