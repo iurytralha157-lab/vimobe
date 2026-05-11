@@ -646,18 +646,28 @@ export function CalendarView({
               {weekDays.map(day => (
                 <div key={day.toString()} className="flex-1 border-r border-border/40 last:border-r-0 relative">
                   {hours.map(hour => {
-                    const slotId = `${format(day, 'yyyy-MM-dd')}|${format(hour, 'HH:mm')}`;
+                    const hourStr = format(hour, 'HH');
                     return (
-                      <DroppableSlot 
-                        key={slotId}
-                        id={slotId}
-                        className="h-14 border-b border-border/40 cursor-pointer hover:bg-primary/[0.01] transition-colors" 
-                        onQuickCreate={() => {
-                          const clickDate = new Date(day);
-                          clickDate.setHours(hour.getHours(), 0, 0, 0);
-                          onQuickCreate?.(clickDate);
-                        }}
-                      />
+                      <div key={hour.toString()} className="h-14 border-b border-border/40 w-full relative">
+                        <DroppableSlot 
+                          id={`${format(day, 'yyyy-MM-dd')}|${hourStr}:00`}
+                          className="h-7 border-b border-border/10 w-full cursor-pointer hover:bg-primary/[0.01] transition-colors" 
+                          onQuickCreate={() => {
+                            const clickDate = new Date(day);
+                            clickDate.setHours(hour.getHours(), 0, 0, 0);
+                            onQuickCreate?.(clickDate);
+                          }}
+                        />
+                        <DroppableSlot 
+                          id={`${format(day, 'yyyy-MM-dd')}|${hourStr}:30`}
+                          className="h-7 w-full cursor-pointer hover:bg-primary/[0.01] transition-colors" 
+                          onQuickCreate={() => {
+                            const clickDate = new Date(day);
+                            clickDate.setHours(hour.getHours(), 30, 0, 0);
+                            onQuickCreate?.(clickDate);
+                          }}
+                        />
+                      </div>
                     );
                   })}
 
@@ -677,10 +687,11 @@ export function CalendarView({
                         key={event.id}
                         event={event}
                         onEditEvent={onEditEvent}
+                        onEventUpdate={onEventUpdate}
                         style={{ 
                           top: `${top}px`, 
                           height: `${height}px`, 
-                          minHeight: '32px',
+                          minHeight: '28px',
                           width: `calc(${width}% - 4px)`,
                           left: `calc(${left}% + 2px)`
                         }}
