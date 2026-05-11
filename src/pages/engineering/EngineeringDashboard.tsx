@@ -30,10 +30,15 @@ import { Badge } from "@/components/ui/badge";
 import { format, addMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
+import { DashboardFilters } from "@/components/dashboard/DashboardFilters";
+import { useDashboardFilters } from "@/hooks/use-dashboard-filters";
+import { DashboardAlertBar } from "@/components/dashboard/DashboardAlertBar";
+
 export default function EngineeringDashboard() {
+  const { filters, ...filterHelpers } = useDashboardFilters();
   const { data: projects, isLoading: projectsLoading } = useConstructionProjects();
-  const { data: milestones, isLoading: milestonesLoading } = useAllMilestones();
-  const { data: engineeringRequests } = useOperationalRequests({ type: 'engineering' });
+  const { data: milestones, isLoading: milestonesLoading } = useAllMilestones(filters.dateRange);
+  const { data: engineeringRequests } = useOperationalRequests({ type: 'engineering', dateRange: filters.dateRange });
 
   const isLoading = projectsLoading || milestonesLoading;
 
@@ -63,6 +68,31 @@ export default function EngineeringDashboard() {
   return (
     <AppLayout title="Dashboard de Engenharia">
       <div className="space-y-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <DashboardAlertBar />
+          <div className="flex-1" />
+          <DashboardFilters 
+            {...filterHelpers}
+            datePreset={filterHelpers.datePreset}
+            onDatePresetChange={filterHelpers.setDatePreset}
+            customDateRange={filterHelpers.customDateRange}
+            onCustomDateRangeChange={filterHelpers.setCustomDateRange}
+            teamId={filterHelpers.teamId}
+            onTeamChange={filterHelpers.setTeamId}
+            userId={filterHelpers.userId}
+            onUserChange={filterHelpers.setUserId}
+            source={filterHelpers.source}
+            onSourceChange={filterHelpers.setSource}
+            campaignId={filterHelpers.campaignId}
+            onCampaignChange={filterHelpers.setCampaignId}
+            adSetId={filterHelpers.adSetId}
+            onAdSetChange={filterHelpers.setAdSetId}
+            adId={filterHelpers.adId}
+            onAdChange={filterHelpers.setAdId}
+            hasActiveFilters={filterHelpers.hasActiveFilters}
+            onClear={filterHelpers.clearFilters}
+          />
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <StatCard title="Obras a Iniciar" value={plannedProjects.length} icon={Calendar} color="text-blue-600" />
           <StatCard title="Em Execução" value={inProgressProjects.length} icon={HardHat} color="text-orange-600" />

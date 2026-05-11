@@ -20,8 +20,13 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { format, differenceInDays } from "date-fns";
 
+import { DashboardFilters } from "@/components/dashboard/DashboardFilters";
+import { useDashboardFilters } from "@/hooks/use-dashboard-filters";
+import { DashboardAlertBar } from "@/components/dashboard/DashboardAlertBar";
+
 export default function ArchitectureDashboard() {
-  const { data: requests, isLoading: isLoadingRequests } = useOperationalRequests({ type: 'architecture' });
+  const { filters, ...filterHelpers } = useDashboardFilters();
+  const { data: requests, isLoading: isLoadingRequests } = useOperationalRequests({ type: 'architecture', dateRange: filters.dateRange });
   const { data: allProjects, isLoading: isLoadingProjects } = useConstructionProjects();
 
   const isLoading = isLoadingRequests || isLoadingProjects;
@@ -54,6 +59,31 @@ export default function ArchitectureDashboard() {
   return (
     <AppLayout title="Dashboard de Arquitetura">
       <div className="space-y-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <DashboardAlertBar />
+          <div className="flex-1" />
+          <DashboardFilters 
+            {...filterHelpers}
+            datePreset={filterHelpers.datePreset}
+            onDatePresetChange={filterHelpers.setDatePreset}
+            customDateRange={filterHelpers.customDateRange}
+            onCustomDateRangeChange={filterHelpers.setCustomDateRange}
+            teamId={filterHelpers.teamId}
+            onTeamChange={filterHelpers.setTeamId}
+            userId={filterHelpers.userId}
+            onUserChange={filterHelpers.setUserId}
+            source={filterHelpers.source}
+            onSourceChange={filterHelpers.setSource}
+            campaignId={filterHelpers.campaignId}
+            onCampaignChange={filterHelpers.setCampaignId}
+            adSetId={filterHelpers.adSetId}
+            onAdSetChange={filterHelpers.setAdSetId}
+            adId={filterHelpers.adId}
+            onAdChange={filterHelpers.setAdId}
+            hasActiveFilters={filterHelpers.hasActiveFilters}
+            onClear={filterHelpers.clearFilters}
+          />
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <StatCard title="Projetos Ativos" value={activeProjects.length} icon={Compass} color="text-blue-600" />
           <StatCard title="Protocolos Prefeitura" value={cityHallProtocols.length} icon={FileText} color="text-orange-600" />
