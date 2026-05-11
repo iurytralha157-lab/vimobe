@@ -254,6 +254,37 @@ export function LeadDetailDialog({
 
   useEffect(() => {
     if (lead) {
+      const valorStr = lead.valor_interesse ? lead.valor_interesse.toString() : '';
+      setEditForm({
+        name: lead.name || '',
+        phone: lead.phone || '',
+        email: lead.email || '',
+        cargo: lead.cargo || '',
+        empresa: lead.empresa || '',
+        endereco: lead.endereco || '',
+        numero: lead.numero || '',
+        complemento: lead.complemento || '',
+        bairro: lead.bairro || '',
+        cidade: lead.cidade || '',
+        uf: lead.uf || '',
+        cep: lead.cep || '',
+        valor_interesse: valorStr,
+        commission_percentage: lead.commission_percentage?.toString() || '',
+        property_id: lead.interest_property_id || lead.property_id || '',
+        message: lead.message || '',
+        renda_familiar: lead.renda_familiar || '',
+        trabalha: lead.trabalha || false,
+        profissao: lead.profissao || '',
+        faixa_valor_imovel: lead.faixa_valor_imovel || '',
+        finalidade_compra: lead.finalidade_compra || '',
+        procura_financiamento: lead.procura_financiamento || false,
+        is_own_resource: (lead as any).is_own_resource || false
+      });
+    }
+  }, [lead?.id, lead?.valor_interesse]); // Re-sync if ID or value changes (e.g. from Plan selection)
+
+  useEffect(() => {
+    if (lead) {
       setEditForm({
         name: lead.name || '',
         phone: lead.phone || '',
