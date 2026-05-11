@@ -1359,8 +1359,10 @@ export type Database = {
         Row: {
           budget_actual: number | null
           budget_estimated: number | null
+          city_hall_approval_date: string | null
           created_at: string | null
           created_by: string | null
+          delivery_date_actual: string | null
           description: string | null
           end_date_actual: string | null
           end_date_planned: string | null
@@ -1369,6 +1371,7 @@ export type Database = {
           name: string
           organization_id: string
           physical_progress_percent: number | null
+          project_type: string | null
           property_id: string | null
           start_date_actual: string | null
           start_date_planned: string | null
@@ -1378,8 +1381,10 @@ export type Database = {
         Insert: {
           budget_actual?: number | null
           budget_estimated?: number | null
+          city_hall_approval_date?: string | null
           created_at?: string | null
           created_by?: string | null
+          delivery_date_actual?: string | null
           description?: string | null
           end_date_actual?: string | null
           end_date_planned?: string | null
@@ -1388,6 +1393,7 @@ export type Database = {
           name: string
           organization_id: string
           physical_progress_percent?: number | null
+          project_type?: string | null
           property_id?: string | null
           start_date_actual?: string | null
           start_date_planned?: string | null
@@ -1397,8 +1403,10 @@ export type Database = {
         Update: {
           budget_actual?: number | null
           budget_estimated?: number | null
+          city_hall_approval_date?: string | null
           created_at?: string | null
           created_by?: string | null
+          delivery_date_actual?: string | null
           description?: string | null
           end_date_actual?: string | null
           end_date_planned?: string | null
@@ -1407,6 +1415,7 @@ export type Database = {
           name?: string
           organization_id?: string
           physical_progress_percent?: number | null
+          project_type?: string | null
           property_id?: string | null
           start_date_actual?: string | null
           start_date_planned?: string | null
@@ -1480,11 +1489,13 @@ export type Database = {
           delivery_date_planned: string | null
           description: string | null
           discount_amount: number | null
+          estimated_cost: number | null
           id: string
           net_amount: number
           organization_id: string
           payment_terms: string | null
           project_id: string
+          saving_amount: number | null
           status: string
           supplier_id: string | null
           total_amount: number
@@ -1498,11 +1509,13 @@ export type Database = {
           delivery_date_planned?: string | null
           description?: string | null
           discount_amount?: number | null
+          estimated_cost?: number | null
           id?: string
           net_amount?: number
           organization_id: string
           payment_terms?: string | null
           project_id: string
+          saving_amount?: number | null
           status?: string
           supplier_id?: string | null
           total_amount?: number
@@ -1516,11 +1529,13 @@ export type Database = {
           delivery_date_planned?: string | null
           description?: string | null
           discount_amount?: number | null
+          estimated_cost?: number | null
           id?: string
           net_amount?: number
           organization_id?: string
           payment_terms?: string | null
           project_id?: string
+          saving_amount?: number | null
           status?: string
           supplier_id?: string | null
           total_amount?: number
@@ -1967,6 +1982,7 @@ export type Database = {
       }
       financial_categories: {
         Row: {
+          category_group: string | null
           color: string | null
           created_at: string | null
           id: string
@@ -1976,6 +1992,7 @@ export type Database = {
           type: string
         }
         Insert: {
+          category_group?: string | null
           color?: string | null
           created_at?: string | null
           id?: string
@@ -1985,6 +2002,7 @@ export type Database = {
           type?: string
         }
         Update: {
+          category_group?: string | null
           color?: string | null
           created_at?: string | null
           id?: string
@@ -2008,6 +2026,7 @@ export type Database = {
           amount: number
           broker_id: string | null
           category: string | null
+          category_group: string | null
           contract_id: string | null
           created_at: string | null
           created_by: string | null
@@ -2034,6 +2053,7 @@ export type Database = {
           amount: number
           broker_id?: string | null
           category?: string | null
+          category_group?: string | null
           contract_id?: string | null
           created_at?: string | null
           created_by?: string | null
@@ -2060,6 +2080,7 @@ export type Database = {
           amount?: number
           broker_id?: string | null
           category?: string | null
+          category_group?: string | null
           contract_id?: string | null
           created_at?: string | null
           created_by?: string | null
@@ -3132,6 +3153,7 @@ export type Database = {
           id: string
           interest_plan_id: string | null
           interest_property_id: string | null
+          is_own_resource: boolean | null
           last_entry_at: string | null
           lost_at: string | null
           lost_reason: string | null
@@ -3191,6 +3213,7 @@ export type Database = {
           id?: string
           interest_plan_id?: string | null
           interest_property_id?: string | null
+          is_own_resource?: boolean | null
           last_entry_at?: string | null
           lost_at?: string | null
           lost_reason?: string | null
@@ -3250,6 +3273,7 @@ export type Database = {
           id?: string
           interest_plan_id?: string | null
           interest_property_id?: string | null
+          is_own_resource?: boolean | null
           last_entry_at?: string | null
           lost_at?: string | null
           lost_reason?: string | null
@@ -4131,6 +4155,44 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "organization_api_keys_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_kpi_cache: {
+        Row: {
+          id: string
+          kpi_name: string
+          kpi_value: number | null
+          metadata: Json | null
+          organization_id: string | null
+          period: string
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          kpi_name: string
+          kpi_value?: number | null
+          metadata?: Json | null
+          organization_id?: string | null
+          period: string
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          kpi_name?: string
+          kpi_value?: number | null
+          metadata?: Json | null
+          organization_id?: string | null
+          period?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_kpi_cache_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"

@@ -107,7 +107,9 @@ export function CreateLeadDialog({
     stage_id: defaultStageId || '',
     property_id: '',
     deal_status: 'open',
+    is_own_resource: false,
     tag_ids: [] as string[],
+
   }), [profile?.id, defaultPipelineId, defaultStageId]);
 
   const [formData, setFormData] = useState(getEmptyFormData);
@@ -239,6 +241,7 @@ export function CreateLeadDialog({
         faixa_valor_imovel: formData.faixa_valor_imovel || undefined,
         valor_interesse: formData.valor_interesse ? parseFloat(formData.valor_interesse) : undefined,
         deal_status: formData.deal_status || 'open',
+        is_own_resource: formData.is_own_resource,
       });
       
       // For Telecom: also create the telecom_customers record with all fields
@@ -800,6 +803,25 @@ export function CreateLeadDialog({
                           onChange={(e) => updateField('valor_interesse', e.target.value)}
                           placeholder="Ex: 500000"
                         />
+                      </div>
+                      
+                      <div className="flex items-center space-x-2 pt-2">
+                        <Checkbox 
+                          id="is_own_resource" 
+                          checked={formData.is_own_resource}
+                          onCheckedChange={(checked) => updateField('is_own_resource', !!checked)}
+                        />
+                        <div className="grid gap-1.5 leading-none">
+                          <Label
+                            htmlFor="is_own_resource"
+                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                          >
+                            Recurso Próprio
+                          </Label>
+                          <p className="text-[10px] text-muted-foreground">
+                            O cliente possui capital próprio para o fechamento do contrato.
+                          </p>
+                        </div>
                       </div>
 
                       <div className="grid gap-4 sm:grid-cols-3">

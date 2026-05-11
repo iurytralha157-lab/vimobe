@@ -39,11 +39,14 @@ export default function ConstructionProjectForm() {
       description: "",
       property_id: "",
       status: "planned",
+      project_type: "construction",
       budget_estimated: 0,
       start_date_planned: "",
-      end_date_planned: ""
+      end_date_planned: "",
+      city_hall_approval_date: ""
     }
   });
+
 
   const selectedPropertyId = watch("property_id");
   const selectedStatus = watch("status");
@@ -55,11 +58,14 @@ export default function ConstructionProjectForm() {
         description: project.description || "",
         property_id: project.property_id || "",
         status: project.status || "planned",
+        project_type: (project as any).project_type || "construction",
         budget_estimated: project.budget_estimated || 0,
         start_date_planned: project.start_date_planned ? project.start_date_planned.split('T')[0] : "",
-        end_date_planned: project.end_date_planned ? project.end_date_planned.split('T')[0] : ""
+        end_date_planned: project.end_date_planned ? project.end_date_planned.split('T')[0] : "",
+        city_hall_approval_date: (project as any).city_hall_approval_date ? (project as any).city_hall_approval_date.split('T')[0] : ""
       });
     }
+
   }, [project, isEditing, reset]);
 
   const onSubmit = async (values: any) => {
@@ -114,20 +120,17 @@ export default function ConstructionProjectForm() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Imóvel / Localização</Label>
+                  <Label>Tipo de Projeto</Label>
                   <Select 
-                    value={selectedPropertyId} 
-                    onValueChange={(v) => setValue("property_id", v)}
+                    value={watch("project_type")} 
+                    onValueChange={(v) => setValue("project_type", v)}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Selecione um imóvel" />
+                      <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {properties?.map((prop) => (
-                        <SelectItem key={prop.id} value={prop.id}>
-                          {prop.title} ({prop.code})
-                        </SelectItem>
-                      ))}
+                      <SelectItem value="construction">Obra / Construção</SelectItem>
+                      <SelectItem value="architecture">Arquitetura / Projeto</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -151,6 +154,35 @@ export default function ConstructionProjectForm() {
                   </Select>
                 </div>
               </div>
+
+              <div className="space-y-2">
+                <Label>Imóvel / Localização</Label>
+                <Select 
+                  value={selectedPropertyId} 
+                  onValueChange={(v) => setValue("property_id", v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um imóvel" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {properties?.map((prop) => (
+                      <SelectItem key={prop.id} value={prop.id}>
+                        {prop.title} ({prop.code})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="city_hall_approval_date">Data de Aprovação Prefeitura (Arquitetura)</Label>
+                <Input 
+                  id="city_hall_approval_date" 
+                  type="date" 
+                  {...register("city_hall_approval_date")}
+                />
+              </div>
+
 
               <div className="space-y-2">
                 <Label htmlFor="description">Descrição / Escopo</Label>

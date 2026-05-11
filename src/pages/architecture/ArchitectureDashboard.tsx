@@ -1,5 +1,7 @@
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useOperationalRequests } from "@/hooks/use-operational";
+import { useConstructionProjects } from "@/hooks/use-construction";
+
 import { 
   Card, 
   CardContent, 
@@ -19,7 +21,10 @@ import { Badge } from "@/components/ui/badge";
 import { format, differenceInDays } from "date-fns";
 
 export default function ArchitectureDashboard() {
-  const { data: requests, isLoading } = useOperationalRequests({ type: 'architecture' });
+  const { data: requests, isLoading: isLoadingRequests } = useOperationalRequests({ type: 'architecture' });
+  const { data: allProjects, isLoading: isLoadingProjects } = useConstructionProjects();
+
+  const isLoading = isLoadingRequests || isLoadingProjects;
 
   if (isLoading) {
     return (
@@ -31,9 +36,11 @@ export default function ArchitectureDashboard() {
     );
   }
 
-  const activeProjects = requests?.filter(r => r.status !== 'completed' && r.status !== 'rejected') || [];
-  const cityHallProtocols = requests?.filter(r => r.title.toLowerCase().includes('prefeitura') || r.description?.toLowerCase().includes('prefeitura')) || [];
-  const completedProjects = requests?.filter(r => r.status === 'completed') || [];
+  const architectureProjects = allProjects?.filter(p => (p as any).project_type === 'architecture') || [];
+  const activeProjects = architectureProjects.filter(p => p.status !== 'completed' && p.status !== 'cancelled');
+  const cityHallProtocols = architectureProjects.filter(p => (p as any).city_hall_approval_date);
+  const completedProjects = architectureProjects.filter(p => p.status === 'completed');
+
 
   // Cálculo de SLA médio (dias entre criação e conclusão ou hoje)
   const totalDays = requests?.reduce((acc, r) => {
@@ -67,13 +74,14 @@ export default function ArchitectureDashboard() {
                    <div key={p.id} className="space-y-2">
                       <div className="flex justify-between items-center">
                         <div className="min-w-0">
-                          <h4 className="font-bold text-sm truncate">{p.title}</h4>
+                          <h4 className="font-bold text-sm truncate">{p.name}</h4>
                           <p className="text-[11px] text-muted-foreground">
-                            {p.project?.name || 'Sem obra'} | Prazo: {p.due_date ? format(new Date(p.due_date), 'dd/MM/yyyy') : 'N/A'}
+                            {p.property?.title || 'Sem imóvel'} | Entrega: {p.end_date_planned ? format(new Date(p.end_date_planned), 'dd/MM/yyyy') : 'N/A'}
                           </p>
                         </div>
                         <Badge variant="secondary" className="text-[10px] whitespace-nowrap">{getStatusLabel(p.status)}</Badge>
                       </div>
+
                       <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
                         <div className={`h-full transition-all ${getProgressColor(p.status)}`} style={{ width: `${getProgressValue(p.status)}%` }} />
                       </div>
@@ -108,10 +116,11 @@ export default function ArchitectureDashboard() {
                         return (
                           <tr key={pt.id}>
                             <td className="py-3">
-                              <p className="font-medium text-xs truncate max-w-[150px]">{pt.title}</p>
-                              <p className="text-[10px] text-slate-400">{pt.project?.name || 'N/A'}</p>
+                              <p className="font-medium text-xs truncate max-w-[150px]">{pt.name}</p>
+                              <p className="text-[10px] text-slate-400">{pt.property?.title || 'N/A'}</p>
                             </td>
                             <td className={`py-3 text-right text-xs font-bold ${days > 30 ? 'text-red-500' : 'text-slate-600'}`}>
+
                               {days}
                             </td>
                             <td className="py-3 text-right">
@@ -140,13 +149,14 @@ export default function ArchitectureDashboard() {
           </CardHeader>
           <CardContent>
              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {completedProjects.slice(0, 3).map((cp) => (
-                  <FileItem 
-                    key={cp.id} 
-                    name={cp.title} 
-                    date={format(new Date(cp.completed_at || cp.updated_at), 'dd/MM/yyyy')} 
-                    size="-" 
-                  />
+                 {completedProjects.slice(0, 3).map((cp) => (
+                   <FileItem 
+                     key={cp.id} 
+                     name={cp.name} 
+                     date={format(new Date(cp.delivery_date_actual || cp.updated_at), 'dd/MM/yyyy')} 
+                     size="-" 
+                   />
+
                 ))}
                 {completedProjects.length === 0 && (
                   <p className="col-span-3 text-sm text-muted-foreground text-center py-4">Nenhum projeto entregue recentemente</p>

@@ -64,12 +64,21 @@ export default function PurchaseDashboard() {
 
   // Cálculo de Saving: Usando discount_amount como proxy ou diferença entre total e net
   const totalSaving = orders?.reduce((acc, o) => {
+    const directSaving = Number((o as any).saving_amount) || 0;
+    if (directSaving > 0) return acc + directSaving;
+
     const discount = Number(o.discount_amount) || 0;
-    const diff = (Number(o.total_amount) > Number(o.net_amount)) 
-      ? Number(o.total_amount) - Number(o.net_amount) 
-      : 0;
+    const estimated = Number((o as any).estimated_cost) || 0;
+    const netAmount = Number(o.net_amount) || 0;
+    const totalAmount = Number(o.total_amount) || 0;
+    
+    const diff = (estimated > 0 && estimated > netAmount) 
+      ? estimated - netAmount 
+      : (totalAmount > netAmount ? totalAmount - netAmount : 0);
+    
     return acc + Math.max(discount, diff);
   }, 0) || 0;
+
 
   const urgencyOrders = 0; // Campo de prioridade não disponível no momento
 

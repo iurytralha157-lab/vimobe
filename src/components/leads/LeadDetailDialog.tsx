@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { PhoneInput } from '@/components/ui/phone-input';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Drawer, DrawerContent } from '@/components/ui/drawer';
@@ -222,8 +223,10 @@ export function LeadDetailDialog({
     profissao: '',
     faixa_valor_imovel: '',
     finalidade_compra: '',
-    procura_financiamento: false
+    procura_financiamento: false,
+    is_own_resource: false
   });
+
 
   // Currency formatting helpers
   const formatCurrencyDisplay = (value: string): string => {
@@ -271,8 +274,10 @@ export function LeadDetailDialog({
         profissao: lead.profissao || '',
         faixa_valor_imovel: lead.faixa_valor_imovel || '',
         finalidade_compra: lead.finalidade_compra || '',
-        procura_financiamento: lead.procura_financiamento || false
+        procura_financiamento: lead.procura_financiamento || false,
+        is_own_resource: (lead as any).is_own_resource || false
       });
+
       // Only sync lost_reason from server if it actually changed on the server
       // This prevents overwriting user's typing when refetch happens
       if (lead.lost_reason !== undefined) {
@@ -715,8 +720,10 @@ export function LeadDetailDialog({
         profissao: editForm.profissao || null,
         faixa_valor_imovel: editForm.faixa_valor_imovel || null,
         finalidade_compra: editForm.finalidade_compra || null,
-        procura_financiamento: editForm.procura_financiamento || null
+        procura_financiamento: editForm.procura_financiamento || null,
+        is_own_resource: editForm.is_own_resource
       } as any);
+
       
       // If lead is already "won" and valores changed, update the commission
       if (lead.deal_status === 'won' && newValorInteresse && newCommissionPercentage) {
@@ -773,14 +780,21 @@ export function LeadDetailDialog({
     if (newStatus === 'won') {
       const valorInteresse = lead.valor_interesse || 0;
 
+      if (!lead.is_own_resource) {
+        toast.warning('Confirme se o cliente possui recurso próprio', {
+          description: 'A regra de fechamento exige a verificação de recurso próprio para finalizar o contrato.',
+          duration: 6000,
+        });
+      }
+
       if (valorInteresse <= 0) {
-        // Show warning but allow to proceed
         toast.warning('Valor de interesse não preenchido', {
           description: 'Recomendamos preencher o valor antes de marcar como ganho para gerar comissões automaticamente.',
           duration: 6000,
         });
       }
     }
+
 
     await dealStatusChange.mutateAsync({
       leadId: lead.id,
@@ -933,9 +947,16 @@ export function LeadDetailDialog({
         </div>
 
         {/* Row 3 — Estágio + Deal Status lado a lado */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          {lead.is_own_resource && (
+            <Badge variant="secondary" className="bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border-none px-2 rounded-full text-[10px] font-bold">
+              <DollarSign className="h-3 w-3 mr-0.5" />
+              Recurso Próprio
+            </Badge>
+          )}
           {/* Stage pill */}
           <Popover open={stagePopoverOpen} onOpenChange={setStagePopoverOpen}>
+
             <PopoverTrigger asChild>
               <button className="flex-1 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-medium min-w-0 overflow-hidden">
                 <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse shrink-0" />
@@ -2314,7 +2335,18 @@ export function LeadDetailDialog({
                               </Select>
                             </div>
                           </div>
+                          <div className="flex items-center space-x-2 pt-2">
+                            <Checkbox 
+                              id="is_own_resource_edit" 
+                              checked={editForm.is_own_resource}
+                              onCheckedChange={(checked) => setEditForm({ ...editForm, is_own_resource: !!checked })}
+                            />
+                            <Label htmlFor="is_own_resource_edit" className="text-xs font-medium cursor-pointer">
+                              Possui Recurso Próprio para Fechamento
+                            </Label>
+                          </div>
                         </div>
+
                       </div>
                     ) : (
                       <div className="space-y-3">
