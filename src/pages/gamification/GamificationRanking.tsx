@@ -16,14 +16,16 @@ import {
   Target,
   Calendar,
   ChevronDown,
-  Filter
+  Filter,
+  FileText,
+  Users2,
+  Presentation
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import confetti from 'canvas-confetti';
 import { toast } from 'sonner';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -31,7 +33,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { startOfMonth, startOfWeek, endOfMonth, endOfWeek, format } from 'date-fns';
+import { startOfDay, endOfDay } from 'date-fns';
+import { DateFilterPopover } from '@/components/ui/date-filter-popover';
+import { DatePreset, getDateRangeFromPreset } from '@/hooks/use-dashboard-filters';
 
 interface LeaderboardUser {
   id: string;
