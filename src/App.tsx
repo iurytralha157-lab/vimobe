@@ -299,7 +299,9 @@ function AppRoutes() {
               <Route index element={<GamificationRanking />} />
               <Route path="dashboard" element={<GamificationDashboard />} />
               <Route path="historico" element={<GamificationHistory />} />
+              <Route path="performance" element={<GamificationPerformance />} />
               <Route path="configuracoes" element={<AdminRoute><GamificationAdmin /></AdminRoute>} />
+
             </Route>
 
             {/* Automations */}
