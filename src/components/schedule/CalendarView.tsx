@@ -66,16 +66,20 @@ const eventTypeColors: Record<EventType, string> = {
 interface ActivityCardProps {
   event: ScheduleEvent;
   onEditEvent?: (event: ScheduleEvent) => void;
+  onEventUpdate?: (id: string, updates: Partial<ScheduleEvent>) => void;
   isDragging?: boolean;
   style?: React.CSSProperties;
   className?: string;
 }
 
-function ActivityCard({ event, onEditEvent, isDragging, style, className }: ActivityCardProps) {
+function ActivityCard({ event, onEditEvent, onEventUpdate, isDragging, style, className }: ActivityCardProps) {
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: event.id,
     data: event
   });
+
+  const [resizing, setResizing] = useState(false);
+  const [tempHeight, setTempHeight] = useState<number | null>(null);
 
   const start = parseISO(event.start_time);
   const end = parseISO(event.end_time);
@@ -91,6 +95,42 @@ function ActivityCard({ event, onEditEvent, isDragging, style, className }: Acti
     opacity: 0.8,
   } : undefined;
 
+  const handleResizeMouseDown = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setResizing(true);
+    
+    const startY = e.clientY;
+    const initialHeight = duration * (56 / 60);
+    
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      const deltaY = moveEvent.clientY - startY;
+      const newHeight = Math.max(28, initialHeight + deltaY); // Min height 30 mins (28px)
+      // Snap to 30 mins increments (28px)
+      const snappedHeight = Math.round(newHeight / 28) * 28;
+      setTempHeight(snappedHeight);
+    };
+    
+    const onMouseUp = () => {
+      setResizing(false);
+      setTempHeight((prev) => {
+        if (prev !== null) {
+          const newDuration = Math.round(prev / (56 / 60));
+          const newEnd = addMinutes(start, newDuration);
+          onEventUpdate?.(event.id, { end_time: newEnd.toISOString() });
+        }
+        return null;
+      });
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+    };
+    
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  };
+
+  const currentHeight = tempHeight !== null ? tempHeight : (duration * (56 / 60));
+
   return (
     <div 
       ref={setNodeRef}
@@ -104,12 +144,17 @@ function ActivityCard({ event, onEditEvent, isDragging, style, className }: Acti
         "absolute left-1 right-1 rounded-[4px] border-2 overflow-hidden shadow-sm transition-shadow hover:shadow-md z-10 cursor-grab active:cursor-grabbing group",
         eventTypeColors[event.event_type as EventType],
         isDragging && "opacity-50 grayscale",
+        resizing && "z-50 ring-2 ring-primary ring-offset-1",
         className
       )}
-      style={{ ...style, ...dragStyle }}
+      style={{ 
+        ...style, 
+        ...dragStyle,
+        height: `${currentHeight}px`
+      }}
     >
       <div className={cn(
-        "flex h-full",
+        "flex h-full relative",
         isCompact ? "flex-row items-center gap-2 px-2 py-1" : "flex-col p-2"
       )}>
         <div className={cn(
@@ -130,7 +175,10 @@ function ActivityCard({ event, onEditEvent, isDragging, style, className }: Acti
         )}>
           <div className="flex items-center gap-1">
             <Clock className="h-2.5 w-2.5" />
-            <span>{format(start, 'HH:mm')}{!isCompact && ` - ${format(end, 'HH:mm')}`}</span>
+            <span>
+              {format(start, 'HH:mm')}
+              {(!isCompact || tempHeight !== null) && ` - ${format(tempHeight !== null ? addMinutes(start, Math.round(tempHeight / (56/60))) : end, 'HH:mm')}`}
+            </span>
           </div>
           {!isCompact && event.lead && (
             <div className="flex items-center gap-1 max-w-[80px]">
@@ -138,6 +186,14 @@ function ActivityCard({ event, onEditEvent, isDragging, style, className }: Acti
               <span className="truncate">{event.lead.name}</span>
             </div>
           )}
+        </div>
+
+        {/* Resize handle */}
+        <div 
+          className="absolute bottom-0 left-0 right-0 h-1.5 cursor-ns-resize hover:bg-white/20 active:bg-white/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+          onMouseDown={handleResizeMouseDown}
+        >
+          <div className="w-4 h-0.5 bg-white/40 rounded-full" />
         </div>
       </div>
     </div>
