@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/table";
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Star, TrendingUp, Phone, MessageSquare, UserCheck, Trophy, FileText, Presentation, Users2 } from 'lucide-react';
+import { Star, TrendingUp, Phone, MessageSquare, UserCheck, Trophy, FileText, Presentation, Users2, Calendar } from 'lucide-react';
 
 const ACTION_ICONS: Record<string, any> = {
   call_made: Phone,
