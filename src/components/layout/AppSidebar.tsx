@@ -214,10 +214,6 @@ const allNavItems: NavItem[] = [{
     icon: DollarSign,
     labelKey: 'financial',
     path: '/obras/financeiro'
-  }, {
-    icon: Inbox,
-    labelKey: 'queues',
-    path: '/obras/filas'
   }]
 }];
 
