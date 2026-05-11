@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { subMonths, format } from 'date-fns';
+import { format } from 'date-fns';
 
 export interface DRELine {
   id: string;
@@ -38,7 +38,7 @@ interface UseDREParams {
   projectId?: string;
 }
 
-export function useDRE({ startDate, endDate, regime, compareWithPrevious = false, projectId }: UseDREParams) {
+export function useDREExecutive({ startDate, endDate, regime, compareWithPrevious = false, projectId }: UseDREParams) {
   const { organization } = useAuth();
 
   return useQuery({
@@ -48,66 +48,46 @@ export function useDRE({ startDate, endDate, regime, compareWithPrevious = false
 
       const statusFilter = regime === 'cash' ? ['paid'] : ['pending', 'paid', 'overdue'];
 
-      // Simplificação: Agrupar diretamente por categoria se as tabelas de mapeamento não existirem
-      let query = supabase
-        .from('financial_entries')
-        .select('*')
-        .eq('organization_id', organization.id)
-        .in('status', statusFilter);
+      // Simplificação do fetch para evitar profundidade de tipo excessiva
+      const fetchEntries = async (s: Date, e: Date) => {
+        let q = supabase
+          .from('financial_entries')
+          .select('amount, type, status, category, due_date, paid_date, project_id' as any)
+          .eq('organization_id', organization.id)
+          .in('status', statusFilter);
 
-      if (projectId) {
-        // Se houver project_id na tabela
-        query = query.eq('project_id' as any, projectId);
-      }
+        if (projectId) q = q.eq('project_id' as any, projectId);
 
-      if (regime === 'cash') {
-        query = query.gte('paid_date', format(startDate, 'yyyy-MM-dd')).lte('paid_date', format(endDate, 'yyyy-MM-dd'));
-      } else {
-        query = query.gte('due_date', format(startDate, 'yyyy-MM-dd')).lte('due_date', format(endDate, 'yyyy-MM-dd'));
-      }
+        const dateField = regime === 'cash' ? 'paid_date' : 'due_date';
+        q = q.gte(dateField, format(s, 'yyyy-MM-dd')).lte(dateField, format(e, 'yyyy-MM-dd'));
 
-      const { data: entries, error: entriesError } = await query;
-      if (entriesError) throw entriesError;
+        const { data, error } = await q;
+        if (error) throw error;
+        return data || [];
+      };
 
-      // Calcular períodos anteriores para comparação
+      const entries = await fetchEntries(startDate, endDate);
+
       let previousEntries: any[] = [];
       if (compareWithPrevious) {
         const interval = endDate.getTime() - startDate.getTime();
         const prevStart = new Date(startDate.getTime() - interval);
         const prevEnd = new Date(endDate.getTime() - interval);
-
-        let prevQuery = supabase
-          .from('financial_entries')
-          .select('*')
-          .eq('organization_id', organization.id)
-          .in('status', statusFilter);
-
-        if (projectId) prevQuery = prevQuery.eq('project_id' as any, projectId);
-
-        if (regime === 'cash') {
-          prevQuery = prevQuery.gte('paid_date', format(prevStart, 'yyyy-MM-dd')).lte('paid_date', format(prevEnd, 'yyyy-MM-dd'));
-        } else {
-          prevQuery = prevQuery.gte('due_date', format(prevStart, 'yyyy-MM-dd')).lte('due_date', format(prevEnd, 'yyyy-MM-dd'));
-        }
-
-        const { data: prevData } = await prevQuery;
-        previousEntries = prevData || [];
+        previousEntries = await fetchEntries(prevStart, prevEnd);
       }
 
-      // Lógica de agregação executiva
       const calculateTotals = (data: any[]) => {
         const revenue = data.filter(e => e.type === 'revenue' || e.type === 'receivable').reduce((s, e) => s + (Number(e.amount) || 0), 0);
         const expense = data.filter(e => e.type === 'expense' || e.type === 'payable').reduce((s, e) => s + (Number(e.amount) || 0), 0);
         return { revenue, expense };
       };
 
-      const currentTotals = calculateTotals(entries || []);
+      const currentTotals = calculateTotals(entries);
       const prevTotals = calculateTotals(previousEntries);
 
       const ebitda = currentTotals.revenue - currentTotals.expense;
       const roi = currentTotals.expense > 0 ? (ebitda / currentTotals.expense) : 0;
 
-      // Montar linhas do relatório
       const lines: DRELine[] = [
         { id: 'rev', name: '(+) Receita Operacional', value: currentTotals.revenue, previousValue: prevTotals.revenue, isTotal: true, type: 'revenue' },
         { id: 'exp', name: '(-) Despesas/Custos', value: currentTotals.expense, previousValue: prevTotals.expense, isTotal: true, type: 'expense' },
