@@ -14,6 +14,7 @@ import { ptBR } from "date-fns/locale";
 export default function ConstructionProjects() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchTerm, setSearchTerm] = useState("");
+  const navigate = useNavigate();
   const { data: projects, isLoading } = useConstructionProjects();
 
   const filteredProjects = projects?.filter((p: any) => 
