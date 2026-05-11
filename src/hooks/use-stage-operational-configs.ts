@@ -19,11 +19,11 @@ export interface StageOperationalConfig {
   visibility_rules: any;
 }
 
-export function useStageOperationalConfigs(pipelineId?: string) {
+export function useStageOperationalConfigs(pipelineId?: string, stageId?: string) {
   const { organization } = useAuth();
 
   return useQuery({
-    queryKey: ["stage-operational-configs", organization?.id, pipelineId],
+    queryKey: ["stage-operational-configs", organization?.id, pipelineId, stageId],
     queryFn: async () => {
       let query = supabase
         .from("stage_operational_configs" as any)
@@ -32,6 +32,9 @@ export function useStageOperationalConfigs(pipelineId?: string) {
           stage:stages(id, name, pipeline_id)
         `)
         .eq("organization_id", organization?.id);
+
+      if (pipelineId) query = query.eq("stage.pipeline_id", pipelineId);
+      if (stageId) query = query.eq("stage_id", stageId);
 
       const { data, error } = await query;
       if (error) throw error;
