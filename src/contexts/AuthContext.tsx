@@ -3,6 +3,7 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { logAuditAction } from '@/hooks/use-audit-logs';
 import { performanceTracker } from '@/lib/performance';
+import { performFullCacheClear } from '@/lib/cache-utils';
 interface UserProfile {
   id: string;
   organization_id: string | null;
