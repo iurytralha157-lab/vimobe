@@ -72,3 +72,51 @@ export function useCreateConstructionProject() {
     }
   });
 }
+
+export function useConstructionDiaries(projectId: string) {
+  return useQuery({
+    queryKey: ["construction-diaries", projectId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("construction_diaries" as any)
+        .select(`
+          *,
+          created_by_profile:users!created_by(id, name, avatar_url)
+        `)
+        .eq("project_id", projectId)
+        .order("entry_date", { ascending: false });
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!projectId,
+  });
+}
+
+export function useCreateConstructionDiary() {
+  const queryClient = useQueryClient();
+  const { profile } = useAuth();
+
+  return useMutation({
+    mutationFn: async (values: any) => {
+      const { data, error } = await supabase
+        .from("construction_diaries" as any)
+        .insert([{
+          ...values,
+          created_by: profile?.id
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["construction-diaries", variables.project_id] });
+      toast.success("Diário registrado com sucesso!");
+    },
+    onError: (error: any) => {
+      toast.error(`Erro ao registrar diário: ${error.message}`);
+    }
+  });
+}
