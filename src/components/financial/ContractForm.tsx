@@ -44,6 +44,9 @@ const formSchema = z.object({
   end_date: z.string().optional(),
   signing_date: z.string().optional(),
   notes: z.string().optional(),
+  client_has_own_resources: z.enum(['yes', 'no', 'partial']).optional().default('no'),
+  available_resource_value: z.number().min(0).optional().default(0),
+  expected_entry_value: z.number().min(0).optional().default(0),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -106,6 +109,9 @@ export function ContractForm({ contract, onSuccess, onCancel }: ContractFormProp
       end_date: values.end_date || null,
       signing_date: values.signing_date || null,
       notes: values.notes || null,
+      client_has_own_resources: values.client_has_own_resources,
+      available_resource_value: values.available_resource_value,
+      expected_entry_value: values.expected_entry_value,
     };
 
     const brokerData = brokers.filter(b => b.user_id).map(b => ({
@@ -417,6 +423,73 @@ export function ContractForm({ contract, onSuccess, onCancel }: ContractFormProp
                 </FormItem>
               )}
             />
+            <div className="pt-4 border-t space-y-4">
+              <h4 className="font-medium">Análise de Crédito / Recurso</h4>
+              <FormField
+                control={form.control}
+                name="client_has_own_resources"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Cliente possui recurso próprio?</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione..." />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="yes">Sim</SelectItem>
+                        <SelectItem value="no">Não (Financiamento Total)</SelectItem>
+                        <SelectItem value="partial">Parcial (Entrada Prevista)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {form.watch('client_has_own_resources') === 'yes' && (
+                <FormField
+                  control={form.control}
+                  name="available_resource_value"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Valor Disponível (R$)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          step="0.01" 
+                          {...field}
+                          onChange={e => field.onChange(parseFloat(e.target.value) || 0)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              {form.watch('client_has_own_resources') === 'partial' && (
+                <FormField
+                  control={form.control}
+                  name="expected_entry_value"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Valor da Entrada Prevista (R$)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          step="0.01" 
+                          {...field}
+                          onChange={e => field.onChange(parseFloat(e.target.value) || 0)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+            </div>
           </TabsContent>
 
           <TabsContent value="brokers" className="pt-2 hidden sm:block">
