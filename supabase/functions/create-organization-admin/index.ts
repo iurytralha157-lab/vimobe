@@ -90,7 +90,7 @@ Deno.serve(async (req) => {
     }
 
     // Validate segment
-    const validSegments = ['imobiliario', 'telecom', 'servicos'];
+    const validSegments = ['imobiliario', 'telecom', 'servicos', 'engenharia'];
     if (!validSegments.includes(segment)) {
       return new Response(JSON.stringify({ error: 'Invalid segment' }), {
         status: 400,
