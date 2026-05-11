@@ -10,7 +10,7 @@ export function useConstructionProjects() {
     queryKey: ["construction-projects", organization?.id],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("construction_projects" as any)
+        .from("construction_projects")
         .select(`
           *,
           property:properties(id, title, main_image_url)
