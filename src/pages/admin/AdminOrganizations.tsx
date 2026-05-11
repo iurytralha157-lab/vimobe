@@ -59,7 +59,7 @@ export default function AdminOrganizations() {
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
   const [newOrg, setNewOrg] = useState({
     name: '',
-    segment: 'imobiliario' as 'imobiliario' | 'telecom' | 'servicos',
+    segment: 'imobiliario' as 'imobiliario' | 'telecom' | 'servicos' | 'engenharia',
     adminEmail: '',
     adminName: '',
     adminPassword: ''
