@@ -1,15 +1,30 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Trophy, Medal, Award, TrendingUp, Crown, PartyPopper } from 'lucide-react';
+import { 
+  Trophy, 
+  Medal, 
+  Award, 
+  TrendingUp, 
+  Crown, 
+  PartyPopper, 
+  Filter, 
+  Calendar,
+  Phone,
+  MessageSquare,
+  BadgeDollarSign,
+  Target
+} from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { useEffect, useState } from 'react';
 import confetti from 'canvas-confetti';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface LeaderboardUser {
   id: string;
@@ -29,6 +44,7 @@ function getInitials(name: string): string {
     .toUpperCase()
     .slice(0, 2);
 }
+
 
 export default function GamificationRanking() {
   const { organization } = useAuth();
