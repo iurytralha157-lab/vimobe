@@ -1723,14 +1723,6 @@ export default function Pipelines() {
           />
         )}
       </div>
-      {selectedLead && (
-        <LeadDetailDialog 
-          lead={selectedLead} 
-          open={!!selectedLead} 
-          onOpenChange={(open) => !open && setSelectedLead(null)} 
-        />
-      )}
-
       <Dialog open={confirmationDialogOpen} onOpenChange={setConfirmationDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
