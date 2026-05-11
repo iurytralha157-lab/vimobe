@@ -1,4 +1,5 @@
 import { AppLayout } from "@/components/layout/AppLayout";
+import { Button } from "@/components/ui/button";
 import { useAllPurchaseOrders, useAllMilestones } from "@/hooks/use-construction";
 import { 
   Card, 
@@ -107,6 +108,13 @@ export default function PurchaseDashboard() {
   return (
     <AppLayout title="Dashboard de Compras">
       <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <h2 className="text-xl font-bold">Visão Geral de Suprimentos</h2>
+          <Button onClick={() => window.location.href = '/obras/compras/novo'}>
+            <ShoppingCart className="h-4 w-4 mr-2" />
+            Novo Pedido
+          </Button>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <StatCard title="Pedidos Abertos" value={openOrders.length} icon={ShoppingCart} color="text-blue-600" />
           <StatCard title="Aguardando Entrega" value={waitingDelivery.length} icon={Truck} color="text-orange-600" />
