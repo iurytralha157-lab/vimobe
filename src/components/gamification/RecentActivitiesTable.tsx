@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/table";
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Star, TrendingUp, Phone, MessageSquare, UserCheck, Trophy } from 'lucide-react';
+import { Star, TrendingUp, Phone, MessageSquare, UserCheck, Trophy, FileText, Presentation, Users2 } from 'lucide-react';
 
 const ACTION_ICONS: Record<string, any> = {
   call_made: Phone,
@@ -21,6 +21,10 @@ const ACTION_ICONS: Record<string, any> = {
   sale_closed: Trophy,
   prospecting_report: Star,
   mission_bonus: Star,
+  meeting_held: Presentation,
+  proposal_sent: FileText,
+  contract_signed: Trophy,
+  visit_confirmed: Users2,
 };
 
 const ACTION_LABELS: Record<string, string> = {
@@ -31,6 +35,10 @@ const ACTION_LABELS: Record<string, string> = {
   sale_closed: 'Venda',
   prospecting_report: 'Relatório de Prospecção',
   mission_bonus: 'Bônus de Missão',
+  meeting_held: 'Reunião',
+  proposal_sent: 'Proposta',
+  contract_signed: 'Contrato Assinado',
+  visit_confirmed: 'Visita Confirmada',
 };
 
 export function RecentActivitiesTable() {
