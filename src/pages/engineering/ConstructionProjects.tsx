@@ -57,7 +57,10 @@ export default function ConstructionProjects() {
             <Button variant="outline" size="icon" className="h-10 w-10">
               <Filter className="h-4 w-4" />
             </Button>
-            <Button className="bg-primary hover:bg-primary/90">
+            <Button 
+              className="bg-primary hover:bg-primary/90"
+              onClick={() => navigate('/engenharia/obras/nova')}
+            >
               <Plus className="h-4 w-4 mr-2" />
               Nova Obra
             </Button>

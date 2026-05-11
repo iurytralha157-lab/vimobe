@@ -64,6 +64,7 @@ const GamificationHistory = lazy(() => import("./pages/gamification/Gamification
 // Engineering pages
 const ConstructionProjects = lazy(() => import("./pages/engineering/ConstructionProjects"));
 const ConstructionProjectDetail = lazy(() => import("./pages/engineering/ConstructionProjectDetail"));
+const ConstructionProjectForm = lazy(() => import("./pages/engineering/ConstructionProjectForm"));
 
 // Telecom pages
 const ServicePlans = lazy(() => import("./pages/ServicePlans"));
@@ -267,7 +268,9 @@ function AppRoutes() {
 
             {/* Engineering Module */}
             <Route path="/engenharia/obras" element={<ProtectedRoute><PermissionGuard permission="module_engineering"><ConstructionProjects /></PermissionGuard></ProtectedRoute>} />
+            <Route path="/engenharia/obras/nova" element={<ProtectedRoute><PermissionGuard permission="module_engineering"><ConstructionProjectForm /></PermissionGuard></ProtectedRoute>} />
             <Route path="/engenharia/obras/:id" element={<ProtectedRoute><PermissionGuard permission="module_engineering"><ConstructionProjectDetail /></PermissionGuard></ProtectedRoute>} />
+            <Route path="/engenharia/obras/:id/editar" element={<ProtectedRoute><PermissionGuard permission="module_engineering"><ConstructionProjectForm /></PermissionGuard></ProtectedRoute>} />
 
             {/* Telecom Module */}
             <Route path="/plans" element={<ProtectedRoute><ServicePlans /></ProtectedRoute>} />

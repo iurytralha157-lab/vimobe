@@ -12,7 +12,10 @@ import {
   CheckCircle2,
   AlertCircle,
   FileText,
-  MapPin
+  MapPin,
+  MoreVertical,
+  Edit,
+  Trash2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -22,7 +25,7 @@ import { ProjectStatusBadge } from "@/components/engineering/EngineeringBadges";
 import { ConstructionProgress } from "@/components/engineering/ConstructionProgress";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { 
   Dialog, 
   DialogContent, 
@@ -42,6 +45,12 @@ import {
   SelectValue 
 } from "@/components/ui/select";
 import { toast } from "sonner";
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger 
+} from "@/components/ui/dropdown-menu";
 
 export default function ConstructionProjectDetail() {
   const { id } = useParams<{ id: string }>();
@@ -130,6 +139,21 @@ export default function ConstructionProjectDetail() {
               {project.property?.title || "Sem localização vinculada"}
             </p>
           </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => navigate(`/engenharia/obras/${id}/editar`)}>
+                <Edit className="h-4 w-4 mr-2" /> Editar Obra
+              </DropdownMenuItem>
+              <DropdownMenuItem className="text-destructive">
+                <Trash2 className="h-4 w-4 mr-2" /> Excluir Obra
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

@@ -73,6 +73,32 @@ export function useCreateConstructionProject() {
   });
 }
 
+export function useUpdateConstructionProject() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, ...values }: any) => {
+      const { data, error } = await supabase
+        .from("construction_projects")
+        .update(values)
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["construction-projects"] });
+      queryClient.invalidateQueries({ queryKey: ["construction-project", data.id] });
+      toast.success("Obra atualizada com sucesso!");
+    },
+    onError: (error: any) => {
+      toast.error(`Erro ao atualizar obra: ${error.message}`);
+    }
+  });
+}
+
 export function useConstructionDiaries(projectId: string) {
   return useQuery({
     queryKey: ["construction-diaries", projectId],
