@@ -112,7 +112,8 @@ export function EventForm({ open, onOpenChange, event, leadId, leadName, default
       } else {
         // Creating new event - Start in Edit Mode
         setIsViewMode(false);
-        setSelectedType(defaultType || 'call');
+        const initialType = defaultType || 'call';
+        setSelectedType(initialType);
         setTitle('');
         setDescription('');
         setSelectedUserId(defaultUserId || '');
@@ -120,11 +121,18 @@ export function EventForm({ open, onOpenChange, event, leadId, leadName, default
         setTime(defaultDate ? format(defaultDate, 'HH:mm') : getCurrentTimeForInput());
         setSelectedLeadId(leadId || null);
         setSelectedLeadName(leadName || null);
-        setDuration(30);
+        setDuration(initialType === 'visit' ? 60 : 30);
         setIsCompleted(false);
       }
     }
   }, [open, event, defaultUserId, defaultDate, leadId, leadName, defaultType]);
+
+  // Update duration automatically when type changes to 'visit' for NEW events
+  useEffect(() => {
+    if (!event && !isViewMode && selectedType === 'visit') {
+      setDuration(60);
+    }
+  }, [selectedType, event, isViewMode]);
 
   const maxDescriptionLength = 280;
   const remainingChars = maxDescriptionLength - (description?.length || 0);
