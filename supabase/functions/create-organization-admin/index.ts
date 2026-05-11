@@ -187,6 +187,9 @@ Deno.serve(async (req) => {
     } else if (segment === 'imobiliario') {
       enabledModules = ['crm', 'financial', 'properties', 'whatsapp', 'agenda', 'cadences', 'tags', 'round_robin', 'reports'];
       disabledModules = ['plans', 'coverage', 'telecom', 'automations', 'performance', 'webhooks', 'site'];
+    } else if (segment === 'engenharia') {
+      enabledModules = ['crm', 'financial', 'engineering', 'whatsapp', 'agenda', 'tags', 'round_robin', 'reports'];
+      disabledModules = ['properties', 'plans', 'coverage', 'telecom', 'cadences', 'automations', 'performance', 'webhooks', 'site'];
     } else {
       // servicos - basic modules
       enabledModules = ['crm', 'financial', 'whatsapp', 'agenda', 'tags', 'round_robin', 'reports'];
