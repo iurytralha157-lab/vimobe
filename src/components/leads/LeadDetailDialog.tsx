@@ -1567,6 +1567,21 @@ export function LeadDetailDialog({
             )
           )}
 
+          {/* Messages Tab */}
+          {activeTab === 'messages' && (
+            <div className="space-y-4">
+              <div className="rounded-xl bg-gradient-to-br from-card to-muted/30 border p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="h-7 w-7 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                    <MessageCircle className="h-4 w-4 text-emerald-500" />
+                  </div>
+                  <Label className="text-sm font-medium">Histórico de Mensagens WhatsApp</Label>
+                </div>
+                <LeadMessagesTab leadId={lead.id} leadName={lead.name} />
+              </div>
+            </div>
+          )}
+
           {/* Deal Tab */}
           {activeTab === 'deal' && <div className="space-y-4">
               {/* Deal Status Section */}
