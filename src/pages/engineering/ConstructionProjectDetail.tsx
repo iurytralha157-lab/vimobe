@@ -15,7 +15,9 @@ import {
   MapPin,
   MoreVertical,
   Edit,
-  Trash2
+  Trash2,
+  DollarSign,
+  ShoppingCart
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";

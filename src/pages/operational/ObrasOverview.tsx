@@ -79,6 +79,18 @@ export default function ObrasOverview() {
             onDatePresetChange={filterHelpers.setDatePreset}
             customDateRange={filterHelpers.customDateRange}
             onCustomDateRangeChange={filterHelpers.setCustomDateRange}
+            teamId={filterHelpers.teamId}
+            onTeamChange={filterHelpers.setTeamId}
+            userId={filterHelpers.userId}
+            onUserChange={filterHelpers.setUserId}
+            source={filterHelpers.source}
+            onSourceChange={filterHelpers.setSource}
+            campaignId={filterHelpers.campaignId}
+            onCampaignChange={filterHelpers.setCampaignId}
+            adSetId={filterHelpers.adSetId}
+            onAdSetChange={filterHelpers.setAdSetId}
+            adId={filterHelpers.adId}
+            onAdChange={filterHelpers.setAdId}
             hasActiveFilters={filterHelpers.hasActiveFilters}
             onClear={filterHelpers.clearFilters}
           />
