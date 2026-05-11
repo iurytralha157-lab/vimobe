@@ -60,6 +60,8 @@ const GamificationDashboard = lazy(() => import("./pages/gamification/Gamificati
 const GamificationRanking = lazy(() => import("./pages/gamification/GamificationRanking"));
 const GamificationAdmin = lazy(() => import("./pages/gamification/GamificationAdmin"));
 const GamificationHistory = lazy(() => import("./pages/gamification/GamificationHistory"));
+const GamificationPerformance = lazy(() => import("./pages/gamification/GamificationPerformance"));
+
 
 // Engineering pages
 const ConstructionProjects = lazy(() => import("./pages/engineering/ConstructionProjects"));
