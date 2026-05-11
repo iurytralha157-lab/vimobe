@@ -61,6 +61,9 @@ const GamificationRanking = lazy(() => import("./pages/gamification/Gamification
 const GamificationAdmin = lazy(() => import("./pages/gamification/GamificationAdmin"));
 const GamificationHistory = lazy(() => import("./pages/gamification/GamificationHistory"));
 
+// Engineering pages
+const ConstructionProjects = lazy(() => import("./pages/engineering/ConstructionProjects"));
+
 // Telecom pages
 const ServicePlans = lazy(() => import("./pages/ServicePlans"));
 const CoverageAreas = lazy(() => import("./pages/CoverageAreas"));
@@ -260,6 +263,9 @@ function AppRoutes() {
             <Route path="/financeiro/corretor" element={<ProtectedRoute><BrokerFinancialPanel /></ProtectedRoute>} />
             <Route path="/financeiro/relatorios" element={<ProtectedRoute><AdminRoute><FinancialReports /></AdminRoute></ProtectedRoute>} />
             <Route path="/financeiro/dre" element={<ProtectedRoute><AdminRoute><FinancialDRE /></AdminRoute></ProtectedRoute>} />
+
+            {/* Engineering Module */}
+            <Route path="/engenharia/obras" element={<ProtectedRoute><PermissionGuard permission="module_engineering"><ConstructionProjects /></PermissionGuard></ProtectedRoute>} />
 
             {/* Telecom Module */}
             <Route path="/plans" element={<ProtectedRoute><ServicePlans /></ProtectedRoute>} />
