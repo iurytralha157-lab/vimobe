@@ -362,20 +362,29 @@ export default function Pipelines() {
   const queryClient = useQueryClient();
 
   const handleDragEnd = useCallback(async (result: DropResult) => {
+    const { destination, source, draggableId } = result;
+    
+    if (!destination) return;
+    if (destination.droppableId === source.droppableId && destination.index === source.index) return;
+
+    // Regra de Fechamento (Plenos Obras)
+    const targetStage = stages.find(s => s.id === destination.droppableId);
+    if (targetStage?.name?.toLowerCase().includes('fechamento') || targetStage?.name?.toLowerCase().includes('contrato')) {
+      setPendingDragResult(result);
+      setConfirmationDialogOpen(true);
+      return;
+    }
+
+    executeLeadMove(result);
+  }, [stages]);
+
+  const executeLeadMove = useCallback(async (result: DropResult) => {
     // Marcar que estamos em processo de drag (bloqueia refetch da subscription)
     isDraggingRef.current = true;
     
     const { destination, source, draggableId } = result;
-    
-    if (!destination) {
-      isDraggingRef.current = false;
-      return;
-    }
-    if (destination.droppableId === source.droppableId && destination.index === source.index) {
-      isDraggingRef.current = false;
-      return;
-    }
-    
+    if (!destination) return;
+
     const newStageId = destination.droppableId;
     const oldStageId = source.droppableId;
     const oldStage = stages.find(s => s.id === oldStageId);
