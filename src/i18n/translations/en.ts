@@ -64,9 +64,14 @@ export const en = {
     summary: 'Summary',
     campaigns: 'Campaigns',
     engineering: 'Engineering',
-    construction: 'Projects',
+    obras: 'Construction',
+    construction: 'Ongoing Projects',
     cockpit: 'Operational Cockpit',
     operationalMapping: 'Operational Mapping',
+    queues: 'Operational Queues',
+    overview: 'Overview',
+    purchase: 'Purchasing',
+    architecture: 'Architecture',
   },
 
   // Settings
