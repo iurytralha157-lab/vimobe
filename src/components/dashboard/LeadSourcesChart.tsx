@@ -118,7 +118,7 @@ export function LeadSourcesChart({ data, isLoading }: LeadSourcesChartProps) {
   }
 
   return (
-    <Card className="overflow-hidden h-full flex flex-col shadow-sm border-border/50 bg-card/50 backdrop-blur-sm">
+    <Card className="overflow-hidden h-full flex flex-col shadow-sm border-border/50">
       <CardHeader className="pb-0 pt-4 px-4">
         <div className="flex items-center justify-between">
           <CardTitle className="text-xs font-semibold flex items-center gap-2 uppercase tracking-widest text-muted-foreground">
@@ -129,29 +129,8 @@ export function LeadSourcesChart({ data, isLoading }: LeadSourcesChartProps) {
       </CardHeader>
       
       <CardContent className="flex-1 p-4 pt-2 flex flex-col">
-        {/* KPI Cards section */}
-        <div className="grid grid-cols-2 gap-3 mb-4">
-          <div className="bg-primary/5 rounded-lg p-3 border border-primary/10">
-            <div className="flex items-center gap-2 mb-1">
-              <Users className="h-3.5 w-3.5 text-primary" />
-              <span className="text-[10px] font-medium text-primary/70 uppercase">Total Leads</span>
-            </div>
-            <p className="text-xl font-bold text-foreground">{total}</p>
-          </div>
-          <div className="bg-emerald-500/5 rounded-lg p-3 border border-emerald-500/10">
-            <div className="flex items-center gap-2 mb-1">
-              <TrendingUp className="h-3.5 w-3.5 text-emerald-500" />
-              <span className="text-[10px] font-medium text-emerald-500/70 uppercase">Melhor Origem</span>
-            </div>
-            <div className="flex items-baseline gap-1.5 truncate">
-              <p className="text-base font-bold text-foreground truncate">{bestSource.name}</p>
-              <p className="text-xs font-bold text-emerald-500">{bestSource.percentage}%</p>
-            </div>
-          </div>
-        </div>
-
         {/* Donut Chart */}
-        <div className="flex-1 min-h-[180px] relative">
+        <div className="flex-1 min-h-[250px] relative mt-2">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
