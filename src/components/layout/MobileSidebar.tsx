@@ -38,6 +38,7 @@ import {
   HelpCircle,
   Trophy,
   History as HistoryIcon,
+  HardHat,
 } from 'lucide-react';
 import { WhatsAppIcon } from '@/components/icons/WhatsAppIcon';
 import { AnimatedIcon } from '@/components/icons/AnimatedIcon';
