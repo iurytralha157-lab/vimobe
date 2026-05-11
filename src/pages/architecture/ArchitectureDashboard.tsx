@@ -116,10 +116,11 @@ export default function ArchitectureDashboard() {
                         return (
                           <tr key={pt.id}>
                             <td className="py-3">
-                              <p className="font-medium text-xs truncate max-w-[150px]">{pt.title}</p>
-                              <p className="text-[10px] text-slate-400">{pt.project?.name || 'N/A'}</p>
+                              <p className="font-medium text-xs truncate max-w-[150px]">{pt.name}</p>
+                              <p className="text-[10px] text-slate-400">{pt.property?.title || 'N/A'}</p>
                             </td>
                             <td className={`py-3 text-right text-xs font-bold ${days > 30 ? 'text-red-500' : 'text-slate-600'}`}>
+
                               {days}
                             </td>
                             <td className="py-3 text-right">
