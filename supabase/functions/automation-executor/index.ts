@@ -879,10 +879,41 @@ async function processActionNode(
       return;
     }
 
+    case "track_gamification_event": {
+      const eventType = config.event_type as string;
+      const points = Number(config.points || 0);
+      if (!eventType) return;
+
+      // Log the event
+      await supabase.from("gamification_events").insert({
+        organization_id: execution.organization_id,
+        user_id: config.user_id || (execution.lead_id ? (await supabase.from("leads").select("assigned_user_id").eq("id", execution.lead_id).single()).data?.assigned_user_id : null),
+        event_type: eventType,
+        source_module: config.source_module || "automation",
+        source_id: execution.lead_id || execution.id,
+        metadata: { ...config.metadata, automation_id: execution.automation_id },
+        points_earned: points,
+      });
+
+      // Update user stats
+      if (execution.lead_id) {
+        const { data: lead } = await supabase.from("leads").select("assigned_user_id").eq("id", execution.lead_id).single();
+        if (lead?.assigned_user_id) {
+          await supabase.rpc("increment_user_points", {
+            p_user_id: lead.assigned_user_id,
+            p_points: points,
+            p_organization_id: execution.organization_id
+          });
+        }
+      }
+      return;
+    }
+
     default:
       console.log(`Unknown action type: ${actionType}`);
   }
 }
+
 
 // deno-lint-ignore no-explicit-any
 async function persistOutgoingMessage(supabase: any, p: {
