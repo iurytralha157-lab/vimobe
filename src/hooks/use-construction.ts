@@ -13,7 +13,7 @@ export function useConstructionProjects() {
         .from("construction_projects")
         .select(`
           *,
-          property:properties(id, title, main_image_url)
+          property:properties(id, title)
         `)
         .order("created_at", { ascending: false });
 
