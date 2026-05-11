@@ -377,55 +377,59 @@ function RealEstateFinancialDashboard({ data }: { data: ReturnType<typeof useFin
         {/* Summary Cards - Leads and Contracts */}
        {/* Summary Cards - Leads, Contracts, Commissions, Balance */}
        <div className="grid grid-cols-2 gap-2 sm:gap-3 md:gap-4 lg:grid-cols-4">
-         <FinancialCard
-           title="Leads Ganhos"
-           value={String(data?.wonLeadsCount || 0)}
-           description={`${formatCurrency(data?.totalLeadsValue || 0)} em valor`}
+         <PremiumFinancialCard
+           title="VGV Total"
+           value={formatCurrency(data?.totalContractsValue || 0)}
+           description={`${data?.activeContracts || 0} contratos ativos`}
            icon={Award}
-           variant="success"
+           variant="primary"
+           trend={{ value: data?.growthRate || 0, isPositive: true }}
+           chartData={data?.monthlyData?.map(m => ({ value: m.receitas }))}
          />
-         <FinancialCard
-           title="Contratos Ativos"
-           value={String(data?.activeContracts || 0)}
-           description={`${formatCurrency(data?.totalContractsValue || 0)} em valor`}
-           icon={FileText}
-         />
-         <FinancialCard
-           title="Total Comissões"
-           value={formatCurrency((data?.forecastCommissions || 0) + (data?.pendingCommissions || 0) + (data?.paidCommissions || 0))}
-           icon={DollarSign}
-           variant="success"
-         />
-         <FinancialCard
-           title="Balanço Projetado"
-           value={formatCurrency((data?.receivable90 || 0) - (data?.totalPayable || 0))}
+         <PremiumFinancialCard
+           title="Ticket Médio"
+           value={formatCurrency(data?.avgTicket || 0)}
+           description="Baseado em vendas reais"
            icon={Target}
-           variant={(data?.receivable90 || 0) - (data?.totalPayable || 0) >= 0 ? 'success' : 'destructive'}
+           chartData={data?.monthlyData?.map(m => ({ value: m.receitas }))}
+         />
+         <PremiumFinancialCard
+           title="Previsão Anual"
+           value={formatCurrency(data?.annualProjection || 0)}
+           description="Projeção baseada em MRR"
+           icon={TrendingUp}
+           variant="success"
+           chartData={data?.monthlyData?.map(m => ({ value: m.receitas }))}
+         />
+         <PremiumFinancialCard
+           title="Inadimplência"
+           value={`${data?.defaultRate?.toFixed(1)}%`}
+           description="Valores vencidos"
+           icon={AlertTriangle}
+           variant="destructive"
+           trend={{ value: 2.1, isPositive: false }}
          />
        </div>
 
-        {/* KPI Cards - Grid mais compacto no mobile */}
-        <div className="grid grid-cols-2 gap-2 sm:gap-3 md:gap-4 lg:grid-cols-4">
-          <FinancialCard
+        {/* Row 2 - Receivables */}
+        <div className="grid grid-cols-2 gap-2 sm:gap-3 md:gap-4 lg:grid-cols-4 mt-4">
+          <PremiumFinancialCard
             title="A Receber (30d)"
             value={formatCurrency(data?.receivable30 || 0)}
-            description="Vence em até 30 dias"
             icon={TrendingUp}
             variant="success"
           />
-          <FinancialCard
+          <PremiumFinancialCard
             title="A Receber (60d)"
             value={formatCurrency(data?.receivable60 || 0)}
-            description="Vence entre 31-60 dias"
             icon={Calendar}
           />
-          <FinancialCard
+          <PremiumFinancialCard
             title="A Receber (90d)"
             value={formatCurrency(data?.receivable90 || 0)}
-            description="Vence entre 61-90 dias"
             icon={Calendar}
           />
-          <FinancialCard
+          <PremiumFinancialCard
             title="A Pagar"
             value={formatCurrency(data?.totalPayable || 0)}
             icon={TrendingDown}
@@ -433,31 +437,30 @@ function RealEstateFinancialDashboard({ data }: { data: ReturnType<typeof useFin
           />
         </div>
 
-        {/* Second Row - Comissões e Vencidos */}
-        <div className="grid grid-cols-2 gap-2 sm:gap-3 md:gap-4 lg:grid-cols-4">
-          <FinancialCard
-            title="Comissões Prev."
-            value={formatCurrency(data?.forecastCommissions || 0)}
-            description="Aguardando aprovação"
-            icon={Clock}
-          />
-          <FinancialCard
+        {/* Row 3 - Commissions */}
+        <div className="grid grid-cols-2 gap-2 sm:gap-3 md:gap-4 lg:grid-cols-4 mt-4">
+          <PremiumFinancialCard
             title="Comissões Pend."
             value={formatCurrency(data?.pendingCommissions || 0)}
-            description="Aprovadas, aguardando pgto"
             icon={DollarSign}
           />
-          <FinancialCard
+          <PremiumFinancialCard
+            title="Comissões Prev."
+            value={formatCurrency(data?.forecastCommissions || 0)}
+            icon={Clock}
+          />
+          <PremiumFinancialCard
             title="Comissões Pagas"
             value={formatCurrency(data?.paidCommissions || 0)}
             icon={CheckCircle2}
             variant="success"
           />
-          <FinancialCard
-            title="Vencidos"
-            value={formatCurrency(totalOverdue)}
-            icon={AlertTriangle}
-            variant="destructive"
+          <PremiumFinancialCard
+            title="Conversão Comercial"
+            value={`${data?.conversionRate?.toFixed(1)}%`}
+            description="Leads Ganhos / Total"
+            icon={TrendingUp}
+            variant="primary"
           />
         </div>
 
