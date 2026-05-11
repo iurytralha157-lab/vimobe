@@ -196,7 +196,15 @@ export default function GamificationRanking() {
                 <Trophy className="h-5 w-5 lg:h-6 lg:w-6 text-yellow-500" />
               </div>
               <h2 className="text-lg lg:text-2xl font-black italic uppercase tracking-tighter text-indigo-900 dark:text-indigo-100">
-                Arena {rankingType === 'general' ? 'de Elite' : `de ${rankingType.charAt(0).toUpperCase() + rankingType.slice(1)}`}
+                Arena {
+                  rankingType === 'general' ? 'de Elite' : 
+                  rankingType === 'calls' ? 'de Ligações' :
+                  rankingType === 'proposals' ? 'de Propostas' :
+                  rankingType === 'sales' ? 'de Vendas' :
+                  rankingType === 'meetings' ? 'de Reuniões' :
+                  rankingType === 'visits' ? 'de Visitas' :
+                  'de Elite'
+                }
               </h2>
             </div>
 
