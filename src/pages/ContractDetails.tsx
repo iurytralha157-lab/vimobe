@@ -37,7 +37,7 @@ export default function ContractDetails() {
         .select(`
           *,
           lead:leads(name, email, phone),
-          property:properties(code, title, address),
+          property:properties(code, title, endereco),
           entries:financial_entries(*),
           commissions:commissions(*, user:profiles(name))
         `)
