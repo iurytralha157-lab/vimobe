@@ -447,7 +447,7 @@ export function useFinancialDashboard() {
         activeContracts: contracts.length,
         wonLeadsCount: wonLeads.length,
         // Premium Metrics (Simulated for now, would come from views)
-        avgTicket: contracts.length > 0 ? totalContractsValue / contracts.length : 0,
+        avgTicket: contracts.length > 0 ? contractsValue / contracts.length : 0,
         conversionRate: wonLeads.length > 0 ? (contracts.length / wonLeads.length) * 100 : 0,
         annualProjection: receivable30 * 12, // Simple projection
         growthRate: 15.5, // Trend simulation
