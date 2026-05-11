@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Shuffle, Users, Tags, GitBranch } from 'lucide-react';
+import { Shuffle, Users, Tags, GitBranch, Workflow } from 'lucide-react';
 import { TeamPipelinesManager } from '@/components/teams/TeamPipelinesManager';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { AnimatedTabNav, AnimatedTabItem } from '@/components/ui/animated-tab-nav';
@@ -13,6 +13,7 @@ import { DistributionTab } from '@/components/crm-management/DistributionTab';
 import { TeamsTab } from '@/components/crm-management/TeamsTab';
 import { TagsTab } from '@/components/crm-management/TagsTab';
 import { TabIntroCard } from '@/components/crm-management/TabIntroCard';
+import { OperationalTab } from '@/components/crm-management/OperationalTab';
 
 // Intro card content for each tab
 const tabIntros: Record<string, { title: string; description: string; tips?: string[] }> = {
@@ -49,9 +50,17 @@ const tabIntros: Record<string, { title: string; description: string; tips?: str
       'Use para marcar prioridade, interesse ou qualquer critério',
     ],
   },
+  operational: {
+    title: 'Inteligência Operacional',
+    description: 'Vincule estágios do pipeline a contextos de negócio e defina metas de SLA.',
+    tips: [
+      'Escolha qual setor é responsável por cada etapa',
+      'Defina prazos de atendimento (SLA) em horas',
+    ],
+  },
 };
 
-const VALID_TABS = ['teams', 'pipelines', 'distribution', 'tags'];
+const VALID_TABS = ['teams', 'pipelines', 'distribution', 'tags', 'operational'];
 
 export default function CRMManagement() {
   const [searchParams] = useSearchParams();
@@ -75,6 +84,7 @@ export default function CRMManagement() {
     { value: 'pipelines', label: 'Pipelines', icon: GitBranch },
     { value: 'distribution', label: 'Distribuição', icon: Shuffle },
     { value: 'tags', label: 'Tags', icon: Tags },
+    { value: 'operational', label: 'Mapeamento', icon: Workflow },
   ], []);
 
   const currentTab = managementTabs.find(tab => tab.value === activeTab);
@@ -135,6 +145,10 @@ export default function CRMManagement() {
 
           <TabsContent value="tags" className="mt-4">
             <TagsTab />
+          </TabsContent>
+
+          <TabsContent value="operational" className="mt-4">
+            <OperationalTab />
           </TabsContent>
         </Tabs>
       </div>
