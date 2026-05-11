@@ -57,192 +57,18 @@ export function useAutoCreateContract() {
       if (!orgId) throw new Error('Organização não encontrada');
       if (!user?.id) throw new Error('Usuário não autenticado');
 
-      const {
-        leadId,
-        value,
-        downPayment = 0,
-        installments = 1,
-        commissionPercentage = 5,
-        brokerIds = [],
-        contractType = 'sale',
-        paymentConditions,
-      } = params;
-
-      // 1. Buscar dados do lead
-      const { data: lead, error: leadError } = await supabase
-        .from('leads')
-        .select('name, assigned_user_id, property_id, organization_id')
-        .eq('id', leadId)
-        .single();
-
-      if (leadError) throw leadError;
-
-      // 2. Gerar número do contrato
-      const contractNumber = await generateContractNumber(orgId);
-
-      // 3. Criar contrato
-      const { data: contract, error: contractError } = await (supabase as any)
-        .from('contracts')
-        .insert({
-          organization_id: orgId,
-          contract_number: contractNumber,
-          contract_type: contractType,
-          status: 'active',
-          lead_id: leadId,
-          property_id: lead.property_id,
-          value,
-          down_payment: downPayment,
-          installments,
-          commission_percentage: commissionPercentage,
-          commission_value: value * (commissionPercentage / 100),
-          client_name: lead.name,
-          payment_conditions: paymentConditions,
-          signing_date: new Date().toISOString().split('T')[0],
-          created_by: user.id,
-        })
-        .select()
-        .single();
-
-      if (contractError) throw contractError;
-
-      const contractId = contract.id;
-      const financialEntries: any[] = [];
-
-      // 4. Gerar entrada (se houver down payment)
-      if (downPayment > 0) {
-        financialEntries.push({
-          organization_id: orgId,
-          contract_id: contractId,
-          lead_id: leadId,
-          type: 'receivable',
-          category: 'Entrada',
-          description: `Entrada - ${contractNumber}`,
-          amount: downPayment,
-          due_date: new Date().toISOString().split('T')[0],
-          status: 'pending',
-          installment_number: 0,
-          total_installments: installments,
-          created_by: user.id,
-        });
-      }
-
-      // 5. Gerar N parcelas
-      const remainingValue = value - downPayment;
-      const installmentValue = Math.round((remainingValue / installments) * 100) / 100;
-      const lastInstallmentAdjust = remainingValue - installmentValue * (installments - 1);
-
-      for (let i = 1; i <= installments; i++) {
-        const dueDate = new Date();
-        dueDate.setMonth(dueDate.getMonth() + i);
-
-        financialEntries.push({
-          organization_id: orgId,
-          contract_id: contractId,
-          lead_id: leadId,
-          type: 'receivable',
-          category: 'Parcela',
-          description: `Parcela ${i}/${installments} - ${contractNumber}`,
-          amount: i === installments ? lastInstallmentAdjust : installmentValue,
-          due_date: dueDate.toISOString().split('T')[0],
-          status: 'pending',
-          installment_number: i,
-          total_installments: installments,
-          created_by: user.id,
-        });
-      }
-
-      // 6. Inserir lançamentos financeiros
-      if (financialEntries.length > 0) {
-        const { error: entriesError } = await supabase
-          .from('financial_entries')
-          .insert(financialEntries as never[]);
-        if (entriesError) throw entriesError;
-      }
-
-      // 7. Vincular corretores e criar comissões
-      const effectiveBrokerIds = brokerIds.length > 0 ? brokerIds : (lead.assigned_user_id ? [lead.assigned_user_id] : []);
-
-      if (effectiveBrokerIds.length > 0) {
-        const perBrokerPercentage = commissionPercentage / effectiveBrokerIds.length;
-
-        // Vincular corretores ao contrato
-        const brokerEntries = effectiveBrokerIds.map(brokerId => ({
-          contract_id: contractId,
-          user_id: brokerId,
-          commission_percentage: perBrokerPercentage,
-        }));
-        await (supabase as any).from('contract_brokers').insert(brokerEntries);
-
-        // Criar comissões
-        const commissions = effectiveBrokerIds.map(brokerId => ({
-          organization_id: orgId,
-          contract_id: contractId,
-          lead_id: leadId,
-          user_id: brokerId,
-          property_id: lead.property_id,
-          base_value: value,
-          percentage: perBrokerPercentage,
-          calculated_value: value * (perBrokerPercentage / 100),
-          amount: value * (perBrokerPercentage / 100),
-          status: 'forecast',
-          forecast_date: new Date().toISOString().split('T')[0],
-          notes: `Comissão automática - ${contractNumber}`,
-        }));
-
-        await (supabase as any).from('commissions').insert(commissions);
-
-        // Criar conta a pagar (comissão total)
-        const totalCommission = value * (commissionPercentage / 100);
-        if (totalCommission > 0) {
-          await supabase.from('financial_entries').insert({
-            organization_id: orgId,
-            contract_id: contractId,
-            lead_id: leadId,
-            type: 'payable',
-            category: 'Comissão',
-            description: `Comissões - ${contractNumber}`,
-            amount: totalCommission,
-            due_date: new Date().toISOString().split('T')[0],
-            status: 'pending',
-            created_by: user.id,
-          } as never);
+      const { data, error } = await supabase.functions.invoke('financial-engine', {
+        body: {
+          action: 'lead_won',
+          leadId: params.leadId,
+          organizationId: orgId,
+          userId: user.id,
+          data: params
         }
-      }
+      });
 
-      // 8. Atualizar lead como won
-      await supabase
-        .from('leads')
-        .update({
-          deal_status: 'won',
-          won_at: new Date().toISOString(),
-        } as never)
-        .eq('id', leadId);
-
-      // 9. Registrar auditoria
-      logAuditAction(
-        'auto_create_contract',
-        'contract',
-        contractId,
-        undefined,
-        {
-          contract_number: contractNumber,
-          lead_id: leadId,
-          lead_name: lead.name,
-          value,
-          down_payment: downPayment,
-          installments,
-          commission_percentage: commissionPercentage,
-          brokers_count: effectiveBrokerIds.length,
-        },
-        orgId
-      ).catch(console.error);
-
-      return {
-        contractId,
-        contractNumber,
-        installmentsCreated: installments,
-        downPaymentCreated: downPayment > 0,
-      };
+      if (error) throw error;
+      return data;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['contracts'] });
@@ -256,7 +82,7 @@ export function useAutoCreateContract() {
       queryClient.invalidateQueries({ queryKey: ['enhanced-dashboard-stats'] });
 
       toast.success('🎉 Contrato criado automaticamente!', {
-        description: `${data.contractNumber} - ${data.installmentsCreated} parcelas geradas`,
+        description: `${data.contractNumber || 'Contrato gerado'} - ${data.installmentsCreated || ''} parcelas geradas`,
       });
     },
     onError: (error: Error) => {
