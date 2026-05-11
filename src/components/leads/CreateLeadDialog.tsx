@@ -804,6 +804,25 @@ export function CreateLeadDialog({
                           placeholder="Ex: 500000"
                         />
                       </div>
+                      
+                      <div className="flex items-center space-x-2 pt-2">
+                        <Checkbox 
+                          id="is_own_resource" 
+                          checked={formData.is_own_resource}
+                          onCheckedChange={(checked) => updateField('is_own_resource', !!checked)}
+                        />
+                        <div className="grid gap-1.5 leading-none">
+                          <Label
+                            htmlFor="is_own_resource"
+                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                          >
+                            Recurso Próprio
+                          </Label>
+                          <p className="text-[10px] text-muted-foreground">
+                            O cliente possui capital próprio para o fechamento do contrato.
+                          </p>
+                        </div>
+                      </div>
 
                       <div className="grid gap-4 sm:grid-cols-3">
                         <div className="sm:col-span-2 space-y-2">
