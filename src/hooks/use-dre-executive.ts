@@ -53,7 +53,7 @@ export function useDREExecutive({ startDate, endDate, regime, compareWithPreviou
       const fetchEntries = async (s: Date, e: Date) => {
         let q: any = supabase.from('financial_entries');
         
-        q = q.select('amount, type, status, category, due_date, paid_date, project_id')
+        q = q.select('amount, type, status, category, category_group, due_date, paid_date, project_id')
              .eq('organization_id', organization.id)
              .in('status', statusFilter);
 
