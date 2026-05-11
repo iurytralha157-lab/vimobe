@@ -93,6 +93,7 @@ const PreviewSiteWrapper = lazy(() => import("./pages/public/PreviewSiteWrapper"
 const APIDocs = lazy(() => import("./pages/public/APIDocs"));
 const OperationalDashboard = lazy(() => import("./pages/OperationalDashboard"));
 const StageOperationalManagement = lazy(() => import("./pages/StageOperationalManagement"));
+const ExecutiveDRE = lazy(() => import("./pages/financial/ExecutiveDRE"));
 
 
 // Trial expired modal
