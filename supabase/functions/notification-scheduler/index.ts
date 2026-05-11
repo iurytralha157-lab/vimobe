@@ -190,12 +190,31 @@ Deno.serve(async (req) => {
     }
 
     // Financial Logic (simplified but preserved)
-    const { data: financialEntries } = await supabase
+    // Only process for organizations that have the financial module enabled
+    const { data: financialEntries, error: financialError } = await supabase
       .from("financial_entries")
-      .select("id, organization_id, type, description, amount, due_date")
+      .select(`
+        id, 
+        organization_id, 
+        type, 
+        description, 
+        amount, 
+        due_date,
+        organization:organizations(is_financial_module_enabled)
+      `)
       .eq("status", "pending");
 
+    if (financialError) {
+      console.error("Error fetching financial entries:", financialError);
+    }
+
     for (const entry of financialEntries || []) {
+      const org = entry.organization as any;
+      if (!org?.is_financial_module_enabled) {
+        // Skip notifications if financial module is disabled for this organization
+        continue;
+      }
+
       const typeLabel = entry.type === 'payable' ? 'A Pagar' : 'A Receber';
       let fTitle = "";
       if (entry.due_date === todayStr) fTitle = "⚠️ Conta vence hoje!";
