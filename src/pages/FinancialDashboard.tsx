@@ -1,5 +1,5 @@
 import { AppLayout } from '@/components/layout/AppLayout';
-import { FinancialCard } from '@/components/financial/FinancialCard';
+import { PremiumFinancialCard } from '@/components/financial/PremiumFinancialCard';
 import { useFinancialDashboard } from '@/hooks/use-financial';
 import { useTelecomFinancialDashboard } from '@/hooks/use-telecom-financial-dashboard';
 import { useAuth } from '@/contexts/AuthContext';
