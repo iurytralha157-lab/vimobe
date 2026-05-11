@@ -214,6 +214,74 @@ export function CalendarView({
   const handleDragStart = (event: any) => {
     setActiveEvent(event.active.data.current);
   };
+
+  const calculateEventLayouts = useCallback((dayEvents: ScheduleEvent[]) => {
+    if (dayEvents.length === 0) return [];
+
+    // Sort events by start time, then duration
+    const sorted = [...dayEvents].sort((a, b) => {
+      const startA = new Date(a.start_time).getTime();
+      const startB = new Date(b.start_time).getTime();
+      if (startA !== startB) return startA - startB;
+      
+      const durA = new Date(a.end_time).getTime() - startA;
+      const durB = new Date(b.end_time).getTime() - startB;
+      return durB - durA;
+    });
+
+    const layouts: { event: ScheduleEvent; column: number; totalColumns: number }[] = [];
+    let currentCluster: ScheduleEvent[] = [];
+    let clusterMaxEnd = 0;
+
+    const processCluster = (cluster: ScheduleEvent[]) => {
+      if (cluster.length === 0) return;
+
+      const columns: ScheduleEvent[][] = [];
+      cluster.forEach(event => {
+        let placed = false;
+        const eventStart = new Date(event.start_time).getTime();
+
+        for (let i = 0; i < columns.length; i++) {
+          const lastEventInCol = columns[i][columns[i].length - 1];
+          if (eventStart >= new Date(lastEventInCol.end_time).getTime()) {
+            columns[i].push(event);
+            layouts.push({ event, column: i, totalColumns: 0 });
+            placed = true;
+            break;
+          }
+        }
+
+        if (!placed) {
+          columns.push([event]);
+          layouts.push({ event, column: columns.length - 1, totalColumns: 0 });
+        }
+      });
+
+      // Update totalColumns for all events in this cluster
+      cluster.forEach(event => {
+        const layout = layouts.find(l => l.event.id === event.id);
+        if (layout) layout.totalColumns = columns.length;
+      });
+    };
+
+    sorted.forEach(event => {
+      const eventStart = new Date(event.start_time).getTime();
+      
+      if (eventStart >= clusterMaxEnd && currentCluster.length > 0) {
+        processCluster(currentCluster);
+        currentCluster = [];
+        clusterMaxEnd = 0;
+      }
+
+      currentCluster.push(event);
+      const eventEnd = new Date(event.end_time).getTime();
+      if (eventEnd > clusterMaxEnd) clusterMaxEnd = eventEnd;
+    });
+
+    processCluster(currentCluster);
+    return layouts;
+  }, []);
+
   const handleNavigate = (direction: 'prev' | 'next') => {
     switch (viewMode) {
       case 'day':
@@ -429,19 +497,28 @@ export function CalendarView({
               })}
 
               {/* Events */}
-              {dayEvents.map(event => {
+              {calculateEventLayouts(dayEvents).map(({ event, column, totalColumns }) => {
                 const start = parseISO(event.start_time);
                 const end = parseISO(event.end_time);
                 const top = (start.getHours() * 60 + start.getMinutes()) * (56 / 60);
                 const duration = Math.max((end.getTime() - start.getTime()) / (1000 * 60), 15);
                 const height = duration * (56 / 60);
+                
+                const width = 100 / totalColumns;
+                const left = column * width;
 
                 return (
                   <ActivityCard
                     key={event.id}
                     event={event}
                     onEditEvent={onEditEvent}
-                    style={{ top: `${top}px`, height: `${height}px`, minHeight: '32px' }}
+                    style={{ 
+                      top: `${top}px`, 
+                      height: `${height}px`, 
+                      minHeight: '32px',
+                      width: `calc(${width}% - 4px)`,
+                      left: `calc(${left}% + 2px)`
+                    }}
                   />
                 );
               })}
@@ -524,19 +601,28 @@ export function CalendarView({
                   })}
 
                   {/* Events for this day */}
-                  {(eventsByDate[format(day, 'yyyy-MM-dd')] || []).map(event => {
+                  {calculateEventLayouts(eventsByDate[format(day, 'yyyy-MM-dd')] || []).map(({ event, column, totalColumns }) => {
                     const start = parseISO(event.start_time);
                     const end = parseISO(event.end_time);
                     const top = (start.getHours() * 60 + start.getMinutes()) * (56 / 60);
                     const duration = Math.max((end.getTime() - start.getTime()) / (1000 * 60), 15);
                     const height = duration * (56 / 60);
 
+                    const width = 100 / totalColumns;
+                    const left = column * width;
+
                     return (
                       <ActivityCard
                         key={event.id}
                         event={event}
                         onEditEvent={onEditEvent}
-                        style={{ top: `${top}px`, height: `${height}px`, minHeight: '32px' }}
+                        style={{ 
+                          top: `${top}px`, 
+                          height: `${height}px`, 
+                          minHeight: '32px',
+                          width: `calc(${width}% - 4px)`,
+                          left: `calc(${left}% + 2px)`
+                        }}
                       />
                     );
                   })}
