@@ -66,6 +66,7 @@ export const en = {
     engineering: 'Engineering',
     construction: 'Projects',
     cockpit: 'Operational Cockpit',
+    operationalMapping: 'Operational Mapping',
   },
 
   // Settings

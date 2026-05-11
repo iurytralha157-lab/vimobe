@@ -92,6 +92,7 @@ const Checkout = lazy(() => import("./pages/Checkout"));
 const PreviewSiteWrapper = lazy(() => import("./pages/public/PreviewSiteWrapper"));
 const APIDocs = lazy(() => import("./pages/public/APIDocs"));
 const OperationalDashboard = lazy(() => import("./pages/OperationalDashboard"));
+const StageOperationalManagement = lazy(() => import("./pages/StageOperationalManagement"));
 
 
 // Trial expired modal
@@ -243,6 +244,7 @@ function AppRoutes() {
             <Route path="/crm/pipelines" element={<ProtectedRoute><Pipelines /></ProtectedRoute>} />
             <Route path="/crm/contacts" element={<ProtectedRoute><Contacts /></ProtectedRoute>} />
             <Route path="/crm/management" element={<ProtectedRoute><AdminRoute><CRMManagement /></AdminRoute></ProtectedRoute>} />
+            <Route path="/crm/management/operacional" element={<ProtectedRoute><AdminRoute><StageOperationalManagement /></AdminRoute></ProtectedRoute>} />
             <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
             <Route path="/agenda" element={<ProtectedRoute><Agenda /></ProtectedRoute>} />
             <Route path="/properties" element={<ProtectedRoute><Properties /></ProtectedRoute>} />

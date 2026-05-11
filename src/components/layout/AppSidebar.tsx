@@ -1,4 +1,4 @@
-import { LayoutDashboard, Kanban, Building2, Shuffle, Shield, Settings, HelpCircle, ChevronDown, ChevronLeft, ChevronRight, Users, MessageSquare, Calendar, DollarSign, FileText, Receipt, TrendingUp, BarChart3, Zap, Package, MapPin, UserCheck, Globe, PieChart, Trophy, History as HistoryIcon, CreditCard, HardHat } from 'lucide-react';
+import { LayoutDashboard, Kanban, Building2, Shuffle, Shield, Settings, HelpCircle, ChevronDown, ChevronLeft, ChevronRight, Users, MessageSquare, Calendar, DollarSign, FileText, Receipt, TrendingUp, BarChart3, Zap, Package, MapPin, UserCheck, Globe, PieChart, Trophy, History as HistoryIcon, CreditCard, HardHat, Workflow } from 'lucide-react';
 import { WhatsAppIcon } from '@/components/icons/WhatsAppIcon';
 import { AnimatedIcon } from '@/components/icons/AnimatedIcon';
 import GLOBE_JSON from '@/components/icons/globe-icon.json';
@@ -161,7 +161,16 @@ const allNavItems: NavItem[] = [{
   labelKey: 'crmManagement',
   path: '/crm/management',
   module: 'crm',
-  adminOnly: true
+  adminOnly: true,
+  children: [{
+    icon: Shuffle,
+    labelKey: 'crmManagement',
+    path: '/crm/management'
+  }, {
+    icon: Workflow,
+    labelKey: 'operationalMapping',
+    path: '/crm/management/operacional'
+  }]
 }, {
   icon: Calendar,
   labelKey: 'schedule',
