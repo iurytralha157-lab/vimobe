@@ -73,7 +73,7 @@ export function SalesFunnelWithPipeline({ filters }: SalesFunnelWithPipelineProp
   const maxStages = Math.max(funnelData.length, 1);
 
   return (
-    <Card className="overflow-hidden h-full flex flex-col shadow-sm border-border/50 bg-card/50 backdrop-blur-sm">
+    <Card className="overflow-hidden h-full flex flex-col shadow-sm border-border/50">
       <CardHeader className="pb-3 pt-4 px-4 shrink-0">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <CardTitle className="text-xs font-semibold flex items-center gap-2 uppercase tracking-widest text-muted-foreground">

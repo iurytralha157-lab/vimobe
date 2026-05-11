@@ -102,7 +102,7 @@ export function DealsEvolutionChart({ data, isLoading }: DealsEvolutionChartProp
 
   if (isLoading) {
     return (
-      <Card className="overflow-hidden h-full flex flex-col">
+      <Card className="overflow-hidden h-full flex flex-col shadow-sm border-border/50">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium flex items-center gap-2">
             <TrendingUp className="h-4 w-4 text-primary" />
@@ -118,7 +118,7 @@ export function DealsEvolutionChart({ data, isLoading }: DealsEvolutionChartProp
 
   if (!data || data.length === 0) {
     return (
-      <Card className="overflow-hidden h-full flex flex-col">
+      <Card className="overflow-hidden h-full flex flex-col shadow-sm border-border/50">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium flex items-center gap-2">
             <TrendingUp className="h-4 w-4 text-primary" />
@@ -152,7 +152,7 @@ export function DealsEvolutionChart({ data, isLoading }: DealsEvolutionChartProp
   const yTickCount = getYTickCount(chartSize.height, maxValue);
 
   return (
-    <Card className="overflow-hidden h-full flex flex-col">
+    <Card className="overflow-hidden h-full flex flex-col shadow-sm border-border/50">
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-medium flex items-center gap-2">
           <TrendingUp className="h-4 w-4 text-primary" />
