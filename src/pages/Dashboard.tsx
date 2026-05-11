@@ -10,6 +10,7 @@ import { DashboardFilters } from '@/components/dashboard/DashboardFilters';
 import { KPICards } from '@/components/dashboard/KPICards';
 import { SalesFunnelWithPipeline } from '@/components/dashboard/SalesFunnelWithPipeline';
 import { DealsEvolutionChart } from '@/components/dashboard/DealsEvolutionChart';
+import { LeadSourcesChart } from '@/components/dashboard/LeadSourcesChart';
 
 import { useDashboardFilters, datePresetOptions } from '@/hooks/use-dashboard-filters';
 import { 
