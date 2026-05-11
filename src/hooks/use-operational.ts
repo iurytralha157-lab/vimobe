@@ -48,7 +48,7 @@ export function useOperationalRequests(filters?: { type?: string; status?: strin
 
       const { data, error } = await query;
       if (error) throw error;
-      return data as OperationalRequest[];
+      return (data || []) as unknown as OperationalRequest[];
     },
     enabled: !!organization?.id,
   });
