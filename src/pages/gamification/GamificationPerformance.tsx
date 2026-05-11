@@ -262,7 +262,7 @@ export default function GamificationPerformance() {
             {performanceData?.distribution.map((item) => {
               const total = performanceData.metrics.totalActions || 1;
               const percentage = Math.round((item.value / total) * 100);
-              const color = item.label === 'Ligações' ? 'bg-indigo-500' : item.label === 'Propostas/Vendas' ? 'bg-emerald-500' : 'bg-orange-500';
+              const color = item.label === 'Ligações' ? 'bg-indigo-500' : item.label === 'Propostas/Vendas' ? 'bg-emerald-500' : item.label === 'Reuniões/Visitas' ? 'bg-orange-500' : 'bg-purple-500';
 
               return (
                 <div key={item.label} className="space-y-2">
