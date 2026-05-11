@@ -206,13 +206,13 @@ export default function GamificationRanking() {
               </h2>
             </div>
 
-
           <div className="absolute top-4 lg:top-8 right-4 lg:right-8 text-right">
             <div className="flex items-center gap-1 text-emerald-500 text-[10px] lg:text-base font-bold animate-pulse">
               <div className="w-1.5 h-1.5 lg:w-2 lg:h-2 rounded-full bg-emerald-500" />
               LIVE
             </div>
           </div>
+
 
           {/* Podium Visualization */}
           <div className="flex items-end justify-center gap-4 w-full max-w-2xl relative z-10">
