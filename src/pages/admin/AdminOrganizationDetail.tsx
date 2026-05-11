@@ -80,6 +80,7 @@ const ALL_MODULES = [
 { name: 'webhooks', label: 'Webhooks', category: 'advanced' },
 { name: 'ai_agent', label: 'Agente de IA (WhatsApp)', category: 'advanced' },
 { name: 'campaigns', label: 'Campanhas (Dashboard Meta)', category: 'advanced' },
+{ name: 'engineering', label: 'Engenharia e Obras', category: 'advanced' },
 { name: 'api', label: 'API Pública (Imóveis)', category: 'advanced' }];
 
 
