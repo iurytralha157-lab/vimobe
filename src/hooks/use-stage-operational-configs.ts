@@ -36,12 +36,7 @@ export function useStageOperationalConfigs(pipelineId?: string) {
       const { data, error } = await query;
       if (error) throw error;
       
-      let filteredData = data;
-      if (pipelineId) {
-        filteredData = data.filter((item: any) => item.stage?.pipeline_id === pipelineId);
-      }
-      
-      return filteredData as (StageOperationalConfig & { stage: { name: string } })[];
+      return (data || []) as unknown as (StageOperationalConfig & { stage: { name: string } })[];
     },
     enabled: !!organization?.id,
   });
