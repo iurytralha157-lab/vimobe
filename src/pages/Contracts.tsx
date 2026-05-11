@@ -475,6 +475,7 @@ export default function Contracts() {
             <ContractForm
               contract={editingContract || undefined}
               onSuccess={handleFormSuccess}
+              onCancel={() => setIsFormOpen(false)}
             />
           </DialogContent>
         </Dialog>
