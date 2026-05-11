@@ -60,35 +60,36 @@ export default function GamificationRanking() {
   const { organization } = useAuth();
   const [prevTopUserId, setPrevTopUserId] = useState<string | null>(null);
   const [rankingType, setRankingType] = useState('general');
-  const [period, setPeriod] = useState('month'); // 'week' or 'month'
+  const [datePreset, setDatePreset] = useState<DatePreset>('thisMonth');
+  const [customDateRange, setCustomDateRange] = useState<{ from: Date; to: Date } | null>(null);
+
+  const dateRange = useMemo(() => {
+    if (datePreset === 'custom' && customDateRange) {
+      return customDateRange;
+    }
+    return getDateRangeFromPreset(datePreset);
+  }, [datePreset, customDateRange]);
 
   const { data: leaderboard, isLoading, refetch } = useQuery({
-    queryKey: ['gamification-leaderboard-full', organization?.id, rankingType, period],
+    queryKey: ['gamification-leaderboard-full', organization?.id, rankingType, datePreset, customDateRange],
     queryFn: async () => {
       if (!organization?.id) return [];
       
-      let startDate: Date;
-      const now = new Date();
-      
-      if (period === 'week') {
-        startDate = startOfWeek(now, { weekStartsOn: 1 }); // Monday
-      } else {
-        startDate = startOfMonth(now);
-      }
-
       // Query events instead of stats for filtered/period points
       let query = supabase
         .from('gamification_events')
         .select('user_id, points_earned, event_type')
         .eq('organization_id', organization.id)
-        .gte('created_at', startDate.toISOString());
+        .gte('created_at', dateRange.from.toISOString())
+        .lte('created_at', dateRange.to.toISOString());
 
       if (rankingType !== 'general') {
         const typeMap: Record<string, string[]> = {
           calls: ['call_made'],
-          messages: ['message_sent'],
-          sales: ['sale_closed'],
-          leads: ['lead_created_manual', 'contact_made']
+          proposals: ['proposal_sent'],
+          sales: ['sale_closed', 'contract_signed'],
+          meetings: ['meeting_held'],
+          visits: ['visit_scheduled', 'visit_confirmed']
         };
         query = query.in('event_type', typeMap[rankingType] || []);
       }
