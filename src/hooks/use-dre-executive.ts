@@ -48,22 +48,21 @@ export function useDREExecutive({ startDate, endDate, regime, compareWithPreviou
 
       const statusFilter = regime === 'cash' ? ['paid'] : ['pending', 'paid', 'overdue'];
 
-      // Simplificação do fetch para evitar profundidade de tipo excessiva
       const fetchEntries = async (s: Date, e: Date) => {
-        let q = supabase
-          .from('financial_entries')
-          .select('amount, type, status, category, due_date, paid_date, project_id' as any)
-          .eq('organization_id', organization.id)
-          .in('status', statusFilter);
+        let q: any = supabase.from('financial_entries');
+        
+        q = q.select('amount, type, status, category, due_date, paid_date, project_id')
+             .eq('organization_id', organization.id)
+             .in('status', statusFilter);
 
-        if (projectId) q = q.eq('project_id' as any, projectId);
+        if (projectId) q = q.eq('project_id', projectId);
 
         const dateField = regime === 'cash' ? 'paid_date' : 'due_date';
         q = q.gte(dateField, format(s, 'yyyy-MM-dd')).lte(dateField, format(e, 'yyyy-MM-dd'));
 
         const { data, error } = await q;
         if (error) throw error;
-        return data || [];
+        return (data || []) as any[];
       };
 
       const entries = await fetchEntries(startDate, endDate);
