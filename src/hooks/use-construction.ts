@@ -79,7 +79,7 @@ export function useUpdateConstructionProject() {
   return useMutation({
     mutationFn: async ({ id, ...values }: any) => {
       const { data, error } = await supabase
-        .from("construction_projects" as any)
+        .from("construction_projects")
         .update(values)
         .eq("id", id)
         .select()
@@ -88,7 +88,7 @@ export function useUpdateConstructionProject() {
       if (error) throw error;
       return data;
     },
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["construction-projects"] });
       queryClient.invalidateQueries({ queryKey: ["construction-project", data.id] });
       toast.success("Obra atualizada com sucesso!");
