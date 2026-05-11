@@ -7,7 +7,9 @@ const corsHeaders = {
 
 const REMINDER_INTERVALS = [
   { minutes: 60, type: 'reminder', target: 'lead' },
+  { minutes: 30, type: 'reminder', target: 'lead' },
   { minutes: 30, type: 'reminder', target: 'user' },
+  { minutes: 15, type: 'reminder', target: 'user' },
   { minutes: 10, type: 'reminder', target: 'user' },
   { minutes: 10, type: 'arrival', target: 'lead' },
   { minutes: 5, type: 'reminder', target: 'user' },
@@ -34,40 +36,45 @@ Deno.serve(async (req) => {
         lead:leads(id, name, phone)
       `)
       .neq("status", "cancelled")
-      .neq("status", "completed")
-      .gte("start_time", now.toISOString())
-      .lte("start_time", new Date(now.getTime() + 65 * 60 * 1000).toISOString());
+      .gte("start_time", new Date(now.getTime() - 5 * 60 * 1000).toISOString())
+      .lte("start_time", new Date(now.getTime() + 70 * 60 * 1000).toISOString());
 
     if (eventsError) throw eventsError;
 
-    console.log(`Processing ${upcomingEvents?.length || 0} upcoming events`);
+    console.log(`Processing ${upcomingEvents?.length || 0} upcoming events at ${now.toISOString()}`);
 
     for (const event of upcomingEvents || []) {
       const startTime = new Date(event.start_time);
-      // Use round to be more tolerant of exact execution second
       const diffMinutes = Math.round((startTime.getTime() - now.getTime()) / (1000 * 60));
       const eventType = event.event_type;
-      const isCritical = eventType === 'meeting' || eventType === 'visit';
+      
+      // Real estate critical events
+      const isCritical = ['meeting', 'visit', 'call'].includes(eventType || '');
 
-      console.log(`Checking event "${event.title}" (${event.id}) - Starts in ${diffMinutes}m`);
+      console.log(`Checking event "${event.title}" (${event.id}) - Type: ${eventType} - Starts in ${diffMinutes}m`);
 
       for (const interval of REMINDER_INTERVALS) {
-        if (!isCritical && (interval.minutes === 30 || interval.minutes === 10 || interval.target === 'lead')) {
+        // Skip non-critical interval types for generic events
+        if (!isCritical && (interval.minutes <= 30 || interval.target === 'lead')) {
           continue;
         }
 
-        // Check if we are within the interval window
-        // We use a small window check to ensure we don't miss it if the cron is slightly off
-        if (diffMinutes === interval.minutes) {
+        // Window-based check: allow +/- 1 minute around the target interval
+        // This ensures that even if the cron runs slightly off, we catch the event
+        if (diffMinutes >= interval.minutes - 1 && diffMinutes <= interval.minutes + 1) {
           const reminderTag = `[EVT_${event.id}_${interval.minutes}_${interval.target}]`;
           
+          // Check if already sent
           const { data: existingNotif } = await supabase
             .from("notifications")
             .select("id")
             .ilike("content", `%${reminderTag}%`)
             .limit(1);
 
-          if (existingNotif && existingNotif.length > 0) continue;
+          if (existingNotif && existingNotif.length > 0) {
+            console.log(`Reminder ${reminderTag} already sent, skipping.`);
+            continue;
+          }
 
           const formattedTime = startTime.toLocaleTimeString("pt-BR", {
             hour: "2-digit",
@@ -76,9 +83,19 @@ Deno.serve(async (req) => {
           });
 
           if (interval.target === 'user') {
-            const title = interval.minutes === 0 ? "🔔 Atividade começando agora!" : `⏰ Atividade em ${interval.minutes} minutos!`;
-            const content = `${event.title} às ${formattedTime} ${reminderTag}`;
+            let title = "";
+            let content = "";
+            
+            if (interval.minutes === 0) {
+              title = "📍 Início de Compromisso";
+              content = `Seu compromisso "${event.title}" está começando agora (${formattedTime}). ${reminderTag}`;
+            } else {
+              title = `⏱️ Lembrete: ${interval.minutes} min`;
+              content = `Em ${interval.minutes} minutos: ${event.title} às ${formattedTime}. ${reminderTag}`;
+            }
 
+            console.log(`Sending user notification: ${title}`);
+            
             await supabase.from("notifications").insert({
               user_id: event.user_id,
               organization_id: event.organization_id,
@@ -99,7 +116,7 @@ Deno.serve(async (req) => {
                 body: JSON.stringify({
                   organization_id: event.organization_id,
                   user_id: event.user_id,
-                  message: `*${title}*\n\n📅 *Evento:* ${event.title}\n🕒 *Horário:* ${formattedTime}\n👤 *Lead:* ${event.lead?.name || 'Não informado'}`,
+                  message: `*${title}*\n\n📅 *Compromisso:* ${event.title}\n🕒 *Horário:* ${formattedTime}\n👤 *Lead:* ${event.lead?.name || 'Não informado'}`,
                 }),
               });
             } catch (e) {
@@ -109,13 +126,21 @@ Deno.serve(async (req) => {
 
           if (interval.target === 'lead' && event.lead?.phone) {
             let message = "";
+            const leadName = event.lead.name || "Cliente";
+            const eventTitle = event.title.toLowerCase();
+            const isVisit = eventTitle.includes('visita') || event.event_type === 'visit';
+            const actionLabel = isVisit ? "nossa visita" : "nosso compromisso";
+            
             if (interval.minutes === 60) {
-              message = `Olá ${event.lead.name}! Passando para lembrar do nosso compromisso: *${event.title}* às *${formattedTime}*. Até logo!`;
+              message = `Olá ${leadName}, tudo bem? Confirmando ${actionLabel} agendado para hoje às *${formattedTime}*. Até breve!`;
+            } else if (interval.minutes === 30) {
+              message = `Oi ${leadName}, confirmando ${actionLabel} em 30 minutos, às *${formattedTime}*. Já estou me preparando por aqui.`;
             } else if (interval.minutes === 10) {
-              message = `Oi ${event.lead.name}, estamos a 10 minutos do nosso compromisso: *${event.title}*. Tudo certo por aí?`;
+              message = `Olá ${leadName}, em 10 minutos iniciaremos ${actionLabel} (*${formattedTime}*). Nos falamos em breve!`;
             }
 
             if (message) {
+              console.log(`Sending lead WhatsApp: ${message}`);
               try {
                 await fetch(`${supabaseUrl}/functions/v1/whatsapp-notifier`, {
                   method: "POST",
