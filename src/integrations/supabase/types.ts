@@ -1160,6 +1160,519 @@ export type Database = {
           },
         ]
       }
+      construction_daily_reports: {
+        Row: {
+          accidents_notes: string | null
+          created_at: string | null
+          equipment_status: string | null
+          id: string
+          labor_count: number | null
+          organization_id: string
+          photos: Json | null
+          project_id: string
+          report_date: string
+          temperature: string | null
+          updated_at: string | null
+          user_id: string
+          weather_condition: string | null
+          work_status: string
+          work_summary: string | null
+        }
+        Insert: {
+          accidents_notes?: string | null
+          created_at?: string | null
+          equipment_status?: string | null
+          id?: string
+          labor_count?: number | null
+          organization_id: string
+          photos?: Json | null
+          project_id: string
+          report_date?: string
+          temperature?: string | null
+          updated_at?: string | null
+          user_id: string
+          weather_condition?: string | null
+          work_status?: string
+          work_summary?: string | null
+        }
+        Update: {
+          accidents_notes?: string | null
+          created_at?: string | null
+          equipment_status?: string | null
+          id?: string
+          labor_count?: number | null
+          organization_id?: string
+          photos?: Json | null
+          project_id?: string
+          report_date?: string
+          temperature?: string | null
+          updated_at?: string | null
+          user_id?: string
+          weather_condition?: string | null
+          work_status?: string
+          work_summary?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "construction_daily_reports_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "construction_daily_reports_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "construction_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      construction_documents: {
+        Row: {
+          created_at: string | null
+          expiry_date: string | null
+          file_url: string
+          id: string
+          issue_date: string | null
+          name: string
+          notes: string | null
+          organization_id: string
+          project_id: string
+          sla_days: number | null
+          status: string
+          type: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          expiry_date?: string | null
+          file_url: string
+          id?: string
+          issue_date?: string | null
+          name: string
+          notes?: string | null
+          organization_id: string
+          project_id: string
+          sla_days?: number | null
+          status?: string
+          type: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          expiry_date?: string | null
+          file_url?: string
+          id?: string
+          issue_date?: string | null
+          name?: string
+          notes?: string | null
+          organization_id?: string
+          project_id?: string
+          sla_days?: number | null
+          status?: string
+          type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "construction_documents_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "construction_documents_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "construction_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      construction_milestones: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          description: string | null
+          end_date: string | null
+          id: string
+          name: string
+          order_index: number
+          organization_id: string
+          project_id: string
+          start_date: string | null
+          status: string
+          updated_at: string | null
+          weight: number | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          name: string
+          order_index?: number
+          organization_id: string
+          project_id: string
+          start_date?: string | null
+          status?: string
+          updated_at?: string | null
+          weight?: number | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          name?: string
+          order_index?: number
+          organization_id?: string
+          project_id?: string
+          start_date?: string | null
+          status?: string
+          updated_at?: string | null
+          weight?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "construction_milestones_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "construction_milestones_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "construction_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      construction_projects: {
+        Row: {
+          budget_actual: number | null
+          budget_estimated: number | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          end_date_actual: string | null
+          end_date_planned: string | null
+          financial_progress_percent: number | null
+          id: string
+          name: string
+          organization_id: string
+          physical_progress_percent: number | null
+          property_id: string | null
+          start_date_actual: string | null
+          start_date_planned: string | null
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          budget_actual?: number | null
+          budget_estimated?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          end_date_actual?: string | null
+          end_date_planned?: string | null
+          financial_progress_percent?: number | null
+          id?: string
+          name: string
+          organization_id: string
+          physical_progress_percent?: number | null
+          property_id?: string | null
+          start_date_actual?: string | null
+          start_date_planned?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          budget_actual?: number | null
+          budget_estimated?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          end_date_actual?: string | null
+          end_date_planned?: string | null
+          financial_progress_percent?: number | null
+          id?: string
+          name?: string
+          organization_id?: string
+          physical_progress_percent?: number | null
+          property_id?: string | null
+          start_date_actual?: string | null
+          start_date_planned?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "construction_projects_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "construction_projects_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      construction_purchase_order_items: {
+        Row: {
+          created_at: string | null
+          description: string
+          id: string
+          purchase_order_id: string
+          quantity: number
+          total_price: number
+          unit: string | null
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string | null
+          description: string
+          id?: string
+          purchase_order_id: string
+          quantity?: number
+          total_price?: number
+          unit?: string | null
+          unit_price?: number
+        }
+        Update: {
+          created_at?: string | null
+          description?: string
+          id?: string
+          purchase_order_id?: string
+          quantity?: number
+          total_price?: number
+          unit?: string | null
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "construction_purchase_order_items_purchase_order_id_fkey"
+            columns: ["purchase_order_id"]
+            isOneToOne: false
+            referencedRelation: "construction_purchase_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      construction_purchase_orders: {
+        Row: {
+          approved_by: string | null
+          created_at: string | null
+          created_by: string | null
+          delivery_date_actual: string | null
+          delivery_date_planned: string | null
+          description: string | null
+          discount_amount: number | null
+          id: string
+          net_amount: number
+          organization_id: string
+          payment_terms: string | null
+          project_id: string
+          status: string
+          supplier_id: string | null
+          total_amount: number
+          updated_at: string | null
+        }
+        Insert: {
+          approved_by?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          delivery_date_actual?: string | null
+          delivery_date_planned?: string | null
+          description?: string | null
+          discount_amount?: number | null
+          id?: string
+          net_amount?: number
+          organization_id: string
+          payment_terms?: string | null
+          project_id: string
+          status?: string
+          supplier_id?: string | null
+          total_amount?: number
+          updated_at?: string | null
+        }
+        Update: {
+          approved_by?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          delivery_date_actual?: string | null
+          delivery_date_planned?: string | null
+          description?: string | null
+          discount_amount?: number | null
+          id?: string
+          net_amount?: number
+          organization_id?: string
+          payment_terms?: string | null
+          project_id?: string
+          status?: string
+          supplier_id?: string | null
+          total_amount?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "construction_purchase_orders_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "construction_purchase_orders_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "construction_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "construction_purchase_orders_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "construction_suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      construction_suppliers: {
+        Row: {
+          address: string | null
+          category: string | null
+          created_at: string | null
+          document_number: string | null
+          email: string | null
+          id: string
+          name: string
+          organization_id: string
+          phone: string | null
+          rating: number | null
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          address?: string | null
+          category?: string | null
+          created_at?: string | null
+          document_number?: string | null
+          email?: string | null
+          id?: string
+          name: string
+          organization_id: string
+          phone?: string | null
+          rating?: number | null
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          address?: string | null
+          category?: string | null
+          created_at?: string | null
+          document_number?: string | null
+          email?: string | null
+          id?: string
+          name?: string
+          organization_id?: string
+          phone?: string | null
+          rating?: number | null
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "construction_suppliers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      construction_team_members: {
+        Row: {
+          created_at: string | null
+          id: string
+          team_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          team_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          team_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "construction_team_members_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "construction_teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      construction_teams: {
+        Row: {
+          created_at: string | null
+          id: string
+          leader_id: string | null
+          name: string
+          organization_id: string
+          specialty: string | null
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          leader_id?: string | null
+          name: string
+          organization_id: string
+          specialty?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          leader_id?: string | null
+          name?: string
+          organization_id?: string
+          specialty?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "construction_teams_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contract_brokers: {
         Row: {
           commission_percentage: number | null
