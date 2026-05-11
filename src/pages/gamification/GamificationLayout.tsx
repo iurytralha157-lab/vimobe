@@ -16,6 +16,7 @@ export default function GamificationLayout() {
     const items = [
       { value: '/gamificacao', label: 'Arena de Ranking', icon: Trophy },
       { value: '/gamificacao/dashboard', label: 'Meu Desempenho', icon: LayoutDashboard },
+      { value: '/gamificacao/performance', label: 'Inteligência', icon: BarChart3 },
       { value: '/gamificacao/historico', label: 'Histórico', icon: History },
     ];
 
@@ -25,6 +26,7 @@ export default function GamificationLayout() {
 
     return items;
   }, [profile?.role, isSuperAdmin]);
+
 
   const activeTab = location.pathname;
 
