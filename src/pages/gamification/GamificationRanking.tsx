@@ -104,7 +104,7 @@ export default function GamificationRanking() {
 
       // Aggregate points by user
       const pointsByUser: Record<string, number> = {};
-      events?.forEach(event => {
+      events?.forEach((event: any) => {
         pointsByUser[event.user_id] = (pointsByUser[event.user_id] || 0) + (event.points_earned || 0);
       });
 
