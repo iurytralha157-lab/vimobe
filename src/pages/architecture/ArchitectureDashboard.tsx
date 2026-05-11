@@ -21,7 +21,10 @@ import { Badge } from "@/components/ui/badge";
 import { format, differenceInDays } from "date-fns";
 
 export default function ArchitectureDashboard() {
-  const { data: requests, isLoading } = useOperationalRequests({ type: 'architecture' });
+  const { data: requests, isLoading: isLoadingRequests } = useOperationalRequests({ type: 'architecture' });
+  const { data: allProjects, isLoading: isLoadingProjects } = useConstructionProjects();
+
+  const isLoading = isLoadingRequests || isLoadingProjects;
 
   if (isLoading) {
     return (
