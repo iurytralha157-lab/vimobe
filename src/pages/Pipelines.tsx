@@ -573,7 +573,7 @@ export default function Pipelines() {
         isDraggingRef.current = false;
       }, 500);
     }
-  }, [stages, selectedPipelineId, queryClient, refetch, isTelecom, profile?.organization_id]);
+  }, [stages, dateRange, filterTag, filterDealStatus, searchQuery, filterCampaign, filterAdSet, filterAd, selectedPipelineId, filterUser, queryClient, recordFirstResponse, refetch, isTelecom, profile]);
 
   // handleCreateLead agora é gerenciado pelo CreateLeadDialog
 
