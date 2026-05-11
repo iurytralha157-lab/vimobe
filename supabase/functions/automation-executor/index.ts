@@ -739,6 +739,65 @@ async function processActionNode(
       return;
     }
 
+    case "create_construction_project": {
+      if (!execution.lead_id) return;
+      const { data: lead } = await supabase.from("leads").select("*").eq("id", execution.lead_id).single();
+      if (!lead) return;
+
+      const { data: project, error: projErr } = await supabase.from("construction_projects").insert({
+        organization_id: execution.organization_id,
+        name: `Obra - ${lead.name}`,
+        status: 'waiting',
+        property_id: lead.property_id,
+        budget_estimated: lead.valor_interesse || 0,
+        start_date_planned: new Date().toISOString().split('T')[0]
+      }).select().single();
+
+      if (projErr) throw projErr;
+
+      // Adicionar atividade
+      await logAutomationActivity(supabase, execution.lead_id, "project_created", 
+        `Obra "${project.name}" criada automaticamente após contrato.`, 
+        { project_id: project.id });
+
+      // Criar milestones padrão (Plenos Obras)
+      const milestones = [
+        { name: 'Limpeza do Terreno', order_index: 0 },
+        { name: 'Fundação', order_index: 1 },
+        { name: 'Alvenaria', order_index: 2 },
+        { name: 'Cobertura', order_index: 3 },
+        { name: 'Acabamento', order_index: 4 },
+        { name: 'Entrega', order_index: 5 }
+      ];
+
+      await supabase.from("construction_milestones").insert(
+        milestones.map(m => ({
+          project_id: project.id,
+          organization_id: execution.organization_id,
+          name: m.name,
+          order_index: m.order_index,
+          status: 'pending'
+        }))
+      );
+
+      // Criar requests automáticos
+      const departments = ['architecture', 'engineering', 'purchase'];
+      for (const dept of departments) {
+        await supabase.from("operational_requests").insert({
+          organization_id: execution.organization_id,
+          project_id: project.id,
+          lead_id: lead.id,
+          type: dept,
+          status: 'pending',
+          priority: 'high',
+          title: `Setup Inicial - ${dept.toUpperCase()}`,
+          description: `Configuração inicial do departamento para a nova obra ${project.name}`
+        });
+      }
+
+      return;
+    }
+
     case "remove_tag": {
       if (!execution.lead_id) return;
       const removeTagId = config.tag_id;

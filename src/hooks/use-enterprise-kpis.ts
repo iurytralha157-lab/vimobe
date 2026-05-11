@@ -3,13 +3,17 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
 export type KPIData = {
-  ebitda: number;
-  revenue: number;
-  expense: number;
-  roi_overview: number;
-  total_active_projects: number;
-  avg_progress: number;
-  pending_requests: number;
+  financial: {
+    ebitda: number;
+    revenue: number;
+    expense: number;
+    roi_overview: number;
+  };
+  engineering: {
+    total_active: number;
+    avg_progress: number;
+    projects: any[];
+  };
 };
 
 export function useEnterpriseKPIs() {
@@ -20,26 +24,47 @@ export function useEnterpriseKPIs() {
     queryFn: async () => {
       if (!organization?.id) return null;
 
-      // Buscar KPIs do cache
-      const { data: cacheData, error: cacheError } = await supabase
-        .from("organization_kpi_cache" as any)
-        .select("*")
-        .eq("organization_id", organization.id);
+      // 1. Fetch Financial Data
+      const { data: entries } = await supabase
+        .from('financial_entries')
+        .select('amount, type, status')
+        .eq('organization_id', organization.id)
+        .in('status', ['paid']);
 
-      if (cacheError) throw cacheError;
+      const revenue = entries?.filter(e => e.type === 'revenue').reduce((s, e) => s + (Number(e.amount) || 0), 0) || 0;
+      const expense = entries?.filter(e => e.type === 'expense').reduce((s, e) => s + (Number(e.amount) || 0), 0) || 0;
+      const ebitda = revenue - expense;
+      const roi = expense > 0 ? (ebitda / expense) : 0;
 
-      // Transformar array de cache em objeto de KPIs
-      const kpis: any = {};
-      cacheData?.forEach((item: any) => {
-        kpis[item.kpi_key] = item.kpi_value;
-      });
+      // 2. Fetch Engineering Data
+      const { data: projects } = await supabase
+        .from('construction_projects')
+        .select('*')
+        .eq('organization_id', organization.id)
+        .in('status', ['active', 'in_progress']);
 
-      // Fallback: Se o cache estiver vazio, tentar calcular em tempo real ou retornar padrão
-      // Em uma implementação real, os triggers manteriam o cache atualizado
-      
+      const totalActive = projects?.length || 0;
+      const avgProgress = projects?.length 
+        ? projects.reduce((acc, p) => acc + (p.physical_progress_percent || 0), 0) / projects.length 
+        : 0;
+
       return {
-        financial: kpis.financial_overview || { ebitda: 0, revenue: 0, expense: 0, roi_overview: 0 },
-        engineering: kpis.engineering_overview || { total_active: 0, avg_progress: 0, projects: [] },
+        financial: { 
+          ebitda, 
+          revenue, 
+          expense, 
+          roi_overview: roi 
+        },
+        engineering: { 
+          total_active: totalActive, 
+          avg_progress: avgProgress, 
+          projects: projects?.map(p => ({
+            id: p.id,
+            name: p.name,
+            progress: p.physical_progress_percent,
+            end_date_planned: p.end_date_planned
+          })) || [] 
+        },
       };
     },
     enabled: !!organization?.id,
@@ -71,7 +96,7 @@ export function useConstructionPurchases(projectId: string) {
         .from("construction_purchase_orders")
         .select(`
           *,
-          supplier:construction_suppliers(id, name)
+          supplier:suppliers(id, name)
         `)
         .eq("project_id", projectId)
         .order("created_at", { ascending: false });

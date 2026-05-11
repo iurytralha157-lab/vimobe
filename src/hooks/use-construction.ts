@@ -231,3 +231,49 @@ export function useCreatePurchaseOrder() {
     }
   });
 }
+
+export function useAllPurchaseOrders() {
+  const { organization } = useAuth();
+
+  return useQuery({
+    queryKey: ["all-purchase-orders", organization?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("construction_purchase_orders")
+        .select(`
+          *,
+          project:construction_projects(id, name),
+          supplier:suppliers(id, name)
+        `)
+        .eq("organization_id", organization?.id)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!organization?.id,
+  });
+}
+
+export function useAllMilestones() {
+  const { organization } = useAuth();
+
+  return useQuery({
+    queryKey: ["all-milestones", organization?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("construction_milestones")
+        .select(`
+          *,
+          project:construction_projects(id, name)
+        `)
+        .eq("organization_id", organization?.id)
+        .order("start_date", { ascending: true });
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!organization?.id,
+  });
+}
+

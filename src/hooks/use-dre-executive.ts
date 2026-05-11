@@ -11,7 +11,7 @@ export interface DRELine {
   percentage?: number;
   variation?: number;
   isTotal?: boolean;
-  type?: string;
+  type?: 'revenue' | 'expense' | 'total' | 'tax';
   level?: number;
 }
 
@@ -27,6 +27,8 @@ export interface DREData {
     netResult: number;
     ebitda: number;
     roi: number;
+    fixedCosts: number;
+    variableCosts: number;
   };
 }
 
@@ -75,35 +77,64 @@ export function useDREExecutive({ startDate, endDate, regime, compareWithPreviou
         previousEntries = await fetchEntries(prevStart, prevEnd);
       }
 
-      const calculateTotals = (data: any[]) => {
-        const revenue = data.filter(e => e.type === 'revenue' || e.type === 'receivable').reduce((s, e) => s + (Number(e.amount) || 0), 0);
-        const expense = data.filter(e => e.type === 'expense' || e.type === 'payable').reduce((s, e) => s + (Number(e.amount) || 0), 0);
-        return { revenue, expense };
+      const categorize = (data: any[]) => {
+        const categories: Record<string, number> = {};
+        data.forEach(e => {
+          const cat = e.category || 'Outros';
+          categories[cat] = (categories[cat] || 0) + (Number(e.amount) || 0);
+        });
+
+        const grossRevenue = data.filter(e => e.type === 'revenue').reduce((s, e) => s + (Number(e.amount) || 0), 0);
+        
+        // Define common categories for better classification
+        const taxCategories = ['Impostos', 'ISS', 'PIS', 'COFINS', 'IRPJ', 'CSLL'];
+        const variableCostCategories = ['Materiais', 'Mão de Obra de Obra', 'Equipamentos', 'Suprimentos'];
+        const fixedCostCategories = ['Aluguel', 'Salários', 'Administrativo', 'Marketing', 'Energia', 'Internet'];
+
+        const taxes = data.filter(e => taxCategories.includes(e.category)).reduce((s, e) => s + (Number(e.amount) || 0), 0);
+        const variableCosts = data.filter(e => variableCostCategories.includes(e.category) || e.type === 'expense' && e.project_id).reduce((s, e) => s + (Number(e.amount) || 0), 0);
+        const fixedCosts = data.filter(e => fixedCostCategories.includes(e.category) || e.type === 'expense' && !e.project_id && !taxCategories.includes(e.category)).reduce((s, e) => s + (Number(e.amount) || 0), 0);
+
+        return { grossRevenue, taxes, variableCosts, fixedCosts };
       };
 
-      const currentTotals = calculateTotals(entries);
-      const prevTotals = calculateTotals(previousEntries);
+      const current = categorize(entries);
+      const prev = categorize(previousEntries);
 
-      const ebitda = currentTotals.revenue - currentTotals.expense;
-      const roi = currentTotals.expense > 0 ? (ebitda / currentTotals.expense) : 0;
+      const netRevenue = current.grossRevenue - current.taxes;
+      const grossProfit = netRevenue - current.variableCosts;
+      const ebitda = grossProfit - current.fixedCosts;
+      const netResult = ebitda; // Simplified for now (could include interest/depreciation)
+      const roi = (current.variableCosts + current.fixedCosts) > 0 ? (ebitda / (current.variableCosts + current.fixedCosts)) : 0;
+
+      const pNetRevenue = prev.grossRevenue - prev.taxes;
+      const pGrossProfit = pNetRevenue - prev.variableCosts;
+      const pEbitda = pGrossProfit - prev.fixedCosts;
 
       const lines: DRELine[] = [
-        { id: 'rev', name: '(+) Receita Operacional', value: currentTotals.revenue, previousValue: prevTotals.revenue, isTotal: true, type: 'revenue' },
-        { id: 'exp', name: '(-) Despesas/Custos', value: currentTotals.expense, previousValue: prevTotals.expense, isTotal: true, type: 'expense' },
-        { id: 'ebitda', name: '(=) EBITDA', value: ebitda, previousValue: prevTotals.revenue - prevTotals.expense, isTotal: true, type: 'total' }
+        { id: 'gross_rev', name: '(+) Receita Bruta', value: current.grossRevenue, previousValue: prev.grossRevenue, isTotal: false, type: 'revenue', level: 0 },
+        { id: 'taxes', name: '(-) Deduções e Impostos', value: current.taxes, previousValue: prev.taxes, isTotal: false, type: 'tax', level: 1 },
+        { id: 'net_rev', name: '(=) Receita Líquida', value: netRevenue, previousValue: pNetRevenue, isTotal: true, type: 'total', level: 0 },
+        { id: 'var_costs', name: '(-) Custos Variáveis (Obra)', value: current.variableCosts, previousValue: prev.variableCosts, isTotal: false, type: 'expense', level: 1 },
+        { id: 'gross_profit', name: '(=) Lucro Bruto', value: grossProfit, previousValue: pGrossProfit, isTotal: true, type: 'total', level: 0 },
+        { id: 'fixed_costs', name: '(-) Custos Fixos (Adm)', value: current.fixedCosts, previousValue: prev.fixedCosts, isTotal: false, type: 'expense', level: 1 },
+        { id: 'ebitda', name: '(=) EBITDA', value: ebitda, previousValue: pEbitda, isTotal: true, type: 'total', level: 0 },
+        { id: 'net_result', name: '(=) Lucro Líquido', value: netResult, previousValue: pEbitda, isTotal: true, type: 'total', level: 0 }
       ];
 
       return {
         period: { start: format(startDate, 'yyyy-MM-dd'), end: format(endDate, 'yyyy-MM-dd') },
         lines,
         totals: {
-          grossRevenue: currentTotals.revenue,
-          netRevenue: currentTotals.revenue,
-          grossProfit: ebitda,
+          grossRevenue: current.grossRevenue,
+          netRevenue,
+          grossProfit,
           operatingResult: ebitda,
-          netResult: ebitda,
+          netResult,
           ebitda,
-          roi
+          roi,
+          fixedCosts: current.fixedCosts,
+          variableCosts: current.variableCosts
         }
       };
     },

@@ -1,4 +1,5 @@
 import { AppLayout } from "@/components/layout/AppLayout";
+import { useOperationalRequests } from "@/hooks/use-operational";
 import { 
   Card, 
   CardContent, 
@@ -15,28 +16,42 @@ import {
   AlertCircle
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { format, differenceInDays } from "date-fns";
 
 export default function ArchitectureDashboard() {
-  const projects = [
-    { id: 1, name: 'Residencial Alpha', architect: 'Ricardo Silva', deadline: '20/05/2026', status: 'Plantas em Revisão', progress: 65 },
-    { id: 2, name: 'Sobrado Lote 45', architect: 'Ana Oliveira', deadline: '12/06/2026', status: 'Cálculo Estrutural', progress: 40 },
-    { id: 3, name: 'Reforma Comercial J&M', architect: 'Ricardo Silva', deadline: '05/05/2026', status: 'Aprovado Prefeitura', progress: 100 },
-  ];
+  const { data: requests, isLoading } = useOperationalRequests({ type: 'architecture' });
 
-  const protocols = [
-    { id: '2026-001', project: 'Residencial Alpha', agency: 'Prefeitura Municipal', days: 15, status: 'Em análise' },
-    { id: '2026-005', project: 'Condomínio Solar', agency: 'Corpo de Bombeiros', days: 42, status: 'Atrasado' },
-    { id: '2025-998', project: 'Studio Bela Vista', agency: 'Vigilância Sanitária', days: 5, status: 'Deferido' },
-  ];
+  if (isLoading) {
+    return (
+      <AppLayout title="Dashboard de Arquitetura">
+        <div className="h-64 flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </AppLayout>
+    );
+  }
+
+  const activeProjects = requests?.filter(r => r.status !== 'completed' && r.status !== 'rejected') || [];
+  const cityHallProtocols = requests?.filter(r => r.title.toLowerCase().includes('prefeitura') || r.description?.toLowerCase().includes('prefeitura')) || [];
+  const completedProjects = requests?.filter(r => r.status === 'completed') || [];
+
+  // Cálculo de SLA médio (dias entre criação e conclusão ou hoje)
+  const totalDays = requests?.reduce((acc, r) => {
+    const end = r.completed_at ? new Date(r.completed_at) : new Date();
+    return acc + differenceInDays(end, new Date(r.created_at));
+  }, 0) || 0;
+  const avgSla = requests?.length ? Math.round(totalDays / requests.length) : 0;
+
+  const pendingReviews = requests?.filter(r => r.status === 'in_analysis').length || 0;
 
   return (
     <AppLayout title="Dashboard de Arquitetura">
       <div className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <StatCard title="Projetos Ativos" value="8" icon={Compass} color="text-blue-600" />
-          <StatCard title="Protocolos Abertos" value="5" icon={FileText} color="text-orange-600" />
-          <StatCard title="SLA Aprovação" value="22 dias" icon={Clock} color="text-purple-600" />
-          <StatCard title="Revisões Pendentes" value="3" icon={AlertCircle} color="text-red-600" />
+          <StatCard title="Projetos Ativos" value={activeProjects.length} icon={Compass} color="text-blue-600" />
+          <StatCard title="Protocolos Prefeitura" value={cityHallProtocols.length} icon={FileText} color="text-orange-600" />
+          <StatCard title="SLA Médio" value={`${avgSla} dias`} icon={Clock} color="text-purple-600" />
+          <StatCard title="Em Revisão" value={pendingReviews} icon={AlertCircle} color="text-red-600" />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -48,20 +63,25 @@ export default function ArchitectureDashboard() {
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
-                 {projects.map((p) => (
+                 {activeProjects.slice(0, 5).map((p) => (
                    <div key={p.id} className="space-y-2">
                       <div className="flex justify-between items-center">
-                        <div>
-                          <h4 className="font-bold text-sm">{p.name}</h4>
-                          <p className="text-[11px] text-muted-foreground">Arquiteto: {p.architect} | Entrega: {p.deadline}</p>
+                        <div className="min-w-0">
+                          <h4 className="font-bold text-sm truncate">{p.title}</h4>
+                          <p className="text-[11px] text-muted-foreground">
+                            {p.project?.name || 'Sem obra'} | Prazo: {p.due_date ? format(new Date(p.due_date), 'dd/MM/yyyy') : 'N/A'}
+                          </p>
                         </div>
-                        <Badge variant="secondary" className="text-[10px]">{p.status}</Badge>
+                        <Badge variant="secondary" className="text-[10px] whitespace-nowrap">{getStatusLabel(p.status)}</Badge>
                       </div>
                       <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
-                        <div className="bg-blue-600 h-full transition-all" style={{ width: `${p.progress}%` }} />
+                        <div className={`h-full transition-all ${getProgressColor(p.status)}`} style={{ width: `${getProgressValue(p.status)}%` }} />
                       </div>
                    </div>
                  ))}
+                 {activeProjects.length === 0 && (
+                   <p className="text-sm text-muted-foreground text-center py-4">Nenhum projeto em andamento</p>
+                 )}
               </div>
             </CardContent>
           </Card>
@@ -70,33 +90,41 @@ export default function ArchitectureDashboard() {
           <Card>
             <CardHeader>
               <CardTitle>Protocolos e Alvarás</CardTitle>
-              <CardDescription>Monitoramento de liberações legais</CardDescription>
+              <CardDescription>Monitoramento de liberações legais (Prefeitura)</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
                 <table className="w-full">
                    <thead>
                       <tr className="text-left text-[10px] uppercase font-bold text-slate-500 border-b">
-                        <th className="pb-3">Projeto</th>
-                        <th className="pb-3 text-right">Dias</th>
+                        <th className="pb-3">Projeto / Obra</th>
+                        <th className="pb-3 text-right">Dias em Aberto</th>
                         <th className="pb-3 text-right">Status</th>
                       </tr>
                    </thead>
                    <tbody className="divide-y">
-                      {protocols.map((pt) => (
-                        <tr key={pt.id}>
-                          <td className="py-3">
-                            <p className="font-medium text-xs">{pt.project}</p>
-                            <p className="text-[10px] text-slate-400">{pt.id} - {pt.agency}</p>
-                          </td>
-                          <td className={`py-3 text-right text-xs font-bold ${pt.days > 30 ? 'text-red-500' : 'text-slate-600'}`}>
-                            {pt.days}
-                          </td>
-                          <td className="py-3 text-right">
-                             <Badge variant="outline" className="text-[10px]">{pt.status}</Badge>
-                          </td>
+                      {cityHallProtocols.slice(0, 5).map((pt) => {
+                        const days = differenceInDays(new Date(), new Date(pt.created_at));
+                        return (
+                          <tr key={pt.id}>
+                            <td className="py-3">
+                              <p className="font-medium text-xs truncate max-w-[150px]">{pt.title}</p>
+                              <p className="text-[10px] text-slate-400">{pt.project?.name || 'N/A'}</p>
+                            </td>
+                            <td className={`py-3 text-right text-xs font-bold ${days > 30 ? 'text-red-500' : 'text-slate-600'}`}>
+                              {days}
+                            </td>
+                            <td className="py-3 text-right">
+                               <Badge variant="outline" className="text-[10px]">{getStatusLabel(pt.status)}</Badge>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                      {cityHallProtocols.length === 0 && (
+                        <tr>
+                          <td colSpan={3} className="text-sm text-muted-foreground text-center py-8">Nenhum protocolo encontrado</td>
                         </tr>
-                      ))}
+                      )}
                    </tbody>
                 </table>
               </div>
@@ -107,14 +135,22 @@ export default function ArchitectureDashboard() {
         {/* Repositório de Plantas Aprovadas */}
         <Card>
           <CardHeader>
-            <CardTitle>Últimas Plantas Entregues</CardTitle>
-            <CardDescription>Versões finais aprovadas e liberadas para obra</CardDescription>
+            <CardTitle>Últimos Projetos Entregues</CardTitle>
+            <CardDescription>Trabalhos finalizados e liberados para obra</CardDescription>
           </CardHeader>
           <CardContent>
              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <FileItem name="Executivo_V2_Alpha.pdf" date="há 2 dias" size="12 MB" />
-                <FileItem name="Eletrico_Lote45_FINAL.dwg" date="há 1 semana" size="8 MB" />
-                <FileItem name="Hidraulico_Solar_Rev04.pdf" date="há 2 semanas" size="15 MB" />
+                {completedProjects.slice(0, 3).map((cp) => (
+                  <FileItem 
+                    key={cp.id} 
+                    name={cp.title} 
+                    date={format(new Date(cp.completed_at || cp.updated_at), 'dd/MM/yyyy')} 
+                    size="-" 
+                  />
+                ))}
+                {completedProjects.length === 0 && (
+                  <p className="col-span-3 text-sm text-muted-foreground text-center py-4">Nenhum projeto entregue recentemente</p>
+                )}
              </div>
           </CardContent>
         </Card>
@@ -153,4 +189,33 @@ function FileItem({ name, date, size }: { name: string, date: string, size: stri
        </div>
     </div>
   );
+}
+
+function getStatusLabel(status: string) {
+  const labels: Record<string, string> = {
+    pending: 'Pendente',
+    in_analysis: 'Em Revisão',
+    approved: 'Aprovado',
+    rejected: 'Recusado',
+    completed: 'Entregue',
+    in_progress: 'Em Execução'
+  };
+  return labels[status] || status;
+}
+
+function getProgressValue(status: string) {
+  const values: Record<string, number> = {
+    pending: 10,
+    in_analysis: 40,
+    in_progress: 70,
+    approved: 90,
+    completed: 100
+  };
+  return values[status] || 0;
+}
+
+function getProgressColor(status: string) {
+  if (status === 'completed' || status === 'approved') return 'bg-emerald-500';
+  if (status === 'rejected') return 'bg-red-500';
+  return 'bg-blue-600';
 }

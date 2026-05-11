@@ -145,13 +145,38 @@ export default function ExecutiveDRE() {
                 subValue="Vendas e Recebimentos"
               />
               <SummaryCard 
-                title="Custo Obra" 
-                value={dreData.totals.grossRevenue - dreData.totals.ebitda} 
+                title="Custo Variável" 
+                value={dreData.totals.variableCosts} 
                 subValue="Materiais e Mão de Obra"
                 variant="negative"
               />
               <SummaryCard 
-                title="ROI Obra" 
+                title="Custo Fixo" 
+                value={dreData.totals.fixedCosts} 
+                subValue="Despesas Administrativas"
+                variant="negative"
+              />
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <SummaryCard 
+                title="Receita Líquida" 
+                value={dreData.totals.netRevenue} 
+                subValue="Após Deduções/Impostos"
+              />
+              <SummaryCard 
+                title="Lucro Bruto" 
+                value={dreData.totals.grossProfit} 
+                subValue="Margem de Contribuição"
+              />
+              <SummaryCard 
+                title="Resultado" 
+                value={dreData.totals.netResult} 
+                subValue="Lucro/Prejuízo Líquido"
+                variant={dreData.totals.netResult >= 0 ? 'positive' : 'negative'}
+              />
+              <SummaryCard 
+                title="ROI Geral" 
                 value={(dreData.totals.roi * 100)} 
                 isPercent
                 subValue="Retorno sobre Investimento"
@@ -195,7 +220,7 @@ export default function ExecutiveDRE() {
                    <div className="relative h-40 w-40 flex items-center justify-center rounded-full border-8 border-slate-100">
                       <div className="text-center">
                         <p className="text-3xl font-black text-blue-600">
-                          {((dreData.totals.ebitda / (dreData.totals.grossRevenue || 1)) * 100).toFixed(1)}%
+                          {((dreData.totals.netResult / (dreData.totals.grossRevenue || 1)) * 100).toFixed(1)}%
                         </p>
                         <p className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Margem Líquida</p>
                       </div>

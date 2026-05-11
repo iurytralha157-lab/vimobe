@@ -139,7 +139,9 @@ export default function Pipelines() {
   
   // Ref para bloquear refetch durante drag-and-drop (evita race condition)
   const isDraggingRef = useRef(false);
-  
+  const [confirmationDialogOpen, setConfirmationDialogOpen] = useState(false);
+  const [pendingDragResult, setPendingDragResult] = useState<DropResult | null>(null);
+
   const { data: pipelines = [], isLoading: pipelinesLoading } = usePipelines();
   const createPipeline = useCreatePipeline();
   const updatePipeline = useUpdatePipeline();
@@ -360,20 +362,29 @@ export default function Pipelines() {
   const queryClient = useQueryClient();
 
   const handleDragEnd = useCallback(async (result: DropResult) => {
+    const { destination, source, draggableId } = result;
+    
+    if (!destination) return;
+    if (destination.droppableId === source.droppableId && destination.index === source.index) return;
+
+    // Regra de Fechamento (Plenos Obras)
+    const targetStage = stages.find(s => s.id === destination.droppableId);
+    if (targetStage?.name?.toLowerCase().includes('fechamento') || targetStage?.name?.toLowerCase().includes('contrato')) {
+      setPendingDragResult(result);
+      setConfirmationDialogOpen(true);
+      return;
+    }
+
+    if (executeLeadMove) executeLeadMove(result);
+  }, [stages]);
+
+  const executeLeadMove = useCallback(async (result: DropResult) => {
     // Marcar que estamos em processo de drag (bloqueia refetch da subscription)
     isDraggingRef.current = true;
     
     const { destination, source, draggableId } = result;
-    
-    if (!destination) {
-      isDraggingRef.current = false;
-      return;
-    }
-    if (destination.droppableId === source.droppableId && destination.index === source.index) {
-      isDraggingRef.current = false;
-      return;
-    }
-    
+    if (!destination) return;
+
     const newStageId = destination.droppableId;
     const oldStageId = source.droppableId;
     const oldStage = stages.find(s => s.id === oldStageId);
@@ -562,7 +573,7 @@ export default function Pipelines() {
         isDraggingRef.current = false;
       }, 500);
     }
-  }, [stages, selectedPipelineId, queryClient, refetch, isTelecom, profile?.organization_id]);
+  }, [stages, dateRange, filterTag, filterDealStatus, searchQuery, filterCampaign, filterAdSet, filterAd, selectedPipelineId, filterUser, queryClient, recordFirstResponse, refetch, isTelecom, profile]);
 
   // handleCreateLead agora é gerenciado pelo CreateLeadDialog
 
@@ -1712,6 +1723,45 @@ export default function Pipelines() {
           />
         )}
       </div>
+      <Dialog open={confirmationDialogOpen} onOpenChange={setConfirmationDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Confirmação de Contrato</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-muted-foreground">
+              Você está movendo este lead para a etapa de Contrato/Fechamento.
+            </p>
+            <div className="flex items-center space-x-2">
+              <input 
+                type="checkbox" 
+                id="recurso_proprio" 
+                className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+              />
+              <Label htmlFor="recurso_proprio" className="text-sm font-medium leading-none">
+                Confirmo que o cliente possui recurso próprio validado.
+              </Label>
+            </div>
+          </div>
+          <div className="flex justify-end gap-3">
+            <Button variant="outline" onClick={() => {
+              setConfirmationDialogOpen(false);
+              setPendingDragResult(null);
+            }}>
+              Cancelar
+            </Button>
+            <Button onClick={() => {
+              if (pendingDragResult) {
+                executeLeadMove(pendingDragResult);
+              }
+              setConfirmationDialogOpen(false);
+              setPendingDragResult(null);
+            }}>
+              Confirmar e Mover
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }
