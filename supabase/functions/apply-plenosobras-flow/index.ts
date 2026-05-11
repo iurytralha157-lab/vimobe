@@ -17,6 +17,9 @@ Deno.serve(async (req) => {
 
     const v_org_id = '03a4d0b1-339f-4afa-8424-40f0799d0446';
     
+    // Clean up previous attempts if needed
+    await supabase.from('pipelines').delete().eq('organization_id', v_org_id).eq('name', 'Fluxo Operacional Obras');
+
     console.log(`Starting pipeline creation for Org: ${v_org_id}`)
 
     // 1. Create Pipeline
