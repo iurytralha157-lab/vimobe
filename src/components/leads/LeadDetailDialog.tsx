@@ -273,8 +273,10 @@ export function LeadDetailDialog({
         profissao: lead.profissao || '',
         faixa_valor_imovel: lead.faixa_valor_imovel || '',
         finalidade_compra: lead.finalidade_compra || '',
-        procura_financiamento: lead.procura_financiamento || false
+        procura_financiamento: lead.procura_financiamento || false,
+        is_own_resource: (lead as any).is_own_resource || false
       });
+
       // Only sync lost_reason from server if it actually changed on the server
       // This prevents overwriting user's typing when refetch happens
       if (lead.lost_reason !== undefined) {
