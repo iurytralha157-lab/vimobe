@@ -25,108 +25,35 @@ export function useCreateCommissionOnWon() {
 
   return useMutation({
     mutationFn: async ({ leadId, organizationId, userId, propertyId, valorInteresse, leadCommissionPercentage }: CreateCommissionParams) => {
-      // Skip if no value
-      if (!valorInteresse || valorInteresse <= 0) {
-        console.log('Skipping commission creation - no valor_interesse:', { valorInteresse });
-        return null;
-      }
-
-      // Check if commission already exists for this lead
-      const { data: existingCommission } = await supabase
-        .from('commissions')
-        .select('id')
-        .eq('lead_id', leadId)
-        .maybeSingle();
-
-      if (existingCommission) {
-        console.log('Commission already exists for lead:', leadId);
-        return null;
-      }
-
-      // FALLBACK CHAIN: lead -> property -> organization -> default 5%
-      let commissionPercentage = leadCommissionPercentage || 0;
-      let sourceLabel = 'Lead';
-
-      // Try property if no lead commission
-      if (commissionPercentage <= 0 && propertyId) {
-        const { data: property } = await supabase
-          .from('properties')
-          .select('commission_percentage, title')
-          .eq('id', propertyId)
-          .single();
-
-        if (property?.commission_percentage && property.commission_percentage > 0) {
-          commissionPercentage = property.commission_percentage;
-          sourceLabel = property.title || 'Imóvel';
+      const { data, error } = await supabase.functions.invoke('financial-engine', {
+        body: {
+          action: 'lead_won',
+          leadId,
+          organizationId,
+          userId,
+          data: {
+            value: valorInteresse,
+            commissionPercentage: leadCommissionPercentage,
+            brokerIds: userId ? [userId] : []
+          }
         }
-      }
+      });
 
-      // Try organization default if still no commission
-      if (commissionPercentage <= 0) {
-        const { data: org } = await supabase
-          .from('organizations')
-          .select('default_commission_percentage, name')
-          .eq('id', organizationId)
-          .single();
-
-        if (org?.default_commission_percentage && org.default_commission_percentage > 0) {
-          commissionPercentage = org.default_commission_percentage;
-          sourceLabel = 'Padrão da empresa';
-        }
-      }
-
-      // Final fallback: 5%
-      if (commissionPercentage <= 0) {
-        commissionPercentage = 5;
-        sourceLabel = 'Padrão do sistema (5%)';
-        console.log('Using default 5% commission for lead:', leadId);
-      }
-
-      // Calculate commission amount
-      const commissionAmount = valorInteresse * (commissionPercentage / 100);
-
-      // Create commission record
-      const { data: commission, error } = await supabase
-        .from('commissions')
-        .insert({
-          organization_id: organizationId,
-          lead_id: leadId,
-          user_id: userId || null,
-          property_id: propertyId,
-          base_value: valorInteresse,
-          amount: commissionAmount,
-          percentage: commissionPercentage,
-          status: 'forecast',
-          notes: `Comissão automática - ${sourceLabel}`
-        })
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Error creating commission:', error);
-        throw error;
-      }
-
-      console.log('✅ Commission created:', { leadId, amount: commissionAmount, percentage: commissionPercentage });
-      return { commission, percentage: commissionPercentage };
+      if (error) throw error;
+      return { commission: { amount: valorInteresse }, percentage: leadCommissionPercentage || 5 };
     },
     onSuccess: (data) => {
       if (data?.commission) {
         queryClient.invalidateQueries({ queryKey: ['commissions'] });
+        queryClient.invalidateQueries({ queryKey: ['financial-entries'] });
         queryClient.invalidateQueries({ queryKey: ['financial-dashboard'] });
         queryClient.invalidateQueries({ queryKey: ['enhanced-dashboard-stats'] });
         queryClient.invalidateQueries({ queryKey: ['top-brokers'] });
         queryClient.invalidateQueries({ queryKey: ['broker-performance'] });
         
-        const commissionAmount = data.commission.amount;
-        const percentage = data.percentage;
-        
-        toast.success(
-          `Comissão de R$ ${commissionAmount.toLocaleString('pt-BR', { minimumFractionDigits: 0 })} gerada!`,
-          { 
-            description: `${percentage}% sobre o valor do negócio`
-          }
-        );
+        toast.success('🎉 Motor financeiro processado com sucesso!', { 
+          description: 'Contrato, parcelas e comissões gerados no backend.'
+        });
       }
     },
     onError: (error) => {
