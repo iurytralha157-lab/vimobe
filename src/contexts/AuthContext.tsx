@@ -286,7 +286,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Logout ou sessão expirada - limpar tudo e NÃO processar mais nada
         if (event === 'SIGNED_OUT') {
           clearAllStates();
-          window.location.href = '/auth';
+          // Perform full cache clear and redirect to login
+          performFullCacheClear({ 
+            clearAuth: true, 
+            redirectTo: '/auth' 
+          });
           return;
         }
 
