@@ -4,6 +4,7 @@ import { useFinancialDashboard } from '@/hooks/use-financial';
 import { useTelecomFinancialDashboard } from '@/hooks/use-telecom-financial-dashboard';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatCurrency } from '@/lib/export-financial';
+import { Button } from '@/components/ui/button';
 import { 
   TrendingUp, 
   TrendingDown, 
