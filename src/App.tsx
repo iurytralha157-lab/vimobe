@@ -91,7 +91,11 @@ const Checkout = lazy(() => import("./pages/Checkout"));
 // Public site preview (used inside CRM)
 const PreviewSiteWrapper = lazy(() => import("./pages/public/PreviewSiteWrapper"));
 const APIDocs = lazy(() => import("./pages/public/APIDocs"));
-const OperationalDashboard = lazy(() => import("./pages/OperationalDashboard"));
+const ObrasOverview = lazy(() => import("./pages/operational/ObrasOverview"));
+const EngineeringDashboard = lazy(() => import("./pages/engineering/EngineeringDashboard"));
+const ArchitectureDashboard = lazy(() => import("./pages/architecture/ArchitectureDashboard"));
+const PurchaseDashboard = lazy(() => import("./pages/purchase/PurchaseDashboard"));
+const OperationalQueues = lazy(() => import("./pages/operational/OperationalQueues"));
 const StageOperationalManagement = lazy(() => import("./pages/StageOperationalManagement"));
 const ExecutiveDRE = lazy(() => import("./pages/financial/ExecutiveDRE"));
 
