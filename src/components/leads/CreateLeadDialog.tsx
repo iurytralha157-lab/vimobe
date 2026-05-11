@@ -241,6 +241,7 @@ export function CreateLeadDialog({
         faixa_valor_imovel: formData.faixa_valor_imovel || undefined,
         valor_interesse: formData.valor_interesse ? parseFloat(formData.valor_interesse) : undefined,
         deal_status: formData.deal_status || 'open',
+        is_own_resource: formData.is_own_resource,
       });
       
       // For Telecom: also create the telecom_customers record with all fields
