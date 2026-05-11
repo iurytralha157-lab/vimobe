@@ -325,7 +325,7 @@ export default function ConstructionProjectDetail() {
               <CardContent className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Orçamento:</span>
-                  <span className="font-semibold">R$ {project.budget_total?.toLocaleString("pt-BR") || "0,00"}</span>
+                  <span className="font-semibold">R$ {(project as any).budget_total?.toLocaleString("pt-BR") || "0,00"}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Gasto Real:</span>
