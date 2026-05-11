@@ -1,27 +1,22 @@
-O usuário relatou dois problemas: o scroll dentro da lista de atribuição de leads não está funcionando corretamente e a atualização visual da atribuição é lenta (falta de feedback imediato).
+O usuário deseja que o sistema seja atualizado (limpeza de cache) sempre que um usuário deslogar, garantindo que a próxima sessão comece com os arquivos e estados mais recentes.
 
-### 1. Correção do Scroll
-O problema do scroll geralmente ocorre quando o componente `Command` (da biblioteca `cmdk`) é usado dentro de um `Popover` ou `Dialog` sem a configuração correta de eventos, ou devido ao `CommandList` não lidar bem com o scroll nativo em certos contextos.
-- Vou ajustar o `CommandList` e garantir que o container tenha as propriedades de scroll corretas.
-- Vou remover a div de busca personalizada que adicionei manualmente e usar o `CommandInput` nativo que já inclui o ícone, evitando conflitos de layout.
+Atualmente, o `signOut` faz um redirecionamento simples. Vou implementar uma limpeza profunda de cache (Service Workers, Cache Storage, LocalStorage) durante o processo de logout.
 
-### 2. Atribuição Instantânea (UI Otimista)
-Atualmente, o sistema espera a resposta do banco de dados e o refetch dos dados para atualizar o nome e avatar do responsável. Isso causa a percepção de lentidão.
-- Vou implementar uma **Atualização Otimista (Optimistic UI)**: assim que o usuário clica em um novo responsável, o estado local do lead será atualizado imediatamente na interface, enquanto a requisição acontece em segundo plano.
-- Vou adicionar um estado de transição visual (loading sutil) no avatar do responsável para indicar que a alteração está sendo processada, mas já mostrando o novo nome/foto.
+### Plano de Implementação:
 
-### Detalhes Técnicos
+1.  **Refatorar utilitário de limpeza de cache**:
+    *   Mover a lógica de `performFullCacheClear` de `src/hooks/use-force-refresh.ts` para um novo arquivo utilitário `src/lib/cache-utils.ts` para que possa ser compartilhado entre o hook de atualização forçada e o contexto de autenticação.
+    *   Adicionar uma opção para limpar também os tokens de autenticação (necessário para o logout).
 
-**Componente: LeadDetailDialog.tsx**
-- Criar um estado local `localLead` inicializado com o `lead` recebido via props.
-- Sincronizar o `localLead` quando a prop `lead` mudar (mas apenas se não houver uma operação em curso).
-- No `handleAssignUser`:
-    1. Identificar o usuário selecionado na lista `allUsers`.
-    2. Atualizar o `localLead` imediatamente com o novo objeto `assignee` e `assigned_user_id`.
-    3. Chamar a mutação do Supabase.
-    4. Em caso de erro, reverter para o estado original.
-- No JSX, usar o `localLead` para exibir o nome e avatar do responsável no cabeçalho e na seção de detalhes.
+2.  **Atualizar `src/contexts/AuthContext.tsx`**:
+    *   Importar o novo utilitário de limpeza.
+    *   Modificar a função `signOut` para executar a limpeza completa antes do redirecionamento.
+    *   Garantir que o redirecionamento para `/auth` use um parâmetro de bust de cache (ex: `?v=timestamp`).
 
-**Correção da Interface:**
-- Simplificar o uso do `Command` removendo wrappers desnecessários que podem estar bloqueando o scroll.
-- Garantir que o `PopoverContent` não tenha `overflow-hidden` se o `CommandList` precisar gerenciar o scroll.
+3.  **Verificar consistência**:
+    *   Garantir que o script no `index.html` e a lógica do `AuthContext` estejam alinhados quanto às chaves do Supabase.
+
+### Detalhes técnicos:
+*   Arquivo novo: `src/lib/cache-utils.ts`.
+*   A limpeza incluirá `navigator.serviceWorker.getRegistrations()`, `window.caches.keys()`, `localStorage.clear()` (ou remoção seletiva) e `sessionStorage.clear()`.
+*   O redirecionamento final usará `window.location.replace('/auth?v=' + Date.now())`.
