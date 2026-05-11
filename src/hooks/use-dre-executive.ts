@@ -86,14 +86,10 @@ export function useDREExecutive({ startDate, endDate, regime, compareWithPreviou
 
         const grossRevenue = data.filter(e => e.type === 'revenue').reduce((s, e) => s + (Number(e.amount) || 0), 0);
         
-        // Define common categories for better classification
-        const taxCategories = ['Impostos', 'ISS', 'PIS', 'COFINS', 'IRPJ', 'CSLL'];
-        const variableCostCategories = ['Materiais', 'Mão de Obra de Obra', 'Equipamentos', 'Suprimentos'];
-        const fixedCostCategories = ['Aluguel', 'Salários', 'Administrativo', 'Marketing', 'Energia', 'Internet'];
+        const taxes = data.filter(e => e.category_group === 'tax_deduction').reduce((s, e) => s + (Number(e.amount) || 0), 0);
+        const variableCosts = data.filter(e => e.category_group === 'variable_cost' || (e.type === 'expense' && e.project_id)).reduce((s, e) => s + (Number(e.amount) || 0), 0);
+        const fixedCosts = data.filter(e => e.category_group === 'fixed_cost' || (e.type === 'expense' && !e.project_id && e.category_group !== 'tax_deduction')).reduce((s, e) => s + (Number(e.amount) || 0), 0);
 
-        const taxes = data.filter(e => taxCategories.includes(e.category)).reduce((s, e) => s + (Number(e.amount) || 0), 0);
-        const variableCosts = data.filter(e => variableCostCategories.includes(e.category) || e.type === 'expense' && e.project_id).reduce((s, e) => s + (Number(e.amount) || 0), 0);
-        const fixedCosts = data.filter(e => fixedCostCategories.includes(e.category) || e.type === 'expense' && !e.project_id && !taxCategories.includes(e.category)).reduce((s, e) => s + (Number(e.amount) || 0), 0);
 
         return { grossRevenue, taxes, variableCosts, fixedCosts };
       };
