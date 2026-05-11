@@ -221,6 +221,18 @@ const allNavItems: NavItem[] = [{
   }]
 }];
 
+const bottomItems: NavItem[] = [{
+  icon: Globe,
+  labelKey: 'mySite',
+  path: '/settings/site',
+  adminOnly: true,
+  module: 'site'
+}, {
+  icon: Settings,
+  labelKey: 'settings',
+  path: '/settings'
+}];
+
 function SidebarIcon({ item, size = 20, className }: { item: NavItem; size?: number; className?: string }) {
   if (item.icon === WhatsAppIcon) {
     return <WhatsAppIcon size={size + 4} className={cn("flex-shrink-0", className)} trigger="hover" />;
