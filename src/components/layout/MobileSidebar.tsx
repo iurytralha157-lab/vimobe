@@ -110,6 +110,15 @@ const allNavItems: NavItem[] = [
   { icon: Shuffle, labelKey: 'crmManagement', path: '/crm/management', module: 'crm', adminOnly: true },
   { icon: Calendar, labelKey: 'schedule', path: '/agenda', module: 'agenda' },
   { icon: Zap, labelKey: 'automations', path: '/automations', module: 'automations' },
+  { 
+    icon: HardHat, 
+    labelKey: 'engineering', 
+    path: '/engenharia/obras', 
+    module: 'engineering',
+    children: [
+      { icon: Building2, labelKey: 'construction', path: '/engenharia/obras' },
+    ]
+  },
 ];
 
 const bottomItems: NavItem[] = [
