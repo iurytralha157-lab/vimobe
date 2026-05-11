@@ -125,9 +125,9 @@ function getPublicSiteMode(): "custom-domain" | "slug" | null {
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 5,
+      staleTime: 1000 * 30, // Reduzido de 5 min para 30 segundos
       gcTime: 1000 * 60 * 15,
-      refetchOnWindowFocus: false,
+      refetchOnWindowFocus: true, // Habilitado para atualizar ao voltar para a aba
       retry: 1,
     },
   },

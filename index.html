@@ -26,8 +26,26 @@
             for (let k of keys) await caches.delete(k);
           }
           
-          localStorage.clear();
-          sessionStorage.clear();
+          // Preservar apenas tokens de autenticação essenciais
+          const authKeysToKeep = ['sb-iemalzlfnbouobyjwlwi-auth-token', 'impersonate_session'];
+          const keysToRemove = [];
+          
+          for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && !authKeysToKeep.some(authKey => key.includes(authKey))) {
+              keysToRemove.push(key);
+            }
+          }
+          keysToRemove.forEach(k => localStorage.removeItem(k));
+          
+          const sessionKeysToRemove = [];
+          for (let i = 0; i < sessionStorage.length; i++) {
+            const key = sessionStorage.key(i);
+            if (key && !authKeysToKeep.some(authKey => key.includes(authKey))) {
+              sessionKeysToRemove.push(key);
+            }
+          }
+          sessionKeysToRemove.forEach(k => sessionStorage.removeItem(k));
           
           // Use a timestamp to bypass any server-side or ISP caching
           const url = new URL(window.location.href);

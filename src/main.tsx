@@ -26,10 +26,10 @@ window.addEventListener('error', handleChunkError);
 window.addEventListener('unhandledrejection', handleChunkError);
 
 // Aggressive version management and cache busting
-const CACHE_BUST_VERSION = '2026-05-08-v3';
+const CACHE_BUST_VERSION = '2026-05-11-v1';
 const BUST_KEY = 'lovable_app_version';
 
-async function cleanupServiceWorkers() {
+async function cleanupServiceWorkers(reload = false) {
   try {
     if ('serviceWorker' in navigator) {
       const registrations = await navigator.serviceWorker.getRegistrations();
@@ -45,31 +45,49 @@ async function cleanupServiceWorkers() {
         console.log('All Caches cleared');
       }
     }
+    
+    if (reload) {
+      const url = new URL(window.location.href);
+      url.searchParams.set('v_refresh', CACHE_BUST_VERSION);
+      window.location.replace(url.toString());
+    }
   } catch (e) {
     console.warn('Cleanup failed', e);
   }
 }
 
-// Ensure SWs are cleaned up if PWA is disabled
-if ('serviceWorker' in navigator) {
-  cleanupServiceWorkers();
+// Background version checker
+async function checkSystemVersion() {
+  try {
+    const response = await fetch(`/version.json?t=${Date.now()}`, { cache: 'no-store' });
+    if (!response.ok) return;
+    
+    const data = await response.json();
+    const currentVersion = localStorage.getItem(BUST_KEY);
+    
+    if (currentVersion && data.version && currentVersion !== data.version) {
+      console.log(`[VersionCheck] New version found: ${data.version}. Updating...`);
+      localStorage.setItem(BUST_KEY, data.version);
+      await cleanupServiceWorkers(true);
+    }
+  } catch (err) {
+    console.warn('[VersionCheck] Background check failed', err);
+  }
 }
 
-try {
-  const currentVersion = localStorage.getItem(BUST_KEY);
-  if (currentVersion && currentVersion !== CACHE_BUST_VERSION) {
-    localStorage.setItem(BUST_KEY, CACHE_BUST_VERSION);
-    cleanupServiceWorkers().finally(() => {
-      // Add unique param to force bypass any proxy cache
-      const url = new URL(window.location.href);
-      url.searchParams.set('reload_v', CACHE_BUST_VERSION);
-      window.location.replace(url.toString());
-    });
-  } else if (!currentVersion) {
-    localStorage.setItem(BUST_KEY, CACHE_BUST_VERSION);
-  }
-} catch (err) {
-  console.error('Version management error:', err);
+// Check version on load and then every 5 minutes
+const currentVersion = localStorage.getItem(BUST_KEY);
+if (currentVersion !== CACHE_BUST_VERSION) {
+  localStorage.setItem(BUST_KEY, CACHE_BUST_VERSION);
+  cleanupServiceWorkers(currentVersion !== null);
+}
+
+// Set up periodic check
+setInterval(checkSystemVersion, 1000 * 60 * 5);
+
+// Ensure SWs are cleaned up if PWA is disabled
+if ('serviceWorker' in navigator) {
+  cleanupServiceWorkers(false);
 }
 
 createRoot(document.getElementById("root")!).render(
