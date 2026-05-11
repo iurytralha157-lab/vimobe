@@ -44,15 +44,20 @@ Deno.serve(async (req) => {
 
     for (const event of upcomingEvents || []) {
       const startTime = new Date(event.start_time);
-      const diffMinutes = Math.floor((startTime.getTime() - now.getTime()) / (1000 * 60));
+      // Use round to be more tolerant of exact execution second
+      const diffMinutes = Math.round((startTime.getTime() - now.getTime()) / (1000 * 60));
       const eventType = event.event_type;
       const isCritical = eventType === 'meeting' || eventType === 'visit';
+
+      console.log(`Checking event "${event.title}" (${event.id}) - Starts in ${diffMinutes}m`);
 
       for (const interval of REMINDER_INTERVALS) {
         if (!isCritical && (interval.minutes === 30 || interval.minutes === 10 || interval.target === 'lead')) {
           continue;
         }
 
+        // Check if we are within the interval window
+        // We use a small window check to ensure we don't miss it if the cron is slightly off
         if (diffMinutes === interval.minutes) {
           const reminderTag = `[EVT_${event.id}_${interval.minutes}_${interval.target}]`;
           
