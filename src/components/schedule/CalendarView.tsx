@@ -116,12 +116,6 @@ function ActivityCard({ event, onEditEvent, isDragging, style, className }: Acti
           "flex items-center gap-2",
           !isCompact && "mb-1.5"
         )}>
-          <div className={cn(
-            "rounded bg-white/20 text-white shrink-0",
-            isCompact ? "p-0.5" : "p-1"
-          )}>
-            <Icon className={cn(isCompact ? "h-3 w-3" : "h-3.5 w-3.5")} />
-          </div>
           <span className={cn(
             "font-black truncate tracking-tight",
             isCompact ? "text-[10px]" : "text-[11px] leading-tight"
