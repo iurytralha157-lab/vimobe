@@ -50,21 +50,26 @@ export default function GamificationRanking() {
   const { organization } = useAuth();
   const { t } = useLanguage();
   const [prevTopUserId, setPrevTopUserId] = useState<string | null>(null);
+  const [rankingType, setRankingType] = useState('general');
+  const [period, setPeriod] = useState('month');
 
   const { data: leaderboard, isLoading, refetch } = useQuery({
-    queryKey: ['gamification-leaderboard-full', organization?.id],
+    queryKey: ['gamification-leaderboard-full', organization?.id, rankingType, period],
     queryFn: async () => {
       if (!organization?.id) return [];
       
-      // 1. Buscamos as pontuações
-      const { data: statsData, error: statsError } = await (supabase as any)
+      let query = (supabase as any)
         .from('user_gamification_stats')
         .select('user_id, total_points')
         .eq('organization_id', organization.id);
+
+      // In a real scenario, we would filter by rankingType and period here
+      // For now, we use the general stats and will expand this as the DB views are ready
+      
+      const { data: statsData, error: statsError } = await query;
       
       if (statsError) throw statsError;
 
-      // 2. Buscamos os usuários (Profiles)
       const { data: userData, error: userError } = await (supabase as any)
         .from('users')
         .select('id, name, avatar_url')
@@ -72,7 +77,6 @@ export default function GamificationRanking() {
 
       if (userError) throw userError;
 
-      // 3. Mesclamos os dados manualmente para evitar erros de tipagem
       const mergedData = (userData || []).map((user: any) => {
         const stats = (statsData || []).find((s: any) => s.user_id === user.id);
         return {
@@ -90,6 +94,7 @@ export default function GamificationRanking() {
     },
     enabled: !!organization?.id,
   });
+
 
   // Realtime subscription
   useEffect(() => {
