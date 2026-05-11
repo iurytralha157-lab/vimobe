@@ -283,7 +283,50 @@ export function CalendarView({
   }, []);
 
   const handleNavigate = (direction: 'prev' | 'next') => {
-...
+    switch (viewMode) {
+      case 'day':
+        onPivotChange(direction === 'prev' ? subDays(pivotDate, 1) : addDays(pivotDate, 1));
+        break;
+      case 'week':
+        onPivotChange(direction === 'prev' ? subWeeks(pivotDate, 1) : addWeeks(pivotDate, 1));
+        break;
+      case 'month':
+        onPivotChange(direction === 'prev' ? subMonths(pivotDate, 1) : addMonths(pivotDate, 1));
+        break;
+      case 'year':
+        onPivotChange(direction === 'prev' ? startOfYear(subDays(startOfYear(pivotDate), 1)) : startOfYear(addDays(endOfYear(pivotDate), 1)));
+        break;
+    }
+  };
+
+  const handleToday = () => {
+    const today = new Date();
+    onPivotChange(today);
+    onDateSelect(today);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    setActiveEvent(null);
+    const { active, over } = event;
+    
+    if (over && active.id !== over.id) {
+      const scheduleEvent = active.data.current as ScheduleEvent;
+      const [dateStr, hourStr] = (over.id as string).split('|');
+      
+      const newStart = parseISO(`${dateStr}T${hourStr}:00`);
+      const originalStart = parseISO(scheduleEvent.start_time);
+      const originalEnd = parseISO(scheduleEvent.end_time);
+      const duration = differenceInMinutes(originalEnd, originalStart);
+      
+      const newEnd = addMinutes(newStart, duration);
+      
+      onEventUpdate?.(scheduleEvent.id, {
+        start_time: newStart.toISOString(),
+        end_time: newEnd.toISOString()
+      });
+    }
+  };
+
   const eventsByDate = useMemo(() => {
     const map: Record<string, ScheduleEvent[]> = {};
     events.forEach(event => {
