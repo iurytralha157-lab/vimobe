@@ -590,7 +590,7 @@ export default function AdminOrganizationDetail() {
                         <p className="font-medium">{module.label}</p>
                         {'segment' in module && module.segment &&
                       <Badge variant="outline" className="text-xs">
-                            {module.segment === 'imobiliario' ? 'Imobiliário' : 'Telecom'}
+                            {module.segment === 'imobiliario' ? 'Imobiliário' : module.segment === 'telecom' ? 'Telecom' : 'Engenharia'}
                           </Badge>
                       }
                       </div>
