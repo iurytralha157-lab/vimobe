@@ -58,7 +58,7 @@ Deno.serve(async (req) => {
       property_id: property.id,
       name: 'Obra Residencial Alpha - Cliente Teste',
       description: 'Construção de alto padrão',
-      status: 'active',
+      status: 'in_progress',
       budget_estimated: 450000,
       physical_progress_percent: 15,
       start_date_planned: new Date().toISOString(),
