@@ -87,6 +87,17 @@ export function useDealStatusChange() {
         }
       });
 
+      // Se for venda, também registrar como atividade explícita de gamificação
+      if (newStatus === 'won') {
+        await supabase.from('activities').insert({
+          lead_id: leadId,
+          user_id: user?.id || null,
+          type: 'sale_closed',
+          content: `Venda concluída para o lead "${leadName}"`,
+          metadata: { valor_interesse: valorInteresse }
+        });
+      }
+
       return { lead, newStatus };
     },
     onSuccess: async ({ lead, newStatus }, variables) => {
