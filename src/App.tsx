@@ -253,10 +253,12 @@ function AppRoutes() {
             <Route path="/financeiro" element={<ProtectedRoute><AdminRoute><FinancialDashboard /></AdminRoute></ProtectedRoute>} />
             <Route path="/financeiro/contas" element={<ProtectedRoute><AdminRoute><FinancialEntries /></AdminRoute></ProtectedRoute>} />
             <Route path="/financeiro/contratos" element={<ProtectedRoute><AdminRoute><Contracts /></AdminRoute></ProtectedRoute>} />
+            <Route path="/financeiro/contratos/:id" element={<ProtectedRoute><AdminRoute><ContractDetails /></AdminRoute></ProtectedRoute>} />
             <Route path="/financeiro/comissoes" element={<ProtectedRoute><AdminRoute><Commissions /></AdminRoute></ProtectedRoute>} />
+            <Route path="/financeiro/corretor" element={<ProtectedRoute><BrokerFinancialPanel /></ProtectedRoute>} />
             <Route path="/financeiro/relatorios" element={<ProtectedRoute><AdminRoute><FinancialReports /></AdminRoute></ProtectedRoute>} />
             <Route path="/financeiro/dre" element={<ProtectedRoute><AdminRoute><FinancialDRE /></AdminRoute></ProtectedRoute>} />
-            
+
             {/* Telecom Module */}
             <Route path="/plans" element={<ProtectedRoute><ServicePlans /></ProtectedRoute>} />
             <Route path="/coverage" element={<ProtectedRoute><CoverageAreas /></ProtectedRoute>} />
