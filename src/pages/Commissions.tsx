@@ -406,10 +406,16 @@ export default function Commissions() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3">
           <p className="text-xs sm:text-sm text-muted-foreground">Gerencie comissões e repasses</p>
-          <Button variant="outline" size={isMobile ? "sm" : "default"} onClick={handleExport} className="w-full sm:w-auto">
-            <Download className="h-4 w-4 mr-1.5" />
-            Exportar
-          </Button>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <Button variant="outline" size={isMobile ? "sm" : "default"} onClick={() => navigate('/financeiro/corretor')} className="flex-1 sm:flex-none">
+              <User className="h-4 w-4 mr-1.5" />
+              Minhas Comissões
+            </Button>
+            <Button variant="outline" size={isMobile ? "sm" : "default"} onClick={handleExport} className="flex-1 sm:flex-none">
+              <Download className="h-4 w-4 mr-1.5" />
+              Exportar
+            </Button>
+          </div>
         </div>
 
         {/* Tabs */}
