@@ -1,15 +1,27 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Trophy, Medal, Award, TrendingUp, Crown, PartyPopper } from 'lucide-react';
+import { 
+  Trophy, 
+  Medal, 
+  Award, 
+  TrendingUp, 
+  Crown, 
+  PartyPopper, 
+  Phone,
+  MessageSquare,
+  BadgeDollarSign,
+  Target
+} from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { useEffect, useState } from 'react';
 import confetti from 'canvas-confetti';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface LeaderboardUser {
   id: string;
@@ -34,21 +46,23 @@ export default function GamificationRanking() {
   const { organization } = useAuth();
   const { t } = useLanguage();
   const [prevTopUserId, setPrevTopUserId] = useState<string | null>(null);
+  const [rankingType, setRankingType] = useState('general');
+  const [period, setPeriod] = useState('month');
 
   const { data: leaderboard, isLoading, refetch } = useQuery({
-    queryKey: ['gamification-leaderboard-full', organization?.id],
+    queryKey: ['gamification-leaderboard-full', organization?.id, rankingType, period],
     queryFn: async () => {
       if (!organization?.id) return [];
       
-      // 1. Buscamos as pontuações
-      const { data: statsData, error: statsError } = await (supabase as any)
+      let query = (supabase as any)
         .from('user_gamification_stats')
         .select('user_id, total_points')
         .eq('organization_id', organization.id);
+
+      const { data: statsData, error: statsError } = await query;
       
       if (statsError) throw statsError;
 
-      // 2. Buscamos os usuários (Profiles)
       const { data: userData, error: userError } = await (supabase as any)
         .from('users')
         .select('id, name, avatar_url')
@@ -56,7 +70,6 @@ export default function GamificationRanking() {
 
       if (userError) throw userError;
 
-      // 3. Mesclamos os dados manualmente para evitar erros de tipagem
       const mergedData = (userData || []).map((user: any) => {
         const stats = (statsData || []).find((s: any) => s.user_id === user.id);
         return {
@@ -87,7 +100,6 @@ export default function GamificationRanking() {
           event: '*',
           schema: 'public',
           table: 'user_gamification_stats',
-          // filter: `organization_id=eq.${organization.id}`
         },
         () => {
           refetch();
@@ -105,7 +117,6 @@ export default function GamificationRanking() {
     if (leaderboard && leaderboard.length > 0) {
       const currentTopUser = leaderboard[0];
       if (prevTopUserId && prevTopUserId !== currentTopUser.user_id) {
-        // First place changed!
         confetti({
           particleCount: 150,
           spread: 70,
@@ -131,155 +142,193 @@ export default function GamificationRanking() {
   }
 
   const topThree = leaderboard?.slice(0, 3) || [];
-  const others = leaderboard?.slice(3) || [];
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 h-auto lg:h-[calc(100vh-180px)] min-h-[500px] animate-in fade-in duration-700 overflow-visible lg:overflow-hidden pb-10 lg:pb-0">
+    <div className="flex flex-col gap-6 animate-in fade-in duration-700 pb-10">
       
-      {/* LEFT SIDE: PODIUM (Arena) */}
-      <div className="lg:col-span-8 flex flex-col gap-6 h-full overflow-hidden">
-        <div className="relative flex-1 bg-gradient-to-b from-indigo-900/10 via-background to-background border rounded-2xl p-4 lg:p-8 flex flex-col items-center justify-end overflow-hidden shadow-none min-h-[400px] lg:min-h-0">
-          <div className="absolute top-4 lg:top-8 left-4 lg:left-8 flex items-center gap-2">
-            <div className="bg-yellow-500/20 p-1.5 lg:p-2 rounded-full">
-              <Trophy className="h-5 w-5 lg:h-6 lg:w-6 text-yellow-500" />
-            </div>
-            <h2 className="text-lg lg:text-2xl font-black italic uppercase tracking-tighter text-indigo-900 dark:text-indigo-100">Arena de Elite</h2>
-          </div>
-
-          <div className="absolute top-4 lg:top-8 right-4 lg:right-8 text-right">
-            <div className="flex items-center gap-1 text-emerald-500 text-[10px] lg:text-base font-bold animate-pulse">
-              <div className="w-1.5 h-1.5 lg:w-2 lg:h-2 rounded-full bg-emerald-500" />
-              LIVE
-            </div>
-          </div>
-
-          {/* Podium Visualization */}
-          <div className="flex items-end justify-center gap-4 w-full max-w-2xl relative z-10">
-            
-            {/* 2nd Place */}
-            {topThree[1] && (
-              <div className="flex flex-col items-center gap-2 lg:gap-4 flex-1">
-                <div className="relative group">
-                  <Avatar className="h-16 w-16 lg:h-24 lg:w-24 border-2 lg:border-4 border-slate-300 shadow-xl transition-transform lg:group-hover:scale-110">
-                    <AvatarImage src={topThree[1].profiles?.avatar_url || undefined} />
-                    <AvatarFallback className="text-sm lg:text-xl">{getInitials(topThree[1].profiles?.name || '')}</AvatarFallback>
-                  </Avatar>
-                  <div className="absolute -top-2 -right-2 bg-slate-100 text-slate-600 rounded-full p-1.5 border-2 border-slate-300">
-                    <Medal className="h-4 w-4 lg:h-5 lg:w-5" />
-                  </div>
-                </div>
-                <div className="bg-slate-300/30 w-full rounded-t-xl p-2 lg:p-4 text-center min-h-[80px] lg:min-h-[120px] flex flex-col justify-center border-x border-t border-slate-300">
-                  <p className="font-bold text-[10px] lg:text-sm truncate w-full px-1">{topThree[1].profiles?.name}</p>
-                  <p className="text-base lg:text-2xl font-black text-slate-600">{topThree[1].total_points.toLocaleString()}</p>
-                  <p className="text-[8px] lg:text-[10px] uppercase font-bold text-slate-500 tracking-widest">Pontos</p>
-                </div>
-              </div>
-            )}
-
-            {/* 1st Place */}
-            {topThree[0] && (
-              <div className="flex flex-col items-center gap-2 lg:gap-4 flex-1 -mt-8 lg:-mt-12">
-                <div className="relative group">
-                  <div className="absolute -top-8 lg:-top-12 left-1/2 -translate-x-1/2 animate-bounce">
-                    <Crown className="h-8 w-8 lg:h-12 lg:w-12 text-yellow-500 fill-yellow-500 drop-shadow-[0_0_15px_rgba(234,179,8,0.5)]" />
-                  </div>
-                  <Avatar className="h-20 w-20 lg:h-32 lg:w-32 border-2 lg:border-4 border-yellow-500 shadow-[0_0_30px_rgba(234,179,8,0.3)] transition-transform lg:group-hover:scale-110">
-                    <AvatarImage src={topThree[0].profiles?.avatar_url || undefined} />
-                    <AvatarFallback className="text-lg lg:text-2xl font-bold">{getInitials(topThree[0].profiles?.name || '')}</AvatarFallback>
-                  </Avatar>
-                  <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-yellow-500 text-yellow-950 text-[8px] lg:text-[10px] font-black px-2 lg:px-3 py-0.5 lg:py-1 rounded-full shadow-lg whitespace-nowrap">
-                    TOP 1
-                  </div>
-                </div>
-                <div className="bg-gradient-to-b from-yellow-500/20 to-yellow-500/5 w-full rounded-t-2xl p-2 lg:p-6 text-center min-h-[110px] lg:min-h-[180px] flex flex-col justify-center border-x border-t border-yellow-500 shadow-[0_-10px_40px_rgba(234,179,8,0.1)]">
-                  <p className="font-black text-xs lg:text-lg truncate w-full mb-0.5 lg:mb-1 px-1">{topThree[0].profiles?.name}</p>
-                  <p className="text-2xl lg:text-4xl font-black text-yellow-600 drop-shadow-sm">{topThree[0].total_points.toLocaleString()}</p>
-                  <p className="text-[9px] lg:text-xs uppercase font-black text-yellow-700 tracking-widest mt-1">Campeão</p>
-                </div>
-              </div>
-            )}
-
-            {/* 3rd Place */}
-            {topThree[2] && (
-              <div className="flex flex-col items-center gap-2 lg:gap-4 flex-1">
-                <div className="relative group">
-                  <Avatar className="h-14 w-14 lg:h-20 lg:w-20 border-2 lg:border-4 border-amber-600 shadow-xl transition-transform lg:group-hover:scale-110">
-                    <AvatarImage src={topThree[2].profiles?.avatar_url || undefined} />
-                    <AvatarFallback className="text-xs lg:text-lg">{getInitials(topThree[2].profiles?.name || '')}</AvatarFallback>
-                  </Avatar>
-                  <div className="absolute -top-1.5 -right-1.5 bg-amber-50 text-amber-700 rounded-full p-1 border-2 border-amber-600">
-                    <Award className="h-3.5 w-3.5 lg:h-4 lg:w-4" />
-                  </div>
-                </div>
-                <div className="bg-amber-600/20 w-full rounded-t-xl p-2 lg:p-4 text-center min-h-[70px] lg:min-h-[100px] flex flex-col justify-center border-x border-t border-amber-600/50">
-                  <p className="font-bold text-[10px] lg:text-xs truncate w-full px-1">{topThree[2].profiles?.name}</p>
-                  <p className="text-base lg:text-xl font-black text-amber-700">{topThree[2].total_points.toLocaleString()}</p>
-                  <p className="text-[8px] lg:text-[10px] uppercase font-bold text-amber-600 tracking-widest">Pontos</p>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Floor */}
-          <div className="w-full h-2 bg-indigo-900/10 rounded-full mt-[-2px] blur-sm" />
+      {/* HEADER: Filters and Segmented Rankings */}
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center bg-card p-4 rounded-xl border shadow-sm">
+        <div className="md:col-span-8 flex flex-wrap gap-2">
+          <Tabs value={rankingType} onValueChange={setRankingType} className="w-full">
+            <TabsList className="bg-muted/50 w-full justify-start overflow-x-auto h-auto p-1 gap-1">
+              <TabsTrigger value="general" className="gap-2 px-4 py-2">
+                <Trophy className="h-4 w-4" /> Geral
+              </TabsTrigger>
+              <TabsTrigger value="calls" className="gap-2 px-4 py-2">
+                <Phone className="h-4 w-4" /> Ligações
+              </TabsTrigger>
+              <TabsTrigger value="messages" className="gap-2 px-4 py-2">
+                <MessageSquare className="h-4 w-4" /> Mensagens
+              </TabsTrigger>
+              <TabsTrigger value="sales" className="gap-2 px-4 py-2">
+                <BadgeDollarSign className="h-4 w-4" /> Vendas
+              </TabsTrigger>
+              <TabsTrigger value="leads" className="gap-2 px-4 py-2">
+                <Target className="h-4 w-4" /> Leads
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+        
+        <div className="md:col-span-4 flex justify-end gap-2">
+          <Tabs value={period} onValueChange={setPeriod}>
+            <TabsList className="bg-muted/50">
+              <TabsTrigger value="today" className="text-xs px-3">Hoje</TabsTrigger>
+              <TabsTrigger value="week" className="text-xs px-3">Semana</TabsTrigger>
+              <TabsTrigger value="month" className="text-xs px-3">Mês</TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
       </div>
 
-      {/* RIGHT SIDE: LIST (The Field) */}
-      <div className="lg:col-span-4 flex flex-col overflow-hidden border rounded-2xl bg-card shadow-none h-[500px] lg:h-full">
-        <div className="p-4 lg:p-6 border-b bg-muted/30">
-          <h3 className="text-base lg:text-lg font-bold">
-            Classificação Geral
-          </h3>
-        </div>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 h-auto lg:h-[calc(100vh-280px)] min-h-[500px] overflow-visible lg:overflow-hidden">
         
-        <div className="flex-1 overflow-y-auto p-4 space-y-2 scrollbar-thin scrollbar-thumb-muted-foreground/20 scrollbar-track-transparent">
-          {leaderboard?.map((user, index) => {
-            const isTop3 = index < 3;
-            return (
-              <div 
-                key={user.id} 
-                className={cn(
-                  "group flex items-center gap-2 lg:gap-3 p-2 lg:p-3 rounded-xl transition-all duration-300 border border-transparent hover:border-indigo-500/20 hover:bg-indigo-500/5",
-                  isTop3 && "bg-muted/50"
-                )}
-              >
-                <div className={cn(
-                  "w-6 h-6 flex items-center justify-center rounded-md text-[10px] font-black",
-                  index === 0 ? "bg-yellow-500 text-yellow-950" : 
-                  index === 1 ? "bg-slate-300 text-slate-700" :
-                  index === 2 ? "bg-amber-600 text-white" : "bg-muted text-muted-foreground"
-                )}>
-                  {index + 1}
-                </div>
-                
-                <Avatar className="h-8 w-8 lg:h-10 lg:w-10 border border-border shrink-0 transition-transform lg:group-hover:scale-105">
-                  <AvatarImage src={user.profiles?.avatar_url || undefined} />
-                  <AvatarFallback className="text-[10px] lg:text-xs font-bold">{getInitials(user.profiles?.name || '')}</AvatarFallback>
-                </Avatar>
-
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs lg:text-sm font-bold truncate leading-tight">{user.profiles?.name}</p>
-                  <p className="text-[9px] lg:text-[10px] text-muted-foreground font-medium uppercase tracking-tighter">Corretor Ativo</p>
-                </div>
-
-                <div className="text-right shrink-0">
-                  <p className="text-xs lg:text-sm font-black text-indigo-600 dark:text-indigo-400">{user.total_points.toLocaleString()}</p>
-                  <p className="text-[8px] lg:text-[9px] uppercase font-bold text-muted-foreground tracking-widest">PTS</p>
-                </div>
+        {/* LEFT SIDE: PODIUM (Arena) */}
+        <div className="lg:col-span-8 flex flex-col gap-6 h-full overflow-hidden">
+          <div className="relative flex-1 bg-gradient-to-b from-indigo-900/10 via-background to-background border rounded-2xl p-4 lg:p-8 flex flex-col items-center justify-end overflow-hidden shadow-none min-h-[400px] lg:min-h-0">
+            <div className="absolute top-4 lg:top-8 left-4 lg:left-8 flex items-center gap-2">
+              <div className="bg-yellow-500/20 p-1.5 lg:p-2 rounded-full">
+                <Trophy className="h-5 w-5 lg:h-6 lg:w-6 text-yellow-500" />
               </div>
-            );
-          })}
-
-          {(!leaderboard || leaderboard.length === 0) && (
-            <div className="flex flex-col items-center justify-center py-20 text-center opacity-50">
-              <Trophy className="h-12 w-12 mb-2 text-muted-foreground" />
-              <p className="text-sm font-medium">A arena está vazia...</p>
-              <p className="text-xs">Lance uma prospecção para entrar no jogo!</p>
+              <h2 className="text-lg lg:text-2xl font-black italic uppercase tracking-tighter text-indigo-900 dark:text-indigo-100">
+                Arena {rankingType === 'general' ? 'de Elite' : `de ${rankingType.charAt(0).toUpperCase() + rankingType.slice(1)}`}
+              </h2>
             </div>
-          )}
+
+            <div className="absolute top-4 lg:top-8 right-4 lg:right-8 text-right">
+              <div className="flex items-center gap-1 text-emerald-500 text-[10px] lg:text-base font-bold animate-pulse">
+                <div className="w-1.5 h-1.5 lg:w-2 lg:h-2 rounded-full bg-emerald-500" />
+                LIVE
+              </div>
+            </div>
+
+            {/* Podium Visualization */}
+            <div className="flex items-end justify-center gap-4 w-full max-w-2xl relative z-10">
+              
+              {/* 2nd Place */}
+              {topThree[1] && (
+                <div className="flex flex-col items-center gap-2 lg:gap-4 flex-1">
+                  <div className="relative group">
+                    <Avatar className="h-16 w-16 lg:h-24 lg:w-24 border-2 lg:border-4 border-slate-300 shadow-xl transition-transform lg:group-hover:scale-110">
+                      <AvatarImage src={topThree[1].profiles?.avatar_url || undefined} />
+                      <AvatarFallback className="text-sm lg:text-xl">{getInitials(topThree[1].profiles?.name || '')}</AvatarFallback>
+                    </Avatar>
+                    <div className="absolute -top-2 -right-2 bg-slate-100 text-slate-600 rounded-full p-1.5 border-2 border-slate-300">
+                      <Medal className="h-4 w-4 lg:h-5 lg:w-5" />
+                    </div>
+                  </div>
+                  <div className="bg-slate-300/30 w-full rounded-t-xl p-2 lg:p-4 text-center min-h-[80px] lg:min-h-[120px] flex flex-col justify-center border-x border-t border-slate-300">
+                    <p className="font-bold text-[10px] lg:text-sm truncate w-full px-1">{topThree[1].profiles?.name}</p>
+                    <p className="text-base lg:text-2xl font-black text-slate-600">{topThree[1].total_points.toLocaleString()}</p>
+                    <p className="text-[8px] lg:text-[10px] uppercase font-bold text-slate-500 tracking-widest">Pontos</p>
+                  </div>
+                </div>
+              )}
+
+              {/* 1st Place */}
+              {topThree[0] && (
+                <div className="flex flex-col items-center gap-2 lg:gap-4 flex-1 -mt-8 lg:-mt-12">
+                  <div className="relative group">
+                    <div className="absolute -top-8 lg:-top-12 left-1/2 -translate-x-1/2 animate-bounce">
+                      <Crown className="h-8 w-8 lg:h-12 lg:w-12 text-yellow-500 fill-yellow-500 drop-shadow-[0_0_15px_rgba(234,179,8,0.5)]" />
+                    </div>
+                    <Avatar className="h-20 w-20 lg:h-32 lg:w-32 border-2 lg:border-4 border-yellow-500 shadow-[0_0_30px_rgba(234,179,8,0.3)] transition-transform lg:group-hover:scale-110">
+                      <AvatarImage src={topThree[0].profiles?.avatar_url || undefined} />
+                      <AvatarFallback className="text-lg lg:text-2xl font-bold">{getInitials(topThree[0].profiles?.name || '')}</AvatarFallback>
+                    </Avatar>
+                    <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-yellow-500 text-yellow-950 text-[8px] lg:text-[10px] font-black px-2 lg:px-3 py-0.5 lg:py-1 rounded-full shadow-lg whitespace-nowrap">
+                      TOP 1
+                    </div>
+                  </div>
+                  <div className="bg-gradient-to-b from-yellow-500/20 to-yellow-500/5 w-full rounded-t-2xl p-2 lg:p-6 text-center min-h-[110px] lg:min-h-[180px] flex flex-col justify-center border-x border-t border-yellow-500 shadow-[0_-10px_40px_rgba(234,179,8,0.1)]">
+                    <p className="font-black text-xs lg:text-lg truncate w-full mb-0.5 lg:mb-1 px-1">{topThree[0].profiles?.name}</p>
+                    <p className="text-2xl lg:text-4xl font-black text-yellow-600 drop-shadow-sm">{topThree[0].total_points.toLocaleString()}</p>
+                    <p className="text-[9px] lg:text-xs uppercase font-black text-yellow-700 tracking-widest mt-1">Campeão</p>
+                  </div>
+                </div>
+              )}
+
+              {/* 3rd Place */}
+              {topThree[2] && (
+                <div className="flex flex-col items-center gap-2 lg:gap-4 flex-1">
+                  <div className="relative group">
+                    <Avatar className="h-14 w-14 lg:h-20 lg:w-20 border-2 lg:border-4 border-amber-600 shadow-xl transition-transform lg:group-hover:scale-110">
+                      <AvatarImage src={topThree[2].profiles?.avatar_url || undefined} />
+                      <AvatarFallback className="text-xs lg:text-lg">{getInitials(topThree[2].profiles?.name || '')}</AvatarFallback>
+                    </Avatar>
+                    <div className="absolute -top-1.5 -right-1.5 bg-amber-50 text-amber-700 rounded-full p-1 border-2 border-amber-600">
+                      <Award className="h-3.5 w-3.5 lg:h-4 lg:w-4" />
+                    </div>
+                  </div>
+                  <div className="bg-amber-600/20 w-full rounded-t-xl p-2 lg:p-4 text-center min-h-[70px] lg:min-h-[100px] flex flex-col justify-center border-x border-t border-amber-600/50">
+                    <p className="font-bold text-[10px] lg:text-xs truncate w-full px-1">{topThree[2].profiles?.name}</p>
+                    <p className="text-base lg:text-xl font-black text-amber-700">{topThree[2].total_points.toLocaleString()}</p>
+                    <p className="text-[8px] lg:text-[10px] uppercase font-bold text-amber-600 tracking-widest">Pontos</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Floor */}
+            <div className="w-full h-2 bg-indigo-900/10 rounded-full mt-[-2px] blur-sm" />
+          </div>
         </div>
 
+        {/* RIGHT SIDE: LIST (The Field) */}
+        <div className="lg:col-span-4 flex flex-col overflow-hidden border rounded-2xl bg-card shadow-none h-[500px] lg:h-full">
+          <div className="p-4 lg:p-6 border-b bg-muted/30">
+            <h3 className="text-base lg:text-lg font-bold">
+              Classificação {rankingType === 'general' ? 'Geral' : `de ${rankingType.charAt(0).toUpperCase() + rankingType.slice(1)}`}
+            </h3>
+          </div>
+          
+          <div className="flex-1 overflow-y-auto p-4 space-y-2 scrollbar-thin scrollbar-thumb-muted-foreground/20 scrollbar-track-transparent">
+            {leaderboard?.map((user, index) => {
+              const isTop3 = index < 3;
+              return (
+                <div 
+                  key={user.id} 
+                  className={cn(
+                    "group flex items-center gap-2 lg:gap-3 p-2 lg:p-3 rounded-xl transition-all duration-300 border border-transparent hover:border-indigo-500/20 hover:bg-indigo-500/5",
+                    isTop3 && "bg-muted/50"
+                  )}
+                >
+                  <div className={cn(
+                    "w-6 h-6 flex items-center justify-center rounded-md text-[10px] font-black",
+                    index === 0 ? "bg-yellow-500 text-yellow-950" : 
+                    index === 1 ? "bg-slate-300 text-slate-700" :
+                    index === 2 ? "bg-amber-600 text-white" : "bg-muted text-muted-foreground"
+                  )}>
+                    {index + 1}
+                  </div>
+                  
+                  <Avatar className="h-8 w-8 lg:h-10 lg:w-10 border border-border shrink-0 transition-transform lg:group-hover:scale-105">
+                    <AvatarImage src={user.profiles?.avatar_url || undefined} />
+                    <AvatarFallback className="text-[10px] lg:text-xs font-bold">{getInitials(user.profiles?.name || '')}</AvatarFallback>
+                  </Avatar>
+
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs lg:text-sm font-bold truncate leading-tight">{user.profiles?.name}</p>
+                    <p className="text-[9px] lg:text-[10px] text-muted-foreground font-medium uppercase tracking-tighter">Corretor Ativo</p>
+                  </div>
+
+                  <div className="text-right shrink-0">
+                    <p className="text-xs lg:text-sm font-black text-indigo-600 dark:text-indigo-400">{user.total_points.toLocaleString()}</p>
+                    <p className="text-[8px] lg:text-[9px] uppercase font-bold text-muted-foreground tracking-widest">PTS</p>
+                  </div>
+                </div>
+              );
+            })}
+
+            {(!leaderboard || leaderboard.length === 0) && (
+              <div className="flex flex-col items-center justify-center py-20 text-center opacity-50">
+                <Trophy className="h-12 w-12 mb-2 text-muted-foreground" />
+                <p className="text-sm font-medium">A arena está vazia...</p>
+                <p className="text-xs">Lance uma prospecção para entrar no jogo!</p>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
