@@ -1,4 +1,5 @@
 import { AppLayout } from "@/components/layout/AppLayout";
+import { useAllPurchaseOrders, useAllMilestones } from "@/hooks/use-construction";
 import { 
   Card, 
   CardContent, 
@@ -12,7 +13,8 @@ import {
   Package,
   Truck,
   DollarSign,
-  AlertTriangle
+  AlertTriangle,
+  TrendingDown
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -26,19 +28,13 @@ import {
   Legend,
   Cell
 } from 'recharts';
+import { format, isAfter, addDays, isBefore } from "date-fns";
 
 export default function PurchaseDashboard() {
-  const supplies = [
-    { obra: 'Residencial Alpha', material: 'Cimento CP II', qtd: '50 sacos', status: 'delivered', date: '10/05' },
-    { obra: 'Residencial Alpha', material: 'Aço CA-50 10mm', qtd: '200kg', status: 'pending', date: '15/05' },
-    { obra: 'Sobrado Lote 45', material: 'Bloco Cerâmico', qtd: '3000 un', status: 'partial', date: '12/05' },
-  ];
+  const { data: orders, isLoading: ordersLoading } = useAllPurchaseOrders();
+  const { data: milestones, isLoading: milestonesLoading } = useAllMilestones();
 
-  const costsData = [
-    { name: 'Alpha', value: 12500 },
-    { name: 'Lote 45', value: 8900 },
-    { name: 'Bela Vista', value: 4500 },
-  ];
+  const isLoading = ordersLoading || milestonesLoading;
 
   const formatCurrency = (val: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -47,14 +43,66 @@ export default function PurchaseDashboard() {
     }).format(val);
   };
 
+  if (isLoading) {
+    return (
+      <AppLayout title="Dashboard de Compras">
+        <div className="h-64 flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </AppLayout>
+    );
+  }
+
+  const openOrders = orders?.filter(o => o.status === 'pending' || o.status === 'approved') || [];
+  const waitingDelivery = orders?.filter(o => o.status === 'ordered' || o.status === 'partially_delivered') || [];
+  
+  const monthlyCost = orders?.filter(o => {
+    const date = new Date(o.created_at);
+    const now = new Date();
+    return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
+  }).reduce((acc, o) => acc + (Number(o.net_amount) || 0), 0) || 0;
+
+  // Cálculo de Saving: Usando discount_amount como proxy ou diferença se budget_amount existir
+  const totalSaving = orders?.reduce((acc, o) => {
+    const discount = Number(o.discount_amount) || 0;
+    const budgetSaving = (o.budget_amount && Number(o.budget_amount) > Number(o.net_amount)) 
+      ? Number(o.budget_amount) - Number(o.net_amount) 
+      : 0;
+    return acc + Math.max(discount, budgetSaving);
+  }, 0) || 0;
+
+  const urgencyOrders = orders?.filter(o => o.status === 'pending' && o.priority === 'urgent').length || 0;
+
+  // Dados para o gráfico de custos por obra
+  const projectsCosts: Record<string, number> = {};
+  orders?.forEach(o => {
+    const projectName = o.project?.name || 'Sem Obra';
+    projectsCosts[projectName] = (projectsCosts[projectName] || 0) + (Number(o.net_amount) || 0);
+  });
+
+  const costsData = Object.entries(projectsCosts).map(([name, value]) => ({ name, value }));
+
+  // Necessidades baseadas em milestones (próximos 15 dias)
+  const nextNeeds = milestones?.filter(m => {
+    const start = new Date(m.start_date);
+    const now = new Date();
+    return isAfter(start, now) && isBefore(start, addDays(now, 15));
+  }).map(m => ({
+    obra: m.project?.name,
+    material: m.name, // Usando o nome da milestone como o que é necessário
+    dataNecessidade: format(new Date(m.start_date), 'dd/MM/yyyy'),
+    deadline: format(addDays(new Date(m.start_date), -7), 'dd/MM/yyyy'), // Deadline 7 dias antes
+    urgency: isBefore(addDays(new Date(m.start_date), -7), new Date())
+  })) || [];
+
   return (
     <AppLayout title="Dashboard de Compras">
       <div className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <StatCard title="Pedidos Abertos" value="14" icon={ShoppingCart} color="text-blue-600" />
-          <StatCard title="Aguardando Entrega" value="6" icon={Truck} color="text-orange-600" />
-          <StatCard title="Custo do Mês" value="R$ 42.5k" icon={DollarSign} color="text-emerald-600" />
-          <StatCard title="Urgências" value="2" icon={AlertTriangle} color="text-red-600" />
+          <StatCard title="Pedidos Abertos" value={openOrders.length} icon={ShoppingCart} color="text-blue-600" />
+          <StatCard title="Aguardando Entrega" value={waitingDelivery.length} icon={Truck} color="text-orange-600" />
+          <StatCard title="Economia (Saving)" value={formatCurrency(totalSaving)} icon={TrendingDown} color="text-emerald-600" />
+          <StatCard title="Urgências" value={urgencyOrders} icon={AlertTriangle} color="text-red-600" />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -62,22 +110,28 @@ export default function PurchaseDashboard() {
           <Card>
             <CardHeader>
               <CardTitle>Custos de Suprimentos por Obra</CardTitle>
-              <CardDescription>Acumulado de pedidos de compra (Mês atual)</CardDescription>
+              <CardDescription>Acumulado de pedidos de compra (Geral)</CardDescription>
             </CardHeader>
             <CardContent className="h-[300px]">
-               <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={costsData} layout="vertical">
-                    <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                    <XAxis type="number" hide />
-                    <YAxis dataKey="name" type="category" width={80} />
-                    <Tooltip formatter={(v: number) => formatCurrency(v)} />
-                    <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={30}>
-                      {costsData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={index === 0 ? '#3b82f6' : '#94a3b8'} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-               </ResponsiveContainer>
+               {costsData.length > 0 ? (
+                 <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={costsData} layout="vertical">
+                      <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                      <XAxis type="number" hide />
+                      <YAxis dataKey="name" type="category" width={100} fontSize={10} />
+                      <Tooltip formatter={(v: number) => formatCurrency(v)} />
+                      <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={30}>
+                        {costsData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={index % 2 === 0 ? '#3b82f6' : '#94a3b8'} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                 </ResponsiveContainer>
+               ) : (
+                 <div className="h-full flex items-center justify-center text-sm text-muted-foreground">
+                    Sem dados de custos
+                 </div>
+               )}
             </CardContent>
           </Card>
 
@@ -89,20 +143,25 @@ export default function PurchaseDashboard() {
             </CardHeader>
             <CardContent>
                <div className="space-y-4">
-                  {supplies.map((s, idx) => (
-                    <div key={idx} className="flex items-center justify-between border-b pb-3 last:border-0 last:pb-0">
+                  {waitingDelivery.slice(0, 5).map((o, idx) => (
+                    <div key={o.id} className="flex items-center justify-between border-b pb-3 last:border-0 last:pb-0">
                        <div className="min-w-0">
-                          <p className="text-xs font-bold truncate">{s.material}</p>
-                          <p className="text-[10px] text-muted-foreground">{s.obra} | {s.qtd}</p>
+                          <p className="text-xs font-bold truncate">{o.description}</p>
+                          <p className="text-[10px] text-muted-foreground">{o.project?.name || 'N/A'} | {formatCurrency(Number(o.net_amount))}</p>
                        </div>
                        <div className="text-right">
-                          <Badge variant="outline" className={`text-[9px] mb-1 ${s.status === 'delivered' ? 'bg-emerald-50 text-emerald-700' : s.status === 'partial' ? 'bg-amber-50 text-amber-700' : ''}`}>
-                             {s.status === 'delivered' ? 'Entregue' : s.status === 'partial' ? 'Parcial' : 'Pendente'}
+                          <Badge variant="outline" className={`text-[9px] mb-1 ${getStatusBadgeClass(o.status)}`}>
+                             {getStatusLabel(o.status)}
                           </Badge>
-                          <p className="text-[9px] text-slate-400">Prev. {s.date}</p>
+                          <p className="text-[9px] text-slate-400">
+                            Prev. {o.delivery_date_planned ? format(new Date(o.delivery_date_planned), 'dd/MM') : 'N/A'}
+                          </p>
                        </div>
                     </div>
                   ))}
+                  {waitingDelivery.length === 0 && (
+                    <p className="text-sm text-muted-foreground text-center py-4">Nenhuma entrega pendente</p>
+                  )}
                </div>
             </CardContent>
           </Card>
@@ -120,30 +179,27 @@ export default function PurchaseDashboard() {
                    <thead>
                       <tr className="text-left text-[10px] uppercase font-bold text-slate-500 border-b">
                         <th className="pb-3 px-2">Obra</th>
-                        <th className="pb-3 px-2">Material</th>
+                        <th className="pb-3 px-2">Material / Etapa</th>
                         <th className="pb-3 px-2 text-right">Data Necessidade</th>
                         <th className="pb-3 px-2 text-right">Deadline Compra</th>
                       </tr>
                    </thead>
                    <tbody className="divide-y text-xs">
-                      <tr>
-                        <td className="py-3 px-2 font-medium">Residencial Alpha</td>
-                        <td className="py-3 px-2">Concreto Usinado (20m3)</td>
-                        <td className="py-3 px-2 text-right">25/05/2026</td>
-                        <td className="py-3 px-2 text-right font-bold text-orange-600">18/05/2026</td>
-                      </tr>
-                      <tr>
-                        <td className="py-3 px-2 font-medium">Residencial Alpha</td>
-                        <td className="py-3 px-2">Madeira para Caixaria</td>
-                        <td className="py-3 px-2 text-right">20/05/2026</td>
-                        <td className="py-3 px-2 text-right font-bold text-red-600">IMEDIATO</td>
-                      </tr>
-                      <tr>
-                        <td className="py-3 px-2 font-medium">Sobrado Lote 45</td>
-                        <td className="py-3 px-2">Tubos e Conexões Tigre</td>
-                        <td className="py-3 px-2 text-right">02/06/2026</td>
-                        <td className="py-3 px-2 text-right text-emerald-600">25/05/2026</td>
-                      </tr>
+                      {nextNeeds.map((need, idx) => (
+                        <tr key={idx}>
+                          <td className="py-3 px-2 font-medium">{need.obra}</td>
+                          <td className="py-3 px-2">{need.material}</td>
+                          <td className="py-3 px-2 text-right">{need.dataNecessidade}</td>
+                          <td className={`py-3 px-2 text-right font-bold ${need.urgency ? 'text-red-600' : 'text-orange-600'}`}>
+                            {need.urgency ? 'URGENTE' : need.deadline}
+                          </td>
+                        </tr>
+                      ))}
+                      {nextNeeds.length === 0 && (
+                        <tr>
+                          <td colSpan={4} className="text-sm text-muted-foreground text-center py-8">Nenhuma necessidade imediata identificada</td>
+                        </tr>
+                      )}
                    </tbody>
                 </table>
              </div>
@@ -170,4 +226,25 @@ function StatCard({ title, value, icon: Icon, color }: any) {
       </CardContent>
     </Card>
   );
+}
+
+function getStatusLabel(status: string) {
+  const labels: Record<string, string> = {
+    pending: 'Pendente',
+    approved: 'Aprovado',
+    ordered: 'Pedido Realizado',
+    partially_delivered: 'Parcial',
+    delivered: 'Entregue',
+    cancelled: 'Cancelado'
+  };
+  return labels[status] || status;
+}
+
+function getStatusBadgeClass(status: string) {
+  switch (status) {
+    case 'delivered': return 'bg-emerald-50 text-emerald-700';
+    case 'partially_delivered': return 'bg-amber-50 text-amber-700';
+    case 'ordered': return 'bg-blue-50 text-blue-700';
+    default: return 'bg-slate-50 text-slate-600';
+  }
 }
