@@ -49,7 +49,7 @@ export function RecentActivitiesTable() {
     queryFn: async () => {
       if (!user?.id) return [];
       const { data, error } = await supabase
-        .from('gamification_activity_logs' as any)
+        .from('gamification_events')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
