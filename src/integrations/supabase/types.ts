@@ -6154,6 +6154,75 @@ export type Database = {
           },
         ]
       }
+      stage_operational_configs: {
+        Row: {
+          approval_flow: Json | null
+          automatic_notifications: Json | null
+          automatic_operational_requests: Json | null
+          automatic_tasks: Json | null
+          checklist_template: Json | null
+          created_at: string | null
+          dashboard_destination: string | null
+          id: string
+          operation_context: string
+          organization_id: string
+          responsible_sector: string | null
+          sla_hours: number | null
+          stage_id: string
+          updated_at: string | null
+          visibility_rules: Json | null
+        }
+        Insert: {
+          approval_flow?: Json | null
+          automatic_notifications?: Json | null
+          automatic_operational_requests?: Json | null
+          automatic_tasks?: Json | null
+          checklist_template?: Json | null
+          created_at?: string | null
+          dashboard_destination?: string | null
+          id?: string
+          operation_context: string
+          organization_id: string
+          responsible_sector?: string | null
+          sla_hours?: number | null
+          stage_id: string
+          updated_at?: string | null
+          visibility_rules?: Json | null
+        }
+        Update: {
+          approval_flow?: Json | null
+          automatic_notifications?: Json | null
+          automatic_operational_requests?: Json | null
+          automatic_tasks?: Json | null
+          checklist_template?: Json | null
+          created_at?: string | null
+          dashboard_destination?: string | null
+          id?: string
+          operation_context?: string
+          organization_id?: string
+          responsible_sector?: string | null
+          sla_hours?: number | null
+          stage_id?: string
+          updated_at?: string | null
+          visibility_rules?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stage_operational_configs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stage_operational_configs_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "stages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stages: {
         Row: {
           color: string | null
