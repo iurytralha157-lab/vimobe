@@ -64,9 +64,14 @@ export const ptBR = {
     summary: 'Geral',
     campaigns: 'Campanhas',
     engineering: 'Engenharia',
-    construction: 'Obras',
+    obras: 'Obras',
+    construction: 'Obras em Andamento',
     cockpit: 'Cockpit Operacional',
     operationalMapping: 'Mapeamento Operacional',
+    queues: 'Filas Operacionais',
+    overview: 'Visão Geral',
+    purchase: 'Compras',
+    architecture: 'Arquitetura',
   },
 
   // Settings
