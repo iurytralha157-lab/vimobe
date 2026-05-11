@@ -780,14 +780,21 @@ export function LeadDetailDialog({
     if (newStatus === 'won') {
       const valorInteresse = lead.valor_interesse || 0;
 
+      if (!lead.is_own_resource) {
+        toast.warning('Confirme se o cliente possui recurso próprio', {
+          description: 'A regra de fechamento exige a verificação de recurso próprio para finalizar o contrato.',
+          duration: 6000,
+        });
+      }
+
       if (valorInteresse <= 0) {
-        // Show warning but allow to proceed
         toast.warning('Valor de interesse não preenchido', {
           description: 'Recomendamos preencher o valor antes de marcar como ganho para gerar comissões automaticamente.',
           duration: 6000,
         });
       }
     }
+
 
     await dealStatusChange.mutateAsync({
       leadId: lead.id,
