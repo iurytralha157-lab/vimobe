@@ -2327,7 +2327,18 @@ export function LeadDetailDialog({
                               </Select>
                             </div>
                           </div>
+                          <div className="flex items-center space-x-2 pt-2">
+                            <Checkbox 
+                              id="is_own_resource_edit" 
+                              checked={editForm.is_own_resource}
+                              onCheckedChange={(checked) => setEditForm({ ...editForm, is_own_resource: !!checked })}
+                            />
+                            <Label htmlFor="is_own_resource_edit" className="text-xs font-medium cursor-pointer">
+                              Possui Recurso Próprio para Fechamento
+                            </Label>
+                          </div>
                         </div>
+
                       </div>
                     ) : (
                       <div className="space-y-3">
