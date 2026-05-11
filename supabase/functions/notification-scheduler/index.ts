@@ -87,10 +87,10 @@ Deno.serve(async (req) => {
             let content = "";
             
             if (interval.minutes === 0) {
-              title = "🚀 Hora do Compromisso!";
+              title = "📍 Início de Compromisso";
               content = `Seu compromisso "${event.title}" está começando agora (${formattedTime}). ${reminderTag}`;
             } else {
-              title = `⏰ Lembrete: ${interval.minutes} min`;
+              title = `⏱️ Lembrete: ${interval.minutes} min`;
               content = `Em ${interval.minutes} minutos: ${event.title} às ${formattedTime}. ${reminderTag}`;
             }
 
@@ -127,13 +127,16 @@ Deno.serve(async (req) => {
           if (interval.target === 'lead' && event.lead?.phone) {
             let message = "";
             const leadName = event.lead.name || "Cliente";
+            const eventTitle = event.title.toLowerCase();
+            const isVisit = eventTitle.includes('visita') || event.event_type === 'visit';
+            const actionLabel = isVisit ? "nossa visita" : "nosso compromisso";
             
             if (interval.minutes === 60) {
-              message = `Olá ${leadName}, confirmando nosso compromisso agendado: *${event.title}* hoje às *${formattedTime}*. Até breve!`;
+              message = `Olá ${leadName}, tudo bem? Confirmando ${actionLabel} agendado para hoje às *${formattedTime}*. Até breve!`;
             } else if (interval.minutes === 30) {
-              message = `Olá ${leadName}, passando para confirmar nossa reunião em 30 minutos: *${event.title}*. Nos falamos em breve!`;
+              message = `Oi ${leadName}, confirmando ${actionLabel} em 30 minutos, às *${formattedTime}*. Já estou me preparando por aqui.`;
             } else if (interval.minutes === 10) {
-              message = `Oi ${leadName}, estamos a 10 minutos do nosso compromisso: *${event.title}*. Tudo pronto por aqui!`;
+              message = `Olá ${leadName}, em 10 minutos iniciaremos ${actionLabel} (*${formattedTime}*). Nos falamos em breve!`;
             }
 
             if (message) {
