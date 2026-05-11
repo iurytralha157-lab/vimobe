@@ -7,7 +7,9 @@ const corsHeaders = {
 
 const REMINDER_INTERVALS = [
   { minutes: 60, type: 'reminder', target: 'lead' },
+  { minutes: 30, type: 'reminder', target: 'lead' },
   { minutes: 30, type: 'reminder', target: 'user' },
+  { minutes: 15, type: 'reminder', target: 'user' },
   { minutes: 10, type: 'reminder', target: 'user' },
   { minutes: 10, type: 'arrival', target: 'lead' },
   { minutes: 5, type: 'reminder', target: 'user' },
