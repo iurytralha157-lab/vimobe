@@ -64,15 +64,15 @@ export function GamificationSettings() {
     queryKey: ['gamification-rules-admin', organization?.id],
     queryFn: async () => {
       if (!organization?.id) return [];
-      const { data, error } = await supabase
-        .from('gamification_rules' as any)
+      const { data, error } = await (supabase as any)
+        .from('gamification_rules')
         .select('*')
         .eq('organization_id', organization.id);
       
       if (error) throw error;
       
       // If some default rules are missing, we'll merge them for display
-      const existingTypes = new Set(data?.map(r => r.action_type));
+      const existingTypes = new Set(data?.map((r: any) => r.action_type));
       const missingRules = DEFAULT_RULES.filter(dr => !existingTypes.has(dr.action_type));
       
       return [...(data || []), ...missingRules.map(mr => ({ ...mr, id: `temp-${mr.action_type}`, is_temp: true }))];
@@ -85,8 +85,8 @@ export function GamificationSettings() {
       const points = editingRules[rule.id] ?? rule.points;
       
       if (rule.is_temp) {
-        const { error } = await supabase
-          .from('gamification_rules' as any)
+        const { error } = await (supabase as any)
+          .from('gamification_rules')
           .insert([{ 
             organization_id: organization?.id, 
             action_type: rule.action_type, 
@@ -95,8 +95,8 @@ export function GamificationSettings() {
           }]);
         if (error) throw error;
       } else {
-        const { error } = await supabase
-          .from('gamification_rules' as any)
+        const { error } = await (supabase as any)
+          .from('gamification_rules')
           .update({ points, is_active: rule.is_active, updated_at: new Date().toISOString() })
           .eq('id', rule.id);
         if (error) throw error;
@@ -112,22 +112,22 @@ export function GamificationSettings() {
   });
 
   const toggleRuleMutation = useMutation({
-    mutationFn: async ({ id, is_active, action_type, points, is_temp }: any) => {
-      if (is_temp) {
-        const { error } = await supabase
-          .from('gamification_rules' as any)
+    mutationFn: async (rule: any) => {
+      if (rule.is_temp) {
+        const { error } = await (supabase as any)
+          .from('gamification_rules')
           .insert([{ 
             organization_id: organization?.id, 
-            action_type, 
-            points, 
-            is_active 
+            action_type: rule.action_type, 
+            points: rule.points, 
+            is_active: !rule.is_active 
           }]);
         if (error) throw error;
       } else {
-        const { error } = await supabase
-          .from('gamification_rules' as any)
-          .update({ is_active, updated_at: new Date().toISOString() })
-          .eq('id', id);
+        const { error } = await (supabase as any)
+          .from('gamification_rules')
+          .update({ is_active: !rule.is_active, updated_at: new Date().toISOString() })
+          .eq('id', rule.id);
         if (error) throw error;
       }
     },
@@ -166,9 +166,9 @@ export function GamificationSettings() {
           </CardHeader>
           <CardContent>
             <div className="grid gap-4">
-              {rules?.map((rule) => {
+              {(rules as any[])?.map((rule) => {
                 const Icon = RULE_ICONS[rule.action_type] || Trophy;
-                const isUpdating = updateRuleMutation.isPending && updateRuleMutation.variables?.id === rule.id;
+                const isUpdating = updateRuleMutation.isPending && (updateRuleMutation.variables as any)?.id === rule.id;
 
                 return (
                   <div key={rule.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg bg-card gap-4">
@@ -195,7 +195,7 @@ export function GamificationSettings() {
                       <div className="flex items-center gap-2 border-l pl-4 h-8">
                         <Switch 
                           checked={rule.is_active} 
-                          onCheckedChange={(checked) => toggleRuleMutation.mutate({ ...rule, is_active: checked })}
+                          onCheckedChange={() => toggleRuleMutation.mutate(rule)}
                           disabled={isUpdating}
                         />
                         <Button 
