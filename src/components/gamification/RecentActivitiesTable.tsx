@@ -35,10 +35,13 @@ const ACTION_LABELS: Record<string, string> = {
   sale_closed: 'Venda',
   prospecting_report: 'Relatório de Prospecção',
   mission_bonus: 'Bônus de Missão',
-  meeting_held: 'Reunião',
+  meeting_held: 'Reunião Realizada',
+  meeting_scheduled: 'Reunião Agendada',
   proposal_sent: 'Proposta',
   contract_signed: 'Contrato Assinado',
-  visit_confirmed: 'Visita Confirmada',
+  visit_confirmed: 'Visita Realizada',
+  lead_created_manual: 'Cadastro de Lead',
+  property_created: 'Captação de Imóvel',
 };
 
 export function RecentActivitiesTable() {
