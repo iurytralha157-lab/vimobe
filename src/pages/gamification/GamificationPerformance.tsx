@@ -7,8 +7,6 @@ import {
   CartesianGrid, 
   Tooltip, 
   ResponsiveContainer,
-  LineChart,
-  Line,
   AreaChart,
   Area
 } from "recharts";
@@ -20,20 +18,89 @@ import {
   Clock, 
   CheckCircle2,
   ArrowUpRight,
-  ArrowDownRight
+  Loader2
 } from "lucide-react";
-
-const data = [
-  { name: 'Seg', pontos: 400, acoes: 24 },
-  { name: 'Ter', pontos: 300, acoes: 18 },
-  { name: 'Qua', pontos: 200, acoes: 12 },
-  { name: 'Qui', pontos: 278, acoes: 20 },
-  { name: 'Sex', pontos: 189, acoes: 15 },
-  { name: 'Sáb', pontos: 239, acoes: 10 },
-  { name: 'Dom', pontos: 349, acoes: 5 },
-];
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { startOfWeek, endOfWeek, eachDayOfInterval, format, isSameDay, subMonths, startOfMonth } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 export default function GamificationPerformance() {
+  const { organization } = useAuth();
+
+  const { data: performanceData, isLoading } = useQuery({
+    queryKey: ['gamification-performance', organization?.id],
+    queryFn: async () => {
+      if (!organization?.id) return null;
+
+      const now = new Date();
+      const startOfThisWeek = startOfWeek(now, { weekStartsOn: 1 });
+      const endOfThisWeek = endOfWeek(now, { weekStartsOn: 1 });
+      const startOfLastMonth = startOfMonth(subMonths(now, 1));
+
+      // Fetch all events since last month to compare
+      const { data: events, error } = await supabase
+        .from('gamification_events')
+        .select('*')
+        .eq('organization_id', organization.id)
+        .gte('created_at', startOfLastMonth.toISOString());
+
+      if (error) throw error;
+
+      // Weekly chart data
+      const days = eachDayOfInterval({ start: startOfThisWeek, end: endOfThisWeek });
+      const chartData = days.map(day => {
+        const dayEvents = events.filter(e => isSameDay(new Date(e.created_at), day));
+        return {
+          name: format(day, 'eee', { locale: ptBR }),
+          pontos: dayEvents.reduce((acc, curr) => acc + (curr.points_earned || 0), 0),
+          acoes: dayEvents.length
+        };
+      });
+
+      // Metrics
+      const thisMonthEvents = events.filter(e => new Date(e.created_at) >= startOfMonth(now));
+      const lastMonthEvents = events.filter(e => new Date(e.created_at) >= startOfLastMonth && new Date(e.created_at) < startOfMonth(now));
+
+      const thisMonthPoints = thisMonthEvents.reduce((acc, curr) => acc + (curr.points_earned || 0), 0);
+      const lastMonthPoints = lastMonthEvents.reduce((acc, curr) => acc + (curr.points_earned || 0), 0);
+      
+      const growth = lastMonthPoints === 0 ? 100 : Math.round(((thisMonthPoints - lastMonthPoints) / lastMonthPoints) * 100);
+
+      const avgActionsPerDay = Math.round((thisMonthEvents.length / (now.getDate())) * 10) / 10;
+
+      return {
+        chartData,
+        metrics: {
+          points: thisMonthPoints,
+          growth,
+          avgActionsPerDay,
+          totalActions: thisMonthEvents.length,
+          efficiency: 87, // Mock efficiency for now as it needs complex calc
+          consistency: 94 // Mock consistency
+        },
+        distribution: [
+          { label: 'Ligações', value: thisMonthEvents.filter(e => e.event_type === 'call_made').length },
+          { label: 'Mensagens', value: thisMonthEvents.filter(e => e.event_type === 'message_sent').length },
+          { label: 'Vendas/Leads', value: thisMonthEvents.filter(e => ['sale_closed', 'lead_created_manual'].includes(e.event_type)).length },
+        ]
+      };
+    },
+    enabled: !!organization?.id
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center p-20">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  const metrics = performanceData?.metrics;
+  const chartData = performanceData?.chartData;
+
   return (
     <div className="space-y-6 animate-in fade-in duration-700">
       <div className="space-y-1">
@@ -47,7 +114,7 @@ export default function GamificationPerformance() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Eficiência</p>
-                <h3 className="text-2xl font-bold">87%</h3>
+                <h3 className="text-2xl font-bold">{metrics?.efficiency}%</h3>
                 <p className="text-[10px] text-emerald-600 flex items-center gap-1 mt-1">
                   <ArrowUpRight className="h-3 w-3" /> +12% vs mês ant.
                 </p>
@@ -64,9 +131,9 @@ export default function GamificationPerformance() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs font-medium text-blue-600 dark:text-blue-400 uppercase tracking-wider">Ações/Dia</p>
-                <h3 className="text-2xl font-bold">42.5</h3>
+                <h3 className="text-2xl font-bold">{metrics?.avgActionsPerDay}</h3>
                 <p className="text-[10px] text-blue-600 flex items-center gap-1 mt-1">
-                  <ArrowUpRight className="h-3 w-3" /> +5% vs mês ant.
+                  <ArrowUpRight className="h-3 w-3" /> {metrics?.growth > 0 ? '+' : ''}{metrics?.growth}% vs mês ant.
                 </p>
               </div>
               <div className="bg-blue-500 p-2 rounded-lg">
@@ -80,10 +147,10 @@ export default function GamificationPerformance() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-medium text-orange-600 dark:text-orange-400 uppercase tracking-wider">Conversão</p>
-                <h3 className="text-2xl font-bold">14.2%</h3>
+                <p className="text-xs font-medium text-orange-600 dark:text-orange-400 uppercase tracking-wider">Total Pontos</p>
+                <h3 className="text-2xl font-bold">{metrics?.points.toLocaleString()}</h3>
                 <p className="text-[10px] text-orange-600 flex items-center gap-1 mt-1">
-                  <ArrowUpRight className="h-3 w-3" /> +2.1% vs mês ant.
+                  <ArrowUpRight className="h-3 w-3" /> {metrics?.growth > 0 ? '+' : ''}{metrics?.growth}% vs mês ant.
                 </p>
               </div>
               <div className="bg-orange-500 p-2 rounded-lg">
@@ -98,7 +165,7 @@ export default function GamificationPerformance() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs font-medium text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">Consistência</p>
-                <h3 className="text-2xl font-bold">94%</h3>
+                <h3 className="text-2xl font-bold">{metrics?.consistency}%</h3>
                 <p className="text-[10px] text-indigo-600 flex items-center gap-1 mt-1">
                   <ArrowUpRight className="h-3 w-3" /> Estável
                 </p>
@@ -115,14 +182,14 @@ export default function GamificationPerformance() {
         <Card>
           <CardHeader>
             <CardTitle className="text-sm font-bold flex items-center gap-2">
-              <BarChart className="h-4 w-4 text-primary" />
+              <TrendingUp className="h-4 w-4 text-primary" />
               Evolução de Pontos (Semana)
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="h-[300px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={data}>
+                <AreaChart data={chartData}>
                   <defs>
                     <linearGradient id="colorPoints" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#6366f1" stopOpacity={0.1}/>
@@ -152,7 +219,7 @@ export default function GamificationPerformance() {
           <CardContent>
             <div className="h-[300px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={data}>
+                <BarChart data={chartData}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 12}} />
                   <YAxis axisLine={false} tickLine={false} tick={{fontSize: 12}} />
@@ -172,26 +239,29 @@ export default function GamificationPerformance() {
         <CardHeader>
           <CardTitle className="text-sm font-bold flex items-center gap-2">
             <Users className="h-4 w-4 text-primary" />
-            Distribuição por Departamento
+            Distribuição por Atividade (Mês Atual)
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {[
-              { label: 'Vendas', value: 65, color: 'bg-indigo-500' },
-              { label: 'Prospecção', value: 25, color: 'bg-emerald-500' },
-              { label: 'Pós-Venda', value: 10, color: 'bg-orange-500' },
-            ].map((item) => (
-              <div key={item.label} className="space-y-2">
-                <div className="flex justify-between text-xs font-bold uppercase tracking-wider">
-                  <span>{item.label}</span>
-                  <span>{item.value}%</span>
+            {performanceData?.distribution.map((item) => {
+              const total = performanceData.metrics.totalActions || 1;
+              const percentage = Math.round((item.value / total) * 100);
+              const color = item.label === 'Ligações' ? 'bg-indigo-500' : item.label === 'Mensagens' ? 'bg-emerald-500' : 'bg-orange-500';
+
+              return (
+                <div key={item.label} className="space-y-2">
+                  <div className="flex justify-between text-xs font-bold uppercase tracking-wider">
+                    <span>{item.label}</span>
+                    <span>{percentage}%</span>
+                  </div>
+                  <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
+                    <div className={`h-full ${color}`} style={{ width: `${percentage}%` }} />
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">{item.value} ações registradas</p>
                 </div>
-                <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
-                  <div className={`h-full ${item.color}`} style={{ width: `${item.value}%` }} />
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </CardContent>
       </Card>

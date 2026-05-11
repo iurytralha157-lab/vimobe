@@ -18,7 +18,9 @@ import {
   BadgeDollarSign,
   Loader2,
   UserPlus,
-  Home
+  Home,
+  FileCheck,
+  ClipboardCheck
 } from 'lucide-react';
 
 const RULE_ICONS: Record<string, any> = {
@@ -29,6 +31,9 @@ const RULE_ICONS: Record<string, any> = {
   sale_closed: BadgeDollarSign,
   lead_created_manual: UserPlus,
   property_created: Home,
+  proposal_sent: MessageSquare,
+  contract_signed: FileCheck,
+  visit_confirmed: ClipboardCheck,
 };
 
 const RULE_LABELS: Record<string, string> = {
@@ -39,7 +44,16 @@ const RULE_LABELS: Record<string, string> = {
   sale_closed: 'Venda Concluída',
   lead_created_manual: 'Cadastro Manual de Lead',
   property_created: 'Captação de Imóvel',
+  proposal_sent: 'Proposta Enviada',
+  contract_signed: 'Contrato Assinado',
+  visit_confirmed: 'Visita Confirmada',
 };
+
+const DEFAULT_RULES = Object.keys(RULE_LABELS).map(type => ({
+  action_type: type,
+  points: 10,
+  is_active: true
+}));
 
 export function GamificationSettings() {
   const { organization } = useAuth();
@@ -50,25 +64,43 @@ export function GamificationSettings() {
     queryKey: ['gamification-rules-admin', organization?.id],
     queryFn: async () => {
       if (!organization?.id) return [];
-      const { data, error } = await supabase
-        .from('gamification_rules' as any)
+      const { data, error } = await (supabase as any)
+        .from('gamification_rules')
         .select('*')
         .eq('organization_id', organization.id);
       
       if (error) throw error;
-      return data as any[];
+      
+      // If some default rules are missing, we'll merge them for display
+      const existingTypes = new Set(data?.map((r: any) => r.action_type));
+      const missingRules = DEFAULT_RULES.filter(dr => !existingTypes.has(dr.action_type));
+      
+      return [...(data || []), ...missingRules.map(mr => ({ ...mr, id: `temp-${mr.action_type}`, is_temp: true }))];
     },
     enabled: !!organization?.id,
   });
 
   const updateRuleMutation = useMutation({
-    mutationFn: async ({ id, points, is_active }: { id: string, points: number, is_active: boolean }) => {
-      const { error } = await supabase
-        .from('gamification_rules' as any)
-        .update({ points, is_active, updated_at: new Date().toISOString() })
-        .eq('id', id);
+    mutationFn: async (rule: any) => {
+      const points = editingRules[rule.id] ?? rule.points;
       
-      if (error) throw error;
+      if (rule.is_temp) {
+        const { error } = await (supabase as any)
+          .from('gamification_rules')
+          .insert([{ 
+            organization_id: organization?.id, 
+            action_type: rule.action_type, 
+            points, 
+            is_active: true 
+          }]);
+        if (error) throw error;
+      } else {
+        const { error } = await (supabase as any)
+          .from('gamification_rules')
+          .update({ points, is_active: rule.is_active, updated_at: new Date().toISOString() })
+          .eq('id', rule.id);
+        if (error) throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['gamification-rules-admin'] });
@@ -79,28 +111,36 @@ export function GamificationSettings() {
     }
   });
 
+  const toggleRuleMutation = useMutation({
+    mutationFn: async (rule: any) => {
+      if (rule.is_temp) {
+        const { error } = await (supabase as any)
+          .from('gamification_rules')
+          .insert([{ 
+            organization_id: organization?.id, 
+            action_type: rule.action_type, 
+            points: rule.points, 
+            is_active: !rule.is_active 
+          }]);
+        if (error) throw error;
+      } else {
+        const { error } = await (supabase as any)
+          .from('gamification_rules')
+          .update({ is_active: !rule.is_active, updated_at: new Date().toISOString() })
+          .eq('id', rule.id);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['gamification-rules-admin'] });
+    }
+  });
+
   const handlePointChange = (ruleId: string, value: string) => {
     setEditingRules(prev => ({
       ...prev,
       [ruleId]: parseInt(value) || 0
     }));
-  };
-
-  const handleSave = (rule: any) => {
-    const points = editingRules[rule.id] ?? rule.points;
-    updateRuleMutation.mutate({ 
-      id: rule.id, 
-      points, 
-      is_active: rule.is_active 
-    });
-  };
-
-  const handleToggle = (rule: any, active: boolean) => {
-    updateRuleMutation.mutate({ 
-      id: rule.id, 
-      points: editingRules[rule.id] ?? rule.points, 
-      is_active: active 
-    });
   };
 
   if (isLoading) {
@@ -126,9 +166,9 @@ export function GamificationSettings() {
           </CardHeader>
           <CardContent>
             <div className="grid gap-4">
-              {rules?.map((rule) => {
+              {(rules as any[])?.map((rule) => {
                 const Icon = RULE_ICONS[rule.action_type] || Trophy;
-                const isUpdating = updateRuleMutation.isPending && updateRuleMutation.variables?.id === rule.id;
+                const isUpdating = updateRuleMutation.isPending && (updateRuleMutation.variables as any)?.id === rule.id;
 
                 return (
                   <div key={rule.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg bg-card gap-4">
@@ -145,7 +185,7 @@ export function GamificationSettings() {
                       <div className="flex items-center gap-2">
                         <Input
                           type="number"
-                          className="w-16 h-8 text-sm"
+                          className="w-20 h-8 text-sm"
                           defaultValue={rule.points}
                           onChange={(e) => handlePointChange(rule.id, e.target.value)}
                         />
@@ -155,15 +195,15 @@ export function GamificationSettings() {
                       <div className="flex items-center gap-2 border-l pl-4 h-8">
                         <Switch 
                           checked={rule.is_active} 
-                          onCheckedChange={(checked) => handleToggle(rule, checked)}
+                          onCheckedChange={() => toggleRuleMutation.mutate(rule)}
                           disabled={isUpdating}
                         />
                         <Button 
                           size="sm" 
                           variant="ghost"
                           className="h-8 w-8 p-0"
-                          onClick={() => handleSave(rule)}
-                          disabled={isUpdating || editingRules[rule.id] === undefined}
+                          onClick={() => updateRuleMutation.mutate(rule)}
+                          disabled={isUpdating || (editingRules[rule.id] === undefined && !rule.is_temp)}
                         >
                           {isUpdating ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-4 w-4" />}
                         </Button>
@@ -190,13 +230,15 @@ export function GamificationSettings() {
         
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Missões Automáticas</CardTitle>
-            <CardDescription className="text-[10px]">As missões usam os pontos base definidos ao lado.</CardDescription>
+            <CardTitle className="text-sm">Configuração Rápida</CardTitle>
           </CardHeader>
-          <CardContent>
-            <p className="text-xs text-muted-foreground text-center py-4 italic">
-              Em breve: Editor de missões personalizadas.
+          <CardContent className="space-y-4">
+            <p className="text-xs text-muted-foreground">
+              Pontos salvos aqui são aplicados retroativamente se o sistema recalcular os rankings.
             </p>
+            <div className="p-3 bg-muted rounded-lg text-xs font-medium">
+              Ações como "Venda Concluída" devem ter pontuação alta para refletir sua importância.
+            </div>
           </CardContent>
         </Card>
       </div>

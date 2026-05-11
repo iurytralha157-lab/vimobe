@@ -13,15 +13,25 @@ import {
   Phone,
   MessageSquare,
   BadgeDollarSign,
-  Target
+  Target,
+  Calendar,
+  ChevronDown,
+  Filter
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { useEffect, useState } from 'react';
 import confetti from 'canvas-confetti';
 import { toast } from 'sonner';
-import { useLanguage } from '@/contexts/LanguageContext';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { startOfMonth, startOfWeek, endOfMonth, endOfWeek, format } from 'date-fns';
 
 interface LeaderboardUser {
   id: string;
@@ -44,46 +54,70 @@ function getInitials(name: string): string {
 
 export default function GamificationRanking() {
   const { organization } = useAuth();
-  const { t } = useLanguage();
   const [prevTopUserId, setPrevTopUserId] = useState<string | null>(null);
   const [rankingType, setRankingType] = useState('general');
-  const [period, setPeriod] = useState('month');
+  const [period, setPeriod] = useState('month'); // 'week' or 'month'
 
   const { data: leaderboard, isLoading, refetch } = useQuery({
     queryKey: ['gamification-leaderboard-full', organization?.id, rankingType, period],
     queryFn: async () => {
       if (!organization?.id) return [];
       
-      let query = (supabase as any)
-        .from('user_gamification_stats')
-        .select('user_id, total_points')
-        .eq('organization_id', organization.id);
-
-      const { data: statsData, error: statsError } = await query;
+      let startDate: Date;
+      const now = new Date();
       
-      if (statsError) throw statsError;
+      if (period === 'week') {
+        startDate = startOfWeek(now, { weekStartsOn: 1 }); // Monday
+      } else {
+        startDate = startOfMonth(now);
+      }
 
-      const { data: userData, error: userError } = await (supabase as any)
-        .from('users')
+      // Query events instead of stats for filtered/period points
+      let query = supabase
+        .from('gamification_events')
+        .select('user_id, points_earned, event_type')
+        .eq('organization_id', organization.id)
+        .gte('created_at', startDate.toISOString());
+
+      if (rankingType !== 'general') {
+        const typeMap: Record<string, string[]> = {
+          calls: ['call_made'],
+          messages: ['message_sent'],
+          sales: ['sale_closed'],
+          leads: ['lead_created_manual', 'contact_made']
+        };
+        query = query.in('event_type', typeMap[rankingType] || []);
+      }
+
+      const { data: events, error: eventsError } = await query;
+      
+      if (eventsError) throw eventsError;
+
+      // Aggregate points by user
+      const pointsByUser: Record<string, number> = {};
+      events?.forEach(event => {
+        pointsByUser[event.user_id] = (pointsByUser[event.user_id] || 0) + (event.points_earned || 0);
+      });
+
+      // Fetch user profiles
+      const { data: userData, error: userError } = await supabase
+        .from('users' as any)
         .select('id, name, avatar_url')
         .eq('organization_id', organization.id);
 
       if (userError) throw userError;
 
-      const mergedData = (userData || []).map((user: any) => {
-        const stats = (statsData || []).find((s: any) => s.user_id === user.id);
-        return {
-          id: user.id,
-          user_id: user.id,
-          total_points: stats?.total_points || 0,
-          profiles: {
-            name: user.name,
-            avatar_url: user.avatar_url
-          }
-        };
-      });
+      const mergedData = (userData || []).map((user: any) => ({
+        id: user.id,
+        user_id: user.id,
+        total_points: pointsByUser[user.id] || 0,
+        profiles: {
+          name: user.name,
+          avatar_url: user.avatar_url
+        }
+      }));
 
-      return mergedData.sort((a: any, b: any) => b.total_points - a.total_points) as unknown as LeaderboardUser[];
+      return mergedData.sort((a, b) => b.total_points - a.total_points) as LeaderboardUser[];
     },
     enabled: !!organization?.id,
   });
@@ -93,13 +127,14 @@ export default function GamificationRanking() {
     if (!organization?.id) return;
 
     const channel = supabase
-      .channel('ranking_changes')
+      .channel('ranking_events')
       .on(
         'postgres_changes',
         {
-          event: '*',
+          event: 'INSERT',
           schema: 'public',
-          table: 'user_gamification_stats',
+          table: 'gamification_events',
+          filter: `organization_id=eq.${organization.id}`
         },
         () => {
           refetch();
@@ -114,7 +149,7 @@ export default function GamificationRanking() {
 
   // Effect for celebrations when 1st place changes
   useEffect(() => {
-    if (leaderboard && leaderboard.length > 0) {
+    if (leaderboard && leaderboard.length > 0 && leaderboard[0].total_points > 0) {
       const currentTopUser = leaderboard[0];
       if (prevTopUserId && prevTopUserId !== currentTopUser.user_id) {
         confetti({
@@ -146,42 +181,7 @@ export default function GamificationRanking() {
   return (
     <div className="flex flex-col gap-6 animate-in fade-in duration-700 pb-10">
       
-      {/* HEADER: Filters and Segmented Rankings */}
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center bg-card p-4 rounded-xl border shadow-sm">
-        <div className="md:col-span-8 flex flex-wrap gap-2">
-          <Tabs value={rankingType} onValueChange={setRankingType} className="w-full">
-            <TabsList className="bg-muted/50 w-full justify-start overflow-x-auto h-auto p-1 gap-1">
-              <TabsTrigger value="general" className="gap-2 px-4 py-2">
-                <Trophy className="h-4 w-4" /> Geral
-              </TabsTrigger>
-              <TabsTrigger value="calls" className="gap-2 px-4 py-2">
-                <Phone className="h-4 w-4" /> Ligações
-              </TabsTrigger>
-              <TabsTrigger value="messages" className="gap-2 px-4 py-2">
-                <MessageSquare className="h-4 w-4" /> Mensagens
-              </TabsTrigger>
-              <TabsTrigger value="sales" className="gap-2 px-4 py-2">
-                <BadgeDollarSign className="h-4 w-4" /> Vendas
-              </TabsTrigger>
-              <TabsTrigger value="leads" className="gap-2 px-4 py-2">
-                <Target className="h-4 w-4" /> Leads
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
-        
-        <div className="md:col-span-4 flex justify-end gap-2">
-          <Tabs value={period} onValueChange={setPeriod}>
-            <TabsList className="bg-muted/50">
-              <TabsTrigger value="today" className="text-xs px-3">Hoje</TabsTrigger>
-              <TabsTrigger value="week" className="text-xs px-3">Semana</TabsTrigger>
-              <TabsTrigger value="month" className="text-xs px-3">Mês</TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 h-auto lg:h-[calc(100vh-280px)] min-h-[500px] overflow-visible lg:overflow-hidden">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 h-auto lg:h-[calc(100vh-220px)] min-h-[500px] overflow-visible lg:overflow-hidden">
         
         {/* LEFT SIDE: PODIUM (Arena) */}
         <div className="lg:col-span-8 flex flex-col gap-6 h-full overflow-hidden">
@@ -204,7 +204,6 @@ export default function GamificationRanking() {
 
             {/* Podium Visualization */}
             <div className="flex items-end justify-center gap-4 w-full max-w-2xl relative z-10">
-              
               {/* 2nd Place */}
               {topThree[1] && (
                 <div className="flex flex-col items-center gap-2 lg:gap-4 flex-1">
@@ -276,10 +275,68 @@ export default function GamificationRanking() {
 
         {/* RIGHT SIDE: LIST (The Field) */}
         <div className="lg:col-span-4 flex flex-col overflow-hidden border rounded-2xl bg-card shadow-none h-[500px] lg:h-full">
-          <div className="p-4 lg:p-6 border-b bg-muted/30">
-            <h3 className="text-base lg:text-lg font-bold">
-              Classificação {rankingType === 'general' ? 'Geral' : `de ${rankingType.charAt(0).toUpperCase() + rankingType.slice(1)}`}
-            </h3>
+          <div className="p-4 border-b bg-muted/30 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base lg:text-lg font-bold flex items-center gap-2">
+                Classificação 
+                <span className="text-xs font-normal text-muted-foreground bg-muted px-2 py-0.5 rounded">
+                  {period === 'week' ? 'Semana' : 'Mês'}
+                </span>
+              </h3>
+              
+              <div className="flex items-center gap-1">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="icon" className="h-8 w-8">
+                      <Calendar className="h-4 w-4 text-indigo-600" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => setPeriod('week')} className={cn(period === 'week' && "bg-muted")}>
+                      Semana Atual
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setPeriod('month')} className={cn(period === 'month' && "bg-muted")}>
+                      Mês Atual
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="icon" className="h-8 w-8">
+                      <Filter className="h-4 w-4 text-indigo-600" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => setRankingType('general')} className={cn(rankingType === 'general' && "bg-muted")}>
+                      Geral
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setRankingType('calls')} className={cn(rankingType === 'calls' && "bg-muted")}>
+                      Ligações
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setRankingType('messages')} className={cn(rankingType === 'messages' && "bg-muted")}>
+                      Mensagens
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setRankingType('sales')} className={cn(rankingType === 'sales' && "bg-muted")}>
+                      Vendas
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setRankingType('leads')} className={cn(rankingType === 'leads' && "bg-muted")}>
+                      Leads
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
+
+            <Tabs value={rankingType} onValueChange={setRankingType} className="w-full">
+              <TabsList className="bg-muted/50 w-full justify-start overflow-x-auto h-auto p-1 gap-1">
+                <TabsTrigger value="general" className="text-[10px] px-2 py-1">Geral</TabsTrigger>
+                <TabsTrigger value="calls" className="text-[10px] px-2 py-1">Ligações</TabsTrigger>
+                <TabsTrigger value="messages" className="text-[10px] px-2 py-1">Msgs</TabsTrigger>
+                <TabsTrigger value="sales" className="text-[10px] px-2 py-1">Vendas</TabsTrigger>
+                <TabsTrigger value="leads" className="text-[10px] px-2 py-1">Leads</TabsTrigger>
+              </TabsList>
+            </Tabs>
           </div>
           
           <div className="flex-1 overflow-y-auto p-4 space-y-2 scrollbar-thin scrollbar-thumb-muted-foreground/20 scrollbar-track-transparent">
@@ -320,11 +377,11 @@ export default function GamificationRanking() {
               );
             })}
 
-            {(!leaderboard || leaderboard.length === 0) && (
+            {(!leaderboard || leaderboard.length === 0 || leaderboard.every(u => u.total_points === 0)) && (
               <div className="flex flex-col items-center justify-center py-20 text-center opacity-50">
                 <Trophy className="h-12 w-12 mb-2 text-muted-foreground" />
                 <p className="text-sm font-medium">A arena está vazia...</p>
-                <p className="text-xs">Lance uma prospecção para entrar no jogo!</p>
+                <p className="text-xs">Nenhuma ação registrada neste período.</p>
               </div>
             )}
           </div>
