@@ -62,16 +62,16 @@ export default function PurchaseDashboard() {
     return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
   }).reduce((acc, o) => acc + (Number(o.net_amount) || 0), 0) || 0;
 
-  // Cálculo de Saving: Usando discount_amount como proxy ou diferença se budget_amount existir
+  // Cálculo de Saving: Usando discount_amount como proxy ou diferença entre total e net
   const totalSaving = orders?.reduce((acc, o) => {
     const discount = Number(o.discount_amount) || 0;
-    const budgetSaving = (o.budget_amount && Number(o.budget_amount) > Number(o.net_amount)) 
-      ? Number(o.budget_amount) - Number(o.net_amount) 
+    const diff = (Number(o.total_amount) > Number(o.net_amount)) 
+      ? Number(o.total_amount) - Number(o.net_amount) 
       : 0;
-    return acc + Math.max(discount, budgetSaving);
+    return acc + Math.max(discount, diff);
   }, 0) || 0;
 
-  const urgencyOrders = orders?.filter(o => o.status === 'pending' && o.priority === 'urgent').length || 0;
+  const urgencyOrders = 0; // Campo de prioridade não disponível no momento
 
   // Dados para o gráfico de custos por obra
   const projectsCosts: Record<string, number> = {};
