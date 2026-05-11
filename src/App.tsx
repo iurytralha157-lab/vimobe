@@ -91,7 +91,11 @@ const Checkout = lazy(() => import("./pages/Checkout"));
 // Public site preview (used inside CRM)
 const PreviewSiteWrapper = lazy(() => import("./pages/public/PreviewSiteWrapper"));
 const APIDocs = lazy(() => import("./pages/public/APIDocs"));
-const OperationalDashboard = lazy(() => import("./pages/OperationalDashboard"));
+const ObrasOverview = lazy(() => import("./pages/operational/ObrasOverview"));
+const EngineeringDashboard = lazy(() => import("./pages/engineering/EngineeringDashboard"));
+const ArchitectureDashboard = lazy(() => import("./pages/architecture/ArchitectureDashboard"));
+const PurchaseDashboard = lazy(() => import("./pages/purchase/PurchaseDashboard"));
+const OperationalQueues = lazy(() => import("./pages/operational/OperationalQueues"));
 const StageOperationalManagement = lazy(() => import("./pages/StageOperationalManagement"));
 const ExecutiveDRE = lazy(() => import("./pages/financial/ExecutiveDRE"));
 
@@ -271,12 +275,17 @@ function AppRoutes() {
             <Route path="/financeiro/dre" element={<ProtectedRoute><AdminRoute><FinancialDRE /></AdminRoute></ProtectedRoute>} />
             <Route path="/financeiro/dre-executivo" element={<ProtectedRoute><AdminRoute><ExecutiveDRE /></AdminRoute></ProtectedRoute>} />
 
-            {/* Engineering Module */}
-            <Route path="/engenharia/obras" element={<ProtectedRoute><PermissionGuard permission="module_engineering"><ConstructionProjects /></PermissionGuard></ProtectedRoute>} />
-            <Route path="/engenharia/obras/nova" element={<ProtectedRoute><PermissionGuard permission="module_engineering"><ConstructionProjectForm /></PermissionGuard></ProtectedRoute>} />
-            <Route path="/engenharia/obras/:id" element={<ProtectedRoute><PermissionGuard permission="module_engineering"><ConstructionProjectDetail /></PermissionGuard></ProtectedRoute>} />
-            <Route path="/engenharia/obras/:id/editar" element={<ProtectedRoute><PermissionGuard permission="module_engineering"><ConstructionProjectForm /></PermissionGuard></ProtectedRoute>} />
-            <Route path="/engenharia/cockpit" element={<ProtectedRoute><OperationalDashboard /></ProtectedRoute>} />
+            {/* Obras Module */}
+            <Route path="/obras/obras" element={<ProtectedRoute><PermissionGuard permission="module_engineering"><ConstructionProjects /></PermissionGuard></ProtectedRoute>} />
+            <Route path="/obras/obras/nova" element={<ProtectedRoute><PermissionGuard permission="module_engineering"><ConstructionProjectForm /></PermissionGuard></ProtectedRoute>} />
+            <Route path="/obras/obras/:id" element={<ProtectedRoute><PermissionGuard permission="module_engineering"><ConstructionProjectDetail /></PermissionGuard></ProtectedRoute>} />
+            <Route path="/obras/obras/:id/editar" element={<ProtectedRoute><PermissionGuard permission="module_engineering"><ConstructionProjectForm /></PermissionGuard></ProtectedRoute>} />
+            <Route path="/obras/overview" element={<ProtectedRoute><ObrasOverview /></ProtectedRoute>} />
+            <Route path="/obras/engenharia" element={<ProtectedRoute><EngineeringDashboard /></ProtectedRoute>} />
+            <Route path="/obras/arquitetura" element={<ProtectedRoute><ArchitectureDashboard /></ProtectedRoute>} />
+            <Route path="/obras/compras" element={<ProtectedRoute><PurchaseDashboard /></ProtectedRoute>} />
+            <Route path="/obras/financeiro" element={<ProtectedRoute><ExecutiveDRE /></ProtectedRoute>} />
+            <Route path="/obras/filas" element={<ProtectedRoute><OperationalQueues /></ProtectedRoute>} />
 
             {/* Telecom Module */}
             <Route path="/plans" element={<ProtectedRoute><ServicePlans /></ProtectedRoute>} />

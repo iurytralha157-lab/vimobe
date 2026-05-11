@@ -1,4 +1,4 @@
-import { LayoutDashboard, Kanban, Building2, Shuffle, Shield, Settings, HelpCircle, ChevronDown, ChevronLeft, ChevronRight, Users, MessageSquare, Calendar, DollarSign, FileText, Receipt, TrendingUp, BarChart3, Zap, Package, MapPin, UserCheck, Globe, PieChart, Trophy, History as HistoryIcon, CreditCard, HardHat, Workflow } from 'lucide-react';
+import { LayoutDashboard, Kanban, Building2, Shuffle, Shield, Settings, HelpCircle, ChevronDown, ChevronLeft, ChevronRight, Users, MessageSquare, Calendar, DollarSign, FileText, Receipt, TrendingUp, BarChart3, Zap, Package, MapPin, UserCheck, Globe, PieChart, Trophy, History as HistoryIcon, CreditCard, HardHat, Workflow, Compass, ShoppingCart, Inbox } from 'lucide-react';
 import { WhatsAppIcon } from '@/components/icons/WhatsAppIcon';
 import { AnimatedIcon } from '@/components/icons/AnimatedIcon';
 import GLOBE_JSON from '@/components/icons/globe-icon.json';
@@ -187,19 +187,40 @@ const allNavItems: NavItem[] = [{
   module: 'automations'
 }, {
   icon: HardHat,
-  labelKey: 'engineering',
-  path: '/engenharia/obras',
+  labelKey: 'obras',
+  path: '/obras',
   module: 'engineering',
   children: [{
+    icon: LayoutDashboard,
+    labelKey: 'overview',
+    path: '/obras/overview'
+  }, {
     icon: Building2,
     labelKey: 'construction',
-    path: '/engenharia/obras'
+    path: '/obras/obras'
   }, {
-    icon: LayoutDashboard,
-    labelKey: 'cockpit',
-    path: '/engenharia/cockpit'
+    icon: HardHat,
+    labelKey: 'engineering',
+    path: '/obras/engenharia'
+  }, {
+    icon: Compass,
+    labelKey: 'architecture',
+    path: '/obras/arquitetura'
+  }, {
+    icon: ShoppingCart,
+    labelKey: 'purchase',
+    path: '/obras/compras'
+  }, {
+    icon: DollarSign,
+    labelKey: 'financial',
+    path: '/obras/financeiro'
+  }, {
+    icon: Inbox,
+    labelKey: 'queues',
+    path: '/obras/filas'
   }]
 }];
+
 const bottomItems: NavItem[] = [{
   icon: Globe,
   labelKey: 'mySite',
