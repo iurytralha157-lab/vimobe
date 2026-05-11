@@ -174,6 +174,15 @@ export default function ConstructionProjectForm() {
                 </Select>
               </div>
 
+              <div className="space-y-2">
+                <Label htmlFor="city_hall_approval_date">Data de Aprovação Prefeitura (Arquitetura)</Label>
+                <Input 
+                  id="city_hall_approval_date" 
+                  type="date" 
+                  {...register("city_hall_approval_date")}
+                />
+              </div>
+
 
               <div className="space-y-2">
                 <Label htmlFor="description">Descrição / Escopo</Label>
