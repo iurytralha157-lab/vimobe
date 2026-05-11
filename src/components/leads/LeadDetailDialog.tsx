@@ -120,7 +120,8 @@ const activityTypeIcons: Record<string, typeof Phone> = {
   stage_change: ChevronRight,
   assignee_changed: UserCheck,
   status_change: Target,
-  lead_reentry: RotateCcw
+  lead_reentry: RotateCcw,
+  proposal_sent: FileText
 };
 interface LeadDetailDialogProps {
   lead: any;
