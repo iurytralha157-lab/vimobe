@@ -161,7 +161,16 @@ const allNavItems: NavItem[] = [{
   labelKey: 'crmManagement',
   path: '/crm/management',
   module: 'crm',
-  adminOnly: true
+  adminOnly: true,
+  children: [{
+    icon: Shuffle,
+    labelKey: 'crmManagement',
+    path: '/crm/management'
+  }, {
+    icon: Workflow,
+    labelKey: 'operationalMapping',
+    path: '/crm/management/operacional'
+  }]
 }, {
   icon: Calendar,
   labelKey: 'schedule',
