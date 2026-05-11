@@ -39,11 +39,14 @@ export default function ConstructionProjectForm() {
       description: "",
       property_id: "",
       status: "planned",
+      project_type: "construction",
       budget_estimated: 0,
       start_date_planned: "",
-      end_date_planned: ""
+      end_date_planned: "",
+      city_hall_approval_date: ""
     }
   });
+
 
   const selectedPropertyId = watch("property_id");
   const selectedStatus = watch("status");
