@@ -719,8 +719,10 @@ export function LeadDetailDialog({
         profissao: editForm.profissao || null,
         faixa_valor_imovel: editForm.faixa_valor_imovel || null,
         finalidade_compra: editForm.finalidade_compra || null,
-        procura_financiamento: editForm.procura_financiamento || null
+        procura_financiamento: editForm.procura_financiamento || null,
+        is_own_resource: editForm.is_own_resource
       } as any);
+
       
       // If lead is already "won" and valores changed, update the commission
       if (lead.deal_status === 'won' && newValorInteresse && newCommissionPercentage) {
