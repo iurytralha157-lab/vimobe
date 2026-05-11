@@ -76,13 +76,14 @@ export function RecentActivitiesTable() {
         </TableHeader>
         <TableBody>
           {activities.map((activity) => {
-            const Icon = ACTION_ICONS[activity.action_type] || Star;
+            const actionType = (activity.event_type || activity.action_type) as string;
+            const Icon = ACTION_ICONS[actionType] || Star;
             return (
               <TableRow key={activity.id}>
                 <TableCell className="font-medium">
                   <div className="flex items-center gap-2">
                     <Icon className="h-4 w-4 text-primary shrink-0" />
-                    <span>{ACTION_LABELS[activity.action_type] || activity.action_type}</span>
+                    <span>{ACTION_LABELS[actionType] || actionType}</span>
                   </div>
                 </TableCell>
                 <TableCell className="text-xs text-muted-foreground">
