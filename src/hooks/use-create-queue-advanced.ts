@@ -118,15 +118,19 @@ export function useCreateQueueAdvanced() {
       // Validate no duplicate conditions across queues
       await validateUniqueConditions(input.conditions);
       
-      // Combine settings with schedule
+      // Combine settings with schedule (schedule é opcional)
       const fullSettings = {
         ...input.settings,
-        schedule: input.schedule.map(s => ({
-          day: s.day,
-          enabled: s.enabled,
-          start: s.start,
-          end: s.end,
-        })),
+        ...(input.schedule && input.schedule.length > 0
+          ? {
+              schedule: input.schedule.map(s => ({
+                day: s.day,
+                enabled: s.enabled,
+                start: s.start,
+                end: s.end,
+              })),
+            }
+          : {}),
       };
       
       // Create round robin with reentry_behavior
