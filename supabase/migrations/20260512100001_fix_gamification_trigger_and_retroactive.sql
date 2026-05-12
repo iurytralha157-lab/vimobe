@@ -1,4 +1,4 @@
--- 1. Redefine the gamification trigger function to handle visit_scheduled and visit_confirmed correctly
+-- 1. Redefine the gamification trigger function
 CREATE OR REPLACE FUNCTION public.handle_activity_gamification()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -14,7 +14,6 @@ BEGIN
 
     -- Mapping CRM types to Gamification types
     IF TG_TABLE_NAME = 'activities' THEN
-        -- Check direct types first
         IF NEW.type = 'call' THEN v_action_type := 'call_made';
         ELSIF NEW.type = 'message' THEN v_action_type := 'message_sent';
         ELSIF NEW.type = 'lead_created' THEN v_action_type := 'lead_created_manual';
@@ -66,12 +65,7 @@ BEGIN
 
     v_points := v_rule_points;
 
-    -- Prevent duplicate entries for the same activity (e.g. from trigger AND manual re-run)
-    IF EXISTS (SELECT 1 FROM public.gamification_events WHERE source_id = NEW.id) THEN
-        RETURN NEW;
-    END IF;
-
-    -- Record the event in both logs
+    -- Record the event
     INSERT INTO public.gamification_activity_logs (user_id, organization_id, action_type, points_earned, reference_id, metadata)
     VALUES (NEW.user_id, v_org_id, v_action_type, v_points, NEW.id, NEW.metadata);
 
@@ -81,7 +75,7 @@ BEGIN
     -- Update total points
     INSERT INTO public.user_gamification_stats (user_id, organization_id, total_points, updated_at)
     VALUES (NEW.user_id, v_org_id, v_points, now())
-    ON CONFLICT (user_id) DO UPDATE SET total_points = public.user_gamification_stats.total_points + v_points, updated_at = now();
+    ON CONFLICT (user_id) DO UPDATE SET total_points = public.user_gamification_stats.total_points + EXCLUDED.total_points, updated_at = now();
 
     RETURN NEW;
 END;
@@ -93,19 +87,55 @@ CREATE TRIGGER tr_activity_gamification
 AFTER INSERT ON public.activities 
 FOR EACH ROW EXECUTE FUNCTION handle_activity_gamification();
 
--- 3. Add trigger to schedule_events if not already there
+-- 3. Add trigger to schedule_events
 DROP TRIGGER IF EXISTS tr_schedule_events_gamification ON public.schedule_events;
 CREATE TRIGGER tr_schedule_events_gamification 
 AFTER INSERT ON public.schedule_events 
 FOR EACH ROW EXECUTE FUNCTION handle_activity_gamification();
 
--- 4. Retroactive points for the last missing activities
--- This will trigger the function for these specific records
-UPDATE public.activities SET updated_at = now() 
-WHERE id IN (
-    '97115e58-e19a-47e2-af2c-7c9aeca442d0', 
-    '4a34b8ed-1e09-4b56-bfb7-6a9917a0077b',
-    '9c5f0489-fe8c-45ea-8c6b-ca945fa7b3c7',
-    'f5614a66-2e1b-4e54-8520-f9bb7e569ee6',
-    'd220990e-66bd-407a-9f98-9d33e977a234'
-);
+-- 4. Manual script to fix missing points (using INSERT to bypass trigger constraints and ensure it works once)
+DO $$
+DECLARE
+    r RECORD;
+    v_points INTEGER;
+    v_org_id UUID;
+BEGIN
+    FOR r IN (
+        SELECT id, user_id, type, metadata, created_at FROM public.activities 
+        WHERE id IN (
+            '97115e58-e19a-47e2-af2c-7c9aeca442d0', 
+            '4a34b8ed-1e09-4b56-bfb7-6a9917a0077b',
+            '9c5f0489-fe8c-45ea-8c6b-ca945fa7b3c7',
+            'f5614a66-2e1b-4e54-8520-f9bb7e569ee6',
+            'd220990e-66bd-407a-9f98-9d33e977a234'
+        ) AND id NOT IN (SELECT source_id FROM public.gamification_events)
+    ) LOOP
+        SELECT organization_id INTO v_org_id FROM public.users WHERE id = r.user_id;
+        
+        IF r.type = 'visit_scheduled' THEN v_points := 50;
+        ELSIF r.type = 'visit_confirmed' THEN v_points := 70;
+        ELSIF r.type = 'meeting_held' THEN v_points := 50;
+        ELSE v_points := 5;
+        END IF;
+
+        -- Check if rule exists
+        SELECT points INTO v_points FROM public.gamification_rules 
+        WHERE organization_id = v_org_id AND action_type = r.type AND is_active = true LIMIT 1;
+        
+        IF v_points IS NULL THEN
+            IF r.type = 'visit_scheduled' THEN v_points := 50;
+            ELSIF r.type = 'visit_confirmed' THEN v_points := 70;
+            ELSIF r.type = 'meeting_held' THEN v_points := 50;
+            ELSE v_points := 5;
+            END IF;
+        END IF;
+
+        INSERT INTO public.gamification_activity_logs (user_id, organization_id, action_type, points_earned, reference_id, metadata, created_at)
+        VALUES (r.user_id, v_org_id, r.type, v_points, r.id, r.metadata, r.created_at);
+
+        INSERT INTO public.gamification_events (user_id, organization_id, event_type, points_earned, source_id, metadata, created_at)
+        VALUES (r.user_id, v_org_id, r.type, v_points, r.id, r.metadata, r.created_at);
+
+        UPDATE public.user_gamification_stats SET total_points = total_points + v_points, updated_at = now() WHERE user_id = r.user_id;
+    END LOOP;
+END $$;
