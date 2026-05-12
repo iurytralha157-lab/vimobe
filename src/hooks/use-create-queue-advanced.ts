@@ -288,15 +288,19 @@ export function useUpdateQueueAdvanced() {
       // Validate no duplicate conditions across queues (exclude current queue)
       await validateUniqueConditions(input.conditions, id);
       
-      // Combine settings with schedule
+      // Combine settings with schedule (schedule é opcional)
       const fullSettings = {
         ...input.settings,
-        schedule: input.schedule.map(s => ({
-          day: s.day,
-          enabled: s.enabled,
-          start: s.start,
-          end: s.end,
-        })),
+        ...(input.schedule && input.schedule.length > 0
+          ? {
+              schedule: input.schedule.map(s => ({
+                day: s.day,
+                enabled: s.enabled,
+                start: s.start,
+                end: s.end,
+              })),
+            }
+          : {}),
       };
       
       // Update round robin with reentry_behavior
