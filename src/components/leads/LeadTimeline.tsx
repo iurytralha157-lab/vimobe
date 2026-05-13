@@ -13,7 +13,9 @@ import {
   FileText,
   Bot,
   Clock,
-  AlertTriangle
+  AlertTriangle,
+  Calendar as CalendarIcon,
+  MapPin
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
