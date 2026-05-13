@@ -12,8 +12,10 @@ import {
   Megaphone,
   HelpCircle,
   Database,
-  ClipboardList
+  ClipboardList,
+  Bell
 } from 'lucide-react';
+
 import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
