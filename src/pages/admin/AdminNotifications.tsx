@@ -4,6 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Bell, MessageSquare, Smartphone, Monitor, History, BarChart3, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { NotificationSettings } from '@/components/admin/settings/NotificationSettings';
 
 export default function AdminNotifications() {
   const [searchTerm, setSearchTerm] = useState('');
