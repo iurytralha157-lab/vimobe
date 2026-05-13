@@ -120,7 +120,7 @@ export function AdminMobileSidebar() {
         <div className="p-3 border-t border-border">
           <button
             onClick={handleSignOut}
-            className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors"
+            className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm transition-colors text-sidebar-foreground/70 hover:bg-orange-100 dark:hover:bg-orange-900/30 hover:text-sidebar-foreground"
           >
             <LogOut className="h-5 w-5" />
             <span>Sair</span>
