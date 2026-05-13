@@ -23,6 +23,8 @@ export interface ScheduleEvent {
   status: string | null;
   reminder_minutes: number | null;
   google_event_id: string | null;
+  completed_by: string | null;
+  completed_at: string | null;
   created_at: string | null;
   updated_at: string | null;
   user?: {
@@ -34,6 +36,10 @@ export interface ScheduleEvent {
     id: string;
     name: string;
     phone: string | null;
+  } | null;
+  completed_by_user?: {
+    id: string;
+    name: string;
   } | null;
 }
 
@@ -117,8 +123,10 @@ export function useScheduleEvents(options: UseScheduleEventsOptions = {}) {
         .select(`
           id, organization_id, user_id, lead_id, property_id, title, 
           event_type, start_time, end_time, is_all_day, status,
+          completed_by, completed_at,
           user:users!schedule_events_user_id_fkey(id, name, avatar_url),
-          lead:leads(id, name, phone)
+          lead:leads(id, name, phone),
+          completed_by_user:users!schedule_events_completed_by_fkey(id, name)
         `)
         .order('start_time', { ascending: true });
 
@@ -296,13 +304,26 @@ export function useCompleteScheduleEvent() {
 
   return useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      const isCompleted = status === 'completed';
+      const updates: any = { status };
+      
+      if (isCompleted) {
+        updates.completed_by = profile?.id;
+        updates.completed_at = new Date().toISOString();
+      } else {
+        updates.completed_by = null;
+        updates.completed_at = null;
+      }
+
       const { data, error } = await (supabase as any)
         .from('schedule_events')
-        .update({
-          status,
-        })
+        .update(updates)
         .eq('id', id)
-        .select()
+        .select(`
+          *,
+          user:users!schedule_events_user_id_fkey(id, name, avatar_url),
+          lead:leads(id, name, phone)
+        `)
         .single();
 
       if (error) throw error;

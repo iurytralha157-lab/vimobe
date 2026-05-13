@@ -397,6 +397,15 @@ export function LeadDetailDialog({
   // Quick action handlers for phone/email with outcome dialog
   const handleQuickPhone = () => {
     if (!lead.phone) return;
+    
+    // 1. Log initiation immediately in history
+    createActivityMutation.mutate({
+      lead_id: lead.id,
+      type: 'call_initiated',
+      content: 'Ligação iniciada',
+      metadata: { phone: lead.phone, channel: 'phone' },
+    });
+
     recordFirstResponse({
       leadId: lead.id,
       organizationId: lead.organization_id || profile?.organization_id || '',
@@ -404,6 +413,7 @@ export function LeadDetailDialog({
       actorUserId: profile?.id || null,
       firstResponseAt: lead.first_response_at,
     });
+    
     window.open(`tel:${lead.phone.replace(/\D/g, '')}`, '_blank');
     setQuickActionOutcomeType('call');
     setQuickActionOutcomeOpen(true);

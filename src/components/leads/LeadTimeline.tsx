@@ -13,7 +13,9 @@ import {
   FileText,
   Bot,
   Clock,
-  AlertTriangle
+  AlertTriangle,
+  Calendar as CalendarIcon,
+  MapPin
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
@@ -100,6 +102,30 @@ const eventConfig: Record<string, {
     label: 'SLA estourado',
     color: 'text-red-600 dark:text-red-400',
     bgColor: 'bg-red-100 dark:bg-red-900/50'
+  },
+  visit_scheduled: {
+    icon: CalendarIcon,
+    label: 'Visita agendada',
+    color: 'text-pink-600 dark:text-pink-400',
+    bgColor: 'bg-pink-100 dark:bg-pink-900/50'
+  },
+  visit_made: {
+    icon: MapPin,
+    label: 'Visita realizada',
+    color: 'text-green-600 dark:text-green-400',
+    bgColor: 'bg-green-100 dark:bg-green-900/50'
+  },
+  meeting_scheduled: {
+    icon: CalendarIcon,
+    label: 'Reunião agendada',
+    color: 'text-purple-600 dark:text-purple-400',
+    bgColor: 'bg-purple-100 dark:bg-purple-900/50'
+  },
+  meeting_made: {
+    icon: CalendarIcon,
+    label: 'Reunião realizada',
+    color: 'text-green-600 dark:text-green-400',
+    bgColor: 'bg-green-100 dark:bg-green-900/50'
   }
 };
 

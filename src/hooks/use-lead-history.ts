@@ -151,9 +151,29 @@ function buildLabel(type: string, metadata: Record<string, any>, source: 'timeli
       return 'Movido por automação';
     case 'automation_tag_added':
       return 'Tag adicionada por automação';
+    case 'visit_scheduled':
+      return 'Visita agendada';
+    case 'visit_made':
+      return 'Visita realizada';
+    case 'meeting_scheduled':
+      return 'Reunião agendada';
+    case 'meeting_made':
+      return 'Reunião realizada';
+    case 'call_initiated':
+      return 'Ligação iniciada';
     default: {
       if (metadata?.is_automation) return `Ação automática (${type})`;
-      return type.replace(/_/g, ' ');
+      const translations: Record<string, string> = {
+        'call_made': 'Ligação realizada',
+        'message_sent': 'Mensagem enviada',
+        'contact_made': 'Contato realizado',
+        'prospecting_report': 'Relatório de prospecção',
+        'agenda_created': 'Atividade agendada',
+        'agenda_rescheduled': 'Atividade remarcada',
+        'agenda_completed': 'Atividade concluída',
+        'agenda_cancelled': 'Atividade cancelada'
+      };
+      return translations[type] || type.replace(/_/g, ' ');
     }
   }
 }
