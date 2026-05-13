@@ -23,6 +23,8 @@ export interface ScheduleEvent {
   status: string | null;
   reminder_minutes: number | null;
   google_event_id: string | null;
+  completed_by: string | null;
+  completed_at: string | null;
   created_at: string | null;
   updated_at: string | null;
   user?: {
@@ -34,6 +36,10 @@ export interface ScheduleEvent {
     id: string;
     name: string;
     phone: string | null;
+  } | null;
+  completed_by_user?: {
+    id: string;
+    name: string;
   } | null;
 }
 
