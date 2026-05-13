@@ -529,16 +529,20 @@ export default function Pipelines() {
         toast.success(`Lead movido para ${newStage?.name}`);
       }
       
-      // Registrar atividade de gamificação se for proposta
-      const isProposal = newStage?.name?.toLowerCase().includes('proposta');
-      if (isProposal) {
-        await supabase.from('activities').insert({
-          lead_id: draggableId,
-          user_id: profile?.id,
-          type: 'proposal_sent',
-          content: 'Lead movido para estágio de Proposta via Pipeline',
-        });
-      }
+      // Registrar atividade de gamificação (sempre registrar stage_change para capturar vendas e propostas)
+      await supabase.from('activities').insert({
+        lead_id: draggableId,
+        user_id: profile?.id,
+        type: 'stage_change',
+        content: `Lead movido para ${newStage?.name} via Pipeline`,
+        metadata: {
+          old_stage_id: oldStageId,
+          new_stage_id: newStageId,
+          old_stage_name: oldStage?.name,
+          new_stage_name: newStage?.name,
+          new_status: newDealStatus || null
+        }
+      });
 
       // Disparar automações de fluxo (automations table) para mudança de etapa
       supabase.functions.invoke('automation-trigger', {
