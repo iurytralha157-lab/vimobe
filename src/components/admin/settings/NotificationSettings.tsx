@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Select, 
   SelectContent, 
@@ -14,223 +16,316 @@ import {
 } from '@/components/ui/select';
 import { 
   Loader2, 
-  Save, 
-  Bell, 
-  Mail, 
-  Smartphone, 
   Plus, 
   Trash2,
-  AlertCircle
+  MessageSquare,
+  History,
+  CheckCircle2,
+  XCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { SystemSettings, SystemSettingsValue } from '@/hooks/use-system-settings';
+import { supabase } from '@/integrations/supabase/client';
+import { NotificationTemplate, NotificationChannel } from '@/services/NotificationService';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
-interface NotificationSettingsProps {
-  settings: SystemSettings | null;
-  onUpdate: (updates: Partial<SystemSettingsValue>) => Promise<void>;
-}
-
-export function NotificationSettings({ settings, onUpdate }: NotificationSettingsProps) {
+export function NotificationSettings() {
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [config, setConfig] = useState({
-    email_enabled: false,
-    push_enabled: false,
-    sms_enabled: false,
-    templates: [] as Array<{
-      type: string;
-      trigger: string;
-      subject: string;
-      body: string;
-    }>
-  });
+  const [templates, setTemplates] = useState<NotificationTemplate[]>([]);
+  const [logs, setLogs] = useState<any[]>([]);
+  const [activeSubTab, setActiveSubTab] = useState('templates');
 
   useEffect(() => {
-    if (settings && settings.notifications_config) {
-      setConfig(settings.notifications_config);
-    }
-  }, [settings]);
+    fetchData();
+  }, []);
 
-  const handleSaveConfig = async () => {
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const { data: templatesData, error: templatesError } = await supabase
+        .from('notification_templates' as any)
+        .select('*')
+        .order('name');
+      
+      if (templatesError) throw templatesError;
+      setTemplates(templatesData as any[] || []);
+
+      const { data: logsData, error: logsError } = await supabase
+        .from('notification_logs' as any)
+        .select(`
+          *,
+          template:notification_templates(name)
+        `)
+        .order('created_at', { ascending: false })
+        .limit(50);
+      
+      if (logsError) throw logsError;
+      setLogs(logsData as any[] || []);
+    } catch (error: any) {
+      console.error('Erro ao buscar dados:', error);
+      toast.error('Não foi possível carregar os templates. Verifique se as tabelas foram criadas.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdateTemplate = async (id: string, updates: Partial<NotificationTemplate>) => {
     setSaving(true);
     try {
-      await onUpdate({ notifications: config });
-      toast.success('Configurações de notificações salvas!');
+      const { error } = await supabase
+        .from('notification_templates' as any)
+        .update(updates)
+        .eq('id', id);
+
+      if (error) throw error;
+      
+      setTemplates(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t));
+      toast.success('Template atualizado com sucesso!');
     } catch (error: any) {
-      toast.error('Erro ao salvar: ' + error.message);
+      toast.error('Erro ao atualizar: ' + error.message);
     } finally {
       setSaving(false);
     }
   };
 
-  const addTemplate = () => {
-    setConfig({
-      ...config,
-      templates: [
-        ...config.templates,
-        { type: 'email', trigger: '', subject: '', body: '' }
-      ]
-    });
+  const handleAddTemplate = async () => {
+    const newTemplate = {
+      name: 'Novo Template',
+      slug: `new_template_${Date.now()}`,
+      channel: 'whatsapp' as NotificationChannel,
+      message: 'Olá {name}, sua mensagem aqui.',
+      category: 'info',
+      variables: ['name'],
+      is_active: true
+    };
+
+    try {
+      const { data, error } = await supabase
+        .from('notification_templates' as any)
+        .insert([newTemplate])
+        .select()
+        .single();
+
+      if (error) throw error;
+      setTemplates([data as any, ...templates]);
+      toast.success('Novo template criado!');
+    } catch (error: any) {
+      toast.error('Erro ao criar template: ' + error.message);
+    }
   };
 
-  const removeTemplate = (index: number) => {
-    const newTemplates = [...config.templates];
-    newTemplates.splice(index, 1);
-    setConfig({ ...config, templates: newTemplates });
+  const handleDeleteTemplate = async (id: string) => {
+    if (!confirm('Tem certeza que deseja excluir este template?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('notification_templates' as any)
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      setTemplates(prev => prev.filter(t => t.id !== id));
+      toast.success('Template removido.');
+    } catch (error: any) {
+      toast.error('Erro ao remover: ' + error.message);
+    }
   };
 
-  const updateTemplate = (index: number, field: string, value: string) => {
-    const newTemplates = [...config.templates];
-    (newTemplates[index] as any)[field] = value;
-    setConfig({ ...config, templates: newTemplates });
-  };
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Canais de Notificação</CardTitle>
-          <CardDescription>Ative ou desative os canais de comunicação do sistema.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex flex-col gap-4">
-            <div className="flex items-center justify-between p-4 border rounded-lg">
-              <div className="flex items-center gap-3">
-                <Mail className="h-5 w-5 text-blue-500" />
-                <div>
-                  <Label className="text-base">Notificações por E-mail</Label>
-                  <p className="text-sm text-muted-foreground">Envio de alertas e confirmações via e-mail.</p>
-                </div>
-              </div>
-              <Switch 
-                checked={config.email_enabled} 
-                onCheckedChange={(checked) => setConfig({ ...config, email_enabled: checked })} 
-              />
-            </div>
+      <Tabs value={activeSubTab} onValueChange={setActiveSubTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-2 max-w-[400px]">
+          <TabsTrigger value="templates" className="flex items-center gap-2">
+            <MessageSquare className="h-4 w-4" />
+            Templates
+          </TabsTrigger>
+          <TabsTrigger value="logs" className="flex items-center gap-2">
+            <History className="h-4 w-4" />
+            Histórico
+          </TabsTrigger>
+        </TabsList>
 
-            <div className="flex items-center justify-between p-4 border rounded-lg">
-              <div className="flex items-center gap-3">
-                <Bell className="h-5 w-5 text-purple-500" />
-                <div>
-                  <Label className="text-base">Notificações Push</Label>
-                  <p className="text-sm text-muted-foreground">Alertas em tempo real no navegador ou app.</p>
-                </div>
-              </div>
-              <Switch 
-                checked={config.push_enabled} 
-                onCheckedChange={(checked) => setConfig({ ...config, push_enabled: checked })} 
-              />
-            </div>
-
-            <div className="flex items-center justify-between p-4 border rounded-lg">
-              <div className="flex items-center gap-3">
-                <Smartphone className="h-5 w-5 text-green-500" />
-                <div>
-                  <Label className="text-base">Notificações SMS</Label>
-                  <p className="text-sm text-muted-foreground">Envio de mensagens curtas para celulares (requer integração ativa).</p>
-                </div>
-              </div>
-              <Switch 
-                checked={config.sms_enabled} 
-                onCheckedChange={(checked) => setConfig({ ...config, sms_enabled: checked })} 
-              />
-            </div>
-          </div>
-          <div className="flex justify-end">
-            <Button onClick={handleSaveConfig} disabled={saving}>
-              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-              Salvar Canais
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
+        <TabsContent value="templates" className="space-y-6 mt-6">
+          <div className="flex justify-between items-center">
             <div>
-              <CardTitle>Templates de Notificação</CardTitle>
-              <CardDescription>Gerencie os textos das notificações automáticas do sistema.</CardDescription>
+              <h3 className="text-lg font-medium">Templates de Notificações</h3>
+              <p className="text-sm text-muted-foreground">Centralize e personalize todas as mensagens enviadas.</p>
             </div>
-            <Button variant="outline" size="sm" onClick={addTemplate}>
+            <Button onClick={handleAddTemplate} size="sm">
               <Plus className="h-4 w-4 mr-2" />
               Novo Template
             </Button>
           </div>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {config.templates.length > 0 ? (
-            config.templates.map((template, index) => (
-              <div key={index} className="p-4 border rounded-lg space-y-4 bg-muted/30">
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
+
+          <div className="grid grid-cols-1 gap-6">
+            {templates.map((template) => (
+              <Card key={template.id} className="overflow-hidden">
+                <CardHeader className="bg-muted/30 pb-4">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <CardTitle className="text-base">{template.name}</CardTitle>
+                        <Badge variant={template.is_active ? "default" : "secondary"}>
+                          {template.is_active ? 'Ativo' : 'Inativo'}
+                        </Badge>
+                        <Badge variant="outline" className="capitalize">
+                          {template.channel}
+                        </Badge>
+                      </div>
+                      <code className="text-xs text-muted-foreground">{template.slug}</code>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Switch 
+                        checked={template.is_active} 
+                        onCheckedChange={(checked) => handleUpdateTemplate(template.id, { is_active: checked })}
+                      />
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="text-destructive h-8 w-8" 
+                        onClick={() => handleDeleteTemplate(template.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-6 space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>Tipo</Label>
+                      <Label>Nome</Label>
+                      <Input 
+                        value={template.name} 
+                        onChange={(e) => {
+                          const newTemplates = [...templates];
+                          const idx = newTemplates.findIndex(t => t.id === template.id);
+                          newTemplates[idx].name = e.target.value;
+                          setTemplates(newTemplates);
+                        }}
+                        onBlur={(e) => handleUpdateTemplate(template.id, { name: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Canal</Label>
                       <Select 
-                        value={template.type} 
-                        onValueChange={(val) => updateTemplate(index, 'type', val)}
+                        value={template.channel} 
+                        onValueChange={(val: NotificationChannel) => handleUpdateTemplate(template.id, { channel: val })}
                       >
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
+                          <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                          <SelectItem value="push">Push Notification</SelectItem>
+                          <SelectItem value="system">Sistema (Interno)</SelectItem>
                           <SelectItem value="email">E-mail</SelectItem>
-                          <SelectItem value="push">Push</SelectItem>
-                          <SelectItem value="sms">SMS</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="space-y-2">
-                      <Label>Gatilho (Trigger)</Label>
-                      <Input 
-                        value={template.trigger} 
-                        onChange={(e) => updateTemplate(index, 'trigger', e.target.value)}
-                        placeholder="Ex: novo_usuario"
-                      />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Mensagem</Label>
+                    <Textarea 
+                      value={template.message} 
+                      onChange={(e) => {
+                        const newTemplates = [...templates];
+                        const idx = newTemplates.findIndex(t => t.id === template.id);
+                        newTemplates[idx].message = e.target.value;
+                        setTemplates(newTemplates);
+                      }}
+                      onBlur={(e) => handleUpdateTemplate(template.id, { message: e.target.value })}
+                      className="min-h-[100px] font-mono text-sm"
+                    />
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      <span className="text-xs text-muted-foreground mr-1">Variáveis:</span>
+                      {template.variables?.map((v, i) => (
+                        <Badge key={i} variant="secondary" className="text-[10px] font-mono">
+                          {`{${v}}`}
+                        </Badge>
+                      ))}
                     </div>
                   </div>
-                  <Button variant="ghost" size="icon" className="text-destructive mt-6" onClick={() => removeTemplate(index)}>
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Assunto (opcional para SMS/Push)</Label>
-                  <Input 
-                    value={template.subject} 
-                    onChange={(e) => updateTemplate(index, 'subject', e.target.value)}
-                    placeholder="Assunto da notificação"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Corpo da Mensagem</Label>
-                  <Textarea 
-                    value={template.body} 
-                    onChange={(e) => updateTemplate(index, 'body', e.target.value)}
-                    placeholder="Olá {{nome_usuario}}, ..."
-                    className="min-h-[100px]"
-                  />
-                  <p className="text-xs text-muted-foreground flex items-center gap-1">
-                    <AlertCircle className="h-3 w-3" />
-                    Use {"{{variavel}}"} para campos dinâmicos.
-                  </p>
-                </div>
-              </div>
-            ))
-          ) : (
-            <div className="py-12 flex flex-col items-center justify-center text-muted-foreground border-2 border-dashed rounded-lg">
-              <AlertCircle className="h-10 w-10 mb-2 opacity-20" />
-              <p>Nenhum template cadastrado.</p>
-            </div>
-          )}
-          <div className="flex justify-end">
-            <Button onClick={handleSaveConfig} disabled={saving}>
-              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-              Salvar Todos Templates
-            </Button>
+                </CardContent>
+              </Card>
+            ))}
           </div>
-        </CardContent>
-      </Card>
+        </TabsContent>
+
+        <TabsContent value="logs" className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Logs de Disparo</CardTitle>
+              <CardDescription>Acompanhe em tempo real as notificações enviadas pelo sistema.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="rounded-md border">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/50 border-b">
+                    <tr>
+                      <th className="px-4 py-3 text-left font-medium">Data/Hora</th>
+                      <th className="px-4 py-3 text-left font-medium">Template</th>
+                      <th className="px-4 py-3 text-left font-medium">Canal</th>
+                      <th className="px-4 py-3 text-left font-medium">Destinatário</th>
+                      <th className="px-4 py-3 text-left font-medium">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {logs.length > 0 ? (
+                      logs.map((log) => (
+                        <tr key={log.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
+                          <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
+                            {format(new Date(log.created_at), 'dd/MM HH:mm', { locale: ptBR })}
+                          </td>
+                          <td className="px-4 py-3 font-medium">
+                            {log.template?.name || 'Manual / Removido'}
+                          </td>
+                          <td className="px-4 py-3">
+                            <Badge variant="outline" className="capitalize text-[10px]">
+                              {log.channel}
+                            </Badge>
+                          </td>
+                          <td className="px-4 py-3 text-muted-foreground truncate max-w-[150px]">
+                            {log.recipient}
+                          </td>
+                          <td className="px-4 py-3">
+                            {log.status === 'sent' ? (
+                              <div className="flex items-center gap-1 text-green-600">
+                                <CheckCircle2 className="h-3 w-3" />
+                                <span className="text-xs">Enviado</span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-1 text-destructive">
+                                <XCircle className="h-3 w-3" />
+                                <span className="text-xs">Erro</span>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={5} className="px-4 py-12 text-center text-muted-foreground">
+                          Nenhum disparo registrado recentemente.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
