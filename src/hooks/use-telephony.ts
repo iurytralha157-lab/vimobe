@@ -36,15 +36,27 @@ export interface TelephonyCall {
   };
 }
 
-// Note: telephony_calls table does not exist in schema yet
-// These hooks return empty data as placeholders
+// These hooks interact with the telephony_calls table
 
 export function useLeadCalls(leadId: string | null) {
   return useQuery({
     queryKey: ['telephony-calls', 'lead', leadId],
     queryFn: async () => {
-      // Table doesn't exist - return empty array
-      return [] as TelephonyCall[];
+      const { data, error } = await supabase
+        .from('telephony_calls')
+        .select(`
+          *,
+          user:users(id, name, avatar_url),
+          lead:leads(id, name)
+        `)
+        .eq('lead_id', leadId)
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.warn('Telephony calls table might not exist yet:', error);
+        return [] as TelephonyCall[];
+      }
+      return data as TelephonyCall[];
     },
     enabled: !!leadId,
   });
@@ -169,9 +181,22 @@ export function useCreateCall() {
       phone_to: string;
       direction?: 'inbound' | 'outbound';
       notes?: string;
+      organization_id?: string;
     }) => {
-      // Table doesn't exist - throw error
-      throw new Error('Telephony feature not available');
+      const { data: user } = await supabase.auth.getUser();
+      const { data: result, error } = await supabase
+        .from('telephony_calls')
+        .insert({
+          ...data,
+          user_id: user.user?.id,
+          direction: data.direction || 'outbound',
+          status: 'initiated'
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return result;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['telephony-calls'] });
