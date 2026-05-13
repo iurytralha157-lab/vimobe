@@ -220,6 +220,32 @@ export function useCreateScheduleEvent() {
         });
       }
 
+      // Send WhatsApp notification for new appointment
+      try {
+        const { notificationService } = await import('@/services/NotificationService');
+        const { data: userData } = await supabase
+          .from('users')
+          .select('name, organization_id')
+          .eq('id', data.user_id)
+          .single();
+
+        if (userData) {
+          await notificationService.send({
+            templateSlug: 'new_appointment_whatsapp',
+            organizationId: userData.organization_id || '',
+            userId: data.user_id,
+            variables: {
+              user_name: userData.name || 'Corretor',
+              title: data.title,
+              date: format(new Date(data.start_time), 'dd/MM/yyyy'),
+              time: format(new Date(data.start_time), 'HH:mm')
+            }
+          });
+        }
+      } catch (err) {
+        console.error('Failed to send appointment notification:', err);
+      }
+
       return data;
     },
     onSuccess: () => {

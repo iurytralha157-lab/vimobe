@@ -424,6 +424,21 @@ export function useLogoutSession() {
         .update({ status: "disconnected" })
         .eq("id", session.id);
 
+      // Send system notification for disconnection
+      try {
+        const { notificationService } = await import('@/services/NotificationService');
+        await notificationService.send({
+          templateSlug: 'whatsapp_disconnected_system',
+          organizationId: session.organization_id,
+          userId: session.owner_user_id,
+          variables: {
+            display_name: session.display_name || session.instance_name
+          }
+        });
+      } catch (err) {
+        console.error('Disconnection notification failed:', err);
+      }
+
       return data;
     },
     onSuccess: () => {

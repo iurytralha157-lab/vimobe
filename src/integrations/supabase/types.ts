@@ -4114,6 +4114,129 @@ export type Database = {
           },
         ]
       }
+      notification_logs: {
+        Row: {
+          channel: string
+          created_at: string | null
+          error: string | null
+          id: string
+          organization_id: string | null
+          payload: Json | null
+          recipient: string | null
+          response: Json | null
+          status: string
+          template_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          channel: string
+          created_at?: string | null
+          error?: string | null
+          id?: string
+          organization_id?: string | null
+          payload?: Json | null
+          recipient?: string | null
+          response?: Json | null
+          status: string
+          template_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          channel?: string
+          created_at?: string | null
+          error?: string | null
+          id?: string
+          organization_id?: string | null
+          payload?: Json | null
+          recipient?: string | null
+          response?: Json | null
+          status?: string
+          template_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_logs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_logs_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "notification_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notification_templates: {
+        Row: {
+          category: string | null
+          channel: string
+          created_at: string | null
+          editable_by_admin: boolean | null
+          event_key: string | null
+          id: string
+          is_active: boolean | null
+          message: string
+          name: string
+          organization_id: string | null
+          slug: string
+          title: string | null
+          updated_at: string | null
+          variables: string[] | null
+        }
+        Insert: {
+          category?: string | null
+          channel: string
+          created_at?: string | null
+          editable_by_admin?: boolean | null
+          event_key?: string | null
+          id?: string
+          is_active?: boolean | null
+          message: string
+          name: string
+          organization_id?: string | null
+          slug: string
+          title?: string | null
+          updated_at?: string | null
+          variables?: string[] | null
+        }
+        Update: {
+          category?: string | null
+          channel?: string
+          created_at?: string | null
+          editable_by_admin?: boolean | null
+          event_key?: string | null
+          id?: string
+          is_active?: boolean | null
+          message?: string
+          name?: string
+          organization_id?: string | null
+          slug?: string
+          title?: string | null
+          updated_at?: string | null
+          variables?: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_templates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           content: string | null

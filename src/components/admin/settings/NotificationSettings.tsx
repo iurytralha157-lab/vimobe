@@ -28,13 +28,16 @@ import { supabase } from '@/integrations/supabase/client';
 import { NotificationTemplate, NotificationChannel } from '@/services/NotificationService';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
 
 export function NotificationSettings() {
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [saving, setSaving] = useState<string | null>(null);
   const [templates, setTemplates] = useState<NotificationTemplate[]>([]);
+  const [originalTemplates, setOriginalTemplates] = useState<NotificationTemplate[]>([]);
   const [logs, setLogs] = useState<any[]>([]);
   const [activeSubTab, setActiveSubTab] = useState('templates');
+  const [changedIds, setChangedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     fetchData();
@@ -49,7 +52,9 @@ export function NotificationSettings() {
         .order('name');
       
       if (templatesError) throw templatesError;
-      setTemplates(templatesData as any[] || []);
+      const data = templatesData as any[] || [];
+      setTemplates(data);
+      setOriginalTemplates(JSON.parse(JSON.stringify(data)));
 
       const { data: logsData, error: logsError } = await supabase
         .from('notification_logs' as any)
@@ -70,23 +75,55 @@ export function NotificationSettings() {
     }
   };
 
-  const handleUpdateTemplate = async (id: string, updates: Partial<NotificationTemplate>) => {
-    setSaving(true);
+  const handleSaveTemplate = async (id: string) => {
+    const template = templates.find(t => t.id === id);
+    if (!template) return;
+
+    setSaving(id);
     try {
       const { error } = await supabase
         .from('notification_templates' as any)
-        .update(updates)
+        .update({
+          name: template.name,
+          message: template.message,
+          channel: template.channel,
+          is_active: template.is_active,
+          category: template.category
+        })
         .eq('id', id);
 
       if (error) throw error;
       
-      setTemplates(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t));
-      toast.success('Template atualizado com sucesso!');
+      // Update original state to match current
+      setOriginalTemplates(prev => prev.map(t => t.id === id ? { ...template } : t));
+      setChangedIds(prev => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+      toast.success('Template salvo com sucesso!');
     } catch (error: any) {
-      toast.error('Erro ao atualizar: ' + error.message);
+      toast.error('Erro ao salvar: ' + error.message);
     } finally {
-      setSaving(false);
+      setSaving(null);
     }
+  };
+
+  const handleCancelEdit = (id: string) => {
+    const original = originalTemplates.find(t => t.id === id);
+    if (!original) return;
+
+    setTemplates(prev => prev.map(t => t.id === id ? { ...original } : t));
+    setChangedIds(prev => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+  };
+
+  const handleLocalUpdate = (id: string, updates: Partial<NotificationTemplate>) => {
+    setTemplates(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t));
+    setChangedIds(prev => new Set(prev).add(id));
   };
 
   const handleAddTemplate = async () => {
@@ -108,7 +145,9 @@ export function NotificationSettings() {
         .single();
 
       if (error) throw error;
-      setTemplates([data as any, ...templates]);
+      const created = data as any;
+      setTemplates([created, ...templates]);
+      setOriginalTemplates([JSON.parse(JSON.stringify(created)), ...originalTemplates]);
       toast.success('Novo template criado!');
     } catch (error: any) {
       toast.error('Erro ao criar template: ' + error.message);
@@ -126,6 +165,12 @@ export function NotificationSettings() {
 
       if (error) throw error;
       setTemplates(prev => prev.filter(t => t.id !== id));
+      setOriginalTemplates(prev => prev.filter(t => t.id !== id));
+      setChangedIds(prev => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
       toast.success('Template removido.');
     } catch (error: any) {
       toast.error('Erro ao remover: ' + error.message);
@@ -166,9 +211,12 @@ export function NotificationSettings() {
             </Button>
           </div>
 
-          <div className="grid grid-cols-1 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {templates.map((template) => (
-              <Card key={template.id} className="overflow-hidden">
+              <Card key={template.id} className={cn(
+                "overflow-hidden transition-all border-2",
+                changedIds.has(template.id) ? "border-primary/50 shadow-md" : "border-transparent"
+              )}>
                 <CardHeader className="bg-muted/30 pb-4">
                   <div className="flex items-center justify-between">
                     <div className="space-y-1">
@@ -186,7 +234,7 @@ export function NotificationSettings() {
                     <div className="flex items-center gap-2">
                       <Switch 
                         checked={template.is_active} 
-                        onCheckedChange={(checked) => handleUpdateTemplate(template.id, { is_active: checked })}
+                        onCheckedChange={(checked) => handleLocalUpdate(template.id, { is_active: checked })}
                       />
                       <Button 
                         variant="ghost" 
@@ -200,27 +248,22 @@ export function NotificationSettings() {
                   </div>
                 </CardHeader>
                 <CardContent className="pt-6 space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>Nome</Label>
+                      <Label>Nome do Template</Label>
                       <Input 
                         value={template.name} 
-                        onChange={(e) => {
-                          const newTemplates = [...templates];
-                          const idx = newTemplates.findIndex(t => t.id === template.id);
-                          newTemplates[idx].name = e.target.value;
-                          setTemplates(newTemplates);
-                        }}
-                        onBlur={(e) => handleUpdateTemplate(template.id, { name: e.target.value })}
+                        onChange={(e) => handleLocalUpdate(template.id, { name: e.target.value })}
+                        className="bg-background"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Canal</Label>
+                      <Label>Canal de Disparo</Label>
                       <Select 
                         value={template.channel} 
-                        onValueChange={(val: NotificationChannel) => handleUpdateTemplate(template.id, { channel: val })}
+                        onValueChange={(val: NotificationChannel) => handleLocalUpdate(template.id, { channel: val })}
                       >
-                        <SelectTrigger>
+                        <SelectTrigger className="bg-background">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -237,17 +280,11 @@ export function NotificationSettings() {
                     <Label>Mensagem</Label>
                     <Textarea 
                       value={template.message} 
-                      onChange={(e) => {
-                        const newTemplates = [...templates];
-                        const idx = newTemplates.findIndex(t => t.id === template.id);
-                        newTemplates[idx].message = e.target.value;
-                        setTemplates(newTemplates);
-                      }}
-                      onBlur={(e) => handleUpdateTemplate(template.id, { message: e.target.value })}
-                      className="min-h-[100px] font-mono text-sm"
+                      onChange={(e) => handleLocalUpdate(template.id, { message: e.target.value })}
+                      className="min-h-[120px] font-mono text-sm bg-background"
                     />
                     <div className="flex flex-wrap gap-2 mt-2">
-                      <span className="text-xs text-muted-foreground mr-1">Variáveis:</span>
+                      <span className="text-xs text-muted-foreground mr-1">Variáveis disponíveis:</span>
                       {template.variables?.map((v, i) => (
                         <Badge key={i} variant="secondary" className="text-[10px] font-mono">
                           {`{${v}}`}
@@ -255,6 +292,32 @@ export function NotificationSettings() {
                       ))}
                     </div>
                   </div>
+
+                  {changedIds.has(template.id) && (
+                    <div className="flex items-center justify-end gap-2 pt-2 border-t mt-4 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => handleCancelEdit(template.id)}
+                        disabled={saving === template.id}
+                      >
+                        Descartar
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        onClick={() => handleSaveTemplate(template.id)}
+                        disabled={saving === template.id}
+                        className="gap-2"
+                      >
+                        {saving === template.id ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <CheckCircle2 className="h-3 w-3" />
+                        )}
+                        Salvar Alterações
+                      </Button>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             ))}
