@@ -107,8 +107,8 @@ export function AdminSidebar() {
                   className="h-8 w-8 object-contain"
                 />
               ) : (
-                <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
-                  <Shield className="h-5 w-5 text-primary-foreground" />
+                <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground font-bold text-sm">
+                  V
                 </div>
               )}
             </div>
