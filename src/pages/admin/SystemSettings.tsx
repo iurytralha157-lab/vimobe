@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Navigate } from 'react-router-dom';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import {
@@ -28,9 +28,12 @@ import { NotificationSettings } from '@/components/admin/settings/NotificationSe
 import { supabase } from '@/integrations/supabase/client';
 import { Json } from '@/integrations/supabase/types';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function SystemSettingsPage() {
+  const { isSuperAdmin, loading: authLoading } = useAuth();
   const { data: settings, isLoading, refetch } = useSystemSettings();
+
   const isMobile = useIsMobile();
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'media');
@@ -93,7 +96,7 @@ export default function SystemSettingsPage() {
   const currentTab = tabs.find((t) => t.value === activeTab);
   const CurrentIcon = currentTab?.icon;
 
-  if (isLoading) {
+  if (authLoading || isLoading) {
     return (
       <AdminLayout title="Configurações do Sistema">
         <div className="flex items-center justify-center py-12">
@@ -102,6 +105,11 @@ export default function SystemSettingsPage() {
       </AdminLayout>
     );
   }
+
+  if (!isSuperAdmin) {
+    return <Navigate to="/admin" replace />;
+  }
+
 
   return (
     <AdminLayout title="Configurações do Sistema">
