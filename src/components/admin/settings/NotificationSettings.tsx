@@ -88,10 +88,13 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
         .from('notification_templates' as any)
         .update({
           name: template.name,
+          title: template.title,
           message: template.message,
           channel: template.channel,
           is_active: template.is_active,
-          category: template.category
+          category: template.category,
+          variables: template.variables,
+          event_key: template.event_key
         })
         .eq('id', id);
 
