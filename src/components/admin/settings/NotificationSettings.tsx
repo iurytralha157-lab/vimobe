@@ -52,7 +52,10 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
         .order('name');
       
       if (templatesError) throw templatesError;
-      const data = templatesData as any[] || [];
+      let data = templatesData as any[] || [];
+      if (filterSlug) {
+        data = data.filter((t: any) => t.slug === filterSlug);
+      }
       setTemplates(data);
       setOriginalTemplates(JSON.parse(JSON.stringify(data)));
 
