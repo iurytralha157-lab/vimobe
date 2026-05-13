@@ -29,7 +29,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { PlusCircle, Phone, MessageSquare, UserCheck, Rocket } from 'lucide-react';
+import { PlusCircle, Phone, MessageSquare, UserCheck, Rocket, Home, ClipboardList, Send } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -37,8 +37,9 @@ import { useQueryClient } from '@tanstack/react-query';
 
 const formSchema = z.object({
   calls: z.coerce.number().min(0).default(0),
-  messages: z.coerce.number().min(0).default(0),
-  contacts: z.coerce.number().min(0).default(0),
+  visits: z.coerce.number().min(0).default(0),
+  property_capturing: z.coerce.number().min(0).default(0),
+  proposals_sent: z.coerce.number().min(0).default(0),
   source: z.string().min(1, 'Selecione a origem'),
   description: z.string().optional(),
 });
@@ -55,8 +56,9 @@ export function ProspectingReportModal() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       calls: 0,
-      messages: 0,
-      contacts: 0,
+      visits: 0,
+      property_capturing: 0,
+      proposals_sent: 0,
       source: '',
       description: '',
     },
@@ -76,10 +78,15 @@ export function ProspectingReportModal() {
         user_id: user.id,
         organization_id: organization.id,
         calls: values.calls,
-        messages: values.messages,
-        contacts: values.contacts,
+        visits: values.visits,
+        property_capturing: values.property_capturing,
+        proposals_sent: values.proposals_sent,
         source: values.source,
         description: values.description || null,
+        metadata: {
+          manual_entry: true,
+          submitted_at: new Date().toISOString()
+        }
       };
       
       console.log("Inserting data into Supabase:", dataToInsert);
@@ -131,7 +138,7 @@ export function ProspectingReportModal() {
             <div className="bg-amber-50 border border-amber-200 p-3 rounded-md text-xs text-amber-800 mb-2">
               ⚠️ Certifique-se de que os dados estão corretos antes de enviar.
             </div>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="calls"
@@ -149,11 +156,11 @@ export function ProspectingReportModal() {
               />
               <FormField
                 control={form.control}
-                name="messages"
+                name="visits"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="flex items-center gap-1 text-xs">
-                      <MessageSquare className="h-3 w-3" /> Whats
+                      <Home className="h-3 w-3" /> Visitas
                     </FormLabel>
                     <FormControl>
                       <Input type="number" {...field} />
@@ -164,11 +171,26 @@ export function ProspectingReportModal() {
               />
               <FormField
                 control={form.control}
-                name="contacts"
+                name="property_capturing"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="flex items-center gap-1 text-xs">
-                      <UserCheck className="h-3 w-3" /> Contatos
+                      <ClipboardList className="h-3 w-3" /> Captação
+                    </FormLabel>
+                    <FormControl>
+                      <Input type="number" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="proposals_sent"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-1 text-xs">
+                      <Send className="h-3 w-3" /> Propostas
                     </FormLabel>
                     <FormControl>
                       <Input type="number" {...field} />
