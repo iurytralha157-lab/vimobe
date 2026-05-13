@@ -351,13 +351,6 @@ export const AppSidebar = React.memo(function AppSidebar() {
         path: '/admin/settings'
       }, ...items];
     }
-    if (isSuperAdmin) {
-      items = [{
-        icon: Shield,
-        labelKey: 'superAdmin',
-        path: '/admin'
-      }, ...items];
-    }
     return items;
   }, [isSuperAdmin, profile?.role, hasModule, modulesLoading]);
   const getLabel = (labelKey: string): string => {
