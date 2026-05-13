@@ -51,6 +51,7 @@ export const en = {
     settings: 'Settings',
     help: 'Help',
     superAdmin: 'Super Admin',
+    systemSettings: 'System Settings',
     logout: 'Logout',
     whatsapp: 'WhatsApp',
     automations: 'Automations',
