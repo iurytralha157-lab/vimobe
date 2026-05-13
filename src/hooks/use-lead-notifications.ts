@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { notificationService } from '@/services/NotificationService';
 
 interface NotifyLeadCreatedParams {
   leadId: string;
@@ -118,13 +119,23 @@ export async function notifyLeadCreated({
     console.error('Erro ao buscar administradores:', error);
   }
 
-  // Inserir todas as notificações de uma vez
-  if (notifications.length > 0) {
+  // Use centralized service for each notification to ensure template usage and logging
+  for (const notification of notifications) {
     try {
-      await supabase.from('notifications').insert(notifications);
-      console.log(`✅ ${notifications.length} notificações criadas para lead ${leadId}`);
+      await notificationService.send({
+        templateSlug: 'new_lead_system',
+        organizationId: notification.organization_id,
+        userId: notification.user_id,
+        leadId: notification.lead_id,
+        variables: {
+          lead_name: leadName,
+          source: sourceLabel
+        }
+      });
     } catch (error) {
-      console.error('Erro ao criar notificações:', error);
+      console.error('Erro ao disparar notificação via serviço:', error);
+      // Fallback a inserção direta se o serviço falhar (evitar perda da notificação crítica)
+      await supabase.from('notifications').insert(notification);
     }
   }
 

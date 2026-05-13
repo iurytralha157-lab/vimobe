@@ -109,42 +109,15 @@ export interface Notification {
   created_at: string;
 }
 
-// Request browser notification permission
+// Notification permission request logic removed as push is disabled
 async function requestNotificationPermission(): Promise<boolean> {
-  if (!('Notification' in window)) {
-    console.log('Browser does not support notifications');
-    return false;
-  }
-
-  if (Notification.permission === 'granted') {
-    return true;
-  }
-
-  if (Notification.permission !== 'denied') {
-    const permission = await Notification.requestPermission();
-    return permission === 'granted';
-  }
-
   return false;
 }
 
-// Send browser push notification
+// Send browser notification logic removed as push is disabled
 function sendBrowserNotification(title: string, options?: NotificationOptions) {
-  if (Notification.permission === 'granted') {
-    const notification = new Notification(title, {
-      icon: '/favicon.png',
-      badge: '/favicon.png',
-      tag: 'crm-notification',
-      ...options,
-    });
-
-    notification.onclick = () => {
-      window.focus();
-      notification.close();
-    };
-
-    setTimeout(() => notification.close(), 10000);
-  }
+  // Push disabled globally
+  console.log('Browser notification suppressed (push disabled):', title);
 }
 
 export function useNotifications() {

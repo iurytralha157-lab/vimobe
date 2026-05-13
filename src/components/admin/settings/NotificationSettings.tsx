@@ -63,10 +63,10 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
         .from('notification_logs' as any)
         .select(`
           *,
-          template:notification_templates(name)
+          template:notification_templates(name, slug)
         `)
         .order('created_at', { ascending: false })
-        .limit(50);
+        .limit(100);
       
       if (logsError) throw logsError;
       setLogs(logsData as any[] || []);
@@ -407,8 +407,9 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
                           <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
                             {format(new Date(log.created_at), 'dd/MM HH:mm', { locale: ptBR })}
                           </td>
-                          <td className="px-4 py-3 font-medium">
-                            {log.template?.name || 'Manual / Removido'}
+                          <td className="px-4 py-3">
+                            <div className="font-medium">{log.template?.name || 'Manual / Sistema'}</div>
+                            <div className="text-[10px] text-muted-foreground">{log.template?.slug || 'N/A'}</div>
                           </td>
                           <td className="px-4 py-3">
                             <Badge variant="outline" className="capitalize text-[10px]">
