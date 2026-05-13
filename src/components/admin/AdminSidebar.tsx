@@ -129,7 +129,7 @@ export function AdminSidebar() {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 py-4 px-2 overflow-y-auto scrollbar-thin">
+        <nav className="flex-1 py-3 px-2 overflow-y-auto scrollbar-thin">
           <ul className="space-y-1">
             {navItems.map((item) => (
               <li key={item.path}>
