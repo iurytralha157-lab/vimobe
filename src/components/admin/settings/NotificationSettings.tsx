@@ -211,27 +211,27 @@ export function NotificationSettings() {
             </Button>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {templates.map((template) => (
               <Card key={template.id} className={cn(
-                "overflow-hidden transition-all border-2",
-                changedIds.has(template.id) ? "border-primary/50 shadow-md" : "border-transparent"
+                "overflow-hidden transition-all border-2 flex flex-col h-full",
+                changedIds.has(template.id) ? "border-primary shadow-md" : "border-transparent"
               )}>
-                <CardHeader className="bg-muted/30 pb-4">
+                <CardHeader className="bg-muted/30 pb-4 shrink-0">
                   <div className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <CardTitle className="text-base">{template.name}</CardTitle>
-                        <Badge variant={template.is_active ? "default" : "secondary"}>
+                    <div className="space-y-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <CardTitle className="text-base truncate">{template.name}</CardTitle>
+                        <Badge variant={template.is_active ? "default" : "secondary"} className="shrink-0">
                           {template.is_active ? 'Ativo' : 'Inativo'}
                         </Badge>
-                        <Badge variant="outline" className="capitalize">
+                        <Badge variant="outline" className="capitalize shrink-0">
                           {template.channel}
                         </Badge>
                       </div>
-                      <code className="text-xs text-muted-foreground">{template.slug}</code>
+                      <code className="text-[10px] text-muted-foreground block truncate">{template.slug}</code>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 shrink-0">
                       <Switch 
                         checked={template.is_active} 
                         onCheckedChange={(checked) => handleLocalUpdate(template.id, { is_active: checked })}
@@ -239,7 +239,7 @@ export function NotificationSettings() {
                       <Button 
                         variant="ghost" 
                         size="icon" 
-                        className="text-destructive h-8 w-8" 
+                        className="text-destructive h-8 w-8 hover:bg-destructive/10" 
                         onClick={() => handleDeleteTemplate(template.id)}
                       >
                         <Trash2 className="h-4 w-4" />
@@ -247,23 +247,23 @@ export function NotificationSettings() {
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent className="pt-6 space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <CardContent className="pt-6 space-y-4 flex-1 flex flex-col">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 shrink-0">
                     <div className="space-y-2">
-                      <Label>Nome do Template</Label>
+                      <Label className="text-xs uppercase text-muted-foreground font-bold">Nome amigável</Label>
                       <Input 
                         value={template.name} 
                         onChange={(e) => handleLocalUpdate(template.id, { name: e.target.value })}
-                        className="bg-background"
+                        className="bg-background h-9"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Canal de Disparo</Label>
+                      <Label className="text-xs uppercase text-muted-foreground font-bold">Canal</Label>
                       <Select 
                         value={template.channel} 
                         onValueChange={(val: NotificationChannel) => handleLocalUpdate(template.id, { channel: val })}
                       >
-                        <SelectTrigger className="bg-background">
+                        <SelectTrigger className="bg-background h-9">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -276,48 +276,70 @@ export function NotificationSettings() {
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label>Mensagem</Label>
+                  <div className="space-y-2 flex-1 flex flex-col min-h-[180px]">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs uppercase text-muted-foreground font-bold">Mensagem do Template</Label>
+                      <span className="text-[10px] text-muted-foreground italic">Markdown suportado</span>
+                    </div>
                     <Textarea 
                       value={template.message} 
                       onChange={(e) => handleLocalUpdate(template.id, { message: e.target.value })}
-                      className="min-h-[120px] font-mono text-sm bg-background"
+                      className="flex-1 font-mono text-xs bg-background resize-none leading-relaxed"
                     />
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      <span className="text-xs text-muted-foreground mr-1">Variáveis disponíveis:</span>
-                      {template.variables?.map((v, i) => (
-                        <Badge key={i} variant="secondary" className="text-[10px] font-mono">
-                          {`{${v}}`}
-                        </Badge>
-                      ))}
+                    <div className="bg-muted/20 p-2 rounded-md border border-dashed mt-2">
+                      <p className="text-[10px] text-muted-foreground mb-1.5 font-medium">Variáveis disponíveis:</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {template.variables && template.variables.length > 0 ? (
+                          template.variables.map((v, i) => (
+                            <Badge key={i} variant="secondary" className="text-[9px] font-mono px-1.5 py-0 h-4">
+                              {`{${v}}`}
+                            </Badge>
+                          ))
+                        ) : (
+                          <span className="text-[9px] text-muted-foreground italic">Nenhuma variável configurada</span>
+                        )}
+                      </div>
                     </div>
                   </div>
 
-                  {changedIds.has(template.id) && (
-                    <div className="flex items-center justify-end gap-2 pt-2 border-t mt-4 animate-in fade-in slide-in-from-bottom-2 duration-200">
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => handleCancelEdit(template.id)}
-                        disabled={saving === template.id}
-                      >
-                        Descartar
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        onClick={() => handleSaveTemplate(template.id)}
-                        disabled={saving === template.id}
-                        className="gap-2"
-                      >
-                        {saving === template.id ? (
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                        ) : (
-                          <CheckCircle2 className="h-3 w-3" />
-                        )}
-                        Salvar Alterações
-                      </Button>
+                  <div className="flex items-center justify-between gap-2 pt-4 border-t mt-auto shrink-0">
+                    <div className="flex items-center gap-2">
+                      {changedIds.has(template.id) ? (
+                        <div className="flex items-center gap-2 animate-in fade-in slide-in-from-left-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => handleCancelEdit(template.id)}
+                            disabled={saving === template.id}
+                            className="h-8 text-xs"
+                          >
+                            Descartar
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            onClick={() => handleSaveTemplate(template.id)}
+                            disabled={saving === template.id}
+                            className="gap-2 h-8 text-xs bg-green-600 hover:bg-green-700"
+                          >
+                            {saving === template.id ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <CheckCircle2 className="h-3 w-3" />
+                            )}
+                            Salvar
+                          </Button>
+                        </div>
+                      ) : (
+                        <span className="text-[10px] text-muted-foreground flex items-center gap-1.5">
+                          <CheckCircle2 className="h-3 w-3 text-green-500" />
+                          Sincronizado
+                        </span>
+                      )}
                     </div>
-                  )}
+                    <div className="flex items-center gap-2">
+                      <span className="text-[9px] text-muted-foreground">ID: {template.id.split('-')[0]}...</span>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             ))}
