@@ -320,37 +320,43 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
 
                   <div className="flex items-center justify-between gap-2 pt-4 border-t mt-auto shrink-0">
                     <div className="flex items-center gap-2">
-                      {changedIds.has(template.id) ? (
-                        <div className="flex items-center gap-2 animate-in fade-in slide-in-from-left-2">
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            onClick={() => handleCancelEdit(template.id)}
-                            disabled={saving === template.id}
-                            className="h-8 text-xs"
-                          >
-                            Descartar
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            onClick={() => handleSaveTemplate(template.id)}
-                            disabled={saving === template.id}
-                            className="gap-2 h-8 text-xs bg-green-600 hover:bg-green-700"
-                          >
-                            {saving === template.id ? (
-                              <Loader2 className="h-3 w-3 animate-spin" />
-                            ) : (
-                              <CheckCircle2 className="h-3 w-3" />
-                            )}
-                            Salvar
-                          </Button>
-                        </div>
-                      ) : (
-                        <span className="text-[10px] text-muted-foreground flex items-center gap-1.5">
+                    <div className="flex items-center gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => handleCancelEdit(template.id)}
+                        disabled={saving === template.id || !changedIds.has(template.id)}
+                        className={cn(
+                          "h-8 text-xs",
+                          !changedIds.has(template.id) && "opacity-50 cursor-not-allowed"
+                        )}
+                      >
+                        Descartar
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        onClick={() => handleSaveTemplate(template.id)}
+                        disabled={saving === template.id || !changedIds.has(template.id)}
+                        className={cn(
+                          "gap-2 h-8 text-xs",
+                          changedIds.has(template.id) ? "bg-green-600 hover:bg-green-700" : "bg-muted"
+                        )}
+                      >
+                        {saving === template.id ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <CheckCircle2 className="h-3 w-3" />
+                        )}
+                        Salvar
+                      </Button>
+                      
+                      {!changedIds.has(template.id) && (
+                        <span className="text-[10px] text-muted-foreground flex items-center gap-1.5 ml-2">
                           <CheckCircle2 className="h-3 w-3 text-green-500" />
-                          Sincronizado
+                          Salvo
                         </span>
                       )}
+                    </div>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-[9px] text-muted-foreground">ID: {template.id.split('-')[0]}...</span>
