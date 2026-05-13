@@ -225,7 +225,7 @@ export default function GamificationRanking() {
               {topThree[1] && (
                 <div className="flex flex-col items-center gap-3 lg:gap-6 flex-1 max-w-[120px] lg:max-w-[180px]">
                   <div className="relative group">
-                    <Avatar className="h-20 w-20 lg:h-32 lg:w-32 border-2 lg:border-4 border-slate-300 shadow-2xl transition-transform lg:group-hover:scale-105">
+                    <Avatar className="h-20 w-20 lg:h-32 lg:w-32 border-2 lg:border-4 border-slate-300 transition-transform lg:group-hover:scale-105">
                       <AvatarImage src={topThree[1].profiles?.avatar_url || undefined} />
                       <AvatarFallback className="text-lg lg:text-2xl">{getInitials(topThree[1].profiles?.name || '')}</AvatarFallback>
                     </Avatar>
@@ -248,7 +248,7 @@ export default function GamificationRanking() {
                     <div className="absolute -top-10 lg:-top-16 left-1/2 -translate-x-1/2 animate-bounce">
                       <Crown className="h-10 w-10 lg:h-16 lg:w-16 text-yellow-500 fill-yellow-500 drop-shadow-[0_0_20px_rgba(234,179,8,0.6)]" />
                     </div>
-                    <Avatar className="h-24 w-24 lg:h-44 lg:w-44 border-4 lg:border-8 border-yellow-500 shadow-[0_0_40px_rgba(234,179,8,0.4)] transition-transform lg:group-hover:scale-105">
+                    <Avatar className="h-24 w-24 lg:h-44 lg:w-44 border-4 lg:border-8 border-yellow-500 transition-transform lg:group-hover:scale-105">
                       <AvatarImage src={topThree[0].profiles?.avatar_url || undefined} />
                       <AvatarFallback className="text-2xl lg:text-4xl font-bold">{getInitials(topThree[0].profiles?.name || '')}</AvatarFallback>
                     </Avatar>
@@ -269,7 +269,7 @@ export default function GamificationRanking() {
               {topThree[2] && (
                 <div className="flex flex-col items-center gap-3 lg:gap-6 flex-1 max-w-[110px] lg:max-w-[160px]">
                   <div className="relative group">
-                    <Avatar className="h-18 w-18 lg:h-28 lg:w-28 border-2 lg:border-4 border-amber-600 shadow-2xl transition-transform lg:group-hover:scale-105">
+                    <Avatar className="h-18 w-18 lg:h-28 lg:w-28 border-2 lg:border-4 border-amber-600 transition-transform lg:group-hover:scale-105">
                       <AvatarImage src={topThree[2].profiles?.avatar_url || undefined} />
                       <AvatarFallback className="text-base lg:text-xl">{getInitials(topThree[2].profiles?.name || '')}</AvatarFallback>
                     </Avatar>
