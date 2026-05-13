@@ -159,8 +159,6 @@ function buildLabel(type: string, metadata: Record<string, any>, source: 'timeli
       return 'Reunião agendada';
     case 'meeting_made':
       return 'Reunião realizada';
-    case 'call_initiated':
-      return 'Ligação iniciada';
     default: {
       if (metadata?.is_automation) return `Ação automática (${type})`;
       const translations: Record<string, string> = {
