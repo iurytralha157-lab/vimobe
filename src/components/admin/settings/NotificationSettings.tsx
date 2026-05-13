@@ -218,7 +218,21 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {templates.map((template) => (
+            {templates.length === 0 ? (
+              <Card className="col-span-full py-12">
+                <CardContent className="flex flex-col items-center justify-center text-center">
+                  <MessageSquare className="h-12 w-12 text-muted-foreground mb-4 opacity-20" />
+                  <h3 className="text-lg font-medium">Nenhum template encontrado</h3>
+                  <p className="text-sm text-muted-foreground max-w-xs mx-auto">
+                    Certifique-se de que as tabelas foram criadas e que você tem permissão de acesso.
+                  </p>
+                  <Button variant="outline" onClick={fetchData} className="mt-4">
+                    Tentar Novamente
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              templates.map((template) => (
               <Card key={template.id} className={cn(
                 "overflow-hidden transition-all border-2 flex flex-col h-full",
                 changedIds.has(template.id) ? "border-primary shadow-md" : "border-transparent"
@@ -364,7 +378,8 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
                   </div>
                 </CardContent>
               </Card>
-            ))}
+              ))
+            )}
           </div>
         </TabsContent>
 
