@@ -408,6 +408,35 @@ export function useUpdateLead() {
             }
           });
         }
+        
+        // Log stage change
+        if (isStageChange && currentLead?.stage_id !== updates.stage_id) {
+          const { data: newStage } = await supabase
+            .from('stages')
+            .select('name')
+            .eq('id', updates.stage_id)
+            .single();
+            
+          const { data: oldStage } = currentLead?.stage_id ? await supabase
+            .from('stages')
+            .select('name')
+            .eq('id', currentLead.stage_id)
+            .single() : { data: null };
+
+          await supabase.from('activities').insert({
+            lead_id: id,
+            user_id: user.user.id,
+            type: 'stage_change',
+            content: `Estágio alterado para ${newStage?.name || 'Novo Estágio'}`,
+            metadata: { 
+              old_stage_id: currentLead?.stage_id || null,
+              new_stage_id: updates.stage_id,
+              old_stage_name: oldStage?.name || null,
+              new_stage_name: newStage?.name || null,
+              new_status: updates.deal_status || null
+            }
+          });
+        }
       }
       
       // Audit log: lead updated
