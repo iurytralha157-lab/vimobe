@@ -157,7 +157,7 @@ export default function SystemSettingsPage() {
           </TabsContent>
 
           <TabsContent value="notifications" className="mt-0">
-            <NotificationSettings settings={settings} onUpdate={handleUpdate} />
+            <NotificationSettings />
           </TabsContent>
         </Tabs>
       </div>
