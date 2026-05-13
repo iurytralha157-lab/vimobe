@@ -171,6 +171,59 @@ export function MaintenanceSettings({ settings, onUpdate }: MaintenanceSettingsP
           </div>
         </CardContent>
       </Card>
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <RefreshCw className="h-5 w-5 text-purple-500" />
+            <div>
+              <CardTitle>Feature Flags</CardTitle>
+              <CardDescription>Ative ou desative funcionalidades em desenvolvimento para todos os usuários.</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-4">
+            {settings?.feature_flags && Object.entries(settings.feature_flags).map(([key, enabled]) => (
+              <div key={key} className="flex items-center justify-between p-2 border rounded">
+                <Label className="font-mono">{key}</Label>
+                <Switch 
+                  checked={!!enabled} 
+                  onCheckedChange={(checked) => {
+                    const newFlags = { ...settings.feature_flags, [key]: checked };
+                    onUpdate({ feature_flags: newFlags });
+                  }}
+                />
+              </div>
+            ))}
+            <div className="flex gap-2">
+              <Input 
+                id="new-flag"
+                placeholder="Nome da nova flag (ex: new_dashboard)"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    const input = e.currentTarget;
+                    const val = input.value.trim();
+                    if (val) {
+                      const newFlags = { ...settings?.feature_flags, [val]: false };
+                      onUpdate({ feature_flags: newFlags });
+                      input.value = '';
+                    }
+                  }
+                }}
+              />
+              <Button variant="outline" onClick={() => {
+                const input = document.getElementById('new-flag') as HTMLInputElement;
+                const val = input.value.trim();
+                if (val) {
+                  const newFlags = { ...settings?.feature_flags, [val]: false };
+                  onUpdate({ feature_flags: newFlags });
+                  input.value = '';
+                }
+              }}>Adicionar Flag</Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
