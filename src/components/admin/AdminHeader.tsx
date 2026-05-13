@@ -228,5 +228,3 @@ export const AdminHeader = React.memo(function AdminHeader({
     </header>
   );
 });
-  );
-}
