@@ -40,6 +40,7 @@ class NotificationService {
     variables,
     leadId
   }: SendNotificationParams) {
+    const startTime = performance.now();
     console.log(`[NotificationService] Sending template: ${templateSlug} to org: ${organizationId}`);
 
     try {
