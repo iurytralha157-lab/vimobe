@@ -304,13 +304,26 @@ export function useCompleteScheduleEvent() {
 
   return useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      const isCompleted = status === 'completed';
+      const updates: any = { status };
+      
+      if (isCompleted) {
+        updates.completed_by = profile?.id;
+        updates.completed_at = new Date().toISOString();
+      } else {
+        updates.completed_by = null;
+        updates.completed_at = null;
+      }
+
       const { data, error } = await (supabase as any)
         .from('schedule_events')
-        .update({
-          status,
-        })
+        .update(updates)
         .eq('id', id)
-        .select()
+        .select(`
+          *,
+          user:users!schedule_events_user_id_fkey(id, name, avatar_url),
+          lead:leads(id, name, phone)
+        `)
         .single();
 
       if (error) throw error;
