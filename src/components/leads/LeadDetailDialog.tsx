@@ -71,6 +71,7 @@ import { TagSelectorPopoverContent } from '@/components/ui/tag-selector';
 import { useCreateCommissionOnWon } from '@/hooks/use-create-commission';
 import { useUpdateLeadCommission } from '@/hooks/use-update-commission';
 import { useDealStatusChange } from '@/hooks/use-deal-status-change';
+import { useCreateCall } from '@/hooks/use-telephony';
 import { useRecordFirstResponseOnAction } from '@/hooks/use-first-response';
 import { useTelecomCustomerByLead } from '@/hooks/use-telecom-customer-by-lead';
 import { TelecomSummaryCard } from '@/components/leads/TelecomSummaryCard';
@@ -321,7 +322,8 @@ export function LeadDetailDialog({
   const updateCommission = useUpdateLeadCommission();
   const dealStatusChange = useDealStatusChange();
   const { recordFirstResponse } = useRecordFirstResponseOnAction();
-  const { profile, organization } = useAuth();
+  const { profile, organization, user } = useAuth();
+  const createCallMutation = useCreateCall();
   const createActivityMutation = useCreateActivity();
   const { data: servicePlans = [] } = useServicePlans();
   const isTelecom = organization?.segment === 'telecom';
@@ -427,13 +429,30 @@ export function LeadDetailDialog({
     setQuickActionOutcomeOpen(true);
   };
   
-  const handleQuickActionOutcomeConfirm = (outcome: TaskOutcome, notes: string) => {
+  const handleQuickActionOutcomeConfirm = async (outcome: TaskOutcome, notes: string) => {
+    // 1. Log in the 'activities' table for visual history
     createActivityMutation.mutate({
       lead_id: lead.id,
       type: quickActionOutcomeType === 'call' ? 'call' : 'email',
       content: quickActionOutcomeType === 'call' ? 'Tentativa de ligação' : 'Email enviado',
       metadata: { outcome, notes, channel: quickActionOutcomeType },
     });
+
+    // 2. If it's a call, also register it in 'telephony_calls' for gamification & metrics
+    if (quickActionOutcomeType === 'call') {
+      try {
+        await createCallMutation.mutateAsync({
+          lead_id: lead.id,
+          phone_to: lead.phone,
+          direction: 'outbound',
+          notes: notes,
+          organization_id: lead.organization_id || profile?.organization_id
+        });
+      } catch (err) {
+        console.error('Failed to register call in telephony_calls:', err);
+      }
+    }
+
     setQuickActionOutcomeOpen(false);
   };
   const handleEditScheduleEvent = (event: ScheduleEvent) => {
