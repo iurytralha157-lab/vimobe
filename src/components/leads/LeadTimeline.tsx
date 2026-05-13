@@ -126,12 +126,6 @@ const eventConfig: Record<string, {
     label: 'Reunião realizada',
     color: 'text-green-600 dark:text-green-400',
     bgColor: 'bg-green-100 dark:bg-green-900/50'
-  },
-  call_initiated: {
-    icon: Phone,
-    label: 'Ligação iniciada',
-    color: 'text-teal-600 dark:text-teal-400',
-    bgColor: 'bg-teal-100 dark:bg-teal-900/50'
   }
 };
 
