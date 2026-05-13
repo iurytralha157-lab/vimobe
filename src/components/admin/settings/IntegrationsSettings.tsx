@@ -25,7 +25,7 @@ export function IntegrationsSettings({ settings, onUpdate }: IntegrationsSetting
     if (settings) {
       const value = (settings.value as SystemSettingsValue) || {};
       setWhatsapp({
-        contact_number: value.contact_whatsapp || '',
+        contact_number: value.contact_whatsapp || value.default_whatsapp || '',
         notification_instance: value.notification_instance_name || ''
       });
     }
@@ -36,6 +36,7 @@ export function IntegrationsSettings({ settings, onUpdate }: IntegrationsSetting
     try {
       await onUpdate({ 
         contact_whatsapp: whatsapp.contact_number,
+        default_whatsapp: whatsapp.contact_number, // Mantendo sincronizado com o campo legado
         notification_instance_name: whatsapp.notification_instance
       });
       toast.success('Configurações de integração salvas com sucesso!');
