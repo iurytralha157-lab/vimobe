@@ -55,6 +55,13 @@ const notificationCategories = {
 type CategoryKey = keyof typeof notificationCategories;
 
 export default function Notifications() {
+  const { isSuperAdmin, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
+
+  if (!authLoading && !isSuperAdmin) {
+    navigate('/dashboard');
+    return null;
+  }
   const isMobile = useIsMobile();
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
   const [categoryFilter, setCategoryFilter] = useState<CategoryKey>('all');

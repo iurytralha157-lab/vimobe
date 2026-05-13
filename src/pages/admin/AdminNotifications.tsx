@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Bell, MessageSquare, Smartphone, Monitor, History, BarChart3, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { NotificationSettings } from '@/components/admin/settings/NotificationSettings';
+import { NotificationLogsTable } from '@/components/admin/notifications/NotificationLogsTable';
 
 export default function AdminNotifications() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -75,9 +76,7 @@ export default function AdminNotifications() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="text-center py-8 text-muted-foreground">
-                  Aguardando registros na tabela notification_logs...
-                </div>
+                <NotificationLogsTable />
               </CardContent>
             </Card>
           </TabsContent>
