@@ -1,6 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 
-export type NotificationChannel = 'whatsapp' | 'push' | 'system' | 'email';
+export type NotificationChannel = 'whatsapp' | 'system' | 'email';
 
 export interface NotificationTemplate {
   id: string;
@@ -40,6 +40,7 @@ class NotificationService {
     variables,
     leadId
   }: SendNotificationParams) {
+    const startTime = performance.now();
     console.log(`[NotificationService] Sending template: ${templateSlug} to org: ${organizationId}`);
 
     try {
@@ -110,38 +111,29 @@ class NotificationService {
           result = { success: !invokeResult.error, ...invokeResult };
           break;
 
-        case 'push':
-          if (userId) {
-            const pushResult = await supabase.functions.invoke('send-push', {
-              body: {
-                user_id: userId,
-                title: formattedTitle || template.name,
-                body: formattedMessage,
-                data: { lead_id: leadId }
-              },
-            });
-            result = { success: !pushResult.error, ...pushResult };
-          } else {
-            result = { success: false, error: 'userId is required for push notifications' };
-          }
-          break;
 
         default:
           console.error(`[NotificationService] Unsupported channel: ${template.channel}`);
           result = { success: false, error: 'Unsupported channel' };
       }
 
-      // 4. Log the event
+      // 4. Log the event with detailed tracking
       await this.logNotification({
         templateId: template.id,
         organizationId,
         userId,
         recipient: recipient || userId || 'unknown',
         channel: template.channel,
-        payload: { variables, formattedTitle, formattedMessage },
+        payload: { 
+          variables, 
+          formattedTitle, 
+          formattedMessage,
+          origin: 'NotificationService',
+          executionTime: `${(performance.now() - startTime).toFixed(2)}ms`
+        },
         response: result,
         status: result.success ? 'sent' : 'failed',
-        error: result.error ? String(result.error) : null
+        error: result.error ? (typeof result.error === 'object' ? JSON.stringify(result.error) : String(result.error)) : null
       });
 
       return result;

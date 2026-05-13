@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { useAccessibleSessions } from "./use-accessible-sessions";
+import { notificationService } from "@/services/NotificationService";
 
 const POLL_INTERVAL = 30000; // 30 seconds
 const ERROR_THRESHOLD = 2; // Notify after 2 consecutive failures
@@ -80,14 +81,14 @@ export function useWhatsAppHealthMonitor() {
     organizationId: string
   ) => {
     try {
-      // Create notification for the session owner
-      await supabase.from("notifications").insert({
-        user_id: ownerId,
-        organization_id: organizationId,
-        title: "⚠️ WhatsApp Desconectado!",
-        content: `A sessão "${sessionName}" perdeu a conexão. Verifique e reconecte o WhatsApp.`,
-        type: "warning",
-        is_read: false,
+      // Create notification for the session owner via service
+      await notificationService.send({
+        templateSlug: 'whatsapp_disconnected_system',
+        organizationId: organizationId,
+        userId: ownerId,
+        variables: {
+          session_name: sessionName
+        }
       });
 
       // Also notify admins
@@ -108,7 +109,16 @@ export function useWhatsAppHealthMonitor() {
           is_read: false,
         }));
 
-        await supabase.from("notifications").insert(adminNotifications);
+        for (const adminNotif of adminNotifications) {
+          await notificationService.send({
+            templateSlug: 'whatsapp_disconnected_system',
+            organizationId: adminNotif.organization_id,
+            userId: adminNotif.user_id,
+            variables: {
+              session_name: sessionName
+            }
+          });
+        }
       }
 
     } catch (err) {

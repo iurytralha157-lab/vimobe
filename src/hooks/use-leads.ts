@@ -5,6 +5,7 @@ import { Tables } from '@/integrations/supabase/types';
 import { normalizePhone } from '@/lib/phone-utils';
 import { notifyLeadCreated } from './use-lead-notifications';
 import { logAuditAction } from './use-audit-logs';
+import { notificationService } from '@/services/NotificationService';
 export type Lead = Tables<'leads'> & {
   tags?: { id: string; name: string; color: string }[];
   assignee?: { id: string; name: string; avatar_url: string | null };
@@ -198,6 +199,28 @@ export function useCreateLead() {
             }
 
             toast.success('Lead atualizado (telefone já existia)');
+            
+            // Notify assignee about re-entry
+            if (existingLead.id && organizationId) {
+              const { data: leadData } = await supabase
+                .from('leads')
+                .select('assigned_user_id')
+                .eq('id', existingLead.id)
+                .single();
+              
+              if (leadData?.assigned_user_id) {
+                await notificationService.send({
+                  templateSlug: 'lead_reentry_system',
+                  organizationId: organizationId,
+                  userId: leadData.assigned_user_id,
+                  leadId: existingLead.id,
+                  variables: {
+                    lead_name: lead.name,
+                    source: lead.source || 'manual'
+                  }
+                });
+              }
+            }
             return { id: existingLead.id };
           }
         }
@@ -286,7 +309,10 @@ export function useCreateLead() {
         user_id: user.user.id,
         type: 'lead_created',
         content: `Lead "${lead.name}" foi criado`,
-        metadata: { source: lead.source || 'manual' }
+        metadata: { 
+          source: lead.source || 'manual',
+          origin: 'useCreateLead'
+        }
       });
       
       // Audit log: lead created
