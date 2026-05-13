@@ -183,12 +183,13 @@ export function useCreateCall() {
       notes?: string;
       organization_id?: string;
     }) => {
-      const { data: user } = await supabase.auth.getUser();
-      const { data: result, error } = await (supabase as any)
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      const { data: result, error } = await supabase
         .from('telephony_calls')
         .insert({
           ...data,
-          user_id: user.user?.id,
+          user_id: user?.id,
           direction: data.direction || 'outbound',
           status: 'initiated'
         })
