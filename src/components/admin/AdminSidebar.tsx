@@ -82,16 +82,13 @@ export function AdminSidebar() {
                 <img 
                   src={logoUrl} 
                   alt="Logo" 
-                  style={{ maxWidth: Math.min(logoWidth, 140), maxHeight: Math.min(logoHeight, 36) }}
+                  style={{ maxWidth: logoWidth, maxHeight: logoHeight }}
                   className="object-contain"
                 />
               ) : (
-                <>
-                  <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center flex-shrink-0">
-                    <Shield className="h-5 w-5 text-primary-foreground" />
-                  </div>
-                  <span className="font-bold text-foreground">Super Admin</span>
-                </>
+                <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground font-bold text-sm">
+                  V
+                </div>
               )}
             </div>
           )}
