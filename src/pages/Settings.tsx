@@ -72,7 +72,6 @@ export default function Settings() {
     const tabs: AnimatedTabItem[] = [
       { value: 'account', label: 'Conta', icon: User,
         renderIcon: () => <AnimatedIcon icon={AVATAR_JSON} size={18} trigger="hover" /> },
-      { value: 'notifications', label: 'Notificações', icon: Bell },
     ];
 
     // Only admins and super admins can see the Users tab
@@ -144,9 +143,6 @@ export default function Settings() {
             <AccountTab />
           </TabsContent>
 
-          <TabsContent value="notifications">
-            <NotificationsTab />
-          </TabsContent>
 
           <TabsContent value="team">
             <TeamTab />
