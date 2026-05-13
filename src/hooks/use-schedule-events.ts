@@ -123,8 +123,10 @@ export function useScheduleEvents(options: UseScheduleEventsOptions = {}) {
         .select(`
           id, organization_id, user_id, lead_id, property_id, title, 
           event_type, start_time, end_time, is_all_day, status,
+          completed_by, completed_at,
           user:users!schedule_events_user_id_fkey(id, name, avatar_url),
-          lead:leads(id, name, phone)
+          lead:leads(id, name, phone),
+          completed_by_user:users!schedule_events_completed_by_fkey(id, name)
         `)
         .order('start_time', { ascending: true });
 
