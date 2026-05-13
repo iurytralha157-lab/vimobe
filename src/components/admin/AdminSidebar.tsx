@@ -75,7 +75,7 @@ export function AdminSidebar() {
         )}
       >
         {/* Logo */}
-        <div className="h-14 flex items-center justify-between px-3 border-b border-border">
+        <div className={cn("flex items-center px-3 pt-4 pb-3 border-b border-border/10", collapsed ? "justify-center" : "justify-between")}>
           {!collapsed && (
             <div className="flex items-center gap-2 flex-1 min-w-0">
               {logoUrl ? (
