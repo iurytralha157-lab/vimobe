@@ -44,7 +44,7 @@ class NotificationService {
 
     try {
       // 1. Fetch template
-      const { data: template, error: templateError } = await supabase
+      const { data, error: templateError } = await supabase
         .from('notification_templates' as any)
         .select('*')
         .eq('slug', templateSlug)
@@ -56,10 +56,12 @@ class NotificationService {
         throw templateError;
       }
 
-      if (!template) {
+      if (!data) {
         console.warn(`[NotificationService] Template ${templateSlug} not found or inactive.`);
         return { success: false, error: 'Template not found' };
       }
+
+      const template = data as any;
 
       // 2. Format message and title
       let formattedMessage = template.message;
@@ -79,7 +81,7 @@ class NotificationService {
       switch (template.channel) {
         case 'system':
           if (userId) {
-            const { data, error } = await supabase.from('notifications').insert({
+            const { data: insertData, error } = await supabase.from('notifications').insert({
               user_id: userId,
               organization_id: organizationId,
               title: formattedTitle || template.name,
@@ -89,7 +91,7 @@ class NotificationService {
               is_read: false,
             }).select().single();
             
-            result = { success: !error, data, error };
+            result = { success: !error, data: insertData, error };
           } else {
             result = { success: false, error: 'userId is required for system notifications' };
           }
