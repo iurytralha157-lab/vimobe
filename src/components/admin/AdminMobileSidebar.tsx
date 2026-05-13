@@ -16,13 +16,12 @@ import {
   LogOut,
   Shield,
   Lightbulb,
-  Monitor,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSystemSettings } from '@/hooks/use-system-settings';
 import { useTheme } from 'next-themes';
 
-const baseNavItems = [
+const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/admin' },
   { icon: Building2, label: 'Organizações', path: '/admin/organizations' },
   { icon: Users, label: 'Usuários', path: '/admin/users' },
@@ -30,22 +29,14 @@ const baseNavItems = [
   { icon: Settings, label: 'Configurações', path: '/admin/settings' },
 ];
 
-
 export function AdminMobileSidebar() {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const { signOut, isSuperAdmin } = useAuth();
+  const { signOut } = useAuth();
   const { data: systemSettings } = useSystemSettings();
   const { resolvedTheme } = useTheme();
 
-  const navItems = useMemo(() => {
-    const items = [...baseNavItems];
-    if (isSuperAdmin) {
-      items.push({ icon: Monitor, label: 'Config. do Sistema', path: '/admin/system-settings' });
-    }
-    return items;
-  }, [isSuperAdmin]);
 
 
   const logoUrl = useMemo(() => {
