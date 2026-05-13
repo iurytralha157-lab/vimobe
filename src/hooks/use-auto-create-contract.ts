@@ -63,8 +63,6 @@ export function useAutoCreateContract() {
       
       return { success: true, contractNumber: 'CTR-PENDING', installmentsCreated: 0 };
     },
-      return data;
-    },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['contracts'] });
       queryClient.invalidateQueries({ queryKey: ['financial-entries'] });
