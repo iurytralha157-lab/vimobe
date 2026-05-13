@@ -138,7 +138,7 @@ Deno.serve(async (req) => {
       data = { message: responseText };
     }
     
-    console.log("WhatsApp notification sent:", { user: user.name, phone: formattedPhone, instance: instanceName, status: response.status });
+    console.log("WhatsApp notification sent:", { user: targetName, phone: formattedPhone, instance: instanceName, status: response.status });
 
     if (!response.ok) {
       return new Response(
