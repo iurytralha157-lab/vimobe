@@ -42,7 +42,7 @@ export function useLeadCalls(leadId: string | null) {
   return useQuery({
     queryKey: ['telephony-calls', 'lead', leadId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('telephony_calls')
         .select(`
           *,
@@ -184,7 +184,7 @@ export function useCreateCall() {
       organization_id?: string;
     }) => {
       const { data: user } = await supabase.auth.getUser();
-      const { data: result, error } = await supabase
+      const { data: result, error } = await (supabase as any)
         .from('telephony_calls')
         .insert({
           ...data,
