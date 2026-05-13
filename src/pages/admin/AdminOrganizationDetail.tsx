@@ -319,6 +319,23 @@ export default function AdminOrganizationDetail() {
         toast.success('Usuário já existia e foi vinculado a esta organização!');
       } else {
         toast.success('Usuário criado com sucesso!');
+        
+        // Send notification with credentials
+        try {
+          const { notificationService } = await import('@/services/NotificationService');
+          await notificationService.send({
+            templateSlug: 'new_user_credentials_whatsapp',
+            organizationId: id,
+            recipient: newUser.email, // Or phone if we had it, but email is primary for login
+            variables: {
+              user_name: newUser.name,
+              email: newUser.email,
+              password: newUser.password
+            }
+          });
+        } catch (err) {
+          console.error('Credentials notification failed:', err);
+        }
       }
       
       setAddUserDialogOpen(false);
