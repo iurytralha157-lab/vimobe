@@ -204,25 +204,34 @@ export function EventsList({ events, onEditEvent, onAddEvent, showUser = true, s
                       </p>
                     )}
 
-                    <div className="flex flex-wrap items-center gap-6 mt-4">
-                      {showUser && event.user && (
-                        <div className="flex items-center gap-2.5 text-[11px] font-black uppercase tracking-tighter text-muted-foreground/70">
-                          <Avatar className="h-6 w-6 border-2 border-background shadow-sm">
-                            <AvatarImage src={event.user.avatar_url || undefined} />
-                            <AvatarFallback className="bg-primary/10 text-primary text-[8px] font-black">
-                              {event.user.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="truncate max-w-[120px]">{event.user.name}</span>
-                        </div>
-                      )}
-
-                      {showLead && event.lead && (
-                        <div className="flex items-center gap-2.5 text-[11px] font-black uppercase tracking-tighter text-muted-foreground/70">
-                          <div className="h-6 w-6 rounded-full bg-muted/50 flex items-center justify-center">
-                            <User className="h-3.5 w-3.5" />
+                    <div className="flex flex-col gap-3 mt-4">
+                      <div className="flex flex-wrap items-center gap-6">
+                        {showUser && event.user && (
+                          <div className="flex items-center gap-2.5 text-[11px] font-black uppercase tracking-tighter text-muted-foreground/70">
+                            <Avatar className="h-6 w-6 border-2 border-background shadow-sm">
+                              <AvatarImage src={event.user.avatar_url || undefined} />
+                              <AvatarFallback className="bg-primary/10 text-primary text-[8px] font-black">
+                                {event.user.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="truncate max-w-[120px]">Agendado por: {event.user.name}</span>
                           </div>
-                          <span className="truncate max-w-[150px]">{event.lead.name}</span>
+                        )}
+
+                        {showLead && event.lead && (
+                          <div className="flex items-center gap-2.5 text-[11px] font-black uppercase tracking-tighter text-muted-foreground/70">
+                            <div className="h-6 w-6 rounded-full bg-muted/50 flex items-center justify-center">
+                              <User className="h-3.5 w-3.5" />
+                            </div>
+                            <span className="truncate max-w-[150px]">{event.lead.name}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {isCompleted && event.completed_by_user && (
+                        <div className="flex items-center gap-2 text-[10px] font-bold text-green-600/80 uppercase tracking-tighter bg-green-50/50 w-fit px-2 py-1 rounded-lg border border-green-100/50">
+                          <CheckSquare className="h-3 w-3" />
+                          <span>Concluído por: {event.completed_by_user.name} {event.completed_at && `em ${format(new Date(event.completed_at), 'dd/MM HH:mm')}`}</span>
                         </div>
                       )}
                     </div>
