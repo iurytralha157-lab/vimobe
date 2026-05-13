@@ -41,10 +41,6 @@ export default function AdminNotifications() {
               <MessageSquare className="h-4 w-4" />
               <span className="hidden md:inline">WhatsApp</span>
             </TabsTrigger>
-            <TabsTrigger value="push" className="flex items-center gap-2 py-2">
-              <Smartphone className="h-4 w-4" />
-              <span className="hidden md:inline">Push</span>
-            </TabsTrigger>
             <TabsTrigger value="system" className="flex items-center gap-2 py-2">
               <Monitor className="h-4 w-4" />
               <span className="hidden md:inline">Sistema</span>
