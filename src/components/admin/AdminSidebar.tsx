@@ -67,10 +67,10 @@ export function AdminSidebar() {
   const logoHeight = systemSettings?.logo_height || 40;
 
   return (
-    <div className="relative h-[calc(100%-24px)] m-3">
+    <div className="relative h-[calc(100%-24px)] m-3 flex-shrink-0">
       <aside 
         className={cn(
-          "h-full bg-card rounded-xl border shadow-sm flex flex-col transition-all duration-300",
+          "h-full bg-card rounded-xl relative flex flex-col transition-all duration-300 shadow-sm border-0",
           collapsed ? "w-16" : "w-56"
         )}
       >
