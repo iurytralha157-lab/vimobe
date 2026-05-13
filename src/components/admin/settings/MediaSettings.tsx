@@ -189,6 +189,83 @@ export function MediaSettings({ settings, onUpdate }: MediaSettingsProps) {
               </div>
             </div>
           </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+            <div className="space-y-4">
+              <Label>Ícone PWA</Label>
+              <div className="border-2 border-dashed rounded-lg p-4 flex flex-col items-center justify-center min-h-[150px]">
+                {settings?.pwa_icon_url ? (
+                  <img src={settings.pwa_icon_url} alt="PWA Icon" className="h-20 w-20 object-contain" />
+                ) : (
+                  <ImageIcon className="h-10 w-10 text-muted-foreground" />
+                )}
+                <input
+                  type="file"
+                  id="pwa_icon_url"
+                  className="hidden"
+                  onChange={(e) => handleUpload(e, 'pwa_icon_url' as any)}
+                  accept=".jpg,.png,.svg"
+                />
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="mt-4"
+                  onClick={() => document.getElementById('pwa_icon_url')?.click()}
+                  disabled={uploading === 'pwa_icon_url'}
+                >
+                  {uploading === 'pwa_icon_url' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4 mr-2" />}
+                  Trocar Ícone PWA
+                </Button>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <Label>Fundo do Login</Label>
+              <div className="border-2 border-dashed rounded-lg p-4 flex flex-col items-center justify-center min-h-[150px]">
+                {settings?.login_bg_url ? (
+                  <img src={settings.login_bg_url} alt="Login BG" className="max-h-24 w-full object-cover rounded" />
+                ) : (
+                  <ImageIcon className="h-10 w-10 text-muted-foreground" />
+                )}
+                <input
+                  type="file"
+                  id="login_bg_url"
+                  className="hidden"
+                  onChange={(e) => handleUpload(e, 'login_bg_url' as any)}
+                  accept=".jpg,.png,.svg,.webp"
+                />
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="mt-4"
+                  onClick={() => document.getElementById('login_bg_url')?.click()}
+                  disabled={uploading === 'login_bg_url'}
+                >
+                  {uploading === 'login_bg_url' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4 mr-2" />}
+                  Trocar Fundo
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t">
+            <div className="space-y-2">
+              <Label>Largura da Logo (px)</Label>
+              <Input 
+                type="number" 
+                value={settings?.logo_width || 140} 
+                onChange={(e) => onUpdate({ logo_width: parseInt(e.target.value) })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Altura da Logo (px)</Label>
+              <Input 
+                type="number" 
+                value={settings?.logo_height || 40} 
+                onChange={(e) => onUpdate({ logo_height: parseInt(e.target.value) })}
+              />
+            </div>
+          </div>
         </CardContent>
       </Card>
 
