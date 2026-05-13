@@ -13,8 +13,7 @@ import {
   HelpCircle,
   Database,
   ClipboardList,
-  Bell,
-  Monitor
+  Bell
 } from 'lucide-react';
 
 import { NavLink, useLocation } from 'react-router-dom';
@@ -25,7 +24,7 @@ import { useState, useMemo } from 'react';
 import { useSystemSettings } from '@/hooks/use-system-settings';
 import { useTheme } from 'next-themes';
 
-const baseNavItems = [
+const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/admin' },
   { icon: Building2, label: 'Organizações', path: '/admin/organizations' },
   { icon: Users, label: 'Usuários', path: '/admin/users' },
@@ -39,21 +38,13 @@ const baseNavItems = [
   { icon: Settings, label: 'Configurações', path: '/admin/settings' },
 ];
 
-
 export function AdminSidebar() {
   const location = useLocation();
-  const { signOut, isSuperAdmin } = useAuth();
+  const { signOut } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
   const { data: systemSettings } = useSystemSettings();
   const { resolvedTheme } = useTheme();
 
-  const navItems = useMemo(() => {
-    const items = [...baseNavItems];
-    if (isSuperAdmin) {
-      items.push({ icon: Monitor, label: 'Config. do Sistema', path: '/admin/system-settings' });
-    }
-    return items;
-  }, [isSuperAdmin]);
 
 
   const logoUrl = useMemo(() => {
