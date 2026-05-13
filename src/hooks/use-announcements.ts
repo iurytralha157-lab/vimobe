@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { notificationService } from '@/services/NotificationService';
 
 interface Announcement {
   id: string;
@@ -165,14 +166,13 @@ export function useAnnouncements() {
           }));
 
           // Using NotificationService for auditability
-          for (const notification of notifications) {
+          for (const user of usersToNotify) {
             await notificationService.send({
               templateSlug: 'system_announcement',
-              organizationId: notification.organization_id,
-              userId: notification.user_id,
+              organizationId: user.organization_id || '',
+              userId: user.id,
               variables: {
-                title: announcement.title,
-                content: announcement.content
+                message: message
               }
             });
           }

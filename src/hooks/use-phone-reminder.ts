@@ -19,12 +19,13 @@ export function usePhoneReminder() {
 
     const createReminder = async () => {
       try {
-        await supabase.from('notifications').insert({
-          user_id: profile.id,
-          type: 'system',
-          title: '📱 Atualize seu WhatsApp',
-          content: 'Cadastre seu número de WhatsApp em Configurações > Conta para receber notificações importantes.',
-          organization_id: profile.organization_id,
+        await notificationService.send({
+          templateSlug: 'update_phone_reminder',
+          organizationId: profile.organization_id,
+          userId: profile.id,
+          variables: {
+            user_name: profile.name
+          }
         });
         localStorage.setItem(storageKey, 'true');
       } catch (error) {
