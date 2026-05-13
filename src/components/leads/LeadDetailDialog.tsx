@@ -322,7 +322,8 @@ export function LeadDetailDialog({
   const updateCommission = useUpdateLeadCommission();
   const dealStatusChange = useDealStatusChange();
   const { recordFirstResponse } = useRecordFirstResponseOnAction();
-  const { profile, organization } = useAuth();
+  const { profile, organization, user } = useAuth();
+  const createCallMutation = useCreateCall();
   const createActivityMutation = useCreateActivity();
   const { data: servicePlans = [] } = useServicePlans();
   const isTelecom = organization?.segment === 'telecom';
