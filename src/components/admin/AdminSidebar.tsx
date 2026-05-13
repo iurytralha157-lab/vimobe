@@ -137,9 +137,10 @@ export function AdminSidebar() {
                   to={item.path}
                   end={item.path === '/admin'}
                   className={({ isActive }) => cn(
-                    "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
-                    "text-muted-foreground hover:text-foreground hover:bg-orange-100 dark:hover:bg-orange-900/30",
-                    isActive && "bg-orange-100 dark:bg-orange-900/30 text-foreground"
+                    "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors",
+                    "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-orange-100 dark:hover:bg-orange-900/30",
+                    isActive && "text-sidebar-foreground bg-orange-100 dark:bg-orange-900/30",
+                    collapsed && "justify-center"
                   )}
                 >
                   <item.icon className="h-5 w-5 flex-shrink-0" />
