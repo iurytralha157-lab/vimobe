@@ -165,7 +165,7 @@ export function GamificationSettings() {
     try {
       // We'll call the function via RPC. 
       // If it doesn't exist, we'll fall back to manual processing in JS
-      const { data, error } = await supabase.rpc('reprocess_won_leads_gamification', {
+      const { data, error } = await (supabase as any).rpc('reprocess_won_leads_gamification', {
         p_organization_id: organization.id
       });
       
@@ -174,8 +174,8 @@ export function GamificationSettings() {
         // Fallback: manual processing if the function hasn't been created yet
         await manualReprocessLeads();
       } else {
-        const result = data[0] || data;
-        toast.success(`Sucesso! ${result.processed_count} leads reprocessados, somando ${result.total_points_added} pontos.`, {
+        const result = Array.isArray(data) ? data[0] : data;
+        toast.success(`Sucesso! ${result.processed_count || 0} leads reprocessados, somando ${result.total_points_added || 0} pontos.`, {
           id: loadingToast
         });
         queryClient.invalidateQueries({ queryKey: ['gamification-ranking'] });
@@ -243,12 +243,30 @@ export function GamificationSettings() {
         }]);
         
       if (!insertError) {
-        // Update stats (one by one for simplicity and to handle conflict)
-        await supabase.rpc('increment_user_points', {
-          p_user_id: lead.assigned_user_id,
-          p_org_id: organization.id,
-          p_points: pointsPerLead
-        });
+        // Update stats
+        const { error: statsError } = await supabase
+          .from('user_gamification_stats')
+          .select('total_points')
+          .eq('user_id', lead.assigned_user_id)
+          .single();
+
+        if (statsError && statsError.code === 'PGRST116') {
+          // Record doesn't exist, create it
+          await supabase.from('user_gamification_stats').insert([{
+            user_id: lead.assigned_user_id,
+            organization_id: organization.id,
+            total_points: pointsPerLead,
+            updated_at: new Date().toISOString()
+          }]);
+        } else {
+          // Record exists, update it
+          await supabase.from('user_gamification_stats')
+            .update({ 
+              total_points: (statsError ? 0 : (error as any)?.total_points || 0) + pointsPerLead,
+              updated_at: new Date().toISOString()
+            })
+            .eq('user_id', lead.assigned_user_id);
+        }
         
         count++;
         totalPoints += pointsPerLead;
