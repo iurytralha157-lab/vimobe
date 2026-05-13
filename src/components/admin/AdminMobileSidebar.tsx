@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   Sheet, 
@@ -16,13 +16,13 @@ import {
   LogOut,
   Shield,
   Lightbulb,
+  Monitor,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSystemSettings } from '@/hooks/use-system-settings';
 import { useTheme } from 'next-themes';
-import { useMemo } from 'react';
 
-const navItems = [
+const baseNavItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/admin' },
   { icon: Building2, label: 'Organizações', path: '/admin/organizations' },
   { icon: Users, label: 'Usuários', path: '/admin/users' },
@@ -30,13 +30,23 @@ const navItems = [
   { icon: Settings, label: 'Configurações', path: '/admin/settings' },
 ];
 
+
 export function AdminMobileSidebar() {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const { signOut } = useAuth();
+  const { signOut, isSuperAdmin } = useAuth();
   const { data: systemSettings } = useSystemSettings();
   const { resolvedTheme } = useTheme();
+
+  const navItems = useMemo(() => {
+    const items = [...baseNavItems];
+    if (isSuperAdmin) {
+      items.push({ icon: Monitor, label: 'Config. do Sistema', path: '/admin/system-settings' });
+    }
+    return items;
+  }, [isSuperAdmin]);
+
 
   const logoUrl = useMemo(() => {
     if (!systemSettings) return null;
