@@ -245,7 +245,7 @@ function AppRoutes() {
             <Route path="/admin/requests" element={<SuperAdminRoute><AdminRequests /></SuperAdminRoute>} />
             <Route path="/admin/audit" element={<SuperAdminRoute><AdminAudit /></SuperAdminRoute>} />
             <Route path="/admin/onboarding" element={<SuperAdminRoute><AdminOnboarding /></SuperAdminRoute>} />
-            <Route path="/admin/notifications" element={<SuperAdminRoute><AdminNotifications /></SuperAdminRoute>} />
+            <Route path="/admin/notifications" element={<AdminRoute><AdminNotifications /></AdminRoute>} />
             
             {/* Regular Routes */}
 
