@@ -288,7 +288,6 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="whatsapp">WhatsApp</SelectItem>
-                          <SelectItem value="push">Push Notification</SelectItem>
                           <SelectItem value="system">Sistema (Interno)</SelectItem>
                           <SelectItem value="email">E-mail</SelectItem>
                         </SelectContent>
