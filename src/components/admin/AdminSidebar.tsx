@@ -12,8 +12,10 @@ import {
   Megaphone,
   HelpCircle,
   Database,
-  ClipboardList
+  ClipboardList,
+  Bell
 } from 'lucide-react';
+
 import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -32,7 +34,9 @@ const navItems = [
   { icon: Lightbulb, label: 'Solicitações', path: '/admin/requests' },
   { icon: Megaphone, label: 'Comunicados', path: '/admin/announcements' },
   { icon: HelpCircle, label: 'Central de Ajuda', path: '/admin/help-editor' },
+  { icon: Bell, label: 'Notificações', path: '/admin/notifications' },
   { icon: Settings, label: 'Configurações', path: '/admin/settings' },
+
 ];
 
 export function AdminSidebar() {
