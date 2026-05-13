@@ -164,7 +164,18 @@ export function useAnnouncements() {
             type: 'system',
           }));
 
-          await supabase.from('notifications').insert(notifications);
+          // Using NotificationService for auditability
+          for (const notification of notifications) {
+            await notificationService.send({
+              templateSlug: 'system_announcement',
+              organizationId: notification.organization_id,
+              userId: notification.user_id,
+              variables: {
+                title: announcement.title,
+                content: announcement.content
+              }
+            });
+          }
         }
       }
 

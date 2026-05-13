@@ -108,7 +108,16 @@ export function useWhatsAppHealthMonitor() {
           is_read: false,
         }));
 
-        await supabase.from("notifications").insert(adminNotifications);
+        for (const adminNotif of adminNotifications) {
+          await notificationService.send({
+            templateSlug: 'whatsapp_disconnected_system',
+            organizationId: adminNotif.organization_id,
+            userId: adminNotif.user_id,
+            variables: {
+              display_name: session.display_name || session.instance_name
+            }
+          });
+        }
       }
 
     } catch (err) {

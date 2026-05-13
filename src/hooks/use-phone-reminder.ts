@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { notificationService } from '@/services/NotificationService';
 
 export function usePhoneReminder() {
   const { profile } = useAuth();
