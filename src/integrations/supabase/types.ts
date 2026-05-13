@@ -6059,6 +6059,8 @@ export type Database = {
       }
       schedule_events: {
         Row: {
+          completed_at: string | null
+          completed_by: string | null
           created_at: string | null
           description: string | null
           end_time: string
@@ -6078,6 +6080,8 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          completed_at?: string | null
+          completed_by?: string | null
           created_at?: string | null
           description?: string | null
           end_time: string
@@ -6097,6 +6101,8 @@ export type Database = {
           user_id: string
         }
         Update: {
+          completed_at?: string | null
+          completed_by?: string | null
           created_at?: string | null
           description?: string | null
           end_time?: string
@@ -6116,6 +6122,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "schedule_events_completed_by_fkey"
+            columns: ["completed_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "schedule_events_lead_id_fkey"
             columns: ["lead_id"]
