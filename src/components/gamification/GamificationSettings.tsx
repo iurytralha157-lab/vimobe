@@ -22,7 +22,9 @@ import {
   FileCheck,
   ClipboardCheck,
   Presentation,
-  FileText
+  FileText,
+  RefreshCcw,
+  ShieldAlert
 } from 'lucide-react';
 
 const RULE_ICONS: Record<string, any> = {
@@ -155,6 +157,108 @@ export function GamificationSettings() {
     );
   }
 
+  const handleReprocessLeads = async () => {
+    if (!organization?.id) return;
+    
+    const loadingToast = toast.loading('Reprocessando leads ganhos...');
+    
+    try {
+      // We'll call the function via RPC. 
+      // If it doesn't exist, we'll fall back to manual processing in JS
+      const { data, error } = await supabase.rpc('reprocess_won_leads_gamification', {
+        p_organization_id: organization.id
+      });
+      
+      if (error) {
+        console.error('RPC Error:', error);
+        // Fallback: manual processing if the function hasn't been created yet
+        await manualReprocessLeads();
+      } else {
+        const result = data[0] || data;
+        toast.success(`Sucesso! ${result.processed_count} leads reprocessados, somando ${result.total_points_added} pontos.`, {
+          id: loadingToast
+        });
+        queryClient.invalidateQueries({ queryKey: ['gamification-ranking'] });
+      }
+    } catch (err: any) {
+      toast.error('Erro ao reprocessar: ' + err.message, { id: loadingToast });
+    }
+  };
+
+  const manualReprocessLeads = async () => {
+    // 1. Fetch won leads
+    const { data: leads, error: leadsError } = await supabase
+      .from('leads')
+      .select('id, assigned_user_id, organization_id, won_at, name')
+      .in('deal_status', ['won', 'GANHO', 'Venda concluída'])
+      .eq('organization_id', organization.id);
+      
+    if (leadsError) throw leadsError;
+    if (!leads || leads.length === 0) {
+      toast.info('Nenhum lead ganho encontrado para reprocessar.');
+      return;
+    }
+
+    // 2. Fetch existing logs to avoid duplicates
+    const { data: existingLogs, error: logsError } = await supabase
+      .from('gamification_activity_logs')
+      .select('reference_id')
+      .eq('organization_id', organization.id)
+      .eq('action_type', 'sale_closed');
+      
+    if (logsError) throw logsError;
+    
+    const processedIds = new Set(existingLogs?.map(l => l.reference_id));
+    const leadsToProcess = leads.filter(l => l.assigned_user_id && !processedIds.has(l.id));
+    
+    if (leadsToProcess.length === 0) {
+      toast.info('Todos os leads ganhos já possuem pontuação registrada.');
+      return;
+    }
+
+    // 3. Get points rule
+    const { data: rule } = await supabase
+      .from('gamification_rules')
+      .select('points')
+      .eq('organization_id', organization.id)
+      .eq('action_type', 'sale_closed')
+      .eq('is_active', true)
+      .single();
+      
+    const pointsPerLead = rule?.points || 500;
+    let count = 0;
+    let totalPoints = 0;
+
+    // 4. Process each lead
+    for (const lead of leadsToProcess) {
+      const { error: insertError } = await supabase
+        .from('gamification_activity_logs')
+        .insert([{
+          user_id: lead.assigned_user_id,
+          organization_id: organization.id,
+          action_type: 'sale_closed',
+          points_earned: pointsPerLead,
+          reference_id: lead.id,
+          metadata: { lead_name: lead.name, reprocessed: true, won_at: lead.won_at }
+        }]);
+        
+      if (!insertError) {
+        // Update stats (one by one for simplicity and to handle conflict)
+        await supabase.rpc('increment_user_points', {
+          p_user_id: lead.assigned_user_id,
+          p_org_id: organization.id,
+          p_points: pointsPerLead
+        });
+        
+        count++;
+        totalPoints += pointsPerLead;
+      }
+    }
+
+    toast.success(`Reprocessamento manual concluído: ${count} leads processados, ${totalPoints} pontos somados.`);
+    queryClient.invalidateQueries({ queryKey: ['gamification-ranking'] });
+  };
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <div className="lg:col-span-2 space-y-6">
@@ -243,6 +347,29 @@ export function GamificationSettings() {
             <div className="p-3 bg-muted rounded-lg text-xs font-medium">
               Ações como "Venda Concluída" devem ter pontuação alta para refletir sua importância.
             </div>
+          </CardContent>
+        </Card>
+        <Card className="border-orange-200 dark:border-orange-900/50">
+          <CardHeader className="pb-2 flex flex-row items-center gap-2">
+            <ShieldAlert className="h-4 w-4 text-orange-500" />
+            <CardTitle className="text-sm">Manutenção</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-xs text-muted-foreground">
+              Se houver divergência no ranking, você pode reprocessar leads antigos.
+            </p>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="w-full gap-2 text-xs"
+              onClick={handleReprocessLeads}
+            >
+              <RefreshCcw className="h-3 w-3" />
+              Reprocessar Ganhos
+            </Button>
+            <p className="text-[10px] text-muted-foreground italic">
+              * Isso apenas adicionará pontos para leads ganhos que ainda não possuem pontuação registrada.
+            </p>
           </CardContent>
         </Card>
       </div>
