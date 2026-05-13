@@ -24,7 +24,7 @@ export function AdminLayout({ children, title }: AdminLayoutProps) {
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Mobile header with hamburger */}
         {isMobile && (
-          <div className="h-14 border-b border-border flex items-center px-4 bg-background">
+          <div className="h-16 border-b border-border/10 flex items-center px-4 bg-background/80 backdrop-blur-md sticky top-0 z-50">
             <AdminMobileSidebar />
           </div>
         )}
