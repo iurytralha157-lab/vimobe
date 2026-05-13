@@ -270,6 +270,26 @@ export function CreateLeadDialog({
         });
       }
       
+      // Send notification for manual lead registration
+      if (newLead?.id && formData.assigned_user_id) {
+        try {
+          const { notificationService } = await import('@/services/NotificationService');
+          const assignedUser = allUsers.find(u => u.id === formData.assigned_user_id);
+          
+          await notificationService.send({
+            templateSlug: 'manual_lead_registered_whatsapp',
+            organizationId: organization?.id || '',
+            userId: formData.assigned_user_id,
+            variables: {
+              lead_name: formData.name,
+              user_name: assignedUser?.name || 'Corretor'
+            }
+          });
+        } catch (err) {
+          console.error('Manual lead notification failed:', err);
+        }
+      }
+      
       // Clear draft on success
       if (draftKey) localStorage.removeItem(draftKey);
       setDraftRestored(false);
