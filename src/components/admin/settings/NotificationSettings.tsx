@@ -282,6 +282,16 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
                     </div>
                   </div>
 
+                  <div className="space-y-2">
+                    <Label className="text-xs uppercase text-muted-foreground font-bold">Título / Assunto</Label>
+                    <Input 
+                      value={template.title || ''} 
+                      onChange={(e) => handleLocalUpdate(template.id, { title: e.target.value })}
+                      className="bg-background h-9"
+                      placeholder="Título da notificação ou assunto do e-mail"
+                    />
+                  </div>
+
                   <div className="space-y-2 flex-1 flex flex-col min-h-[180px]">
                     <div className="flex items-center justify-between">
                       <Label className="text-xs uppercase text-muted-foreground font-bold">Mensagem do Template</Label>
