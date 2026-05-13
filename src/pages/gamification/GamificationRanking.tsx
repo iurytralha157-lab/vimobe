@@ -194,7 +194,7 @@ export default function GamificationRanking() {
         
         {/* LEFT SIDE: PODIUM (Arena) */}
         <div className="lg:col-span-8 flex flex-col gap-6 h-full overflow-hidden">
-          <div className="relative flex-1 bg-gradient-to-b from-indigo-900/10 via-background to-background border rounded-2xl p-4 lg:p-8 pt-20 lg:pt-28 flex flex-col items-center justify-center overflow-hidden shadow-none min-h-[400px] lg:min-h-0">
+          <div className="relative flex-1 bg-gradient-to-b from-indigo-900/10 via-background to-background border rounded-2xl p-4 lg:p-10 flex flex-col items-center justify-end overflow-hidden shadow-none min-h-[500px] lg:min-h-0">
             <div className="absolute top-4 lg:top-8 left-4 lg:left-8 flex items-center gap-2">
               <div className="bg-yellow-500/20 p-1.5 lg:p-2 rounded-full">
                 <Trophy className="h-5 w-5 lg:h-6 lg:w-6 text-yellow-500" />
