@@ -344,7 +344,7 @@ export const AppSidebar = React.memo(function AppSidebar() {
       if (item.module && !hasModule(item.module as any)) return false;
       return true;
     });
-    if (isSuperAdmin || profile?.role === 'admin') {
+    if (isSuperAdmin) {
       items = [{
         icon: Shield,
         labelKey: 'systemSettings',
