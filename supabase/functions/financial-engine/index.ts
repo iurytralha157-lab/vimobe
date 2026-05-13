@@ -32,9 +32,11 @@ Deno.serve(async (req) => {
       if (!leadId) throw new Error("leadId is required for lead_won");
 
       // 1. Fetch Lead data
+      // Use explicit relationship to avoid "more than one relationship found" error
+      // between leads and properties (property_id vs interest_property_id)
       const { data: lead, error: leadError } = await supabase
         .from("leads")
-        .select("*, properties(*)")
+        .select("*, properties!leads_property_id_fkey(*)")
         .eq("id", leadId)
         .single();
 
