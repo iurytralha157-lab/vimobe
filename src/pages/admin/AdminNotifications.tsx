@@ -32,7 +32,7 @@ export default function AdminNotifications() {
         </div>
 
         <Tabs defaultValue="templates" className="space-y-4">
-          <TabsList className="grid grid-cols-2 md:grid-cols-7 h-auto p-1 bg-muted/50 border">
+          <TabsList className="grid grid-cols-2 md:grid-cols-6 h-auto p-1 bg-muted/50 border">
             <TabsTrigger value="templates" className="flex items-center gap-2 py-2">
               <Bell className="h-4 w-4" />
               <span className="hidden md:inline">Templates</span>
