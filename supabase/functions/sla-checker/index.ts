@@ -113,15 +113,22 @@ Deno.serve(async (req) => {
 
         // Create notification for assigned user
         if (lead.notify_assignee && lead.assigned_user_id) {
-          await supabase.from("notifications").insert({
-            user_id: lead.assigned_user_id,
-            organization_id: lead.organization_id,
-            title: "⚠️ SLA em alerta",
-            content: `O lead "${lead.lead_name}" está há ${Math.floor(elapsedSeconds / 60)} minutos sem resposta.`,
-            type: "warning",
-            lead_id: lead.lead_id,
+          await fetch(`${SUPABASE_URL}/functions/v1/notification-service`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+            },
+            body: JSON.stringify({
+              templateSlug: "sla_warning",
+              organizationId: lead.organization_id,
+              userId: lead.assigned_user_id,
+              variables: { lead_name: lead.lead_name, minutes: Math.floor(elapsedSeconds / 60) },
+              leadId: lead.lead_id
+            }),
           });
         }
+
 
         console.log(`Created WARNING notification for lead ${lead.lead_id}`);
       }
