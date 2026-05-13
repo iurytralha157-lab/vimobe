@@ -28,6 +28,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { NotificationTemplate, NotificationChannel } from '@/services/NotificationService';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
 
 export function NotificationSettings() {
   const [loading, setLoading] = useState(true);
