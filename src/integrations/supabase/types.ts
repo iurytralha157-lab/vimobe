@@ -2251,6 +2251,8 @@ export type Database = {
           organization_id: string | null
           period: string | null
           target_count: number
+          target_scope: string | null
+          target_user_id: string | null
           title: string
           updated_at: string | null
         }
@@ -2264,6 +2266,8 @@ export type Database = {
           organization_id?: string | null
           period?: string | null
           target_count: number
+          target_scope?: string | null
+          target_user_id?: string | null
           title: string
           updated_at?: string | null
         }
@@ -2277,6 +2281,8 @@ export type Database = {
           organization_id?: string | null
           period?: string | null
           target_count?: number
+          target_scope?: string | null
+          target_user_id?: string | null
           title?: string
           updated_at?: string | null
         }
@@ -2286,6 +2292,13 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gamification_missions_target_user_id_fkey"
+            columns: ["target_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -7812,6 +7825,16 @@ export type Database = {
     }
     Functions: {
       accept_invite: { Args: { p_token: string }; Returns: undefined }
+      award_gamification_points: {
+        Args: {
+          p_action_type: string
+          p_metadata?: Json
+          p_organization_id: string
+          p_reference_id?: string
+          p_user_id: string
+        }
+        Returns: undefined
+      }
       can_access_lead: {
         Args: { p_lead_id: string; p_user_id?: string }
         Returns: boolean
