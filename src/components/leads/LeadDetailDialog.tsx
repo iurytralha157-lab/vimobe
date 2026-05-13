@@ -71,6 +71,7 @@ import { TagSelectorPopoverContent } from '@/components/ui/tag-selector';
 import { useCreateCommissionOnWon } from '@/hooks/use-create-commission';
 import { useUpdateLeadCommission } from '@/hooks/use-update-commission';
 import { useDealStatusChange } from '@/hooks/use-deal-status-change';
+import { useCreateCall } from '@/hooks/use-telephony';
 import { useRecordFirstResponseOnAction } from '@/hooks/use-first-response';
 import { useTelecomCustomerByLead } from '@/hooks/use-telecom-customer-by-lead';
 import { TelecomSummaryCard } from '@/components/leads/TelecomSummaryCard';
