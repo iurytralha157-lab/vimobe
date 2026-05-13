@@ -4,6 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Bell, MessageSquare, Smartphone, Monitor, History, BarChart3, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { NotificationSettings } from '@/components/admin/settings/NotificationSettings';
 
 export default function AdminNotifications() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -62,21 +63,7 @@ export default function AdminNotifications() {
           </TabsList>
 
           <TabsContent value="templates" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Templates de Notificação</CardTitle>
-                <CardDescription>
-                  Configure o conteúdo e variáveis de cada disparo sistêmico
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8 text-muted-foreground border-2 border-dashed rounded-lg">
-                  Nenhum template encontrado com os filtros atuais.
-                  <br />
-                  <span className="text-xs">Dica: Os templates são sincronizados com a tabela notification_templates.</span>
-                </div>
-              </CardContent>
-            </Card>
+            <NotificationSettings />
           </TabsContent>
 
           <TabsContent value="logs">
