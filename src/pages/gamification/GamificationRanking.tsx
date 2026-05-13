@@ -190,11 +190,11 @@ export default function GamificationRanking() {
   return (
     <div className="flex flex-col gap-6 animate-in fade-in duration-700 pb-10">
       
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 h-auto lg:h-[calc(100vh-220px)] min-h-[500px] overflow-visible lg:overflow-hidden">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 h-auto lg:h-[calc(100vh-180px)] min-h-[600px] overflow-visible lg:overflow-hidden">
         
         {/* LEFT SIDE: PODIUM (Arena) */}
         <div className="lg:col-span-8 flex flex-col gap-6 h-full overflow-hidden">
-          <div className="relative flex-1 bg-gradient-to-b from-indigo-900/10 via-background to-background border rounded-2xl p-4 lg:p-8 pt-20 lg:pt-28 flex flex-col items-center justify-center overflow-hidden shadow-none min-h-[400px] lg:min-h-0">
+          <div className="relative flex-1 bg-gradient-to-b from-indigo-900/10 via-background to-background border rounded-2xl p-4 lg:p-10 flex flex-col items-center justify-end overflow-hidden shadow-none min-h-[500px] lg:min-h-0">
             <div className="absolute top-4 lg:top-8 left-4 lg:left-8 flex items-center gap-2">
               <div className="bg-yellow-500/20 p-1.5 lg:p-2 rounded-full">
                 <Trophy className="h-5 w-5 lg:h-6 lg:w-6 text-yellow-500" />
@@ -220,66 +220,67 @@ export default function GamificationRanking() {
             </div>
 
             {/* Podium Visualization */}
-            <div className="flex items-end justify-center gap-4 w-full max-w-2xl relative z-10">
+            <div className="flex items-end justify-center gap-3 lg:gap-8 w-full max-w-4xl relative z-10 mb-2">
               {/* 2nd Place */}
               {topThree[1] && (
-                <div className="flex flex-col items-center gap-2 lg:gap-4 flex-1">
+                <div className="flex flex-col items-center gap-3 lg:gap-6 flex-1 max-w-[120px] lg:max-w-[180px]">
                   <div className="relative group">
-                    <Avatar className="h-16 w-16 lg:h-24 lg:w-24 border-2 lg:border-4 border-slate-300 shadow-xl transition-transform lg:group-hover:scale-110">
+                    <Avatar className="h-20 w-20 lg:h-32 lg:w-32 border-2 lg:border-4 border-slate-300 shadow-2xl transition-transform lg:group-hover:scale-105">
                       <AvatarImage src={topThree[1].profiles?.avatar_url || undefined} />
-                      <AvatarFallback className="text-sm lg:text-xl">{getInitials(topThree[1].profiles?.name || '')}</AvatarFallback>
+                      <AvatarFallback className="text-lg lg:text-2xl">{getInitials(topThree[1].profiles?.name || '')}</AvatarFallback>
                     </Avatar>
-                    <div className="absolute -top-2 -right-2 bg-slate-100 text-slate-600 rounded-full p-1.5 border-2 border-slate-300">
-                      <Medal className="h-4 w-4 lg:h-5 lg:w-5" />
+                    <div className="absolute -top-2 -right-2 bg-slate-100 text-slate-600 rounded-full p-2 border-2 border-slate-300 shadow-lg">
+                      <Medal className="h-5 w-5 lg:h-7 lg:w-7" />
                     </div>
                   </div>
-                  <div className="bg-slate-300/30 w-full rounded-t-xl p-2 lg:p-4 text-center min-h-[80px] lg:min-h-[120px] flex flex-col justify-center border-x border-t border-slate-300">
-                    <p className="font-bold text-[10px] lg:text-sm truncate w-full px-1">{topThree[1].profiles?.name}</p>
-                    <p className="text-base lg:text-2xl font-black text-slate-600">{topThree[1].total_points.toLocaleString()}</p>
-                    <p className="text-[8px] lg:text-[10px] uppercase font-bold text-slate-500 tracking-widest">Pontos</p>
+                  <div className="bg-slate-300/30 w-full rounded-t-2xl p-3 lg:p-6 text-center min-h-[100px] lg:min-h-[160px] flex flex-col justify-center border-x border-t border-slate-300/50 backdrop-blur-sm">
+                    <p className="font-bold text-xs lg:text-base truncate w-full px-1 mb-1">{topThree[1].profiles?.name}</p>
+                    <p className="text-xl lg:text-3xl font-black text-slate-700 leading-none">{topThree[1].total_points.toLocaleString()}</p>
+                    <p className="text-[9px] lg:text-[11px] uppercase font-bold text-slate-500 tracking-widest mt-2 lg:mt-3">Pontos</p>
                   </div>
                 </div>
               )}
 
               {/* 1st Place */}
               {topThree[0] && (
-                <div className="flex flex-col items-center gap-2 lg:gap-4 flex-1 -mt-8 lg:-mt-12">
+                <div className="flex flex-col items-center gap-3 lg:gap-6 flex-1 max-w-[140px] lg:max-w-[220px]">
                   <div className="relative group">
-                    <div className="absolute -top-8 lg:-top-12 left-1/2 -translate-x-1/2 animate-bounce">
-                      <Crown className="h-8 w-8 lg:h-12 lg:w-12 text-yellow-500 fill-yellow-500 drop-shadow-[0_0_15px_rgba(234,179,8,0.5)]" />
+                    <div className="absolute -top-10 lg:-top-16 left-1/2 -translate-x-1/2 animate-bounce">
+                      <Crown className="h-10 w-10 lg:h-16 lg:w-16 text-yellow-500 fill-yellow-500 drop-shadow-[0_0_20px_rgba(234,179,8,0.6)]" />
                     </div>
-                    <Avatar className="h-20 w-20 lg:h-32 lg:w-32 border-2 lg:border-4 border-yellow-500 shadow-[0_0_30px_rgba(234,179,8,0.3)] transition-transform lg:group-hover:scale-110">
+                    <Avatar className="h-24 w-24 lg:h-44 lg:w-44 border-4 lg:border-8 border-yellow-500 shadow-[0_0_40px_rgba(234,179,8,0.4)] transition-transform lg:group-hover:scale-105">
                       <AvatarImage src={topThree[0].profiles?.avatar_url || undefined} />
-                      <AvatarFallback className="text-lg lg:text-2xl font-bold">{getInitials(topThree[0].profiles?.name || '')}</AvatarFallback>
+                      <AvatarFallback className="text-2xl lg:text-4xl font-bold">{getInitials(topThree[0].profiles?.name || '')}</AvatarFallback>
                     </Avatar>
-                    <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-yellow-500 text-yellow-950 text-[8px] lg:text-[10px] font-black px-2 lg:px-3 py-0.5 lg:py-1 rounded-full shadow-lg whitespace-nowrap">
+                    <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-yellow-500 text-yellow-950 text-[10px] lg:text-xs font-black px-3 lg:px-5 py-1 lg:py-1.5 rounded-full shadow-xl whitespace-nowrap border-2 border-yellow-200">
                       TOP 1
                     </div>
                   </div>
-                  <div className="bg-gradient-to-b from-yellow-500/20 to-yellow-500/5 w-full rounded-t-2xl p-2 lg:p-6 text-center min-h-[110px] lg:min-h-[180px] flex flex-col justify-center border-x border-t border-yellow-500 shadow-[0_-10px_40px_rgba(234,179,8,0.1)]">
-                    <p className="font-black text-xs lg:text-lg truncate w-full mb-0.5 lg:mb-1 px-1">{topThree[0].profiles?.name}</p>
-                    <p className="text-2xl lg:text-4xl font-black text-yellow-600 drop-shadow-sm">{topThree[0].total_points.toLocaleString()}</p>
-                    <p className="text-[9px] lg:text-xs uppercase font-black text-yellow-700 tracking-widest mt-1">Campeão</p>
+                  <div className="bg-gradient-to-b from-yellow-500/30 via-yellow-500/10 to-transparent w-full rounded-t-3xl p-4 lg:p-8 text-center min-h-[140px] lg:min-h-[240px] flex flex-col justify-center border-x border-t border-yellow-500/60 shadow-[0_-15px_50px_rgba(234,179,8,0.15)] backdrop-blur-sm relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-yellow-300 to-transparent opacity-50" />
+                    <p className="font-black text-sm lg:text-xl truncate w-full mb-1 lg:mb-2 px-1 text-indigo-950 dark:text-white">{topThree[0].profiles?.name}</p>
+                    <p className="text-3xl lg:text-5xl font-black text-yellow-600 drop-shadow-md leading-none">{topThree[0].total_points.toLocaleString()}</p>
+                    <p className="text-[10px] lg:text-sm uppercase font-black text-yellow-700 tracking-[0.2em] mt-3 lg:mt-4">Campeão</p>
                   </div>
                 </div>
               )}
 
               {/* 3rd Place */}
               {topThree[2] && (
-                <div className="flex flex-col items-center gap-2 lg:gap-4 flex-1">
+                <div className="flex flex-col items-center gap-3 lg:gap-6 flex-1 max-w-[110px] lg:max-w-[160px]">
                   <div className="relative group">
-                    <Avatar className="h-14 w-14 lg:h-20 lg:w-20 border-2 lg:border-4 border-amber-600 shadow-xl transition-transform lg:group-hover:scale-110">
+                    <Avatar className="h-18 w-18 lg:h-28 lg:w-28 border-2 lg:border-4 border-amber-600 shadow-2xl transition-transform lg:group-hover:scale-105">
                       <AvatarImage src={topThree[2].profiles?.avatar_url || undefined} />
-                      <AvatarFallback className="text-xs lg:text-lg">{getInitials(topThree[2].profiles?.name || '')}</AvatarFallback>
+                      <AvatarFallback className="text-base lg:text-xl">{getInitials(topThree[2].profiles?.name || '')}</AvatarFallback>
                     </Avatar>
-                    <div className="absolute -top-1.5 -right-1.5 bg-amber-50 text-amber-700 rounded-full p-1 border-2 border-amber-600">
-                      <Award className="h-3.5 w-3.5 lg:h-4 lg:w-4" />
+                    <div className="absolute -top-1.5 -right-1.5 bg-amber-50 text-amber-700 rounded-full p-1.5 border-2 border-amber-600 shadow-lg">
+                      <Award className="h-4 w-4 lg:h-6 lg:w-6" />
                     </div>
                   </div>
-                  <div className="bg-amber-600/20 w-full rounded-t-xl p-2 lg:p-4 text-center min-h-[70px] lg:min-h-[100px] flex flex-col justify-center border-x border-t border-amber-600/50">
-                    <p className="font-bold text-[10px] lg:text-xs truncate w-full px-1">{topThree[2].profiles?.name}</p>
-                    <p className="text-base lg:text-xl font-black text-amber-700">{topThree[2].total_points.toLocaleString()}</p>
-                    <p className="text-[8px] lg:text-[10px] uppercase font-bold text-amber-600 tracking-widest">Pontos</p>
+                  <div className="bg-amber-600/20 w-full rounded-t-xl p-3 lg:p-5 text-center min-h-[80px] lg:min-h-[130px] flex flex-col justify-center border-x border-t border-amber-600/40 backdrop-blur-sm">
+                    <p className="font-bold text-[10px] lg:text-sm truncate w-full px-1 mb-1">{topThree[2].profiles?.name}</p>
+                    <p className="text-lg lg:text-2xl font-black text-amber-800 leading-none">{topThree[2].total_points.toLocaleString()}</p>
+                    <p className="text-[9px] lg:text-[10px] uppercase font-bold text-amber-600 tracking-widest mt-2 lg:mt-3">Pontos</p>
                   </div>
                 </div>
               )}
