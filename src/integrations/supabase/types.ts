@@ -5682,9 +5682,13 @@ export type Database = {
           description: string | null
           id: string
           messages: number | null
+          metadata: Json | null
           organization_id: string | null
+          property_capturing: number | null
+          proposals_sent: number | null
           source: string | null
           user_id: string | null
+          visits: number | null
         }
         Insert: {
           calls?: number | null
@@ -5693,9 +5697,13 @@ export type Database = {
           description?: string | null
           id?: string
           messages?: number | null
+          metadata?: Json | null
           organization_id?: string | null
+          property_capturing?: number | null
+          proposals_sent?: number | null
           source?: string | null
           user_id?: string | null
+          visits?: number | null
         }
         Update: {
           calls?: number | null
@@ -5704,9 +5712,13 @@ export type Database = {
           description?: string | null
           id?: string
           messages?: number | null
+          metadata?: Json | null
           organization_id?: string | null
+          property_capturing?: number | null
+          proposals_sent?: number | null
           source?: string | null
           user_id?: string | null
+          visits?: number | null
         }
         Relationships: [
           {
@@ -6899,6 +6911,67 @@ export type Database = {
           {
             foreignKeyName: "telecom_customers_seller_id_fkey"
             columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      telephony_calls: {
+        Row: {
+          created_at: string | null
+          direction: string | null
+          duration_seconds: number | null
+          id: string
+          lead_id: string | null
+          metadata: Json | null
+          organization_id: string | null
+          outcome: string | null
+          status: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          direction?: string | null
+          duration_seconds?: number | null
+          id?: string
+          lead_id?: string | null
+          metadata?: Json | null
+          organization_id?: string | null
+          outcome?: string | null
+          status?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          direction?: string | null
+          duration_seconds?: number | null
+          id?: string
+          lead_id?: string | null
+          metadata?: Json | null
+          organization_id?: string | null
+          outcome?: string | null
+          status?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "telephony_calls_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "telephony_calls_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "telephony_calls_user_id_fkey"
+            columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
