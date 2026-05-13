@@ -49,59 +49,62 @@ export function IntegrationsSettings({ settings, onUpdate }: IntegrationsSetting
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <MessageSquare className="h-5 w-5 text-green-500" />
-            <div>
-              <CardTitle>Contato WhatsApp</CardTitle>
-              <CardDescription>Número de WhatsApp para novos interessados</CardDescription>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <MessageSquare className="h-4 w-4 text-green-500" />
+              <div>
+                <CardTitle className="text-base font-semibold">Contato WhatsApp</CardTitle>
+                <CardDescription className="text-xs">Número para novos interessados</CardDescription>
+              </div>
             </div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label>Número do WhatsApp</Label>
-            <Input 
-              value={whatsapp.contact_number} 
-              onChange={(e) => setWhatsapp({ ...whatsapp, contact_number: e.target.value })}
-              placeholder="Ex: 5511999999999"
-            />
-          </div>
-        </CardContent>
-      </Card>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label className="text-xs">Número do WhatsApp</Label>
+              <Input 
+                value={whatsapp.contact_number} 
+                onChange={(e) => setWhatsapp({ ...whatsapp, contact_number: e.target.value })}
+                placeholder="Ex: 5511999999999"
+                className="h-9 text-sm"
+              />
+            </div>
+          </CardContent>
+        </Card>
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Smartphone className="h-5 w-5 text-blue-500" />
-            <div>
-              <CardTitle>WhatsApp de Notificações (Global)</CardTitle>
-              <CardDescription>
-                Configure uma instância WhatsApp central para enviar notificações automáticas. 
-                Organizações que possuem seu próprio WhatsApp de notificação usarão o deles. 
-                As demais receberão notificações por este WhatsApp global.
-              </CardDescription>
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <Smartphone className="h-4 w-4 text-blue-500" />
+              <div>
+                <CardTitle className="text-base font-semibold">WhatsApp de Notificações (Global)</CardTitle>
+                <CardDescription className="text-xs">
+                  Instância central para envios automáticos.
+                </CardDescription>
+              </div>
             </div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label>Nome da Instância (Evolution API)</Label>
-            <Input 
-              value={whatsapp.notification_instance} 
-              onChange={(e) => setWhatsapp({ ...whatsapp, notification_instance: e.target.value })}
-              placeholder="Digite o nome da instância"
-            />
-          </div>
-          <div className="flex justify-end pt-4">
-            <Button onClick={handleSave} disabled={saving} className="bg-orange-500 hover:bg-orange-600">
-              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-              Salvar Alterações
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label className="text-xs">Nome da Instância (Evolution API)</Label>
+              <Input 
+                value={whatsapp.notification_instance} 
+                onChange={(e) => setWhatsapp({ ...whatsapp, notification_instance: e.target.value })}
+                placeholder="Digite o nome da instância"
+                className="h-9 text-sm"
+              />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="flex justify-end">
+        <Button onClick={handleSave} disabled={saving} className="bg-orange-500 hover:bg-orange-600 h-9 px-6 text-sm">
+          {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+          Salvar Alterações
+        </Button>
+      </div>
     </div>
   );
 }
