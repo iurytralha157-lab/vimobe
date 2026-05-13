@@ -269,48 +269,6 @@ export function MediaSettings({ settings, onUpdate }: MediaSettingsProps) {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Imagens Padrão</CardTitle>
-              <CardDescription>Galeria de imagens para uso geral no sistema.</CardDescription>
-            </div>
-            <Button onClick={() => document.getElementById('add_standard')?.click()} disabled={uploading === 'imagens_padrao'}>
-              {uploading === 'imagens_padrao' ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Upload className="h-4 w-4 mr-2" />}
-              Adicionar Imagem
-            </Button>
-            <input
-              type="file"
-              id="add_standard"
-              className="hidden"
-              onChange={handleAddStandardImage}
-              accept=".jpg,.png,.svg"
-            />
-          </div>
-        </CardHeader>
-        <CardContent>
-          {settings?.imagens_padrao && settings.imagens_padrao.length > 0 ? (
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-              {settings.imagens_padrao.map((url, index) => (
-                <div key={index} className="relative group aspect-square rounded-lg border overflow-hidden bg-muted">
-                  <img src={url} alt={`Standard ${index}`} className="w-full h-full object-cover" />
-                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <Button variant="destructive" size="icon" onClick={() => removeStandardImage(url)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="py-12 flex flex-col items-center justify-center text-muted-foreground">
-              <ImageIcon className="h-12 w-12 mb-2 opacity-20" />
-              <p>Nenhuma imagem na galeria</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
     </div>
   );
 }
