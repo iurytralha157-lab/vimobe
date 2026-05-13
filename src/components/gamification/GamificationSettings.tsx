@@ -370,24 +370,26 @@ export function GamificationSettings() {
         <Card className="border-orange-200 dark:border-orange-900/50">
           <CardHeader className="pb-2 flex flex-row items-center gap-2">
             <ShieldAlert className="h-4 w-4 text-orange-500" />
-            <CardTitle className="text-sm">Manutenção</CardTitle>
+            <CardTitle className="text-sm">Manutenção do Ranking</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-xs text-muted-foreground">
-              Se houver divergência no ranking, você pode reprocessar leads antigos.
+              Sincronize pontos de leads que foram marcados como "Ganho" antes da ativação total da gamificação.
             </p>
             <Button 
               variant="outline" 
               size="sm" 
-              className="w-full gap-2 text-xs"
+              className="w-full gap-2 text-xs border-orange-200 hover:bg-orange-50 dark:border-orange-900/50 dark:hover:bg-orange-950/20"
               onClick={handleReprocessLeads}
             >
               <RefreshCcw className="h-3 w-3" />
-              Reprocessar Ganhos
+              Sincronizar Leads Ganhos
             </Button>
-            <p className="text-[10px] text-muted-foreground italic">
-              * Isso apenas adicionará pontos para leads ganhos que ainda não possuem pontuação registrada.
-            </p>
+            <div className="p-2 bg-orange-50 dark:bg-orange-950/20 rounded border border-orange-100 dark:border-orange-900/30">
+              <p className="text-[10px] text-orange-800 dark:text-orange-300 leading-tight">
+                <strong>Atenção:</strong> Esta ação verifica leads em estágios de "Venda/Ganho" e atribui os pontos caso ainda não existam no histórico.
+              </p>
+            </div>
           </CardContent>
         </Card>
       </div>
