@@ -79,7 +79,7 @@ const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
 const AdminOrganizations = lazy(() => import("./pages/admin/AdminOrganizations"));
 const AdminOrganizationDetail = lazy(() => import("./pages/admin/AdminOrganizationDetail"));
 const AdminUsers = lazy(() => import("./pages/admin/AdminUsers"));
-const AdminSettings = lazy(() => import("./pages/admin/AdminSettings"));
+const AdminSettings = lazy(() => import("./pages/admin/SystemSettings"));
 const AdminAudit = lazy(() => import("./pages/admin/AdminAudit"));
 const AdminRequests = lazy(() => import("./pages/admin/AdminRequests"));
 const AdminPlans = lazy(() => import("./pages/admin/AdminPlans"));
