@@ -153,11 +153,11 @@ function buildLabel(type: string, metadata: Record<string, any>, source: 'timeli
       return 'Tag adicionada por automação';
     case 'visit_scheduled':
       return 'Visita agendada';
-    case 'visit_confirmed':
+    case 'visit_made':
       return 'Visita realizada';
     case 'meeting_scheduled':
       return 'Reunião agendada';
-    case 'meeting_held':
+    case 'meeting_made':
       return 'Reunião realizada';
     case 'call_initiated':
       return 'Ligação iniciada';
