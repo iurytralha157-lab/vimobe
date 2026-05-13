@@ -120,6 +120,9 @@ class NotificationService {
       }
 
       // 4. Log the event with detailed tracking
+      const endTime = performance.now();
+      const executionTime = `${(endTime - startTime).toFixed(2)}ms`;
+
       await this.logNotification({
         templateId: template.id,
         organizationId,
@@ -131,7 +134,7 @@ class NotificationService {
           formattedTitle, 
           formattedMessage,
           origin: 'NotificationService',
-          executionTime: `${(performance.now() - startTime).toFixed(2)}ms`
+          executionTime
         },
         response: result,
         status: result.success ? 'sent' : 'failed',
