@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Bell, Check, CheckCheck, Loader2, UserPlus, CheckSquare, FileText, DollarSign, Info, MessageCircle, Settings, AlertTriangle, Zap, SlidersHorizontal } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useNotifications, useMarkNotificationRead, useMarkAllNotificationsRead, Notification } from '@/hooks/use-notifications';
+import { useAuth } from '@/contexts/AuthContext';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -55,10 +56,19 @@ const notificationCategories = {
 type CategoryKey = keyof typeof notificationCategories;
 
 export default function Notifications() {
+  const { isSuperAdmin, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
   const isMobile = useIsMobile();
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
   const [categoryFilter, setCategoryFilter] = useState<CategoryKey>('all');
-  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!authLoading && !isSuperAdmin) {
+      navigate('/dashboard');
+    }
+  }, [authLoading, isSuperAdmin, navigate]);
+
+  if (authLoading || !isSuperAdmin) return null;
 
   const { data: notifications = [], isLoading } = useNotifications();
   const markAsRead = useMarkNotificationRead();
