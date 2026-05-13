@@ -30,7 +30,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 
-export function NotificationSettings() {
+export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
   const [templates, setTemplates] = useState<NotificationTemplate[]>([]);
