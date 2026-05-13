@@ -190,7 +190,7 @@ export default function GamificationRanking() {
   return (
     <div className="flex flex-col gap-6 animate-in fade-in duration-700 pb-10">
       
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 h-auto lg:h-[calc(100vh-220px)] min-h-[500px] overflow-visible lg:overflow-hidden">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 h-auto lg:h-[calc(100vh-180px)] min-h-[600px] overflow-visible lg:overflow-hidden">
         
         {/* LEFT SIDE: PODIUM (Arena) */}
         <div className="lg:col-span-8 flex flex-col gap-6 h-full overflow-hidden">
