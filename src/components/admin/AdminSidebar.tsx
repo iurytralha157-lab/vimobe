@@ -171,7 +171,7 @@ export function AdminSidebar() {
         <Button
           variant="outline"
           size="icon"
-          className="absolute -right-3 top-4 h-6 w-6 rounded-full border bg-card shadow-sm z-10"
+          className="absolute -right-3 top-14 z-50 h-6 w-6 rounded-full bg-card border shadow-md flex items-center justify-center"
           onClick={() => setCollapsed(false)}
         >
           <ChevronRight className="h-3 w-3" />
