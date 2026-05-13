@@ -82,6 +82,7 @@ export function useDealStatusChange() {
         content,
         metadata: {
           new_status: newStatus,
+          to_status: newStatus, // Adicionado para compatibilidade com o trigger
           valor_interesse: valorInteresse,
           ...(newStatus === 'lost' && lostReason ? { lost_reason: lostReason } : {}),
         }
@@ -94,7 +95,11 @@ export function useDealStatusChange() {
           user_id: user?.id || null,
           type: 'sale_closed',
           content: `Venda concluída para o lead "${leadName}"`,
-          metadata: { valor_interesse: valorInteresse }
+          metadata: { 
+            valor_interesse: valorInteresse,
+            new_status: 'won', // Forçar detecção pelo trigger
+            to_status: 'won'
+          }
         });
       }
 
