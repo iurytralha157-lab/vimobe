@@ -13,7 +13,7 @@ export function AdminLayout({ children, title }: AdminLayoutProps) {
   const isMobile = useIsMobile();
 
   return (
-    <div className="h-screen flex w-full bg-background overflow-hidden pt-[env(safe-area-inset-top)]">
+    <div className="h-screen flex w-full bg-background overflow-hidden">
       {/* Desktop sidebar */}
       {!isMobile && (
         <div className="flex-shrink-0">
