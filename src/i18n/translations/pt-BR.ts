@@ -51,6 +51,7 @@ export const ptBR = {
     settings: 'Configurações',
     help: 'Ajuda',
     superAdmin: 'Super Admin',
+    systemSettings: 'Configurações do Sistema',
     logout: 'Sair',
     whatsapp: 'WhatsApp',
     automations: 'Automações',
