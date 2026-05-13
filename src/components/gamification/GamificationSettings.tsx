@@ -244,7 +244,7 @@ export function GamificationSettings() {
         
       if (!insertError) {
         // Update stats
-        const { error: statsError } = await supabase
+        const { data: statsData, error: statsError } = await supabase
           .from('user_gamification_stats')
           .select('total_points')
           .eq('user_id', lead.assigned_user_id)
@@ -262,7 +262,7 @@ export function GamificationSettings() {
           // Record exists, update it
           await supabase.from('user_gamification_stats')
             .update({ 
-              total_points: (statsError ? 0 : (error as any)?.total_points || 0) + pointsPerLead,
+              total_points: (statsData?.total_points || 0) + pointsPerLead,
               updated_at: new Date().toISOString()
             })
             .eq('user_id', lead.assigned_user_id);
