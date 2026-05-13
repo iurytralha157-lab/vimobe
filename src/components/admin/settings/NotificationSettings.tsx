@@ -16,18 +16,12 @@ import {
 } from '@/components/ui/select';
 import { 
   Loader2, 
-  Save, 
-  Bell, 
-  MessageSquare,
-  Smartphone, 
   Plus, 
   Trash2,
-  AlertCircle,
+  MessageSquare,
   History,
   CheckCircle2,
-  XCircle,
-  Clock,
-  Search
+  XCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -55,7 +49,7 @@ export function NotificationSettings() {
         .order('name');
       
       if (templatesError) throw templatesError;
-      setTemplates(templatesData || []);
+      setTemplates(templatesData as any[] || []);
 
       const { data: logsData, error: logsError } = await supabase
         .from('notification_logs' as any)
@@ -67,7 +61,7 @@ export function NotificationSettings() {
         .limit(50);
       
       if (logsError) throw logsError;
-      setLogs(logsData || []);
+      setLogs(logsData as any[] || []);
     } catch (error: any) {
       console.error('Erro ao buscar dados:', error);
       toast.error('Não foi possível carregar os templates. Verifique se as tabelas foram criadas.');
@@ -114,7 +108,7 @@ export function NotificationSettings() {
         .single();
 
       if (error) throw error;
-      setTemplates([data, ...templates]);
+      setTemplates([data as any, ...templates]);
       toast.success('Novo template criado!');
     } catch (error: any) {
       toast.error('Erro ao criar template: ' + error.message);
