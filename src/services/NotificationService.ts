@@ -11,7 +11,7 @@ export interface NotificationTemplate {
   channel: NotificationChannel;
   title: string | null;
   message: string;
-  variables: string[];
+  variables: string[] | null;
   is_active: boolean;
   editable_by_admin: boolean;
   organization_id: string | null;
@@ -68,13 +68,15 @@ class NotificationService {
       let formattedMessage = template.message;
       let formattedTitle = template.title || '';
 
-      Object.entries(variables).forEach(([key, value]) => {
-        const placeholder = `{${key}}`;
-        formattedMessage = formattedMessage.replace(new RegExp(placeholder, 'g'), String(value));
-        if (formattedTitle) {
-          formattedTitle = formattedTitle.replace(new RegExp(placeholder, 'g'), String(value));
-        }
-      });
+      if (variables) {
+        Object.entries(variables).forEach(([key, value]) => {
+          const placeholder = `{${key}}`;
+          formattedMessage = formattedMessage.replace(new RegExp(placeholder, 'g'), String(value));
+          if (formattedTitle) {
+            formattedTitle = formattedTitle.replace(new RegExp(placeholder, 'g'), String(value));
+          }
+        });
+      }
 
       // 3. Dispatch based on channel
       let result: any = { success: false };
@@ -118,6 +120,9 @@ class NotificationService {
       }
 
       // 4. Log the event with detailed tracking
+      const endTime = performance.now();
+      const executionTime = `${(endTime - startTime).toFixed(2)}ms`;
+
       await this.logNotification({
         templateId: template.id,
         organizationId,
@@ -129,7 +134,7 @@ class NotificationService {
           formattedTitle, 
           formattedMessage,
           origin: 'NotificationService',
-          executionTime: `${(performance.now() - startTime).toFixed(2)}ms`
+          executionTime
         },
         response: result,
         status: result.success ? 'sent' : 'failed',

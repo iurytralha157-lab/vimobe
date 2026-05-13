@@ -422,14 +422,14 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
                           </td>
                           <td className="px-4 py-3">
                             {log.status === 'sent' ? (
-                              <div className="flex items-center gap-1 text-green-600">
+                              <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-green-500/10 text-green-600 w-fit">
                                 <CheckCircle2 className="h-3 w-3" />
-                                <span className="text-xs">Enviado</span>
+                                <span className="text-[10px] font-medium">Enviado</span>
                               </div>
                             ) : (
-                              <div className="flex items-center gap-1 text-destructive">
+                              <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-destructive/10 text-destructive w-fit">
                                 <XCircle className="h-3 w-3" />
-                                <span className="text-xs">Erro</span>
+                                <span className="text-[10px] font-medium">Erro</span>
                               </div>
                             )}
                           </td>
