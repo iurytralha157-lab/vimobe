@@ -156,15 +156,17 @@ export function useDealStatusChange() {
             : undefined
         });
 
-        // Send WhatsApp notification for won deal
+        // Send WhatsApp notification for won deal using centralized service
         if (variables.userId) {
           try {
-            await supabase.functions.invoke('whatsapp-notifier', {
-              body: {
-                organization_id: variables.organizationId,
-                user_id: variables.userId,
-                message: `🎉 *Lead Ganho!*\nNome: ${variables.leadName}\nParabéns pela venda!`,
-              },
+            const { notificationService } = await import('@/services/NotificationService');
+            await notificationService.send({
+              templateSlug: 'deal_won_whatsapp',
+              organizationId: variables.organizationId,
+              userId: variables.userId,
+              variables: {
+                lead_name: variables.leadName
+              }
             });
           } catch (err) {
             console.error('WhatsApp won notification failed:', err);

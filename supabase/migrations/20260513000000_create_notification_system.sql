@@ -36,11 +36,15 @@ CREATE TABLE IF NOT EXISTS public.notification_logs (
 ALTER TABLE public.notification_templates ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.notification_logs ENABLE ROW LEVEL SECURITY;
 
--- Seed some default templates
+-- Seed all existing system notifications as templates
 INSERT INTO public.notification_templates (name, slug, channel, category, message, variables)
 VALUES 
-('Boas-vindas WhatsApp', 'welcome_whatsapp', 'whatsapp', 'marketing', 'Olá {user_name}! Bem-vindo ao sistema. Como podemos ajudar hoje?', ARRAY['user_name']),
-('Nova Tarefa', 'new_task_system', 'system', 'task', 'Você tem uma nova tarefa: {task_title}', ARRAY['task_title']),
-('Lead Recebido', 'new_lead_push', 'push', 'lead', 'Novo lead recebido: {lead_name}', ARRAY['lead_name']),
-('Lembrete de Agendamento', 'appointment_reminder_whatsapp', 'whatsapp', 'reminder', 'Olá {user_name}, passando para lembrar do seu agendamento amanhã às {time}.', ARRAY['user_name', 'time'])
-ON CONFLICT (slug) DO NOTHING;
+('🎉 Negócio Ganho (WhatsApp)', 'deal_won_whatsapp', 'whatsapp', 'sales', '🎉 *Lead Ganho!*\nNome: {lead_name}\nParabéns pela venda!', ARRAY['lead_name']),
+('Teste de Notificação Push', 'test_push', 'push', 'test', 'Esta é uma notificação de teste enviada via Web Push API!', ARRAY[]),
+('Novo Lead Recebido', 'new_lead_received', 'system', 'leads', 'Novo lead recebido: {lead_name}', ARRAY['lead_name']),
+('Lembrete de Agendamento', 'appointment_reminder', 'whatsapp', 'reminder', 'Olá {user_name}, passando para lembrar do seu agendamento amanhã às {time}.', ARRAY['user_name', 'time']),
+('Boas-vindas ao Sistema', 'welcome_system', 'system', 'onboarding', 'Bem-vindo ao sistema, {user_name}! Estamos felizes em ter você conosco.', ARRAY['user_name'])
+ON CONFLICT (slug) DO UPDATE SET 
+    name = EXCLUDED.name,
+    message = EXCLUDED.message,
+    variables = EXCLUDED.variables;

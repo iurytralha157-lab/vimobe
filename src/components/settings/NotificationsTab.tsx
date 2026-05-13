@@ -27,13 +27,12 @@ export const NotificationsTab = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data, error } = await supabase.functions.invoke('send-push', {
-        body: {
-          user_id: user.id,
-          title: 'Teste de Notificação',
-          message: 'Esta é uma notificação de teste enviada via Web Push API!',
-          url: '/settings?tab=notifications'
-        }
+      const { notificationService } = await import('@/services/NotificationService');
+      const { success, error } = await notificationService.send({
+        templateSlug: 'test_push',
+        organizationId: user.user_metadata?.organization_id || '', // Fallback or get from profile
+        userId: user.id,
+        variables: {}
       });
 
       if (error) throw error;
