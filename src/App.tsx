@@ -87,7 +87,9 @@ const AdminAnnouncements = lazy(() => import("./pages/admin/AdminAnnouncements")
 const AdminHelpEditor = lazy(() => import("./pages/admin/AdminHelpEditor"));
 const AdminDatabase = lazy(() => import("./pages/admin/AdminDatabase"));
 const AdminOnboarding = lazy(() => import("./pages/admin/AdminOnboarding"));
+const AdminNotifications = lazy(() => import("./pages/admin/AdminNotifications"));
 const Checkout = lazy(() => import("./pages/Checkout"));
+
 // Subscription page is now part of Settings tab
 
 // Public site preview (used inside CRM)
