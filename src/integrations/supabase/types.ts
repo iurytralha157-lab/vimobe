@@ -2245,6 +2245,7 @@ export type Database = {
           action_type: string
           bonus_points: number
           created_at: string | null
+          current_progress: number | null
           description: string | null
           id: string
           is_active: boolean | null
@@ -2260,6 +2261,7 @@ export type Database = {
           action_type: string
           bonus_points: number
           created_at?: string | null
+          current_progress?: number | null
           description?: string | null
           id?: string
           is_active?: boolean | null
@@ -2275,6 +2277,7 @@ export type Database = {
           action_type?: string
           bonus_points?: number
           created_at?: string | null
+          current_progress?: number | null
           description?: string | null
           id?: string
           is_active?: boolean | null
@@ -7210,10 +7213,12 @@ export type Database = {
           numero: string | null
           organization_id: string | null
           phone: string | null
+          points: number | null
           role: string | null
           uf: string | null
           updated_at: string
           whatsapp: string | null
+          xp: number | null
         }
         Insert: {
           avatar_url?: string | null
@@ -7232,10 +7237,12 @@ export type Database = {
           numero?: string | null
           organization_id?: string | null
           phone?: string | null
+          points?: number | null
           role?: string | null
           uf?: string | null
           updated_at?: string
           whatsapp?: string | null
+          xp?: number | null
         }
         Update: {
           avatar_url?: string | null
@@ -7254,10 +7261,12 @@ export type Database = {
           numero?: string | null
           organization_id?: string | null
           phone?: string | null
+          points?: number | null
           role?: string | null
           uf?: string | null
           updated_at?: string
           whatsapp?: string | null
+          xp?: number | null
         }
         Relationships: [
           {
