@@ -61,6 +61,7 @@ export function NotificationLogsTable() {
             <TableHead>Canal</TableHead>
             <TableHead>Destinatário</TableHead>
             <TableHead>Status</TableHead>
+            <TableHead>Execução</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -100,6 +101,9 @@ export function NotificationLogsTable() {
                       Falhou
                     </Badge>
                   )}
+                </TableCell>
+                <TableCell className="font-mono text-[10px]">
+                  {log.payload?.executionTime || 'N/A'}
                 </TableCell>
               </TableRow>
             ))

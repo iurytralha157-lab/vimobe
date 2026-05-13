@@ -398,6 +398,7 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
                       <th className="px-4 py-3 text-left font-medium">Canal</th>
                       <th className="px-4 py-3 text-left font-medium">Destinatário</th>
                       <th className="px-4 py-3 text-left font-medium">Status</th>
+                      <th className="px-4 py-3 text-left font-medium">Tempo</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -432,11 +433,18 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
                               </div>
                             )}
                           </td>
+                          <td className="px-4 py-3">
+                            {log.payload?.executionTime && (
+                              <span className="text-[10px] text-muted-foreground font-mono">
+                                {log.payload.executionTime}
+                              </span>
+                            )}
+                          </td>
                         </tr>
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={5} className="px-4 py-12 text-center text-muted-foreground">
+                        <td colSpan={6} className="px-4 py-12 text-center text-muted-foreground">
                           Nenhum disparo registrado recentemente.
                         </td>
                       </tr>

@@ -117,7 +117,6 @@ class NotificationService {
       }
 
       // 4. Log the event with detailed tracking
-      const startTime = performance.now();
       await this.logNotification({
         templateId: template.id,
         organizationId,
