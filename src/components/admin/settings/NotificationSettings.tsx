@@ -88,10 +88,13 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
         .from('notification_templates' as any)
         .update({
           name: template.name,
+          title: template.title,
           message: template.message,
           channel: template.channel,
           is_active: template.is_active,
-          category: template.category
+          category: template.category,
+          variables: template.variables,
+          event_key: template.event_key
         })
         .eq('id', id);
 
@@ -215,7 +218,21 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {templates.map((template) => (
+            {templates.length === 0 ? (
+              <Card className="col-span-full py-12">
+                <CardContent className="flex flex-col items-center justify-center text-center">
+                  <MessageSquare className="h-12 w-12 text-muted-foreground mb-4 opacity-20" />
+                  <h3 className="text-lg font-medium">Nenhum template encontrado</h3>
+                  <p className="text-sm text-muted-foreground max-w-xs mx-auto">
+                    Certifique-se de que as tabelas foram criadas e que você tem permissão de acesso.
+                  </p>
+                  <Button variant="outline" onClick={fetchData} className="mt-4">
+                    Tentar Novamente
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              templates.map((template) => (
               <Card key={template.id} className={cn(
                 "overflow-hidden transition-all border-2 flex flex-col h-full",
                 changedIds.has(template.id) ? "border-primary shadow-md" : "border-transparent"
@@ -279,6 +296,16 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
                     </div>
                   </div>
 
+                  <div className="space-y-2">
+                    <Label className="text-xs uppercase text-muted-foreground font-bold">Título / Assunto</Label>
+                    <Input 
+                      value={template.title || ''} 
+                      onChange={(e) => handleLocalUpdate(template.id, { title: e.target.value })}
+                      className="bg-background h-9"
+                      placeholder="Título da notificação ou assunto do e-mail"
+                    />
+                  </div>
+
                   <div className="space-y-2 flex-1 flex flex-col min-h-[180px]">
                     <div className="flex items-center justify-between">
                       <Label className="text-xs uppercase text-muted-foreground font-bold">Mensagem do Template</Label>
@@ -307,37 +334,43 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
 
                   <div className="flex items-center justify-between gap-2 pt-4 border-t mt-auto shrink-0">
                     <div className="flex items-center gap-2">
-                      {changedIds.has(template.id) ? (
-                        <div className="flex items-center gap-2 animate-in fade-in slide-in-from-left-2">
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            onClick={() => handleCancelEdit(template.id)}
-                            disabled={saving === template.id}
-                            className="h-8 text-xs"
-                          >
-                            Descartar
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            onClick={() => handleSaveTemplate(template.id)}
-                            disabled={saving === template.id}
-                            className="gap-2 h-8 text-xs bg-green-600 hover:bg-green-700"
-                          >
-                            {saving === template.id ? (
-                              <Loader2 className="h-3 w-3 animate-spin" />
-                            ) : (
-                              <CheckCircle2 className="h-3 w-3" />
-                            )}
-                            Salvar
-                          </Button>
-                        </div>
-                      ) : (
-                        <span className="text-[10px] text-muted-foreground flex items-center gap-1.5">
+                    <div className="flex items-center gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => handleCancelEdit(template.id)}
+                        disabled={saving === template.id || !changedIds.has(template.id)}
+                        className={cn(
+                          "h-8 text-xs",
+                          !changedIds.has(template.id) && "opacity-50 cursor-not-allowed"
+                        )}
+                      >
+                        Descartar
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        onClick={() => handleSaveTemplate(template.id)}
+                        disabled={saving === template.id || !changedIds.has(template.id)}
+                        className={cn(
+                          "gap-2 h-8 text-xs",
+                          changedIds.has(template.id) ? "bg-green-600 hover:bg-green-700" : "bg-muted"
+                        )}
+                      >
+                        {saving === template.id ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <CheckCircle2 className="h-3 w-3" />
+                        )}
+                        Salvar
+                      </Button>
+                      
+                      {!changedIds.has(template.id) && (
+                        <span className="text-[10px] text-muted-foreground flex items-center gap-1.5 ml-2">
                           <CheckCircle2 className="h-3 w-3 text-green-500" />
-                          Sincronizado
+                          Salvo
                         </span>
                       )}
+                    </div>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-[9px] text-muted-foreground">ID: {template.id.split('-')[0]}...</span>
@@ -345,7 +378,8 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
                   </div>
                 </CardContent>
               </Card>
-            ))}
+              ))
+            )}
           </div>
         </TabsContent>
 
