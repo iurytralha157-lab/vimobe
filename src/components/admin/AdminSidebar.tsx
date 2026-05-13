@@ -151,13 +151,12 @@ export function AdminSidebar() {
           </ul>
         </nav>
 
-        {/* Footer */}
-        <div className="p-2 border-t border-border">
+        <div className="py-3 px-2 border-t border-border">
           <button
             onClick={signOut}
             className={cn(
-              "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
-              "text-destructive hover:bg-destructive/10",
+              "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors",
+              "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-orange-100 dark:hover:bg-orange-900/30",
               collapsed && "justify-center"
             )}
           >
