@@ -35,6 +35,11 @@ export function getFriendlyErrorMessage(error: any): string {
     return 'Você não tem permissão para realizar esta ação.';
   }
 
+  // Specific check for SMTP/Email sending errors which often have codes like 535, 550, etc.
+  if (lowerMessage.includes('error sending') || lowerMessage.includes('535') || lowerMessage.includes('5.7.8')) {
+    return 'Erro ao enviar e-mail. Por favor, verifique se o servidor de e-mail está configurado corretamente ou tente novamente mais tarde.';
+  }
+
   // Fallback to the original message if it's already in Portuguese, otherwise a generic one
   const isPortuguese = /[áéíóúãõç]/i.test(message) && !message.includes('error');
   
