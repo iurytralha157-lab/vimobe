@@ -72,6 +72,7 @@ import {
   MetaIntegration,
 } from "@/hooks/use-meta-integration";
 import { MetaFormManager } from "./MetaFormManager";
+import { MetaWebhookHealthBanner } from "./MetaWebhookHealthBanner";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 interface OAuthData {
@@ -274,6 +275,7 @@ export function MetaIntegrationSettings() {
 
   return (
     <div className="space-y-4">
+      <MetaWebhookHealthBanner />
       {/* Header Card */}
       <Card>
         <CardContent className="p-3">

@@ -495,29 +495,42 @@ serve(async (req) => {
           }
         }
 
-        // Subscribe to leadgen webhook
+        // Subscribe to leadgen webhook (FASE 1: bloquear conexão se a inscrição falhar)
         console.log("Subscribing to leadgen webhook for page:", page_id);
         const subscribeUrl = `https://graph.facebook.com/v19.0/${page_id}/subscribed_apps`;
-        const subscribeResponse = await fetch(subscribeUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: new URLSearchParams({
-            access_token: page.access_token,
-            subscribed_fields: "leadgen,messages,messaging_postbacks,feed"
-          }).toString()
-        });
-        const subscribeData = await subscribeResponse.json();
+        let subscribeData: any = null;
+        try {
+          const subscribeResponse = await fetch(subscribeUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: new URLSearchParams({
+              access_token: page.access_token,
+              subscribed_fields: "leadgen,messages,messaging_postbacks,feed"
+            }).toString()
+          });
+          subscribeData = await subscribeResponse.json();
+        } catch (subErr) {
+          console.error("Webhook subscription request failed:", subErr);
+          return new Response(JSON.stringify({
+            error: "Falha ao inscrever a página no webhook do Meta. Verifique permissões da página e tente novamente.",
+            details: (subErr as Error).message,
+          }), { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
 
         console.log("Webhook subscription response:", JSON.stringify(subscribeData));
 
-        if (subscribeData.error) {
-          console.error("Webhook subscription error:", subscribeData.error);
-          // Store the error but continue
-        } else {
-          console.log("Successfully subscribed to leadgen webhook");
+        if (subscribeData?.error || subscribeData?.success === false) {
+          console.error("Webhook subscription error:", subscribeData?.error);
+          return new Response(JSON.stringify({
+            error: subscribeData?.error?.message
+              || "Não foi possível inscrever a página no webhook. Conexão não foi finalizada para evitar perda de leads.",
+            error_code: subscribeData?.error?.code,
+            error_subcode: subscribeData?.error?.error_subcode,
+          }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
         }
+        console.log("Successfully subscribed to leadgen webhook");
 
-        // Upsert integration
+        // Upsert integration (somente após webhook OK)
         const { error: upsertError } = await supabase
           .from("meta_integrations")
           .upsert({
