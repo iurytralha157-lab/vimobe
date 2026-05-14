@@ -74,6 +74,7 @@ import {
 import { MetaFormManager } from "./MetaFormManager";
 import { MetaWebhookHealthBanner } from "./MetaWebhookHealthBanner";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { MetaWebhookHistory } from "./MetaWebhookHistory";
 
 interface OAuthData {
   success: boolean;
