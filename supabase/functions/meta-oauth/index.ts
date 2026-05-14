@@ -301,6 +301,7 @@ serve(async (req) => {
           "pages_read_engagement",
           "pages_manage_ads",
           "pages_manage_metadata",
+          "pages_messaging",
           "leads_retrieval",
           "ads_management",
           "business_management",
