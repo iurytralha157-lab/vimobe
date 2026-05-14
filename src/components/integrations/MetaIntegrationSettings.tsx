@@ -690,9 +690,9 @@ export function MetaIntegrationSettings() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm font-semibold">Monitoramento e Auditoria</CardTitle>
+          <CardTitle className="text-sm font-semibold">{meta.webhookHistoryTitle}</CardTitle>
           <CardDescription className="text-xs">
-            Acompanhe o histórico de eventos recebidos da Meta em tempo real.
+            {meta.webhookHistoryDesc}
           </CardDescription>
         </CardHeader>
         <CardContent>
