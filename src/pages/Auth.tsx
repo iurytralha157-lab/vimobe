@@ -275,7 +275,7 @@ export default function Auth() {
               loading="eager"
             />
             {/* Vertical gradient similar to desktop horizontal gradient */}
-            <div className="absolute inset-0 bg-gradient-to-b from-background via-background/80 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-transparent" />
           </div>
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-primary/10 via-background to-background" />
