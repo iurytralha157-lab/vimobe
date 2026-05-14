@@ -74,6 +74,7 @@ import {
 import { MetaFormManager } from "./MetaFormManager";
 import { MetaWebhookHealthBanner } from "./MetaWebhookHealthBanner";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { MetaWebhookHistory } from "./MetaWebhookHistory";
 
 interface OAuthData {
   success: boolean;
@@ -686,6 +687,19 @@ export function MetaIntegrationSettings() {
           </div>
         </SheetContent>
       </Sheet>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm font-semibold">Monitoramento e Auditoria</CardTitle>
+          <CardDescription className="text-xs">
+            Acompanhe o histórico de eventos recebidos da Meta em tempo real.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <MetaWebhookHistory />
+        </CardContent>
+      </Card>
     </div>
   );
 }
+
