@@ -74,7 +74,6 @@ import {
 import { MetaFormManager } from "./MetaFormManager";
 import { MetaWebhookHealthBanner } from "./MetaWebhookHealthBanner";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { MetaWebhookHistory } from "./MetaWebhookHistory";
 
 interface OAuthData {
   success: boolean;
@@ -687,19 +686,6 @@ export function MetaIntegrationSettings() {
           </div>
         </SheetContent>
       </Sheet>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm font-semibold">{meta.webhookHistoryTitle}</CardTitle>
-          <CardDescription className="text-xs">
-            {meta.webhookHistoryDesc}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <MetaWebhookHistory />
-        </CardContent>
-      </Card>
     </div>
   );
 }
-

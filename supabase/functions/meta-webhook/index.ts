@@ -216,25 +216,12 @@ async function handleComment(supabase: any, pageId: string, changeValue: any, pl
   }).eq("id", conversation.id);
 }
 
-// Process a single leadgen change using shared utility
+// Process a single leadgen change. Returns final status.
 async function processLeadgen(
   supabase: any,
   pageId: string,
   changeValue: any,
-  eventId: string | null = null
 ): Promise<{ status: string; error?: string; organization_id?: string }> {
-  try {
-    // Import dynamically or just use the local copy if needed, but here we'll keep the logic
-    // for now to avoid complexity with cross-folder imports in serve context if not setup.
-    // However, we already wrote the shared utility, so let's try to use it.
-    // For Deno Edge Functions, relative imports work fine.
-  } catch (e) {
-    console.error("Error in processLeadgen wrapper:", e);
-  }
-  
-  // Actually, I'll keep the core logic here but refactored to match the shared one for reliability,
-  // then I'll point both to the same logic.
-  
   const leadgenId = changeValue?.leadgen_id;
   const formId = changeValue?.form_id;
   if (!leadgenId || !formId) {
@@ -285,10 +272,19 @@ async function processLeadgen(
       continue;
     }
 
-    if (!formConfig || formConfig.is_active !== true) {
+    if (!formConfig) {
       lastResult = {
         status: "skipped",
-        error: !formConfig ? "form_not_configured" : "form_inactive",
+        error: "form_not_configured",
+        organization_id: integration.organization_id,
+      };
+      continue;
+    }
+
+    if (formConfig.is_active !== true) {
+      lastResult = {
+        status: "skipped",
+        error: "form_inactive",
         organization_id: integration.organization_id,
       };
       continue;
@@ -316,7 +312,7 @@ async function processLeadgen(
       if (property?.preco) valorInteresse = property.preco;
     }
 
-    const leadUrl = `https://graph.facebook.com/v21.0/${leadgenId}?access_token=${integration.access_token}&fields=id,created_time,field_data,ad_id,ad_name,adset_id,adset_name,campaign_id,campaign_name,form_id,platform`;
+    const leadUrl = `https://graph.facebook.com/v19.0/${leadgenId}?access_token=${integration.access_token}&fields=id,created_time,field_data,ad_id,ad_name,adset_id,adset_name,campaign_id,campaign_name,form_id,platform`;
     const leadResponse = await fetch(leadUrl);
     const leadData = await leadResponse.json();
 
@@ -334,14 +330,14 @@ async function processLeadgen(
     let creativeInstagramUrl = null;
     if (leadData.ad_id) {
       try {
-        const creativeApiUrl = `https://graph.facebook.com/v21.0/${leadData.ad_id}?fields=creative{effective_image_url,thumbnail_url,video_id,instagram_permalink_url}&access_token=${integration.access_token}`;
+        const creativeApiUrl = `https://graph.facebook.com/v19.0/${leadData.ad_id}?fields=creative{effective_image_url,thumbnail_url,video_id,instagram_permalink_url}&access_token=${integration.access_token}`;
         const creativeResponse = await fetch(creativeApiUrl);
         const creativeData = await creativeResponse.json();
         if (creativeData?.creative) {
           creativeUrl = creativeData.creative.effective_image_url || creativeData.creative.thumbnail_url || null;
           creativeInstagramUrl = creativeData.creative.instagram_permalink_url || null;
           if (creativeData.creative.video_id) {
-            const videoApiUrl = `https://graph.facebook.com/v21.0/${creativeData.creative.video_id}?fields=source,permalink_url&access_token=${integration.access_token}`;
+            const videoApiUrl = `https://graph.facebook.com/v19.0/${creativeData.creative.video_id}?fields=source,permalink_url&access_token=${integration.access_token}`;
             const videoResponse = await fetch(videoApiUrl);
             const videoData = await videoResponse.json();
             creativeVideoUrl = videoData?.source || videoData?.permalink_url || null;
@@ -350,7 +346,7 @@ async function processLeadgen(
       } catch (e) { console.warn("Creative fetch error", e); }
     }
 
-    let name = "Lead Facebook", email = "", phone = "", message = "";
+    let name = "Lead Facebook", email = "", phone = "", message = "", cargo = "", empresa = "", cidade = "", bairro = "";
     const customFields: any = {};
 
     for (const field of leadData.field_data || []) {
@@ -362,7 +358,11 @@ async function processLeadgen(
         else if (mappedTo === "email") email = value;
         else if (mappedTo === "phone") phone = value;
         else if (mappedTo === "message") message = value;
-        else customFields[field.name] = value;
+        else if (mappedTo === "cargo") cargo = value;
+        else if (mappedTo === "empresa") empresa = value;
+        else if (mappedTo === "cidade") cidade = value;
+        else if (mappedTo === "bairro") bairro = value;
+        else if (mappedTo === "custom") customFields[field.name] = value;
       } else {
         if (fieldKey.includes("nome") || fieldKey.includes("name") || fieldKey === "full_name") name = value || name;
         else if (fieldKey.includes("email")) email = value;
@@ -385,8 +385,14 @@ async function processLeadgen(
     }).select("id").single();
 
     if (leadError) {
+      // Pode ser violação do índice único (corrida) — tratar como duplicate, não como falha
       if ((leadError as any).code === "23505") {
-        return { status: "duplicate", organization_id: integration.organization_id };
+        lastResult = {
+          status: "duplicate",
+          error: "unique_violation_meta_lead_id",
+          organization_id: integration.organization_id,
+        };
+        continue;
       }
       lastResult = {
         status: "failed",
@@ -401,6 +407,10 @@ async function processLeadgen(
     }
 
     const contactNotesLines = [];
+    if (cargo) contactNotesLines.push(`Cargo: ${cargo}`);
+    if (empresa) contactNotesLines.push(`Empresa: ${empresa}`);
+    if (cidade) contactNotesLines.push(`Cidade: ${cidade}`);
+    if (bairro) contactNotesLines.push(`Bairro: ${bairro}`);
     for (const [k, v] of Object.entries(customFields)) contactNotesLines.push(`${k}: ${v}`);
 
     await supabase.from("lead_meta").insert({
@@ -423,7 +433,6 @@ async function processLeadgen(
 
   return lastResult;
 }
-
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {

@@ -3976,23 +3976,18 @@ export type Database = {
           default_status: string | null
           field_mapping: Json | null
           form_ids: Json | null
-          health_status: string | null
           id: string
           is_connected: boolean | null
           last_error: string | null
           last_lead_at: string | null
           last_sync_at: string | null
-          last_validated_at: string | null
           leads_received: number | null
           organization_id: string
           page_id: string | null
           page_name: string | null
           pipeline_id: string | null
           stage_id: string | null
-          token_expires_at: string | null
-          token_status: string | null
           updated_at: string
-          webhook_subscribed_at: string | null
         }
         Insert: {
           access_token?: string | null
@@ -4003,23 +3998,18 @@ export type Database = {
           default_status?: string | null
           field_mapping?: Json | null
           form_ids?: Json | null
-          health_status?: string | null
           id?: string
           is_connected?: boolean | null
           last_error?: string | null
           last_lead_at?: string | null
           last_sync_at?: string | null
-          last_validated_at?: string | null
           leads_received?: number | null
           organization_id: string
           page_id?: string | null
           page_name?: string | null
           pipeline_id?: string | null
           stage_id?: string | null
-          token_expires_at?: string | null
-          token_status?: string | null
           updated_at?: string
-          webhook_subscribed_at?: string | null
         }
         Update: {
           access_token?: string | null
@@ -4030,23 +4020,18 @@ export type Database = {
           default_status?: string | null
           field_mapping?: Json | null
           form_ids?: Json | null
-          health_status?: string | null
           id?: string
           is_connected?: boolean | null
           last_error?: string | null
           last_lead_at?: string | null
           last_sync_at?: string | null
-          last_validated_at?: string | null
           leads_received?: number | null
           organization_id?: string
           page_id?: string | null
           page_name?: string | null
           pipeline_id?: string | null
           stage_id?: string | null
-          token_expires_at?: string | null
-          token_status?: string | null
           updated_at?: string
-          webhook_subscribed_at?: string | null
         }
         Relationships: [
           {
@@ -4125,68 +4110,6 @@ export type Database = {
             columns: ["conversation_id"]
             isOneToOne: false
             referencedRelation: "meta_conversations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      meta_webhook_events: {
-        Row: {
-          attempts: number | null
-          error_message: string | null
-          form_id: string | null
-          id: string
-          last_error: string | null
-          leadgen_id: string | null
-          next_retry_at: string | null
-          object: string | null
-          organization_id: string | null
-          page_id: string | null
-          processed_at: string | null
-          raw_payload: Json
-          received_at: string
-          signature_valid: boolean | null
-          status: string
-        }
-        Insert: {
-          attempts?: number | null
-          error_message?: string | null
-          form_id?: string | null
-          id?: string
-          last_error?: string | null
-          leadgen_id?: string | null
-          next_retry_at?: string | null
-          object?: string | null
-          organization_id?: string | null
-          page_id?: string | null
-          processed_at?: string | null
-          raw_payload: Json
-          received_at?: string
-          signature_valid?: boolean | null
-          status?: string
-        }
-        Update: {
-          attempts?: number | null
-          error_message?: string | null
-          form_id?: string | null
-          id?: string
-          last_error?: string | null
-          leadgen_id?: string | null
-          next_retry_at?: string | null
-          object?: string | null
-          organization_id?: string | null
-          page_id?: string | null
-          processed_at?: string | null
-          raw_payload?: Json
-          received_at?: string
-          signature_valid?: boolean | null
-          status?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "meta_webhook_events_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]

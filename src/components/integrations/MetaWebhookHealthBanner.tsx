@@ -3,19 +3,16 @@ import { AlertTriangle, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { useLanguage } from "@/contexts/LanguageContext";
+
+const STATUS_LABELS: Record<string, string> = {
+  failed: "falhas",
+  skipped: "ignorados",
+  duplicate: "duplicados",
+};
 
 export function MetaWebhookHealthBanner() {
   const { profile } = useAuth();
   const orgId = profile?.organization_id;
-  const { t } = useLanguage();
-  const meta = t.settings.integrations.meta;
-
-  const STATUS_LABELS: Record<string, string> = {
-    failed: meta.webhookStatusFailed.toLowerCase(),
-    skipped: meta.webhookStatusSkipped.toLowerCase(),
-    duplicate: meta.webhookStatusDuplicate.toLowerCase(),
-  };
 
   const { data } = useQuery({
     queryKey: ["meta-webhook-health", orgId],
@@ -32,6 +29,7 @@ export function MetaWebhookHealthBanner() {
         .order("received_at", { ascending: false })
         .limit(200);
       if (error) {
+        // Tabela ainda pode não existir (migration da Fase 1 não aplicada).
         return { counts: {} as Record<string, number>, lastError: null as string | null, missing: true };
       }
       const counts: Record<string, number> = {};
@@ -59,14 +57,14 @@ export function MetaWebhookHealthBanner() {
   return (
     <Alert variant={variant as any}>
       <Icon className="h-4 w-4" />
-      <AlertTitle>{meta.webhookHealthAlert}</AlertTitle>
+      <AlertTitle>Eventos Meta nos últimos 7 dias</AlertTitle>
       <AlertDescription className="space-y-1">
         <p>
-          {parts.join(" e ")} {meta.webhookHealthParts}
-          {skipped > 0 && ` ${meta.webhookHealthNote}`}
+          {parts.join(" e ")} no webhook do Meta.
+          {skipped > 0 && " Leads ignorados normalmente significam formulário sem configuração ativa."}
         </p>
         {data.lastError && (
-          <p className="text-xs opacity-80">{meta.webhookHealthLastError} {data.lastError}</p>
+          <p className="text-xs opacity-80">Último motivo: {data.lastError}</p>
         )}
       </AlertDescription>
     </Alert>
