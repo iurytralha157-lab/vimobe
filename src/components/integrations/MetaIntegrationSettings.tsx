@@ -275,6 +275,7 @@ export function MetaIntegrationSettings() {
 
   return (
     <div className="space-y-4">
+      <MetaWebhookHealthBanner />
       {/* Header Card */}
       <Card>
         <CardContent className="p-3">
