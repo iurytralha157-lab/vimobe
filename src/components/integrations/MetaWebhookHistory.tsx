@@ -50,6 +50,8 @@ export const MetaWebhookHistory = () => {
   const [loading, setLoading] = useState(true);
   const [replaying, setReplaying] = useState<string | null>(null);
   const { toast } = useToast();
+  const { t } = useLanguage();
+  const meta = t.settings.integrations.meta;
 
   const fetchEvents = async () => {
     setLoading(true);
@@ -82,7 +84,7 @@ export const MetaWebhookHistory = () => {
     setReplaying(eventId);
     try {
       const { data, error } = await supabase.functions.invoke("meta-webhook-replay", {
-        body: { eventId } // If we wanted to trigger specifically one, but the job handles batches
+        body: { eventId }
       });
 
       if (error) throw error;
@@ -106,22 +108,22 @@ export const MetaWebhookHistory = () => {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "processed":
-        return <Badge className="bg-green-100 text-green-800 hover:bg-green-100"><CheckCircle2 className="w-3 h-3 mr-1" /> Processado</Badge>;
+        return <Badge className="bg-green-100 text-green-800 hover:bg-green-100"><CheckCircle2 className="w-3 h-3 mr-1" /> {meta.webhookStatusProcessed}</Badge>;
       case "failed":
-        return <Badge variant="destructive"><AlertCircle className="w-3 h-3 mr-1" /> Falhou</Badge>;
+        return <Badge variant="destructive"><AlertCircle className="w-3 h-3 mr-1" /> {meta.webhookStatusFailed}</Badge>;
       case "duplicate":
-        return <Badge variant="outline" className="text-gray-500"><RotateCcw className="w-3 h-3 mr-1" /> Duplicado</Badge>;
+        return <Badge variant="outline" className="text-gray-500"><RotateCcw className="w-3 h-3 mr-1" /> {meta.webhookStatusDuplicate}</Badge>;
       case "skipped":
-        return <Badge variant="secondary"><Clock className="w-3 h-3 mr-1" /> Ignorado</Badge>;
+        return <Badge variant="secondary"><Clock className="w-3 h-3 mr-1" /> {meta.webhookStatusSkipped}</Badge>;
       default:
-        return <Badge variant="outline">{status}</Badge>;
+        return <Badge variant="outline">{meta.webhookStatusPending}</Badge>;
     }
   };
 
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold">Logs de Disparos (Notificações)</h3>
+        <h3 className="text-lg font-semibold">{meta.webhookHistoryTitle}</h3>
         <Button variant="outline" size="sm" onClick={fetchEvents} disabled={loading}>
           <RefreshCcw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
           Atualizar
@@ -132,12 +134,12 @@ export const MetaWebhookHistory = () => {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Data/Hora</TableHead>
-              <TableHead>Página / Origem</TableHead>
-              <TableHead>Lead ID</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Tentativas</TableHead>
-              <TableHead className="text-right">Ações</TableHead>
+              <TableHead>{meta.webhookTableDate}</TableHead>
+              <TableHead>{meta.webhookTableSource}</TableHead>
+              <TableHead>{meta.webhookTableLeadId}</TableHead>
+              <TableHead>{meta.webhookTableStatus}</TableHead>
+              <TableHead>{meta.webhookTableAttempts}</TableHead>
+              <TableHead className="text-right">{meta.webhookTableActions}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -175,7 +177,7 @@ export const MetaWebhookHistory = () => {
                         </DialogTrigger>
                         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
                           <DialogHeader>
-                            <DialogTitle>Detalhes do Webhook</DialogTitle>
+                            <DialogTitle>{meta.webhookDetailTitle}</DialogTitle>
                           </DialogHeader>
                           <div className="space-y-4">
                             <div className="grid grid-cols-2 gap-4 text-sm">
@@ -184,8 +186,8 @@ export const MetaWebhookHistory = () => {
                                 <p className="font-mono text-xs">{event.id}</p>
                               </div>
                               <div>
-                                <p className="font-semibold">Processado em</p>
-                                <p>{event.processed_at ? format(new Date(event.processed_at), "dd/MM/yyyy HH:mm:ss") : 'Pendente'}</p>
+                                <p className="font-semibold">{meta.webhookDetailProcessedAt}</p>
+                                <p>{event.processed_at ? format(new Date(event.processed_at), "dd/MM/yyyy HH:mm:ss") : meta.webhookStatusPending}</p>
                               </div>
                             </div>
                             {event.error_message && (
@@ -197,7 +199,7 @@ export const MetaWebhookHistory = () => {
                               </div>
                             )}
                             <div className="space-y-2">
-                              <p className="font-semibold">Payload Bruto (Raw JSON)</p>
+                              <p className="font-semibold">{meta.webhookDetailPayload}</p>
                               <pre className="p-4 bg-gray-900 text-green-400 rounded-lg text-xs overflow-x-auto">
                                 {JSON.stringify(event.raw_payload, null, 2)}
                               </pre>
