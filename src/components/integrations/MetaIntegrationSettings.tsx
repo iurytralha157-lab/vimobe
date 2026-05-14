@@ -72,6 +72,7 @@ import {
   MetaIntegration,
 } from "@/hooks/use-meta-integration";
 import { MetaFormManager } from "./MetaFormManager";
+import { MetaWebhookHealthBanner } from "./MetaWebhookHealthBanner";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 interface OAuthData {
