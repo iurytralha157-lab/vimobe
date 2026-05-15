@@ -226,14 +226,14 @@ export default function Onboarding() {
                         <button
                           key={item.id}
                           onClick={() => updateField('segment', item.id)}
-                          className={`group relative flex items-center p-6 border rounded-3xl text-left transition-all duration-300 hover:shadow-soft hover:border-primary/30 ${
+                          className={`group relative flex items-center p-6 border rounded-3xl text-left transition-all duration-300 ${
                             form.segment === item.id 
                               ? 'border-primary bg-primary/5 ring-1 ring-primary/20' 
-                              : 'border-border bg-card/50 shadow-none hover:translate-y-[-2px]'
+                              : 'border-border bg-card/30 shadow-none hover:border-primary/20'
                           }`}
                         >
                           <div className={`mr-5 p-4 rounded-2xl transition-all duration-300 ${
-                            form.segment === item.id ? 'bg-primary text-primary-foreground shadow-glow' : 'bg-muted group-hover:bg-accent'
+                            form.segment === item.id ? 'bg-primary text-primary-foreground' : 'bg-muted group-hover:bg-accent'
                           }`}>
                             <item.icon className="h-7 w-7" />
                           </div>
