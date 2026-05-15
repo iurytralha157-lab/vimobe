@@ -337,10 +337,10 @@ export default function Onboarding() {
                     <div className="space-y-2">
                       <Label htmlFor="primary_color">Cor principal da marca</Label>
                       <div className="flex gap-2">
-                        <Input 
+                        <input 
                           id="primary_color" 
                           type="color" 
-                          className="w-20 h-10 p-1 cursor-pointer" 
+                          className="w-20 h-10 p-1 cursor-pointer bg-transparent border rounded-md" 
                           value={form.primary_color} 
                           onChange={(e) => updateField('primary_color', e.target.value)} 
                         />
