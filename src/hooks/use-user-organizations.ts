@@ -25,6 +25,7 @@ export function useUserOrganizations(userId: string | undefined, activeOrgId?: s
           role,
           is_active,
           joined_at,
+          updated_at,
           organizations:organization_id (
             id,
             name,
