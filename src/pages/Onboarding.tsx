@@ -325,12 +325,20 @@ export default function Onboarding() {
                           ) : (
                             <Upload className="h-8 w-8 text-muted-foreground" />
                           )}
-                          <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" accept="image/*" onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0])} />
+                          <input 
+                            id="logo-upload"
+                            type="file" 
+                            className="absolute inset-0 opacity-0 cursor-pointer" 
+                            accept="image/*" 
+                            onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0])} 
+                          />
                           {logoUploading && <div className="absolute inset-0 bg-background/80 flex items-center justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>}
                         </div>
                         <div className="flex-1 space-y-1">
                           <p className="text-xs text-muted-foreground">Clique para enviar ou arraste o arquivo.</p>
-                          <Button size="sm" variant="outline" type="button">Escolher arquivo</Button>
+                          <label htmlFor="logo-upload">
+                            <Button size="sm" variant="outline" type="button" className="pointer-events-none">Escolher arquivo</Button>
+                          </label>
                         </div>
                       </div>
                     </div>
