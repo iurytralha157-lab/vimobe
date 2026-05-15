@@ -106,21 +106,11 @@ export const AppHeader = React.memo(function AppHeader({
 
       {/* Right side actions - Capsule style redesign */}
       <div className="flex items-center gap-3 ml-auto">
-        {/* Organization Logo in Header */}
-        {!isMobile && organization?.logo_url && (
-          <div className="flex items-center gap-2 mr-2 px-3 py-1.5 rounded-full bg-card dark:bg-[#111] border border-border/10">
-            <img 
-              src={organization.logo_url} 
-              alt={organization.name} 
-              className="h-7 w-auto object-contain"
-            />
-          </div>
-        )}
 
         {/* Org switcher */}
-        {hasMultipleOrgs && (
+        {organization && (
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
+            <DropdownMenuTrigger asChild disabled={!hasMultipleOrgs}>
               <Button
                 variant="ghost"
                 disabled={isSwitching}
@@ -128,6 +118,14 @@ export const AppHeader = React.memo(function AppHeader({
               >
                 {isSwitching ? (
                   <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                ) : organization?.logo_url ? (
+                  <div className="h-5 w-5 rounded-full overflow-hidden border border-border/20 flex items-center justify-center bg-white/5">
+                    <img 
+                      src={organization.logo_url} 
+                      alt="" 
+                      className="h-full w-full object-contain p-0.5" 
+                    />
+                  </div>
                 ) : (
                   <Building2 className="h-4 w-4 text-primary" />
                 )}
@@ -136,41 +134,43 @@ export const AppHeader = React.memo(function AppHeader({
                     {organization?.name || 'Organização'}
                   </span>
                 )}
-                <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                {hasMultipleOrgs && <ChevronDown className="h-3 w-3 text-muted-foreground" />}
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" sideOffset={12} className="w-64 bg-popover/95 backdrop-blur-md rounded-2xl p-1 border-border/50">
-              <div className="px-3 py-2 border-b border-border/40">
-                <p className="text-xs font-semibold text-muted-foreground">Trocar organização</p>
-              </div>
-              {userOrganizations.map((org) => (
-                <DropdownMenuItem
-                  key={org.organization_id}
-                  onClick={() => handleSwitchOrg(org.organization_id)}
-                  className="cursor-pointer rounded-xl m-1 px-3 py-2.5 gap-3"
-                >
-                  <Avatar className="h-8 w-8 rounded-lg border border-border/40">
-                    {org.organization_logo ? (
-                      <AvatarImage src={org.organization_logo} className="object-contain" />
-                    ) : (
-                      <AvatarImage src={undefined} />
+            {hasMultipleOrgs && (
+              <DropdownMenuContent align="end" sideOffset={12} className="w-64 bg-popover/95 backdrop-blur-md rounded-2xl p-1 border-border/50">
+                <div className="px-3 py-2 border-b border-border/40">
+                  <p className="text-xs font-semibold text-muted-foreground">Trocar organização</p>
+                </div>
+                {userOrganizations.map((org) => (
+                  <DropdownMenuItem
+                    key={org.organization_id}
+                    onClick={() => handleSwitchOrg(org.organization_id)}
+                    className="cursor-pointer rounded-xl m-1 px-3 py-2.5 gap-3"
+                  >
+                    <Avatar className="h-8 w-8 rounded-lg border border-border/40">
+                      {org.organization_logo ? (
+                        <AvatarImage src={org.organization_logo} className="object-contain" />
+                      ) : (
+                        <AvatarImage src={undefined} />
+                      )}
+                      <AvatarFallback className="rounded-lg bg-primary/10 text-primary text-xs font-bold">
+                        {org.organization_name?.charAt(0)?.toUpperCase() || 'O'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{org.organization_name}</p>
+                      <p className="text-[10px] text-muted-foreground">
+                        {org.member_role === 'admin' ? 'Administrador' : 'Usuário'}
+                      </p>
+                    </div>
+                    {organization?.id === org.organization_id && (
+                      <Check className="h-4 w-4 text-primary shrink-0" />
                     )}
-                    <AvatarFallback className="rounded-lg bg-primary/10 text-primary text-xs font-bold">
-                      {org.organization_name?.charAt(0)?.toUpperCase() || 'O'}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{org.organization_name}</p>
-                    <p className="text-[10px] text-muted-foreground">
-                      {org.member_role === 'admin' ? 'Administrador' : 'Usuário'}
-                    </p>
-                  </div>
-                  {organization?.id === org.organization_id && (
-                    <Check className="h-4 w-4 text-primary shrink-0" />
-                  )}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            )}
           </DropdownMenu>
         )}
 
