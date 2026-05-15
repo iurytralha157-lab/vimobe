@@ -277,12 +277,7 @@ export default function Onboarding() {
                     {form.segment !== 'corretor' && (
                       <div className="md:col-span-2 space-y-2">
                         <Label htmlFor="cnpj">CNPJ</Label>
-                        <div className="flex gap-2">
-                          <Input id="cnpj" className="flex-1" value={form.cnpj} onChange={(e) => updateField('cnpj', maskCNPJ(e.target.value))} placeholder="00.000.000/0000-00" />
-                          <Button type="button" variant="outline" onClick={handleCNPJLookup} disabled={loading || form.cnpj.length < 18}>
-                            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Buscar'}
-                          </Button>
-                        </div>
+                        <Input id="cnpj" value={form.cnpj} onChange={(e) => updateField('cnpj', maskCNPJ(e.target.value))} placeholder="00.000.000/0000-00" />
                       </div>
                     )}
                     <div className="md:col-span-2 space-y-2">
