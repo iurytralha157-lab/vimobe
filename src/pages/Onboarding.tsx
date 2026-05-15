@@ -11,13 +11,14 @@ import { Separator } from '@/components/ui/separator';
 import { 
   Building2, User, Palette, Globe, Share2, CheckCircle2, 
   Upload, Loader2, ChevronRight, ChevronLeft, Briefcase, Construction,
-  Instagram, Facebook, Youtube, Linkedin, Mail, Phone, MapPin
+  Instagram, Facebook, Youtube, Linkedin, Mail, Phone, MapPin, Scissors
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { maskCNPJ, maskCPF, maskPhone } from '@/lib/masks';
 import { fetchCNPJData } from '@/lib/cnpj';
 import { useSystemSettings } from '@/hooks/use-system-settings';
 import { useTheme } from 'next-themes';
+import { ImageCropper } from '@/components/ui/image-cropper';
 
 const STEPS = [
   { id: 1, title: 'Perfil' },
@@ -44,6 +45,8 @@ export default function Onboarding() {
   const [loading, setLoading] = useState(false);
   const [logoUploading, setLogoUploading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [cropDialogOpen, setCropDialogOpen] = useState(false);
+  const [pendingLogoUrl, setPendingLogoUrl] = useState<string | null>(null);
 
   const [form, setForm] = useState({
     segment: 'corretor',
@@ -81,20 +84,30 @@ export default function Onboarding() {
   const updateField = (field: string, value: any) => setForm((prev) => ({ ...prev, [field]: value }));
 
   const handleFileUpload = async (file: File) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      setPendingLogoUrl(reader.result as string);
+      setCropDialogOpen(true);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const onCropComplete = async (blob: Blob) => {
+    setCropDialogOpen(false);
     setLogoUploading(true);
     try {
       const uniqueId = user?.id || crypto.randomUUID();
-      const ext = file.name.split('.').pop();
-      const path = `onboarding/${uniqueId}/logo_${Date.now()}.${ext}`;
-      const { error: uploadError } = await supabase.storage.from('logos').upload(path, file);
+      const path = `onboarding/${uniqueId}/logo_${Date.now()}.png`;
+      const { error: uploadError } = await supabase.storage.from('logos').upload(path, blob);
       if (uploadError) throw uploadError;
       const { data: { publicUrl } } = supabase.storage.from('logos').getPublicUrl(path);
       updateField('logo_url', publicUrl);
-      toast.success('Logo enviado com sucesso!');
+      toast.success('Logo enviado e ajustado com sucesso!');
     } catch (err: any) {
       toast.error('Erro ao enviar arquivo: ' + err.message);
     } finally {
       setLogoUploading(false);
+      setPendingLogoUrl(null);
     }
   };
 
@@ -330,17 +343,48 @@ export default function Onboarding() {
                             type="file" 
                             className="absolute inset-0 opacity-0 cursor-pointer" 
                             accept="image/*" 
-                            onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0])} 
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) handleFileUpload(file);
+                              e.target.value = ''; // Reset to allow same file re-upload
+                            }} 
                           />
                           {logoUploading && <div className="absolute inset-0 bg-background/80 flex items-center justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>}
                         </div>
                         <div className="flex-1 space-y-1">
                           <p className="text-xs text-muted-foreground">Clique para enviar ou arraste o arquivo.</p>
-                          <label htmlFor="logo-upload">
-                            <Button size="sm" variant="outline" type="button" className="pointer-events-none">Escolher arquivo</Button>
-                          </label>
+                          <div className="flex flex-col gap-2">
+                            <label htmlFor="logo-upload">
+                              <Button size="sm" variant="outline" type="button" className="pointer-events-none w-full">Escolher arquivo</Button>
+                            </label>
+                            {form.logo_url && (
+                              <Button 
+                                size="sm" 
+                                variant="ghost" 
+                                type="button" 
+                                className="h-8 gap-2"
+                                onClick={() => {
+                                  setPendingLogoUrl(form.logo_url);
+                                  setCropDialogOpen(true);
+                                }}
+                              >
+                                <Scissors className="h-3.5 w-3.5" />
+                                Ajustar atual
+                              </Button>
+                            )}
+                          </div>
                         </div>
                       </div>
+                      {cropDialogOpen && pendingLogoUrl && (
+                        <ImageCropper 
+                          imageSrc={pendingLogoUrl}
+                          onCropComplete={onCropComplete}
+                          onCancel={() => {
+                            setCropDialogOpen(false);
+                            setPendingLogoUrl(null);
+                          }}
+                        />
+                      )}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="primary_color">Cor principal da marca</Label>
