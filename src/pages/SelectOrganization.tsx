@@ -170,6 +170,18 @@ export default function SelectOrganization() {
             Acessar Painel Super Admin
           </button>
         )}
+
+        {/* Logout button */}
+        <button
+          onClick={() => {
+            // Clear org selection flag so they see the selector again on next login
+            sessionStorage.removeItem('org_selected');
+            window.location.href = '/auth?logout=true';
+          }}
+          className="w-full px-4 py-2.5 rounded-xl bg-red-500/80 hover:bg-red-500 text-white font-medium transition-colors mt-6"
+        >
+          Sair
+        </button>
       </div>
     </div>
   );
