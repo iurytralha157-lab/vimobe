@@ -254,6 +254,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsSuperAdmin(false);
       setImpersonating(null);
       localStorage.removeItem('impersonating');
+      sessionStorage.removeItem('org_selected');
     };
 
     supabase.auth.getSession().then(async ({ data: { session }, error }) => {
