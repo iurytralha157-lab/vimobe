@@ -94,33 +94,8 @@ const allNavItems: NavItem[] = [{
     path: '/financeiro/dre-executivo'
   }]
 }, {
-  icon: Trophy,
-  labelKey: 'gamification',
-  path: '/gamificacao',
-  module: 'gamification',
-  permission: 'module_gamification',
-  children: [{
-    icon: Trophy,
-    labelKey: 'performance',
-    path: '/gamificacao'
-  }, {
-    icon: LayoutDashboard,
-    labelKey: 'dashboard',
-    path: '/gamificacao/dashboard'
-  }, {
-    icon: HistoryIcon,
-    labelKey: 'history',
-    path: '/gamificacao/historico'
-  }, {
-    icon: Settings,
-    labelKey: 'settings',
-    path: '/gamificacao/configuracoes',
-    adminOnly: true
-  }]
-},
-// Imobiliária module with submenu
-{
   icon: Building2,
+
   labelKey: 'properties',
   path: '/properties',
   module: 'properties',

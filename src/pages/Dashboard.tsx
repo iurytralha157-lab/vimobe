@@ -1,12 +1,8 @@
 import { useState, useEffect } from 'react';
 import { performanceTracker } from '@/lib/performance';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { ProspectingReportModal } from '@/components/gamification/ProspectingReportModal';
-import { GamificationStatsWidget } from '@/components/gamification/GamificationStatsWidget';
-import { LeaderboardWidget } from '@/components/gamification/LeaderboardWidget';
-import { MissionsWidget } from '@/components/gamification/MissionsWidget';
-
 import { DashboardFilters } from '@/components/dashboard/DashboardFilters';
+
 import { KPICards } from '@/components/dashboard/KPICards';
 import { SalesFunnelWithPipeline } from '@/components/dashboard/SalesFunnelWithPipeline';
 import { DealsEvolutionChart } from '@/components/dashboard/DealsEvolutionChart';
