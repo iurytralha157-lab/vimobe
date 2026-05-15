@@ -438,8 +438,8 @@ export default function Onboarding() {
           </Card>
         </div>
 
-        {/* Live Preview (Col 8-12) */}
-        <div className="lg:col-span-5 sticky top-8 hidden lg:block">
+        {/* Live Preview (40%) */}
+        <div className="lg:col-span-4 sticky top-8 hidden lg:block">
           <div className="space-y-4">
             <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground px-2">Preview ao vivo</h3>
             <Card className="overflow-hidden border-border/50 shadow-none">
