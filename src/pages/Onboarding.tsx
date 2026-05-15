@@ -165,15 +165,18 @@ export default function Onboarding() {
         
         {/* Formulário (Col 1-7) */}
         <div className="lg:col-span-7 space-y-8">
-          <div className="flex items-center justify-between mb-4">
-            <h1 className="text-3xl font-bold tracking-tight">Onboarding</h1>
-            <div className="text-right">
-              <span className="text-sm font-medium text-muted-foreground">Passo {step} de {STEPS.length}</span>
-              <Progress value={(step / STEPS.length) * 100} className="w-32 h-2 mt-1" />
+          <div className="flex flex-col gap-6 mb-4">
+            <img src="/logo.png" alt="Vimob" className="h-10 w-auto self-start" />
+            <div className="flex items-center justify-between">
+              <h1 className="text-3xl font-bold tracking-tight">Onboarding</h1>
+              <div className="text-right">
+                <span className="text-sm font-medium text-muted-foreground">Passo {step} de {STEPS.length}</span>
+                <Progress value={(step / STEPS.length) * 100} className="w-32 h-2 mt-1" />
+              </div>
             </div>
           </div>
 
-          <Card className="border-border/50 shadow-sm">
+          <Card className="border-border/50 shadow-none">
             <CardContent className="p-6 md:p-10">
               
               {step === 1 && (
@@ -192,7 +195,7 @@ export default function Onboarding() {
                         key={item.id}
                         onClick={() => updateField('segment', item.id)}
                         className={`group relative flex items-center p-6 border-2 rounded-2xl text-left transition-all hover:border-primary/50 ${
-                          form.segment === item.id ? 'border-primary bg-primary/5 shadow-md' : 'border-border bg-card'
+                          form.segment === item.id ? 'border-primary bg-primary/5' : 'border-border bg-card shadow-none'
                         }`}
                       >
                         <div className={`mr-4 p-3 rounded-xl transition-colors ${
@@ -402,7 +405,7 @@ export default function Onboarding() {
                   <ChevronLeft className="mr-2 h-4 w-4" /> Anterior
                 </Button>
                 {step === STEPS.length ? (
-                  <Button onClick={handleSubmit} disabled={loading} size="lg" className="px-8 shadow-lg shadow-primary/20">
+                  <Button onClick={handleSubmit} disabled={loading} size="lg" className="px-8 shadow-none">
                     {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Enviar Solicitação'}
                   </Button>
                 ) : (
@@ -419,11 +422,11 @@ export default function Onboarding() {
         <div className="lg:col-span-5 sticky top-8 hidden lg:block">
           <div className="space-y-4">
             <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground px-2">Preview ao vivo</h3>
-            <Card className="overflow-hidden border-border/50 shadow-xl">
+            <Card className="overflow-hidden border-border/50 shadow-none">
               <div className="h-24" style={{ backgroundColor: `${form.primary_color}33` }} />
               <CardContent className="px-6 pb-8 -mt-12 space-y-6">
                 <div className="flex items-end justify-between">
-                  <div className="h-24 w-24 rounded-2xl border-4 border-card bg-card shadow-lg flex items-center justify-center overflow-hidden">
+                  <div className="h-24 w-24 rounded-2xl border-4 border-card bg-card shadow-none flex items-center justify-center overflow-hidden">
                     {form.logo_url ? (
                       <img src={form.logo_url} className="w-full h-full object-contain p-2" />
                     ) : (
