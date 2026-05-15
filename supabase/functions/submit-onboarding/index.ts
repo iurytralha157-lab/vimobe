@@ -48,7 +48,7 @@ Deno.serve(async (req) => {
         company_phone: company_phone || null,
         company_whatsapp: company_whatsapp || null,
         company_email: company_email || null,
-        segment: 'imobiliario',
+        segment: segment || 'imobiliario',
         responsible_name,
         responsible_email,
         responsible_cpf: responsible_cpf || null,
