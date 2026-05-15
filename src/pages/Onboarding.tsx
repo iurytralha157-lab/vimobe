@@ -172,27 +172,29 @@ export default function Onboarding() {
 
   return (
     <div className="min-h-screen bg-accent/5 p-4 md:p-8 lg:p-12">
-      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        
-        {/* Formulário (Col 1-7) */}
-        <div className="lg:col-span-7 space-y-8">
-          <div className="flex flex-col items-center gap-6 mb-8 text-center">
-            {settingsLoading ? (
-              <div className="h-10 w-32 bg-muted animate-pulse rounded-lg" />
-            ) : logoUrl ? (
-              <img src={logoUrl} alt="Logo" className="h-12 w-auto" />
-            ) : (
-              <img src="/logo.png" alt="Vimob" className="h-12 w-auto" />
-            )}
-            
-            <div className="space-y-4 w-full">
-              <h1 className="text-4xl font-bold tracking-tight">Onboarding</h1>
-              <div className="flex flex-col items-center gap-2">
-                <span className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Passo {step} de {STEPS.length}</span>
-                <Progress value={(step / STEPS.length) * 100} className="w-full max-w-xs h-2" />
-              </div>
+      <div className="max-w-7xl mx-auto space-y-12">
+        {/* Topo Centralizado */}
+        <div className="flex flex-col items-center gap-6 text-center">
+          {settingsLoading ? (
+            <div className="h-10 w-32 bg-muted animate-pulse rounded-lg" />
+          ) : logoUrl ? (
+            <img src={logoUrl} alt="Logo" className="h-16 w-auto" />
+          ) : (
+            <img src="/logo.png" alt="Vimob" className="h-16 w-auto" />
+          )}
+          
+          <div className="space-y-4 w-full max-w-2xl">
+            <h1 className="text-4xl font-bold tracking-tight">Onboarding</h1>
+            <div className="flex flex-col items-center gap-2">
+              <span className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Passo {step} de {STEPS.length}</span>
+              <Progress value={(step / STEPS.length) * 100} className="w-full h-2" />
             </div>
           </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-10 gap-8 items-start">
+          {/* Formulário (60%) */}
+          <div className="lg:col-span-6 space-y-8">
 
           <Card className="border-border/50 shadow-none">
             <CardContent className="p-6 md:p-10">
@@ -436,8 +438,8 @@ export default function Onboarding() {
           </Card>
         </div>
 
-        {/* Live Preview (Col 8-12) */}
-        <div className="lg:col-span-5 sticky top-8 hidden lg:block">
+        {/* Live Preview (40%) */}
+        <div className="lg:col-span-4 sticky top-8 hidden lg:block">
           <div className="space-y-4">
             <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground px-2">Preview ao vivo</h3>
             <Card className="overflow-hidden border-border/50 shadow-none">
