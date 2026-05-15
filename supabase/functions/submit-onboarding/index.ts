@@ -23,7 +23,7 @@ Deno.serve(async (req) => {
     const {
       company_name, cnpj, company_address, company_city, company_neighborhood,
       company_number, company_complement, company_phone, company_whatsapp, company_email,
-      responsible_name, responsible_email, responsible_cpf, responsible_phone,
+      segment, responsible_name, responsible_email, responsible_cpf, responsible_phone,
       logo_url, favicon_url, primary_color, secondary_color,
       site_title, custom_domain, instagram, facebook, youtube, linkedin,
     } = body;
@@ -48,7 +48,7 @@ Deno.serve(async (req) => {
         company_phone: company_phone || null,
         company_whatsapp: company_whatsapp || null,
         company_email: company_email || null,
-        segment: 'imobiliario',
+        segment: segment || 'imobiliario',
         responsible_name,
         responsible_email,
         responsible_cpf: responsible_cpf || null,

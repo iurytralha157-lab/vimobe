@@ -37,6 +37,7 @@ export interface OnboardingRequestData {
   selected_plan_id?: string | null;
   confirmed_value?: number | null;
   billing_cycle?: string | null;
+  creci?: string;
 }
 
 export interface OnboardingRequest extends OnboardingRequestData {
