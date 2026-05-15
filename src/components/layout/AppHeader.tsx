@@ -109,7 +109,7 @@ export const AppHeader = React.memo(function AppHeader({
 
 
         {/* Org switcher */}
-        {hasMultipleOrgs && (
+        {organization && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -135,7 +135,7 @@ export const AppHeader = React.memo(function AppHeader({
                     {organization?.name || 'Organização'}
                   </span>
                 )}
-                <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                {hasMultipleOrgs && <ChevronDown className="h-3 w-3 text-muted-foreground" />}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" sideOffset={12} className="w-64 bg-popover/95 backdrop-blur-md rounded-2xl p-1 border-border/50">
