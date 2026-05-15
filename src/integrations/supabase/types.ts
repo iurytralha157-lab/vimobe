@@ -2153,6 +2153,7 @@ export type Database = {
           action_type: string
           created_at: string | null
           id: string
+          idempotency_key: string | null
           metadata: Json | null
           organization_id: string | null
           points_earned: number
@@ -2163,6 +2164,7 @@ export type Database = {
           action_type: string
           created_at?: string | null
           id?: string
+          idempotency_key?: string | null
           metadata?: Json | null
           organization_id?: string | null
           points_earned: number
@@ -2173,6 +2175,7 @@ export type Database = {
           action_type?: string
           created_at?: string | null
           id?: string
+          idempotency_key?: string | null
           metadata?: Json | null
           organization_id?: string | null
           points_earned?: number
