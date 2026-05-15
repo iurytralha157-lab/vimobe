@@ -119,7 +119,7 @@ export function useScheduleEvents(options: UseScheduleEventsOptions = {}) {
   return useQuery({
     queryKey: ['schedule-events', options],
     queryFn: async () => {
-      let query = (supabase as any)
+      let query = supabase
         .from('schedule_events')
         .select(`
           id, organization_id, user_id, lead_id, property_id, title, 
@@ -175,7 +175,7 @@ export function useCreateScheduleEvent() {
     }) => {
       if (!profile?.organization_id) throw new Error('Organização não encontrada');
 
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('schedule_events')
         .insert({
           organization_id: profile.organization_id,
@@ -273,13 +273,13 @@ export function useUpdateScheduleEvent() {
   return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<ScheduleEvent> & { id: string }) => {
       // Get current event data for timeline logging
-      const { data: currentEvent } = await (supabase as any)
+      const { data: currentEvent } = await supabase
         .from('schedule_events')
         .select('*')
         .eq('id', id)
         .single();
 
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('schedule_events')
         .update(updates)
         .eq('id', id)
@@ -352,7 +352,7 @@ export function useCompleteScheduleEvent() {
         updates.completed_at = null;
       }
 
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('schedule_events')
         .update(updates)
         .eq('id', id)
