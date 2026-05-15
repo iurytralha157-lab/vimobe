@@ -434,16 +434,21 @@ export default function Onboarding() {
                 </div>
               )}
 
-              <div className="flex justify-between pt-10 mt-10 border-t">
-                <Button variant="outline" onClick={handleBack} disabled={step === 1 || loading}>
+              <div className="flex justify-between pt-12 mt-12 border-t border-border/40">
+                <Button 
+                  variant="ghost" 
+                  onClick={handleBack} 
+                  disabled={step === 1 || loading}
+                  className="rounded-2xl hover:bg-muted/50 px-6"
+                >
                   <ChevronLeft className="mr-2 h-4 w-4" /> Anterior
                 </Button>
                 {step === STEPS.length ? (
-                  <Button onClick={handleSubmit} disabled={loading} size="lg" className="px-8 shadow-none">
+                  <Button onClick={handleSubmit} disabled={loading} size="lg" className="px-10 rounded-2xl shadow-none">
                     {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Enviar Solicitação'}
                   </Button>
                 ) : (
-                  <Button onClick={handleNext} disabled={loading} size="lg" className="px-8">
+                  <Button onClick={handleNext} disabled={loading} size="lg" className="px-10 rounded-2xl">
                     Próximo <ChevronRight className="ml-2 h-4 w-4" />
                   </Button>
                 )}
