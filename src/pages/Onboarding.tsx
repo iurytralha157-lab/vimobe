@@ -171,72 +171,55 @@ export default function Onboarding() {
   }
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-8 lg:p-12">
-      <div className="max-w-6xl mx-auto space-y-16">
+    <div className="min-h-screen bg-accent/5 p-4 md:p-8 lg:p-12">
+      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         
-        {/* Header Centralizado */}
-        <div className="flex flex-col items-center text-center space-y-8 py-4">
-          <div className="p-1">
+        {/* Formulário (Col 1-7) */}
+        <div className="lg:col-span-7 space-y-8">
+          <div className="flex flex-col gap-6 mb-4">
             {settingsLoading ? (
-              <div className="h-12 w-40 bg-muted animate-pulse rounded-2xl" />
+              <div className="h-10 w-32 bg-muted animate-pulse rounded-lg" />
             ) : logoUrl ? (
-              <img src={logoUrl} alt="Logo" className="h-12 w-auto object-contain" />
+              <img src={logoUrl} alt="Logo" className="h-10 w-auto self-start" />
             ) : (
-              <img src="/logo.png" alt="Vimob" className="h-12 w-auto object-contain" />
+              <img src="/logo.png" alt="Vimob" className="h-10 w-auto self-start" />
             )}
-          </div>
-          <div>
-            <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground">Onboarding</h1>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 items-start">
-          
-          {/* Formulário (Col 1-7) */}
-          <div className="lg:col-span-7 space-y-10">
-            {/* Progress Bar moved here */}
-            <div className="space-y-4 px-2">
-              <div className="flex justify-between text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">
-                <span>Passo {step} de {STEPS.length}</span>
-                <span>{Math.round((step / STEPS.length) * 100)}%</span>
-              </div>
-              <div className="h-1 w-full bg-muted rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-primary transition-all duration-700 ease-in-out rounded-full"
-                  style={{ width: `${(step / STEPS.length) * 100}%` }}
-                />
+            <div className="flex items-center justify-between">
+              <h1 className="text-3xl font-bold tracking-tight">Onboarding</h1>
+              <div className="text-right">
+                <span className="text-sm font-medium text-muted-foreground">Passo {step} de {STEPS.length}</span>
+                <Progress value={(step / STEPS.length) * 100} className="w-32 h-2 mt-1" />
               </div>
             </div>
+          </div>
 
-            <Card className="border-border/60 bg-card/30 backdrop-blur-sm rounded-[2.5rem] overflow-hidden shadow-none transition-all duration-500">
-              <CardContent className="p-8 md:p-14">
-                
-                {step === 1 && (
-                  <div className="space-y-8 animate-in">
-                    <div className="space-y-3">
-                      <h2 className="text-3xl font-bold tracking-tight text-foreground">Como você atua no mercado?</h2>
-                      <p className="text-muted-foreground text-lg">Selecione o perfil que melhor define sua operação diária.</p>
-                    </div>
-                    <div className="grid grid-cols-1 gap-5">
-                      {[
-                        { id: 'corretor', label: 'Corretor Autônomo', desc: 'Trabalho de forma independente', icon: User },
-                        { id: 'imobiliaria', label: 'Imobiliária / Agência', desc: 'Tenho ou gerencio uma imobiliária', icon: Building2 },
-                        { id: 'incorporadora', label: 'Incorporadora / Construtora', desc: 'Desenvolvo ou vendo empreendimentos', icon: Construction },
-                      ].map((item) => (
-                        <button
-                          key={item.id}
-                          onClick={() => updateField('segment', item.id)}
-                          className={`group relative flex items-center p-6 border rounded-3xl text-left transition-all duration-300 ${
-                            form.segment === item.id 
-                              ? 'border-primary bg-primary/5 ring-1 ring-primary/20' 
-                              : 'border-border bg-card/30 shadow-none hover:border-primary/20'
-                          }`}
-                        >
-                          <div className={`mr-5 p-4 rounded-2xl transition-all duration-300 ${
-                            form.segment === item.id ? 'bg-primary text-primary-foreground' : 'bg-muted group-hover:bg-accent'
-                          }`}>
-                            <item.icon className="h-7 w-7" />
-                          </div>
+          <Card className="border-border/50 shadow-none">
+            <CardContent className="p-6 md:p-10">
+              
+              {step === 1 && (
+                <div className="space-y-6">
+                  <div className="space-y-2">
+                    <h2 className="text-2xl font-bold">Como você atua no mercado imobiliário?</h2>
+                    <p className="text-muted-foreground">Escolha o perfil que melhor descreve sua atuação.</p>
+                  </div>
+                  <div className="grid grid-cols-1 gap-4">
+                    {[
+                      { id: 'corretor', label: 'Corretor Autônomo', desc: 'Trabalho de forma independente', icon: User },
+                      { id: 'imobiliaria', label: 'Imobiliária / Agência', desc: 'Tenho ou gerencio uma imobiliária', icon: Building2 },
+                      { id: 'incorporadora', label: 'Incorporadora / Construtora', desc: 'Desenvolvo ou vendo empreendimentos', icon: Construction },
+                    ].map((item) => (
+                      <button
+                        key={item.id}
+                        onClick={() => updateField('segment', item.id)}
+                        className={`group relative flex items-center p-6 border-2 rounded-2xl text-left transition-all hover:border-primary/50 ${
+                          form.segment === item.id ? 'border-primary bg-primary/5' : 'border-border bg-card shadow-none'
+                        }`}
+                      >
+                        <div className={`mr-4 p-3 rounded-xl transition-colors ${
+                          form.segment === item.id ? 'bg-primary text-primary-foreground' : 'bg-accent group-hover:bg-accent-foreground/10'
+                        }`}>
+                          <item.icon className="h-6 w-6" />
+                        </div>
                         <div className="flex-1">
                           <h3 className="font-bold text-lg">{item.label}</h3>
                           <p className="text-sm text-muted-foreground">{item.desc}</p>
@@ -251,10 +234,10 @@ export default function Onboarding() {
               )}
 
               {step === 2 && (
-                <div className="space-y-8 animate-in">
-                  <div className="space-y-3">
-                    <h2 className="text-3xl font-bold tracking-tight text-foreground">Seus dados pessoais</h2>
-                    <p className="text-muted-foreground text-lg">Informações básicas para criarmos seu acesso mestre.</p>
+                <div className="space-y-6">
+                  <div className="space-y-2">
+                    <h2 className="text-2xl font-bold">Seus dados pessoais</h2>
+                    <p className="text-muted-foreground">Precisamos saber quem está no comando.</p>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
@@ -278,13 +261,13 @@ export default function Onboarding() {
               )}
 
               {step === 3 && (
-                <div className="space-y-8 animate-in">
-                  <div className="space-y-3">
-                    <h2 className="text-3xl font-bold tracking-tight text-foreground">Dados da organização</h2>
-                    <p className="text-muted-foreground text-lg">
+                <div className="space-y-6">
+                  <div className="space-y-2">
+                    <h2 className="text-2xl font-bold">Dados da organização</h2>
+                    <p className="text-muted-foreground">
                       {form.segment === 'corretor' 
-                        ? 'Identidade da sua conta profissional.'
-                        : 'Informações oficiais da sua imobiliária ou construtora.'}
+                        ? 'A sua conta será criada no seu nome. Você poderá convidar outros depois.'
+                        : 'Preencha os dados oficiais da sua empresa.'}
                     </p>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -329,10 +312,10 @@ export default function Onboarding() {
               )}
 
               {step === 4 && (
-                <div className="space-y-8 animate-in">
-                  <div className="space-y-3">
-                    <h2 className="text-3xl font-bold tracking-tight text-foreground">Personalização</h2>
-                    <p className="text-muted-foreground text-lg">Defina como seus clientes verão sua marca na plataforma.</p>
+                <div className="space-y-6">
+                  <div className="space-y-2">
+                    <h2 className="text-2xl font-bold">Personalização</h2>
+                    <p className="text-muted-foreground">Quer configurar a identidade visual agora? Você pode fazer isso depois também.</p>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div className="space-y-4">
@@ -373,10 +356,10 @@ export default function Onboarding() {
               )}
 
               {step === 5 && (
-                <div className="space-y-8 animate-in">
-                  <div className="space-y-3">
-                    <h2 className="text-3xl font-bold tracking-tight text-foreground">Redes Sociais</h2>
-                    <p className="text-muted-foreground text-lg">Conecte seus canais digitais para maior alcance.</p>
+                <div className="space-y-6">
+                  <div className="space-y-2">
+                    <h2 className="text-2xl font-bold">Redes Sociais</h2>
+                    <p className="text-muted-foreground">Adicione suas redes para conectar com seus clientes.</p>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
@@ -400,12 +383,12 @@ export default function Onboarding() {
               )}
 
               {step === 6 && (
-                <div className="space-y-8 animate-in">
-                  <div className="space-y-3">
-                    <h2 className="text-3xl font-bold tracking-tight text-foreground">Confirmação</h2>
-                    <p className="text-muted-foreground text-lg">Tudo pronto! Revise as informações antes de finalizar.</p>
+                <div className="space-y-6">
+                  <div className="space-y-2">
+                    <h2 className="text-2xl font-bold">Confirmação</h2>
+                    <p className="text-muted-foreground">Tudo pronto! Revise seus dados antes de enviar.</p>
                   </div>
-                  <div className="bg-muted/30 rounded-3xl p-8 space-y-6 border border-border/40">
+                  <div className="bg-accent/30 rounded-2xl p-6 space-y-4 border border-border/50">
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div className="text-muted-foreground">Perfil:</div>
                       <div className="font-semibold capitalize">{form.segment}</div>
@@ -434,21 +417,16 @@ export default function Onboarding() {
                 </div>
               )}
 
-              <div className="flex justify-between pt-12 mt-12 border-t border-border/40">
-                <Button 
-                  variant="ghost" 
-                  onClick={handleBack} 
-                  disabled={step === 1 || loading}
-                  className="rounded-2xl hover:bg-muted/50 px-6"
-                >
+              <div className="flex justify-between pt-10 mt-10 border-t">
+                <Button variant="outline" onClick={handleBack} disabled={step === 1 || loading}>
                   <ChevronLeft className="mr-2 h-4 w-4" /> Anterior
                 </Button>
                 {step === STEPS.length ? (
-                  <Button onClick={handleSubmit} disabled={loading} size="lg" className="px-10 rounded-2xl shadow-none">
+                  <Button onClick={handleSubmit} disabled={loading} size="lg" className="px-8 shadow-none">
                     {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Enviar Solicitação'}
                   </Button>
                 ) : (
-                  <Button onClick={handleNext} disabled={loading} size="lg" className="px-10 rounded-2xl">
+                  <Button onClick={handleNext} disabled={loading} size="lg" className="px-8">
                     Próximo <ChevronRight className="ml-2 h-4 w-4" />
                   </Button>
                 )}
@@ -457,60 +435,56 @@ export default function Onboarding() {
           </Card>
         </div>
 
-        <div className="lg:col-span-5 sticky top-12 hidden lg:block">
-          <div className="space-y-6 pt-10">
-            <Card className="overflow-hidden border-border/60 bg-card/20 backdrop-blur-md rounded-[3rem] shadow-none">
-              <div className="h-40 transition-colors duration-700" style={{ backgroundColor: `${form.primary_color}15` }} />
-              <CardContent className="px-10 pb-12 -mt-20 space-y-10">
+        {/* Live Preview (Col 8-12) */}
+        <div className="lg:col-span-5 sticky top-8 hidden lg:block">
+          <div className="space-y-4">
+            <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground px-2">Preview ao vivo</h3>
+            <Card className="overflow-hidden border-border/50 shadow-none">
+              <div className="h-24" style={{ backgroundColor: `${form.primary_color}33` }} />
+              <CardContent className="px-6 pb-8 -mt-12 space-y-6">
                 <div className="flex items-end justify-between">
-                  <div className="h-36 w-36 rounded-[2rem] border-8 border-card bg-card flex items-center justify-center overflow-hidden transition-all duration-500 shadow-none">
+                  <div className="h-24 w-24 rounded-2xl border-4 border-card bg-card shadow-none flex items-center justify-center overflow-hidden">
                     {form.logo_url ? (
-                      <img src={form.logo_url} className="w-full h-full object-contain p-4" />
+                      <img src={form.logo_url} className="w-full h-full object-contain p-2" />
                     ) : (
-                      <div className="h-full w-full bg-muted/50 flex items-center justify-center">
-                        <Building2 className="h-12 w-12 text-muted-foreground/30" />
+                      <div className="h-full w-full bg-accent flex items-center justify-center">
+                        <Building2 className="h-10 w-10 text-muted-foreground" />
                       </div>
                     )}
                   </div>
-                  <div className="pb-4">
-                    <div className={`px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${
-                      form.segment === 'corretor' ? 'bg-blue-500/10 text-blue-600' : 
-                      form.segment === 'imobiliaria' ? 'bg-orange-500/10 text-orange-600' : 'bg-purple-500/10 text-purple-600'
+                  <div className="pb-2">
+                    <div className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                      form.segment === 'corretor' ? 'bg-blue-100 text-blue-700' : 
+                      form.segment === 'imobiliaria' ? 'bg-orange-100 text-orange-700' : 'bg-purple-100 text-purple-700'
                     }`}>
                       {form.segment.replace('_', ' ')}
                     </div>
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <h2 className="text-2xl font-bold tracking-tight">{form.company_name || 'Nome da sua marca'}</h2>
-                  {form.creci && <p className="text-xs font-mono text-muted-foreground/60">CRECI: {form.creci}</p>}
-                  <p className="text-sm text-muted-foreground/80 flex items-center gap-1.5">
-                    <User className="h-3.5 w-3.5" /> {form.responsible_name || 'Seu Nome'}
+                <div className="space-y-1">
+                  <h2 className="text-xl font-bold">{form.company_name || 'Nome da sua marca'}</h2>
+                  {form.creci && <p className="text-xs font-mono text-muted-foreground">CRECI: {form.creci}</p>}
+                  <p className="text-sm text-muted-foreground flex items-center gap-1">
+                    <User className="h-3 w-3" /> {form.responsible_name || 'Seu Nome'}
                   </p>
                 </div>
 
-                <div className="grid grid-cols-1 gap-4 pt-4">
-                  <div className="flex items-center gap-4 text-sm p-5 rounded-3xl bg-muted/20 border border-border/10 transition-all hover:bg-muted/30">
-                    <div className="p-2.5 rounded-xl bg-background border border-border/10">
-                      <Mail className="h-4 w-4 text-primary" />
-                    </div>
-                    <span className="truncate font-medium">{form.responsible_email || 'email@exemplo.com'}</span>
+                <div className="grid grid-cols-1 gap-3 pt-4">
+                  <div className="flex items-center gap-3 text-sm p-3 rounded-xl bg-accent/30 border border-border/30">
+                    <Mail className="h-4 w-4 text-muted-foreground" />
+                    <span className="truncate">{form.responsible_email || 'email@exemplo.com'}</span>
                   </div>
-                  {(form.company_phone || form.responsible_phone) && (
-                    <div className="flex items-center gap-4 text-sm p-5 rounded-3xl bg-muted/20 border border-border/10 transition-all hover:bg-muted/30">
-                      <div className="p-2.5 rounded-xl bg-background border border-border/10">
-                        <Phone className="h-4 w-4 text-primary" />
-                      </div>
-                      <span className="font-medium">{form.company_phone || form.responsible_phone}</span>
+                  {form.company_phone && (
+                    <div className="flex items-center gap-3 text-sm p-3 rounded-xl bg-accent/30 border border-border/30">
+                      <Phone className="h-4 w-4 text-muted-foreground" />
+                      <span>{form.company_phone}</span>
                     </div>
                   )}
                   {form.company_address && (
-                    <div className="flex items-center gap-4 text-sm p-5 rounded-3xl bg-muted/20 border border-border/10 transition-all hover:bg-muted/30">
-                      <div className="p-2.5 rounded-xl bg-background border border-border/10">
-                        <MapPin className="h-4 w-4 text-primary" />
-                      </div>
-                      <span className="truncate font-medium">{form.company_address}</span>
+                    <div className="flex items-center gap-3 text-sm p-3 rounded-xl bg-accent/30 border border-border/30">
+                      <MapPin className="h-4 w-4 text-muted-foreground" />
+                      <span className="truncate">{form.company_address}</span>
                     </div>
                   )}
                 </div>
@@ -559,7 +533,6 @@ export default function Onboarding() {
           </div>
         </div>
 
-        </div>
       </div>
     </div>
   );
