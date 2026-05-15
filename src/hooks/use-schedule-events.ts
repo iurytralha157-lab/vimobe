@@ -119,7 +119,7 @@ export function useScheduleEvents(options: UseScheduleEventsOptions = {}) {
   return useQuery({
     queryKey: ['schedule-events', options],
     queryFn: async () => {
-      let query = (supabase as any)
+      let query = supabase
         .from('schedule_events')
         .select(`
           id, organization_id, user_id, lead_id, property_id, title, 
@@ -175,7 +175,7 @@ export function useCreateScheduleEvent() {
     }) => {
       if (!profile?.organization_id) throw new Error('Organização não encontrada');
 
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('schedule_events')
         .insert({
           organization_id: profile.organization_id,
@@ -194,22 +194,25 @@ export function useCreateScheduleEvent() {
 
       if (error) throw error;
       
-      // Log to timeline if lead is present
+      // Log to timeline if lead is present - wrapped in try/catch to prevent blocking
       if (data.lead_id && profile) {
-        logScheduleEventToTimeline({
-          lead_id: data.lead_id,
-          organization_id: data.organization_id,
-          actor_id: profile.id,
-          assigned_user_id: data.user_id,
-          event_title: data.title,
-          event_type: data.event_type || 'task',
-          start_time: data.start_time,
-          action_type: 'created'
-        });
+        try {
+          await logScheduleEventToTimeline({
+            lead_id: data.lead_id,
+            organization_id: data.organization_id,
+            actor_id: profile.id,
+            assigned_user_id: data.user_id,
+            event_title: data.title,
+            event_type: data.event_type || 'task',
+            start_time: data.start_time,
+            action_type: 'created'
+          });
+        } catch (timelineError) {
+          console.error('Error logging to timeline (non-critical):', timelineError);
+        }
       }
 
-      // A atividade de gamificação será registrada automaticamente pelo trigger 'tr_schedule_gamification' no banco de dados.
-      // Se precisar registrar algo adicional na tabela de atividades:
+      // Record activity log if needed
       if (data.lead_id && (data.event_type === 'visit' || data.event_type === 'meeting')) {
         try {
           await supabase.from('activities').insert({
@@ -270,13 +273,13 @@ export function useUpdateScheduleEvent() {
   return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<ScheduleEvent> & { id: string }) => {
       // Get current event data for timeline logging
-      const { data: currentEvent } = await (supabase as any)
+      const { data: currentEvent } = await supabase
         .from('schedule_events')
         .select('*')
         .eq('id', id)
         .single();
 
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('schedule_events')
         .update(updates)
         .eq('id', id)
@@ -349,7 +352,7 @@ export function useCompleteScheduleEvent() {
         updates.completed_at = null;
       }
 
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('schedule_events')
         .update(updates)
         .eq('id', id)
