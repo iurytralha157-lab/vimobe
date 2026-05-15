@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { getFriendlyErrorMessage } from "@/lib/error-handler";
 
 export type EventType = 'call' | 'email' | 'meeting' | 'task' | 'message' | 'visit';
 
@@ -254,7 +255,7 @@ export function useCreateScheduleEvent() {
     },
     onError: (error: Error) => {
       console.error('Error creating schedule event:', error);
-      toast.error('Erro ao criar atividade');
+      toast.error(getFriendlyErrorMessage(error));
     },
   });
 }
