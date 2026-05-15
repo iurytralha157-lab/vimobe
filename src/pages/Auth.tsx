@@ -327,8 +327,10 @@ export default function Auth() {
                     <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="login-email"
+                      name="email"
                       type="email"
                       placeholder="seu@email.com"
+                      autoComplete="username"
                       value={loginData.email}
                       onChange={e => setLoginData({ ...loginData, email: e.target.value })}
                       className="h-11 rounded-xl bg-muted pl-11"
