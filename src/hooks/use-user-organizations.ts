@@ -77,6 +77,7 @@ export function useUserOrganizations(userId: string | undefined, activeOrgId?: s
           member_role: item.role,
           is_active: item.is_active,
           joined_at: item.joined_at,
+          last_accessed_at: item.updated_at || null,
         };
       }) as UserOrganization[];
 
