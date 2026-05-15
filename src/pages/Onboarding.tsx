@@ -468,7 +468,7 @@ export default function Onboarding() {
                     )}
                   </div>
                   <div className="pb-4">
-                    <div className={`px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest shadow-sm ${
+                    <div className={`px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${
                       form.segment === 'corretor' ? 'bg-blue-500/10 text-blue-600' : 
                       form.segment === 'imobiliaria' ? 'bg-orange-500/10 text-orange-600' : 'bg-purple-500/10 text-purple-600'
                     }`}>
@@ -477,32 +477,32 @@ export default function Onboarding() {
                   </div>
                 </div>
 
-                <div className="space-y-1">
-                  <h2 className="text-xl font-bold">{form.company_name || 'Nome da sua marca'}</h2>
-                  {form.creci && <p className="text-xs font-mono text-muted-foreground">CRECI: {form.creci}</p>}
-                  <p className="text-sm text-muted-foreground flex items-center gap-1">
-                    <User className="h-3 w-3" /> {form.responsible_name || 'Seu Nome'}
+                <div className="space-y-2">
+                  <h2 className="text-2xl font-bold tracking-tight">{form.company_name || 'Nome da sua marca'}</h2>
+                  {form.creci && <p className="text-xs font-mono text-muted-foreground/60">CRECI: {form.creci}</p>}
+                  <p className="text-sm text-muted-foreground/80 flex items-center gap-1.5">
+                    <User className="h-3.5 w-3.5" /> {form.responsible_name || 'Seu Nome'}
                   </p>
                 </div>
 
                 <div className="grid grid-cols-1 gap-4 pt-4">
-                  <div className="flex items-center gap-4 text-sm p-4 rounded-2xl bg-muted/30 border border-border/20 transition-all hover:bg-muted/50">
-                    <div className="p-2 rounded-lg bg-background shadow-sm">
+                  <div className="flex items-center gap-4 text-sm p-5 rounded-3xl bg-muted/20 border border-border/10 transition-all hover:bg-muted/30">
+                    <div className="p-2.5 rounded-xl bg-background border border-border/10">
                       <Mail className="h-4 w-4 text-primary" />
                     </div>
                     <span className="truncate font-medium">{form.responsible_email || 'email@exemplo.com'}</span>
                   </div>
                   {(form.company_phone || form.responsible_phone) && (
-                    <div className="flex items-center gap-4 text-sm p-4 rounded-2xl bg-muted/30 border border-border/20 transition-all hover:bg-muted/50">
-                      <div className="p-2 rounded-lg bg-background shadow-sm">
+                    <div className="flex items-center gap-4 text-sm p-5 rounded-3xl bg-muted/20 border border-border/10 transition-all hover:bg-muted/30">
+                      <div className="p-2.5 rounded-xl bg-background border border-border/10">
                         <Phone className="h-4 w-4 text-primary" />
                       </div>
                       <span className="font-medium">{form.company_phone || form.responsible_phone}</span>
                     </div>
                   )}
                   {form.company_address && (
-                    <div className="flex items-center gap-4 text-sm p-4 rounded-2xl bg-muted/30 border border-border/20 transition-all hover:bg-muted/50">
-                      <div className="p-2 rounded-lg bg-background shadow-sm">
+                    <div className="flex items-center gap-4 text-sm p-5 rounded-3xl bg-muted/20 border border-border/10 transition-all hover:bg-muted/30">
+                      <div className="p-2.5 rounded-xl bg-background border border-border/10">
                         <MapPin className="h-4 w-4 text-primary" />
                       </div>
                       <span className="truncate font-medium">{form.company_address}</span>
