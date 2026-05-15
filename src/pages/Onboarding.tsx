@@ -171,24 +171,11 @@ export default function Onboarding() {
   }
 
   return (
-    <div className="min-h-screen bg-background/50 p-4 md:p-8 lg:p-16">
-      <div className="max-w-6xl mx-auto space-y-12">
-        {/* Progress Bar Top */}
-        <div className="max-w-md mx-auto space-y-3">
-          <div className="flex justify-between text-xs font-semibold uppercase tracking-widest text-muted-foreground/60">
-            <span>Passo {step}</span>
-            <span>{Math.round((step / STEPS.length) * 100)}% concluído</span>
-          </div>
-          <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-primary transition-all duration-500 ease-out rounded-full"
-              style={{ width: `${(step / STEPS.length) * 100}%` }}
-            />
-          </div>
-        </div>
-
+    <div className="min-h-screen bg-background p-4 md:p-8 lg:p-12">
+      <div className="max-w-6xl mx-auto space-y-16">
+        
         {/* Header Centralizado */}
-        <div className="flex flex-col items-center text-center space-y-6">
+        <div className="flex flex-col items-center text-center space-y-8 py-4">
           <div className="p-1">
             {settingsLoading ? (
               <div className="h-12 w-40 bg-muted animate-pulse rounded-2xl" />
@@ -198,20 +185,31 @@ export default function Onboarding() {
               <img src="/logo.png" alt="Vimob" className="h-12 w-auto object-contain" />
             )}
           </div>
-          <div className="space-y-2">
+          <div>
             <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground">Onboarding</h1>
-            <p className="text-muted-foreground text-lg max-w-lg mx-auto">
-              Configure sua nova experiência imobiliária em poucos minutos.
-            </p>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 items-start">
           
           {/* Formulário (Col 1-7) */}
-          <div className="lg:col-span-7 space-y-8">
-            <Card className="border-border/40 shadow-soft bg-card/50 backdrop-blur-sm rounded-[2rem] overflow-hidden">
-              <CardContent className="p-8 md:p-12">
+          <div className="lg:col-span-7 space-y-10">
+            {/* Progress Bar moved here */}
+            <div className="space-y-4 px-2">
+              <div className="flex justify-between text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">
+                <span>Passo {step} de {STEPS.length}</span>
+                <span>{Math.round((step / STEPS.length) * 100)}%</span>
+              </div>
+              <div className="h-1 w-full bg-muted rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-primary transition-all duration-700 ease-in-out rounded-full"
+                  style={{ width: `${(step / STEPS.length) * 100}%` }}
+                />
+              </div>
+            </div>
+
+            <Card className="border-border/60 bg-card/30 backdrop-blur-sm rounded-[2.5rem] overflow-hidden shadow-none transition-all duration-500">
+              <CardContent className="p-8 md:p-14">
                 
                 {step === 1 && (
                   <div className="space-y-8 animate-in">
