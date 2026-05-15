@@ -402,12 +402,12 @@ export default function Onboarding() {
               )}
 
               {step === 6 && (
-                <div className="space-y-6">
-                  <div className="space-y-2">
-                    <h2 className="text-2xl font-bold">Confirmação</h2>
-                    <p className="text-muted-foreground">Tudo pronto! Revise seus dados antes de enviar.</p>
+                <div className="space-y-8 animate-in">
+                  <div className="space-y-3">
+                    <h2 className="text-3xl font-bold tracking-tight text-foreground">Confirmação</h2>
+                    <p className="text-muted-foreground text-lg">Tudo pronto! Revise as informações antes de finalizar.</p>
                   </div>
-                  <div className="bg-accent/30 rounded-2xl p-6 space-y-4 border border-border/50">
+                  <div className="bg-muted/30 rounded-3xl p-8 space-y-6 border border-border/40">
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div className="text-muted-foreground">Perfil:</div>
                       <div className="font-semibold capitalize">{form.segment}</div>
@@ -560,6 +560,7 @@ export default function Onboarding() {
           </div>
         </div>
 
+        </div>
       </div>
     </div>
   );
