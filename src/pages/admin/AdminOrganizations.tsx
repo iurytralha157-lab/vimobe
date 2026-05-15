@@ -260,8 +260,12 @@ export default function AdminOrganizations() {
                 <CardContent className="p-5">
                   <div className="flex justify-between items-start mb-4">
                     <div className="flex items-center gap-4">
-                      <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                        <Building2 className="h-6 w-6 text-primary" />
+                      <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors overflow-hidden">
+                        {org.logo_url ? (
+                          <img src={org.logo_url} alt={org.name} className="h-full w-full object-contain p-1" />
+                        ) : (
+                          <Building2 className="h-6 w-6 text-primary" />
+                        )}
                       </div>
                       <div>
                         <h3 className="font-bold text-lg leading-tight">{org.name}</h3>

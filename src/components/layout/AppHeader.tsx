@@ -106,6 +106,17 @@ export const AppHeader = React.memo(function AppHeader({
 
       {/* Right side actions - Capsule style redesign */}
       <div className="flex items-center gap-3 ml-auto">
+        {/* Organization Logo in Header */}
+        {!isMobile && organization?.logo_url && (
+          <div className="flex items-center gap-2 mr-2 px-3 py-1.5 rounded-full bg-card dark:bg-[#111] border border-border/10">
+            <img 
+              src={organization.logo_url} 
+              alt={organization.name} 
+              className="h-7 w-auto object-contain"
+            />
+          </div>
+        )}
+
         {/* Org switcher */}
         {hasMultipleOrgs && (
           <DropdownMenu>
@@ -139,7 +150,11 @@ export const AppHeader = React.memo(function AppHeader({
                   className="cursor-pointer rounded-xl m-1 px-3 py-2.5 gap-3"
                 >
                   <Avatar className="h-8 w-8 rounded-lg border border-border/40">
-                    <AvatarImage src={org.organization_logo || undefined} />
+                    {org.organization_logo ? (
+                      <AvatarImage src={org.organization_logo} className="object-contain" />
+                    ) : (
+                      <AvatarImage src={undefined} />
+                    )}
                     <AvatarFallback className="rounded-lg bg-primary/10 text-primary text-xs font-bold">
                       {org.organization_name?.charAt(0)?.toUpperCase() || 'O'}
                     </AvatarFallback>
@@ -251,9 +266,15 @@ export const AppHeader = React.memo(function AppHeader({
               className="h-12 gap-3 pl-1.5 pr-2 rounded-full bg-card dark:bg-[#111] transition-all duration-300 group"
             >
               <Avatar className="h-9 w-9 border border-border/40 dark:border-white/10 ring-2 ring-primary/10 group-hover:ring-primary/20 transition-all">
-                <AvatarImage src={profile?.avatar_url || undefined} className="object-cover" />
+                {profile?.avatar_url ? (
+                  <AvatarImage src={profile.avatar_url} className="object-cover" />
+                ) : organization?.logo_url ? (
+                  <AvatarImage src={organization.logo_url} className="object-contain" />
+                ) : (
+                  <AvatarImage src={undefined} />
+                )}
                 <AvatarFallback className="bg-primary text-primary-foreground text-xs font-bold">
-                  {profile?.name ? getInitials(profile.name) : 'U'}
+                  {profile?.name ? getInitials(profile.name) : organization?.name ? getInitials(organization.name) : 'U'}
                 </AvatarFallback>
               </Avatar>
               {!isMobile && (

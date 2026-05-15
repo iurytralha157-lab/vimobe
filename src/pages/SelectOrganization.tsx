@@ -113,9 +113,11 @@ export default function SelectOrganization() {
                 onClick={() => handleSelectOrg(org.organization_id)}
               >
                 <div className="flex items-center gap-4">
-                  <Avatar className="h-12 w-12 rounded-full">
-                    {org.organization_logo && (
-                      <AvatarImage src={org.organization_logo} className="object-cover rounded-full" />
+                  <Avatar className="h-12 w-12 rounded-full border border-border/40">
+                    {org.organization_logo ? (
+                      <AvatarImage src={org.organization_logo} className="object-contain rounded-full" />
+                    ) : (
+                      <AvatarImage src={undefined} />
                     )}
                     <AvatarFallback className="rounded-full bg-primary text-primary-foreground font-bold">
                       {getInitials(name)}

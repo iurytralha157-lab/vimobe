@@ -428,7 +428,16 @@ export default function AdminOrganizationDetail() {
           <TabsContent value="general" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Informações Gerais</CardTitle>
+                <CardTitle className="flex items-center gap-3">
+                  <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center overflow-hidden">
+                    {orgDetails?.logo_url ? (
+                      <img src={orgDetails.logo_url} alt={orgDetails.name} className="h-full w-full object-contain p-1" />
+                    ) : (
+                      <Building2 className="h-6 w-6 text-primary" />
+                    )}
+                  </div>
+                  Informações Gerais
+                </CardTitle>
                 <CardDescription>
                   Dados básicos da organização
                 </CardDescription>

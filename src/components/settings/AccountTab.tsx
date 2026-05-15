@@ -15,7 +15,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Camera, Loader2, Globe, Eye, EyeOff, KeyRound, Building2, User, Percent, Info } from 'lucide-react';
+import { Camera, Loader2, Globe, Eye, EyeOff, KeyRound, Building2, User, Percent, Info, Upload, Scissors } from 'lucide-react';
+import { ImageCropper } from '@/components/ui/image-cropper';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -64,6 +65,9 @@ export function AccountTab() {
   
   // Organization states
   const [savingOrg, setSavingOrg] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [cropDialogOpen, setCropDialogOpen] = useState(false);
+  const [pendingLogoUrl, setPendingLogoUrl] = useState<string | null>(null);
   const isAdmin = profile?.role === 'admin';
 
   const [profileForm, setProfileForm] = useState<ProfileFormData>({
@@ -210,6 +214,41 @@ export function AccountTab() {
       toast.error(t.settings.organization.saveError);
     } finally {
       setSavingOrg(false);
+    }
+  };
+
+  const handleUploadLogo = async (file: File) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      setPendingLogoUrl(reader.result as string);
+      setCropDialogOpen(true);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const onCropComplete = async (blob: Blob) => {
+    if (!organization?.id) return;
+    setCropDialogOpen(false);
+    setUploadingLogo(true);
+    try {
+      const path = `logos/${organization.id}-${Date.now()}.png`;
+      const { error: uploadError } = await supabase.storage.from('logos').upload(path, blob);
+      if (uploadError) throw uploadError;
+      const { data: { publicUrl } } = supabase.storage.from('logos').getPublicUrl(path);
+      
+      const { error: updateError } = await supabase
+        .from('organizations')
+        .update({ logo_url: publicUrl })
+        .eq('id', organization.id);
+      if (updateError) throw updateError;
+
+      await refreshProfile();
+      toast.success('Logo atualizada com sucesso!');
+    } catch (error: any) {
+      toast.error('Erro ao salvar logo: ' + error.message);
+    } finally {
+      setUploadingLogo(false);
+      setPendingLogoUrl(null);
     }
   };
 
@@ -460,6 +499,72 @@ export function AccountTab() {
             <CardDescription>{t.settings.organization.description}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6 px-4 md:px-5 pb-5">
+            {/* Organization Logo Upload */}
+            <div className="space-y-4">
+              <Label>Logotipo da Organização</Label>
+              <div className="flex items-center gap-4">
+                <div className="h-20 w-20 rounded-xl border-2 border-dashed flex items-center justify-center bg-muted/30 overflow-hidden relative group">
+                  {organization?.logo_url ? (
+                    <img src={organization.logo_url} className="w-full h-full object-contain p-2" />
+                  ) : (
+                    <Upload className="h-6 w-6 text-muted-foreground" />
+                  )}
+                  {isAdmin && (
+                    <input 
+                      id="org-logo-upload"
+                      type="file" 
+                      className="absolute inset-0 opacity-0 cursor-pointer" 
+                      accept="image/*" 
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleUploadLogo(file);
+                        e.target.value = '';
+                      }} 
+                    />
+                  )}
+                  {uploadingLogo && <div className="absolute inset-0 bg-background/80 flex items-center justify-center"><Loader2 className="h-5 w-5 animate-spin" /></div>}
+                </div>
+                {isAdmin && (
+                  <div className="flex flex-col gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="h-8"
+                      onClick={() => document.getElementById('org-logo-upload')?.click()}
+                      disabled={uploadingLogo}
+                    >
+                      Alterar Logo
+                    </Button>
+                    {organization?.logo_url && (
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-8 gap-2"
+                        onClick={() => {
+                          setPendingLogoUrl(organization.logo_url);
+                          setCropDialogOpen(true);
+                        }}
+                      >
+                        <Scissors className="h-3 w-3" />
+                        Ajustar
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {cropDialogOpen && pendingLogoUrl && (
+              <ImageCropper 
+                imageSrc={pendingLogoUrl}
+                onCropComplete={onCropComplete}
+                onCancel={() => {
+                  setCropDialogOpen(false);
+                  setPendingLogoUrl(null);
+                }}
+              />
+            )}
+
             {/* Company Name */}
             <div className="space-y-1.5">
               <Label className="text-xs">{t.settings.organization.companyName}</Label>
