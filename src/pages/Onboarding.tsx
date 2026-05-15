@@ -16,6 +16,8 @@ import {
 import { toast } from 'sonner';
 import { maskCNPJ, maskCPF, maskPhone } from '@/lib/masks';
 import { fetchCNPJData } from '@/lib/cnpj';
+import { useSystemSettings } from '@/hooks/use-system-settings';
+import { useTheme } from 'next-themes';
 
 const STEPS = [
   { id: 1, title: 'Perfil' },
@@ -29,6 +31,15 @@ const STEPS = [
 export default function Onboarding() {
   const navigate = useNavigate();
   const { user, profile } = useAuth();
+  const { data: systemSettings, isLoading: settingsLoading } = useSystemSettings();
+  const { resolvedTheme } = useTheme();
+
+  const logoUrl = useMemo(() => {
+    if (!systemSettings) return null;
+    return resolvedTheme === 'dark'
+      ? systemSettings.logo_url_dark || systemSettings.logo_url_light
+      : systemSettings.logo_url_light || systemSettings.logo_url_dark;
+  }, [systemSettings, resolvedTheme]);
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [logoUploading, setLogoUploading] = useState(false);
@@ -166,7 +177,13 @@ export default function Onboarding() {
         {/* Formulário (Col 1-7) */}
         <div className="lg:col-span-7 space-y-8">
           <div className="flex flex-col gap-6 mb-4">
-            <img src="/logo.png" alt="Vimob" className="h-10 w-auto self-start" />
+            {settingsLoading ? (
+              <div className="h-10 w-32 bg-muted animate-pulse rounded-lg" />
+            ) : logoUrl ? (
+              <img src={logoUrl} alt="Logo" className="h-10 w-auto self-start" />
+            ) : (
+              <img src="/logo.png" alt="Vimob" className="h-10 w-auto self-start" />
+            )}
             <div className="flex items-center justify-between">
               <h1 className="text-3xl font-bold tracking-tight">Onboarding</h1>
               <div className="text-right">
