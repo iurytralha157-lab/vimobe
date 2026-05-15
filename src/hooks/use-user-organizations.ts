@@ -8,6 +8,7 @@ export interface UserOrganization {
   member_role: string;
   is_active: boolean;
   joined_at: string;
+  last_accessed_at: string | null;
 }
 
 export function useUserOrganizations(userId: string | undefined, activeOrgId?: string | null) {
