@@ -171,24 +171,11 @@ export default function Onboarding() {
   }
 
   return (
-    <div className="min-h-screen bg-background/50 p-4 md:p-8 lg:p-16">
-      <div className="max-w-6xl mx-auto space-y-12">
-        {/* Progress Bar Top */}
-        <div className="max-w-md mx-auto space-y-3">
-          <div className="flex justify-between text-xs font-semibold uppercase tracking-widest text-muted-foreground/60">
-            <span>Passo {step}</span>
-            <span>{Math.round((step / STEPS.length) * 100)}% concluído</span>
-          </div>
-          <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-primary transition-all duration-500 ease-out rounded-full"
-              style={{ width: `${(step / STEPS.length) * 100}%` }}
-            />
-          </div>
-        </div>
-
+    <div className="min-h-screen bg-background p-4 md:p-8 lg:p-12">
+      <div className="max-w-6xl mx-auto space-y-16">
+        
         {/* Header Centralizado */}
-        <div className="flex flex-col items-center text-center space-y-6">
+        <div className="flex flex-col items-center text-center space-y-8 py-4">
           <div className="p-1">
             {settingsLoading ? (
               <div className="h-12 w-40 bg-muted animate-pulse rounded-2xl" />
@@ -198,20 +185,31 @@ export default function Onboarding() {
               <img src="/logo.png" alt="Vimob" className="h-12 w-auto object-contain" />
             )}
           </div>
-          <div className="space-y-2">
+          <div>
             <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground">Onboarding</h1>
-            <p className="text-muted-foreground text-lg max-w-lg mx-auto">
-              Configure sua nova experiência imobiliária em poucos minutos.
-            </p>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 items-start">
           
           {/* Formulário (Col 1-7) */}
-          <div className="lg:col-span-7 space-y-8">
-            <Card className="border-border/40 shadow-soft bg-card/50 backdrop-blur-sm rounded-[2rem] overflow-hidden">
-              <CardContent className="p-8 md:p-12">
+          <div className="lg:col-span-7 space-y-10">
+            {/* Progress Bar moved here */}
+            <div className="space-y-4 px-2">
+              <div className="flex justify-between text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">
+                <span>Passo {step} de {STEPS.length}</span>
+                <span>{Math.round((step / STEPS.length) * 100)}%</span>
+              </div>
+              <div className="h-1 w-full bg-muted rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-primary transition-all duration-700 ease-in-out rounded-full"
+                  style={{ width: `${(step / STEPS.length) * 100}%` }}
+                />
+              </div>
+            </div>
+
+            <Card className="border-border/60 bg-card/30 backdrop-blur-sm rounded-[2.5rem] overflow-hidden shadow-none transition-all duration-500">
+              <CardContent className="p-8 md:p-14">
                 
                 {step === 1 && (
                   <div className="space-y-8 animate-in">
@@ -228,14 +226,14 @@ export default function Onboarding() {
                         <button
                           key={item.id}
                           onClick={() => updateField('segment', item.id)}
-                          className={`group relative flex items-center p-6 border rounded-3xl text-left transition-all duration-300 hover:shadow-soft hover:border-primary/30 ${
+                          className={`group relative flex items-center p-6 border rounded-3xl text-left transition-all duration-300 ${
                             form.segment === item.id 
                               ? 'border-primary bg-primary/5 ring-1 ring-primary/20' 
-                              : 'border-border bg-card/50 shadow-none hover:translate-y-[-2px]'
+                              : 'border-border bg-card/30 shadow-none hover:border-primary/20'
                           }`}
                         >
                           <div className={`mr-5 p-4 rounded-2xl transition-all duration-300 ${
-                            form.segment === item.id ? 'bg-primary text-primary-foreground shadow-glow' : 'bg-muted group-hover:bg-accent'
+                            form.segment === item.id ? 'bg-primary text-primary-foreground' : 'bg-muted group-hover:bg-accent'
                           }`}>
                             <item.icon className="h-7 w-7" />
                           </div>
@@ -436,16 +434,21 @@ export default function Onboarding() {
                 </div>
               )}
 
-              <div className="flex justify-between pt-10 mt-10 border-t">
-                <Button variant="outline" onClick={handleBack} disabled={step === 1 || loading}>
+              <div className="flex justify-between pt-12 mt-12 border-t border-border/40">
+                <Button 
+                  variant="ghost" 
+                  onClick={handleBack} 
+                  disabled={step === 1 || loading}
+                  className="rounded-2xl hover:bg-muted/50 px-6"
+                >
                   <ChevronLeft className="mr-2 h-4 w-4" /> Anterior
                 </Button>
                 {step === STEPS.length ? (
-                  <Button onClick={handleSubmit} disabled={loading} size="lg" className="px-8 shadow-none">
+                  <Button onClick={handleSubmit} disabled={loading} size="lg" className="px-10 rounded-2xl shadow-none">
                     {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Enviar Solicitação'}
                   </Button>
                 ) : (
-                  <Button onClick={handleNext} disabled={loading} size="lg" className="px-8">
+                  <Button onClick={handleNext} disabled={loading} size="lg" className="px-10 rounded-2xl">
                     Próximo <ChevronRight className="ml-2 h-4 w-4" />
                   </Button>
                 )}
@@ -455,16 +458,12 @@ export default function Onboarding() {
         </div>
 
         <div className="lg:col-span-5 sticky top-12 hidden lg:block">
-          <div className="space-y-6">
-            <div className="flex items-center justify-between px-2">
-              <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground/80">Preview em tempo real</h3>
-              <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-            </div>
-            <Card className="overflow-hidden border-border/40 shadow-soft bg-card/50 backdrop-blur-md rounded-[2.5rem]">
-              <div className="h-32 transition-colors duration-500" style={{ backgroundColor: `${form.primary_color}22` }} />
-              <CardContent className="px-8 pb-10 -mt-16 space-y-8">
+          <div className="space-y-6 pt-10">
+            <Card className="overflow-hidden border-border/60 bg-card/20 backdrop-blur-md rounded-[3rem] shadow-none">
+              <div className="h-40 transition-colors duration-700" style={{ backgroundColor: `${form.primary_color}15` }} />
+              <CardContent className="px-10 pb-12 -mt-20 space-y-10">
                 <div className="flex items-end justify-between">
-                  <div className="h-32 w-32 rounded-3xl border-8 border-card bg-card shadow-soft flex items-center justify-center overflow-hidden transition-all duration-300 group-hover:scale-105">
+                  <div className="h-36 w-36 rounded-[2rem] border-8 border-card bg-card flex items-center justify-center overflow-hidden transition-all duration-500 shadow-none">
                     {form.logo_url ? (
                       <img src={form.logo_url} className="w-full h-full object-contain p-4" />
                     ) : (
@@ -474,7 +473,7 @@ export default function Onboarding() {
                     )}
                   </div>
                   <div className="pb-4">
-                    <div className={`px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest shadow-sm ${
+                    <div className={`px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${
                       form.segment === 'corretor' ? 'bg-blue-500/10 text-blue-600' : 
                       form.segment === 'imobiliaria' ? 'bg-orange-500/10 text-orange-600' : 'bg-purple-500/10 text-purple-600'
                     }`}>
@@ -483,32 +482,32 @@ export default function Onboarding() {
                   </div>
                 </div>
 
-                <div className="space-y-1">
-                  <h2 className="text-xl font-bold">{form.company_name || 'Nome da sua marca'}</h2>
-                  {form.creci && <p className="text-xs font-mono text-muted-foreground">CRECI: {form.creci}</p>}
-                  <p className="text-sm text-muted-foreground flex items-center gap-1">
-                    <User className="h-3 w-3" /> {form.responsible_name || 'Seu Nome'}
+                <div className="space-y-2">
+                  <h2 className="text-2xl font-bold tracking-tight">{form.company_name || 'Nome da sua marca'}</h2>
+                  {form.creci && <p className="text-xs font-mono text-muted-foreground/60">CRECI: {form.creci}</p>}
+                  <p className="text-sm text-muted-foreground/80 flex items-center gap-1.5">
+                    <User className="h-3.5 w-3.5" /> {form.responsible_name || 'Seu Nome'}
                   </p>
                 </div>
 
                 <div className="grid grid-cols-1 gap-4 pt-4">
-                  <div className="flex items-center gap-4 text-sm p-4 rounded-2xl bg-muted/30 border border-border/20 transition-all hover:bg-muted/50">
-                    <div className="p-2 rounded-lg bg-background shadow-sm">
+                  <div className="flex items-center gap-4 text-sm p-5 rounded-3xl bg-muted/20 border border-border/10 transition-all hover:bg-muted/30">
+                    <div className="p-2.5 rounded-xl bg-background border border-border/10">
                       <Mail className="h-4 w-4 text-primary" />
                     </div>
                     <span className="truncate font-medium">{form.responsible_email || 'email@exemplo.com'}</span>
                   </div>
                   {(form.company_phone || form.responsible_phone) && (
-                    <div className="flex items-center gap-4 text-sm p-4 rounded-2xl bg-muted/30 border border-border/20 transition-all hover:bg-muted/50">
-                      <div className="p-2 rounded-lg bg-background shadow-sm">
+                    <div className="flex items-center gap-4 text-sm p-5 rounded-3xl bg-muted/20 border border-border/10 transition-all hover:bg-muted/30">
+                      <div className="p-2.5 rounded-xl bg-background border border-border/10">
                         <Phone className="h-4 w-4 text-primary" />
                       </div>
                       <span className="font-medium">{form.company_phone || form.responsible_phone}</span>
                     </div>
                   )}
                   {form.company_address && (
-                    <div className="flex items-center gap-4 text-sm p-4 rounded-2xl bg-muted/30 border border-border/20 transition-all hover:bg-muted/50">
-                      <div className="p-2 rounded-lg bg-background shadow-sm">
+                    <div className="flex items-center gap-4 text-sm p-5 rounded-3xl bg-muted/20 border border-border/10 transition-all hover:bg-muted/30">
+                      <div className="p-2.5 rounded-xl bg-background border border-border/10">
                         <MapPin className="h-4 w-4 text-primary" />
                       </div>
                       <span className="truncate font-medium">{form.company_address}</span>
