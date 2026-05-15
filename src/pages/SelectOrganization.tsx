@@ -174,11 +174,7 @@ export default function SelectOrganization() {
         {/* Logout button */}
         <div className="flex justify-center">
           <button
-            onClick={() => {
-              // Clear org selection flag so they see the selector again on next login
-              sessionStorage.removeItem('org_selected');
-              window.location.href = '/auth?logout=true';
-            }}
+            onClick={signOut}
             className="px-8 py-2.5 rounded-xl bg-red-500/80 hover:bg-red-500 text-white font-medium transition-colors mt-6"
           >
             Sair
