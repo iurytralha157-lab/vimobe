@@ -106,16 +106,7 @@ export const AppHeader = React.memo(function AppHeader({
 
       {/* Right side actions - Capsule style redesign */}
       <div className="flex items-center gap-3 ml-auto">
-        {/* Organization Logo in Header */}
-        {!isMobile && organization?.logo_url && (
-          <div className="flex items-center gap-2 mr-2 px-3 py-1.5 rounded-full bg-card dark:bg-[#111] border border-border/10">
-            <img 
-              src={organization.logo_url} 
-              alt={organization.name} 
-              className="h-7 w-auto object-contain"
-            />
-          </div>
-        )}
+
 
         {/* Org switcher */}
         {hasMultipleOrgs && (
@@ -128,6 +119,14 @@ export const AppHeader = React.memo(function AppHeader({
               >
                 {isSwitching ? (
                   <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                ) : organization?.logo_url ? (
+                  <div className="h-5 w-5 rounded-full overflow-hidden border border-border/20 flex items-center justify-center bg-white/5">
+                    <img 
+                      src={organization.logo_url} 
+                      alt="" 
+                      className="h-full w-full object-contain p-0.5" 
+                    />
+                  </div>
                 ) : (
                   <Building2 className="h-4 w-4 text-primary" />
                 )}

@@ -409,6 +409,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const switchOrganization = async (orgId: string) => {
     if (!user) return;
 
+    // Marcar como selecionado na sessão para evitar re-redirecionamento
+    sessionStorage.setItem('org_selected', 'true');
+
+
     // Update users.organization_id to reflect active org
     await supabase
       .from('users')
@@ -454,6 +458,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const checkMultiOrg = async (userId: string) => {
     return performanceTracker.trackTimed('checkMultiOrg', async () => {
       try {
+        // Se já selecionamos nesta sessão, não precisamos perguntar de novo
+        if (sessionStorage.getItem('org_selected') === 'true') {
+          setNeedsOrgSelection(false);
+          return;
+        }
+
         const { data, error } = await supabase
           .from('organization_members' as any)
           .select('organization_id')
