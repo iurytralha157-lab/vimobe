@@ -307,20 +307,21 @@ export function useUpdateScheduleEvent() {
           });
         }
 
-        // Registrar atividade de gamificação se foi concluído
+        // Registrar atividade no histórico se foi concluído
         if (statusChangedToCompleted && (data.event_type === 'visit' || data.event_type === 'meeting')) {
-          try {
-            await supabase.from('activities').insert({
-              lead_id: data.lead_id,
-              user_id: data.user_id,
-              type: data.event_type === 'visit' ? 'visit_confirmed' : 'meeting_held',
-              content: `${data.event_type === 'visit' ? 'Visita realizada' : 'Reunião realizada'}: ${data.title}`,
-              metadata: { schedule_event_id: data.id }
-            });
-          } catch (activityError) {
+          const { error: activityError } = await supabase.from('activities').insert({
+            lead_id: data.lead_id,
+            user_id: data.user_id,
+            type: data.event_type === 'visit' ? 'visit_confirmed' : 'meeting_held',
+            content: `${data.event_type === 'visit' ? 'Visita realizada' : 'Reunião realizada'}: ${data.title}`,
+            metadata: { schedule_event_id: data.id }
+          });
+          
+          if (activityError) {
             console.error('Error creating activity log (non-critical):', activityError);
           }
         }
+
       }
 
       return data;
@@ -380,20 +381,21 @@ export function useCompleteScheduleEvent() {
         });
       }
 
-      // Registrar atividade de gamificação se foi concluído
+      // Registrar atividade no histórico se foi concluído
       if (status === 'completed' && (data.event_type === 'visit' || data.event_type === 'meeting')) {
-        try {
-          await supabase.from('activities').insert({
-            lead_id: data.lead_id,
-            user_id: data.user_id,
-            type: data.event_type === 'visit' ? 'visit_confirmed' : 'meeting_held',
-            content: `${data.event_type === 'visit' ? 'Visita realizada' : 'Reunião realizada'}: ${data.title}`,
-            metadata: { schedule_event_id: data.id }
-          });
-        } catch (activityError) {
+        const { error: activityError } = await supabase.from('activities').insert({
+          lead_id: data.lead_id,
+          user_id: data.user_id,
+          type: data.event_type === 'visit' ? 'visit_confirmed' : 'meeting_held',
+          content: `${data.event_type === 'visit' ? 'Visita realizada' : 'Reunião realizada'}: ${data.title}`,
+          metadata: { schedule_event_id: data.id }
+        });
+        
+        if (activityError) {
           console.error('Error creating activity log (non-critical):', activityError);
         }
       }
+
 
       return data;
     },
