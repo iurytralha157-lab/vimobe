@@ -334,47 +334,24 @@ export default function Onboarding() {
                         </div>
                       </div>
                     </div>
-                    <div className="space-y-4">
+                    <div className="space-y-2">
                       <Label htmlFor="primary_color">Cor principal da marca</Label>
-                      <div className="flex flex-col gap-4">
-                        <div className="flex gap-2">
-                          <Input id="primary_color" type="color" className="w-16 h-10 p-1 cursor-pointer" value={form.primary_color} onChange={(e) => updateField('primary_color', e.target.value)} />
-                          <Input value={form.primary_color} onChange={(e) => updateField('primary_color', e.target.value)} className="font-mono" placeholder="#000000" />
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Sugestões de paleta</p>
-                          <div className="flex flex-wrap gap-2">
-                            {[
-                              { label: 'Vimob Orange', color: '#ff482a' },
-                              { label: 'Midnight', color: '#0f172a' },
-                              { label: 'Ocean', color: '#0ea5e9' },
-                              { label: 'Emerald', color: '#10b981' },
-                              { label: 'Violet', color: '#8b5cf6' },
-                              { label: 'Rose', color: '#f43f5e' },
-                              { label: 'Amber', color: '#f59e0b' },
-                              { label: 'Slate', color: '#64748b' }
-                            ].map((preset) => (
-                              <button
-                                key={preset.color}
-                                type="button"
-                                onClick={() => updateField('primary_color', preset.color)}
-                                className={`group relative w-10 h-10 rounded-lg border-2 transition-all hover:scale-110 ${
-                                  form.primary_color === preset.color ? 'border-primary ring-2 ring-primary/20' : 'border-transparent'
-                                }`}
-                                style={{ backgroundColor: preset.color }}
-                                title={preset.label}
-                              >
-                                {form.primary_color === preset.color && (
-                                  <div className="absolute inset-0 flex items-center justify-center bg-black/20 rounded-md">
-                                    <CheckCircle2 className="h-4 w-4 text-white" />
-                                  </div>
-                                )}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
+                      <div className="flex gap-2">
+                        <Input 
+                          id="primary_color" 
+                          type="color" 
+                          className="w-20 h-10 p-1 cursor-pointer" 
+                          value={form.primary_color} 
+                          onChange={(e) => updateField('primary_color', e.target.value)} 
+                        />
+                        <Input 
+                          value={form.primary_color} 
+                          onChange={(e) => updateField('primary_color', e.target.value)} 
+                          className="font-mono" 
+                          placeholder="#000000"
+                        />
                       </div>
+                      <p className="text-[10px] text-muted-foreground">Clique no seletor acima para abrir a paleta completa.</p>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="site_title">Título do site</Label>
