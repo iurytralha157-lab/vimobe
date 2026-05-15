@@ -6,7 +6,6 @@ import { useUserOrganizations } from '@/hooks/use-user-organizations';
 import { useSystemSettings } from '@/hooks/use-system-settings';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Building2, Loader2, Shield, User } from 'lucide-react';
 
 const getInitials = (name?: string | null) => {
@@ -14,6 +13,23 @@ const getInitials = (name?: string | null) => {
   if (parts.length === 0) return 'OR';
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
   return (parts[0][0] + parts[1][0]).toUpperCase();
+};
+
+const formatLastAccess = (iso: string | null) => {
+  if (!iso) return null;
+  try {
+    const d = new Date(iso);
+    return d.toLocaleString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    }).replace(',', ' às');
+  } catch {
+    return null;
+  }
 };
 
 export default function SelectOrganization() {
@@ -41,10 +57,6 @@ export default function SelectOrganization() {
       navigate('/admin', { replace: true });
     }
   }, [loading, orgsLoading, isSuperAdmin, organizations, navigate]);
-
-  // Replaced auto-redirect to allow users to always see the selection screen if desired
-  // This addresses the user request "Ele não tá sempre aparecendo, ele tem que sempre aparecer"
-
 
   const handleSelectOrg = async (orgId: string) => {
     await switchOrganization(orgId);
@@ -81,63 +93,69 @@ export default function SelectOrganization() {
     );
   }
 
-
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <div className="w-full max-w-md space-y-6">
-        <div className="text-center space-y-3">
+    <div className="min-h-screen flex items-start justify-center bg-background p-6 pt-16">
+      <div className="w-full max-w-5xl space-y-10">
+        {/* Header */}
+        <div className="text-center space-y-4">
           <div className="flex items-center justify-center">
             {logoUrl ? (
-              <img
-                src={logoUrl}
-                alt="Logo"
-                className="h-14 w-auto object-contain"
-              />
+              <img src={logoUrl} alt="Logo" className="h-12 w-auto object-contain" />
             ) : (
               <Building2 className="h-12 w-12 text-primary" />
             )}
           </div>
-          <h1 className="text-2xl font-bold text-foreground">Selecione a organização</h1>
+          <h1 className="text-3xl font-bold text-foreground">Selecione a organização</h1>
           <p className="text-muted-foreground text-sm">
             Você tem acesso a múltiplas organizações. Escolha qual deseja acessar.
           </p>
         </div>
 
-        <div className="space-y-3">
+        {/* Cards grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {organizations.map((org) => {
             const name = org.organization_name || 'Organização';
+            const lastAccess = formatLastAccess(org.last_accessed_at);
+            const isAdmin = org.member_role === 'admin' || org.member_role === 'super_admin';
             return (
               <Card
                 key={org.organization_id}
-                className="p-4 cursor-pointer rounded-2xl hover:border-primary/50 hover:shadow-md transition-all duration-200 group"
                 onClick={() => handleSelectOrg(org.organization_id)}
+                className="p-6 cursor-pointer rounded-2xl hover:border-primary/60 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 group flex flex-col items-center text-center"
               >
-                <div className="flex items-center gap-4">
-                  <Avatar className="h-12 w-12 rounded-full border border-border/40">
-                    {org.organization_logo ? (
-                      <AvatarImage src={org.organization_logo} className="object-contain rounded-full" />
-                    ) : (
-                      <AvatarImage src={undefined} />
-                    )}
-                    <AvatarFallback className="rounded-full bg-primary text-primary-foreground font-bold">
-                      {getInitials(name)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-foreground break-words group-hover:text-primary transition-colors">
-                      {name}
-                    </p>
-                    <Badge variant="secondary" className="text-[10px] mt-1">
-                      {org.member_role === 'admin' ? (
-                        <><Shield className="h-3 w-3 mr-1" /> Administrador</>
-                      ) : (
-                        <><User className="h-3 w-3 mr-1" /> Usuário</>
-                      )}
-                    </Badge>
+                <Avatar className="h-20 w-20 rounded-full border border-border/40 mb-4">
+                  {org.organization_logo ? (
+                    <AvatarImage
+                      src={org.organization_logo}
+                      className="object-contain rounded-full"
+                    />
+                  ) : null}
+                  <AvatarFallback className="rounded-full bg-primary text-primary-foreground font-bold text-xl">
+                    {getInitials(name)}
+                  </AvatarFallback>
+                </Avatar>
+
+                <p className="font-semibold text-foreground uppercase tracking-wide text-sm break-words group-hover:text-primary transition-colors">
+                  {name}
+                </p>
+
+                {lastAccess && (
+                  <div className="mt-3 text-xs text-muted-foreground">
+                    <p>Último acesso:</p>
+                    <p>{lastAccess}</p>
                   </div>
-                  <div className="h-8 w-8 shrink-0 rounded-full bg-muted flex items-center justify-center group-hover:bg-primary group-hover:text-primary-foreground transition-all">
-                    <span className="text-xs">→</span>
-                  </div>
+                )}
+
+                <div className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-muted/40 px-3 py-1 text-xs text-foreground">
+                  {isAdmin ? (
+                    <>
+                      <Shield className="h-3 w-3 text-primary" /> Administrador
+                    </>
+                  ) : (
+                    <>
+                      <User className="h-3 w-3 text-primary" /> Usuário
+                    </>
+                  )}
                 </div>
               </Card>
             );

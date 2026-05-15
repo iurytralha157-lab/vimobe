@@ -8,6 +8,7 @@ export interface UserOrganization {
   member_role: string;
   is_active: boolean;
   joined_at: string;
+  last_accessed_at: string | null;
 }
 
 export function useUserOrganizations(userId: string | undefined, activeOrgId?: string | null) {
@@ -24,6 +25,7 @@ export function useUserOrganizations(userId: string | undefined, activeOrgId?: s
           role,
           is_active,
           joined_at,
+          updated_at,
           organizations:organization_id (
             id,
             name,
@@ -57,6 +59,7 @@ export function useUserOrganizations(userId: string | undefined, activeOrgId?: s
               member_role: profile.role || 'user',
               is_active: true,
               joined_at: new Date().toISOString(),
+              last_accessed_at: null,
             }] as UserOrganization[];
           }
         }
@@ -74,6 +77,7 @@ export function useUserOrganizations(userId: string | undefined, activeOrgId?: s
           member_role: item.role,
           is_active: item.is_active,
           joined_at: item.joined_at,
+          last_accessed_at: item.updated_at || null,
         };
       }) as UserOrganization[];
 

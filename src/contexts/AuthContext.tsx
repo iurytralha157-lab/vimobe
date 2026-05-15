@@ -420,6 +420,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .update({ organization_id: orgId })
       .eq('id', user.id);
 
+    // Track last access on the membership row
+    await supabase
+      .from('organization_members' as any)
+      .update({ updated_at: new Date().toISOString() })
+      .eq('user_id', user.id)
+      .eq('organization_id', orgId);
+
     // Fetch the new org data
     const { data: orgData } = await supabase
       .from('organizations')
