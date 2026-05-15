@@ -453,16 +453,12 @@ export default function Onboarding() {
         </div>
 
         <div className="lg:col-span-5 sticky top-12 hidden lg:block">
-          <div className="space-y-6">
-            <div className="flex items-center justify-between px-2">
-              <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground/80">Preview em tempo real</h3>
-              <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-            </div>
-            <Card className="overflow-hidden border-border/40 shadow-soft bg-card/50 backdrop-blur-md rounded-[2.5rem]">
-              <div className="h-32 transition-colors duration-500" style={{ backgroundColor: `${form.primary_color}22` }} />
-              <CardContent className="px-8 pb-10 -mt-16 space-y-8">
+          <div className="space-y-6 pt-10">
+            <Card className="overflow-hidden border-border/60 bg-card/20 backdrop-blur-md rounded-[3rem] shadow-none">
+              <div className="h-40 transition-colors duration-700" style={{ backgroundColor: `${form.primary_color}15` }} />
+              <CardContent className="px-10 pb-12 -mt-20 space-y-10">
                 <div className="flex items-end justify-between">
-                  <div className="h-32 w-32 rounded-3xl border-8 border-card bg-card shadow-soft flex items-center justify-center overflow-hidden transition-all duration-300 group-hover:scale-105">
+                  <div className="h-36 w-36 rounded-[2rem] border-8 border-card bg-card flex items-center justify-center overflow-hidden transition-all duration-500 shadow-none">
                     {form.logo_url ? (
                       <img src={form.logo_url} className="w-full h-full object-contain p-4" />
                     ) : (
