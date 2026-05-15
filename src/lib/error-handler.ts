@@ -20,9 +20,21 @@ export function getFriendlyErrorMessage(error: any): string {
     return 'Por favor, confirme seu e-mail antes de fazer login.';
   }
 
-  // Foreign Key / Deletion errors
+  if (lowerMessage.includes('rate limit') || lowerMessage.includes('once every 60 seconds')) {
+    return 'Muitas solicitações em pouco tempo. Por favor, aguarde um minuto e tente novamente.';
+  }
+
+  if (lowerMessage.includes('email rate limit exceeded')) {
+    return 'Limite de envio de e-mails atingido (limite do provedor). Tente novamente mais tarde ou entre em contato com o suporte.';
+  }
+
+  // Foreign Key / Deletion / Constraint errors
   if (lowerMessage.includes('violates foreign key constraint') || lowerMessage.includes('fk_')) {
-    return 'Este registro não pode ser excluído pois está sendo utilizado em outras partes do sistema (vendas, contratos, tarefas, etc).';
+    return 'Este registro não pode ser excluído pois está sendo utilizado em outras partes do sistema.';
+  }
+
+  if (lowerMessage.includes('idempotency_key')) {
+    return 'Erro técnico no banco de dados (trigger de gamificação). Por favor, informe ao suporte que a coluna idempotency_key está ausente.';
   }
 
   // Database / Connection errors
@@ -32,16 +44,16 @@ export function getFriendlyErrorMessage(error: any): string {
 
   // Permission errors
   if (lowerMessage.includes('insufficient_privilege') || lowerMessage.includes('permission denied')) {
-    return 'Você não tem permissão para realizar esta ação.';
+    return 'Você não tem permissão para realizar esta ação (RLS Policy).';
   }
 
-  // Specific check for SMTP/Email sending errors which often have codes like 535, 550, etc.
+  // Specific check for SMTP/Email sending errors
   if (lowerMessage.includes('error sending') || lowerMessage.includes('535') || lowerMessage.includes('5.7.8')) {
-    return 'Erro ao enviar e-mail. Por favor, verifique se o servidor de e-mail está configurado corretamente ou tente novamente mais tarde.';
+    return 'Erro no servidor de e-mail. Verifique a configuração SMTP no painel do Supabase.';
   }
 
-  // Fallback to the original message if it's already in Portuguese, otherwise a generic one
-  const isPortuguese = /[áéíóúãõç]/i.test(message) && !message.includes('error');
+  // Fallback
+  const isPortuguese = /[áéíóúãõç]/i.test(message) && !message.includes('error') && !message.includes('fail');
   
   return isPortuguese ? message : 'Ocorreu um erro ao processar sua solicitação. Tente novamente em alguns instantes.';
 }
