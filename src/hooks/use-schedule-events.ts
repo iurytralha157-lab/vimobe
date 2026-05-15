@@ -254,7 +254,7 @@ export function useCreateScheduleEvent() {
     },
     onError: (error: Error) => {
       console.error('Error creating schedule event:', error);
-      toast.error('Erro ao criar atividade');
+      toast.error(getFriendlyErrorMessage(error));
     },
   });
 }
