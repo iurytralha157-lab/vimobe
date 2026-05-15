@@ -176,19 +176,20 @@ export default function Onboarding() {
         
         {/* Formulário (Col 1-7) */}
         <div className="lg:col-span-7 space-y-8">
-          <div className="flex flex-col gap-6 mb-4">
+          <div className="flex flex-col items-center gap-6 mb-8 text-center">
             {settingsLoading ? (
               <div className="h-10 w-32 bg-muted animate-pulse rounded-lg" />
             ) : logoUrl ? (
-              <img src={logoUrl} alt="Logo" className="h-10 w-auto self-start" />
+              <img src={logoUrl} alt="Logo" className="h-12 w-auto" />
             ) : (
-              <img src="/logo.png" alt="Vimob" className="h-10 w-auto self-start" />
+              <img src="/logo.png" alt="Vimob" className="h-12 w-auto" />
             )}
-            <div className="flex items-center justify-between">
-              <h1 className="text-3xl font-bold tracking-tight">Onboarding</h1>
-              <div className="text-right">
-                <span className="text-sm font-medium text-muted-foreground">Passo {step} de {STEPS.length}</span>
-                <Progress value={(step / STEPS.length) * 100} className="w-32 h-2 mt-1" />
+            
+            <div className="space-y-4 w-full">
+              <h1 className="text-4xl font-bold tracking-tight">Onboarding</h1>
+              <div className="flex flex-col items-center gap-2">
+                <span className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Passo {step} de {STEPS.length}</span>
+                <Progress value={(step / STEPS.length) * 100} className="w-full max-w-xs h-2" />
               </div>
             </div>
           </div>
