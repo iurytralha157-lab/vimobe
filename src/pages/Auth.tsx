@@ -349,8 +349,10 @@ export default function Auth() {
                   <div className="relative">
                     <Input
                       id="login-password"
+                      name="password"
                       type={showPassword ? "text" : "password"}
                       placeholder="••••••••"
+                      autoComplete="current-password"
                       value={loginData.password}
                       onChange={e => setLoginData({ ...loginData, password: e.target.value })}
                       onKeyDown={handleCapsLock}
