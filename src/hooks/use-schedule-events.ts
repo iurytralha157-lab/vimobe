@@ -194,22 +194,25 @@ export function useCreateScheduleEvent() {
 
       if (error) throw error;
       
-      // Log to timeline if lead is present
+      // Log to timeline if lead is present - wrapped in try/catch to prevent blocking
       if (data.lead_id && profile) {
-        logScheduleEventToTimeline({
-          lead_id: data.lead_id,
-          organization_id: data.organization_id,
-          actor_id: profile.id,
-          assigned_user_id: data.user_id,
-          event_title: data.title,
-          event_type: data.event_type || 'task',
-          start_time: data.start_time,
-          action_type: 'created'
-        });
+        try {
+          await logScheduleEventToTimeline({
+            lead_id: data.lead_id,
+            organization_id: data.organization_id,
+            actor_id: profile.id,
+            assigned_user_id: data.user_id,
+            event_title: data.title,
+            event_type: data.event_type || 'task',
+            start_time: data.start_time,
+            action_type: 'created'
+          });
+        } catch (timelineError) {
+          console.error('Error logging to timeline (non-critical):', timelineError);
+        }
       }
 
-      // A atividade de gamificação será registrada automaticamente pelo trigger 'tr_schedule_gamification' no banco de dados.
-      // Se precisar registrar algo adicional na tabela de atividades:
+      // Record activity log if needed
       if (data.lead_id && (data.event_type === 'visit' || data.event_type === 'meeting')) {
         try {
           await supabase.from('activities').insert({
