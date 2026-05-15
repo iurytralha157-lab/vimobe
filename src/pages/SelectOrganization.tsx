@@ -33,7 +33,7 @@ const formatLastAccess = (iso: string | null) => {
 };
 
 export default function SelectOrganization() {
-  const { user, loading, isSuperAdmin, switchOrganization, organization } = useAuth();
+  const { user, loading, isSuperAdmin, switchOrganization, organization, signOut } = useAuth();
   const navigate = useNavigate();
   const { data: organizations = [], isLoading: orgsLoading } = useUserOrganizations(user?.id, organization?.id);
   const { data: systemSettings } = useSystemSettings();
