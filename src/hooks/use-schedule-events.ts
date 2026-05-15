@@ -208,17 +208,20 @@ export function useCreateScheduleEvent() {
         });
       }
 
-      // Registrar atividade de gamificação no banco para o gatilho processar
-      // O gatilho handle_gamification_event cuidará disso se o evento estiver na tabela schedule_events
-      // mas como o gatilho SQL falhou na criação, vou registrar uma atividade explícita em atividades para garantir
+      // A atividade de gamificação será registrada automaticamente pelo trigger 'tr_schedule_gamification' no banco de dados.
+      // Se precisar registrar algo adicional na tabela de atividades:
       if (data.lead_id && (data.event_type === 'visit' || data.event_type === 'meeting')) {
-        await supabase.from('activities').insert({
-          lead_id: data.lead_id,
-          user_id: data.user_id,
-          type: data.event_type === 'visit' ? 'visit_scheduled' : 'meeting_scheduled',
-          content: `${data.event_type === 'visit' ? 'Visita' : 'Reunião'} agendada: ${data.title}`,
-          metadata: { schedule_event_id: data.id }
-        });
+        try {
+          await supabase.from('activities').insert({
+            lead_id: data.lead_id,
+            user_id: data.user_id,
+            type: data.event_type === 'visit' ? 'visit_scheduled' : 'meeting_scheduled',
+            content: `${data.event_type === 'visit' ? 'Visita' : 'Reunião'} agendada: ${data.title}`,
+            metadata: { schedule_event_id: data.id }
+          });
+        } catch (activityError) {
+          console.error('Error creating activity log (non-critical):', activityError);
+        }
       }
 
       // Send WhatsApp notification for new appointment
@@ -302,13 +305,17 @@ export function useUpdateScheduleEvent() {
 
         // Registrar atividade de gamificação se foi concluído
         if (statusChangedToCompleted && (data.event_type === 'visit' || data.event_type === 'meeting')) {
-          await supabase.from('activities').insert({
-            lead_id: data.lead_id,
-            user_id: data.user_id,
-            type: data.event_type === 'visit' ? 'visit_confirmed' : 'meeting_held',
-            content: `${data.event_type === 'visit' ? 'Visita realizada' : 'Reunião realizada'}: ${data.title}`,
-            metadata: { schedule_event_id: data.id }
-          });
+          try {
+            await supabase.from('activities').insert({
+              lead_id: data.lead_id,
+              user_id: data.user_id,
+              type: data.event_type === 'visit' ? 'visit_confirmed' : 'meeting_held',
+              content: `${data.event_type === 'visit' ? 'Visita realizada' : 'Reunião realizada'}: ${data.title}`,
+              metadata: { schedule_event_id: data.id }
+            });
+          } catch (activityError) {
+            console.error('Error creating activity log (non-critical):', activityError);
+          }
         }
       }
 
@@ -371,13 +378,17 @@ export function useCompleteScheduleEvent() {
 
       // Registrar atividade de gamificação se foi concluído
       if (status === 'completed' && (data.event_type === 'visit' || data.event_type === 'meeting')) {
-        await supabase.from('activities').insert({
-          lead_id: data.lead_id,
-          user_id: data.user_id,
-          type: data.event_type === 'visit' ? 'visit_confirmed' : 'meeting_held',
-          content: `${data.event_type === 'visit' ? 'Visita realizada' : 'Reunião realizada'}: ${data.title}`,
-          metadata: { schedule_event_id: data.id }
-        });
+        try {
+          await supabase.from('activities').insert({
+            lead_id: data.lead_id,
+            user_id: data.user_id,
+            type: data.event_type === 'visit' ? 'visit_confirmed' : 'meeting_held',
+            content: `${data.event_type === 'visit' ? 'Visita realizada' : 'Reunião realizada'}: ${data.title}`,
+            metadata: { schedule_event_id: data.id }
+          });
+        } catch (activityError) {
+          console.error('Error creating activity log (non-critical):', activityError);
+        }
       }
 
       return data;

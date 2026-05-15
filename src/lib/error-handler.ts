@@ -33,6 +33,10 @@ export function getFriendlyErrorMessage(error: any): string {
     return 'Este registro não pode ser excluído pois está sendo utilizado em outras partes do sistema.';
   }
 
+  if (lowerMessage.includes('violates row-level security policy for table "gamification_activity_logs"')) {
+    return 'Atividade agendada com sucesso! (Nota: Ocorreu um erro não-crítico ao registrar seus pontos de gamificação. Informe ao administrador sobre as permissões da tabela gamification_activity_logs).';
+  }
+
   if (lowerMessage.includes('idempotency_key')) {
     return 'Erro técnico no banco de dados (trigger de gamificação). Por favor, informe ao suporte que a coluna idempotency_key está ausente.';
   }
