@@ -535,7 +535,6 @@ export default function Onboarding() {
             </Card>
           </div>
         </div>
-
       </div>
     </div>
   );
