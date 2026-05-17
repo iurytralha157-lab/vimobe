@@ -631,7 +631,15 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
                                       organizationId: targetOrgId,
                                       userId: targetData.id,
                                       recipient: targetData.whatsapp || targetData.phone || targetData.email || undefined,
-                                      variables: { nome: targetData.name || 'Admin', lead: 'Teste de Notificação' },
+                                      variables: { 
+                                        nome: targetData.name || 'Admin', 
+                                        lead: 'Teste de Notificação',
+                                        lead_name: 'Lead de Teste',
+                                        organization_name: 'Organização de Teste',
+                                        source: 'Manual',
+                                        from_stage: 'Novo',
+                                        to_stage: 'Em Negociação'
+                                      },
                                       isTest: true
                                     }),
                                     {
