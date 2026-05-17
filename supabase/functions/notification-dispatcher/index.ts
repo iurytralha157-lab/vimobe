@@ -72,8 +72,25 @@ Deno.serve(async (req) => {
     let formattedMessage = template.message;
     let formattedTitle = template.title || '';
 
-    if (variables) {
-      Object.entries(variables).forEach(([key, value]) => {
+    // Enrich variables with common aliases to be more robust
+    const enrichedVariables = { ...variables };
+    if (enrichedVariables.nome && !enrichedVariables.user_name) enrichedVariables.user_name = enrichedVariables.nome;
+    if (enrichedVariables.user_name && !enrichedVariables.nome) enrichedVariables.nome = enrichedVariables.user_name;
+    if (enrichedVariables.lead_name && !enrichedVariables.nome_lead) enrichedVariables.nome_lead = enrichedVariables.lead_name;
+    if (enrichedVariables.nome_lead && !enrichedVariables.lead_name) enrichedVariables.lead_name = enrichedVariables.nome_lead;
+    if (enrichedVariables.horario && !enrichedVariables.time) enrichedVariables.time = enrichedVariables.horario;
+    if (enrichedVariables.time && !enrichedVariables.horario) enrichedVariables.horario = enrichedVariables.time;
+    if (enrichedVariables.titulo && !enrichedVariables.title) enrichedVariables.title = enrichedVariables.titulo;
+    if (enrichedVariables.title && !enrichedVariables.titulo) enrichedVariables.titulo = enrichedVariables.title;
+
+    // Auto-fetch organization name if needed
+    if ((formattedMessage.includes('{organization_name}') || formattedTitle.includes('{organization_name}')) && !enrichedVariables.organization_name) {
+      const { data: org } = await supabase.from('organizations').select('name').eq('id', organization_id).maybeSingle();
+      if (org) enrichedVariables.organization_name = org.name;
+    }
+
+    if (enrichedVariables) {
+      Object.entries(enrichedVariables).forEach(([key, value]) => {
         // Replace {variable_name} with the value, case-insensitive
         const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         const regex = new RegExp(`\\{\\s*${escapedKey}\\s*\\}`, 'gi');
