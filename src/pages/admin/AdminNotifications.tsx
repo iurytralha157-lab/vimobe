@@ -33,69 +33,36 @@ export default function AdminNotifications() {
           </div>
         </div>
 
-        <Tabs defaultValue="email-resend" className="space-y-4">
-          <TabsList className="grid grid-cols-2 md:grid-cols-7 h-auto p-1 bg-muted/50 border">
-            <TabsTrigger value="email-resend" className="flex items-center gap-2 py-2">
-              <Mail className="h-4 w-4" />
-              <span className="hidden md:inline">E-mail (Resend)</span>
-            </TabsTrigger>
+        <Tabs defaultValue="templates" className="space-y-4">
+          <TabsList className="grid grid-cols-2 md:grid-cols-4 h-auto p-1 bg-muted/50 border">
             <TabsTrigger value="templates" className="flex items-center gap-2 py-2">
               <Bell className="h-4 w-4" />
-              <span className="hidden md:inline">Notificações</span>
-            </TabsTrigger>
-            <TabsTrigger value="whatsapp" className="flex items-center gap-2 py-2">
-              <MessageSquare className="h-4 w-4" />
-              <span className="hidden md:inline">WhatsApp</span>
-            </TabsTrigger>
-            <TabsTrigger value="system" className="flex items-center gap-2 py-2">
-              <Monitor className="h-4 w-4" />
-              <span className="hidden md:inline">Sistema</span>
-            </TabsTrigger>
-            <TabsTrigger value="events" className="flex items-center gap-2 py-2">
-              <Bell className="h-4 w-4" />
-              <span className="hidden md:inline">Eventos</span>
+              <span>Templates</span>
             </TabsTrigger>
             <TabsTrigger value="logs" className="flex items-center gap-2 py-2">
               <History className="h-4 w-4" />
-              <span className="hidden md:inline">Logs</span>
+              <span>Logs de Disparo</span>
+            </TabsTrigger>
+            <TabsTrigger value="email-resend" className="flex items-center gap-2 py-2">
+              <Mail className="h-4 w-4" />
+              <span>Logs E-mail (Legacy)</span>
             </TabsTrigger>
             <TabsTrigger value="analytics" className="flex items-center gap-2 py-2">
               <BarChart3 className="h-4 w-4" />
-              <span className="hidden md:inline">Analytics</span>
+              <span>Analytics</span>
             </TabsTrigger>
           </TabsList>
-
-          <TabsContent value="email-resend" className="space-y-4">
-            <Tabs defaultValue="templates-resend" className="w-full">
-              <TabsList>
-                <TabsTrigger value="templates-resend">Templates de E-mail</TabsTrigger>
-                <TabsTrigger value="logs-resend">Logs de Envio</TabsTrigger>
-              </TabsList>
-              <TabsContent value="templates-resend">
-                <EmailTemplates />
-              </TabsContent>
-              <TabsContent value="logs-resend">
-                <EmailLogs />
-              </TabsContent>
-            </Tabs>
-          </TabsContent>
 
           <TabsContent value="templates" className="space-y-4">
             <NotificationSettings />
           </TabsContent>
 
           <TabsContent value="logs">
-            <Card>
-              <CardHeader>
-                <CardTitle>Histórico de Disparos</CardTitle>
-                <CardDescription>
-                  Rastreabilidade técnica de todas as notificações enviadas
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <NotificationLogsTable />
-              </CardContent>
-            </Card>
+            <NotificationLogsTable />
+          </TabsContent>
+
+          <TabsContent value="email-resend" className="space-y-4">
+            <EmailLogs />
           </TabsContent>
           
           <TabsContent value="analytics">
@@ -107,8 +74,8 @@ export default function AdminNotifications() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="h-48 flex items-center justify-center bg-muted/20 rounded-lg">
-                  <BarChart3 className="h-8 w-8 text-muted-foreground/50" />
+                <div className="h-48 flex items-center justify-center bg-muted/20 rounded-lg text-muted-foreground italic">
+                   Gráficos em desenvolvimento
                 </div>
               </CardContent>
             </Card>

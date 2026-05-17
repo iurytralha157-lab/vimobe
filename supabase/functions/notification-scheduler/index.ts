@@ -96,32 +96,26 @@ Deno.serve(async (req) => {
 
             console.log(`Sending user notification: ${title}`);
             
-            await supabase.from("notifications").insert({
-              user_id: event.user_id,
-              organization_id: event.organization_id,
-              title,
-              content,
-              type: "task",
-              lead_id: event.lead_id,
-              is_read: false,
-            });
-
-            try {
-              await fetch(`${supabaseUrl}/functions/v1/whatsapp-notifier`, {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  "Authorization": `Bearer ${supabaseServiceKey}`,
+            await fetch(`${supabaseUrl}/functions/v1/notification-dispatcher`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${supabaseServiceKey}`,
+              },
+              body: JSON.stringify({
+                event_key: interval.minutes === 0 ? "event_starting" : "event_reminder_user",
+                organization_id: event.organization_id,
+                user_id: event.user_id,
+                lead_id: event.lead_id,
+                variables: {
+                  titulo: event.title,
+                  horario: formattedTime,
+                  minutos: interval.minutes,
+                  nome_lead: event.lead?.name || 'Não informado'
                 },
-                body: JSON.stringify({
-                  organization_id: event.organization_id,
-                  user_id: event.user_id,
-                  message: `*${title}*\n\n📅 *Compromisso:* ${event.title}\n🕒 *Horário:* ${formattedTime}\n👤 *Lead:* ${event.lead?.name || 'Não informado'}`,
-                }),
-              });
-            } catch (e) {
-              console.error("Error sending WhatsApp to user:", e);
-            }
+                dedupe_key: reminderTag
+              }),
+            });
           }
 
           if (interval.target === 'lead' && event.lead?.phone) {
@@ -139,25 +133,26 @@ Deno.serve(async (req) => {
               message = `Olá ${leadName}, em 10 minutos iniciaremos ${actionLabel} (*${formattedTime}*). Nos falamos em breve!`;
             }
 
-            if (message) {
-              console.log(`Sending lead WhatsApp: ${message}`);
-              try {
-                await fetch(`${supabaseUrl}/functions/v1/whatsapp-notifier`, {
-                  method: "POST",
-                  headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${supabaseServiceKey}`,
+              await fetch(`${supabaseUrl}/functions/v1/notification-dispatcher`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "Authorization": `Bearer ${supabaseServiceKey}`,
+                },
+                body: JSON.stringify({
+                  event_key: "event_reminder_lead",
+                  organization_id: event.organization_id,
+                  recipient: event.lead.phone,
+                  lead_id: event.lead.id,
+                  variables: {
+                    nome_lead: leadName,
+                    acao: actionLabel,
+                    horario: formattedTime,
+                    minutos: interval.minutes
                   },
-                  body: JSON.stringify({
-                    organization_id: event.organization_id,
-                    phone: event.lead.phone,
-                    message: `${message}\n\n${reminderTag}`,
-                  }),
-                });
-              } catch (e) {
-                console.error("Error sending WhatsApp to lead:", e);
-              }
-            }
+                  dedupe_key: reminderTag
+                }),
+              });
           }
         }
       }

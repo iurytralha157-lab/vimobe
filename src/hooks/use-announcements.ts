@@ -168,7 +168,9 @@ export function useAnnouncements() {
           // Using NotificationService for auditability
           for (const user of usersToNotify) {
             await notificationService.send({
+              eventKey: 'system_announcement',
               templateSlug: 'system_announcement',
+              dedupeKey: `announcement:${announcement.id}:${user.id}`,
               organizationId: user.organization_id || '',
               userId: user.id,
               variables: {

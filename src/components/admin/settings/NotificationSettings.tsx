@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -21,16 +22,18 @@ import {
   MessageSquare,
   History,
   CheckCircle2,
-  XCircle
+  XCircle,
+  Bell
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { NotificationTemplate, NotificationChannel } from '@/services/NotificationService';
+import { NotificationTemplate, NotificationChannel, notificationService } from '@/services/NotificationService';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 
 export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
+  const { isSuperAdmin, user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
   const [templates, setTemplates] = useState<NotificationTemplate[]>([]);
@@ -38,6 +41,7 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
   const [logs, setLogs] = useState<any[]>([]);
   const [activeSubTab, setActiveSubTab] = useState('templates');
   const [changedIds, setChangedIds] = useState<Set<string>>(new Set());
+  const [settings, setSettings] = useState<any>(null);
 
   useEffect(() => {
     fetchData();
@@ -61,15 +65,19 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
 
       const { data: logsData, error: logsError } = await supabase
         .from('notification_logs' as any)
-        .select(`
-          *,
-          template:notification_templates(name, slug)
-        `)
+        .select('*')
         .order('created_at', { ascending: false })
         .limit(100);
       
       if (logsError) throw logsError;
       setLogs(logsData as any[] || []);
+
+      const { data: settingsData } = await supabase
+        .from('notification_settings' as any)
+        .select('*')
+        .maybeSingle();
+      
+      if (settingsData) setSettings(settingsData);
     } catch (error: any) {
       console.error('Erro ao buscar dados:', error);
       toast.error('Não foi possível carregar os templates. Verifique se as tabelas foram criadas.');
@@ -91,6 +99,10 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
           title: template.title,
           message: template.message,
           channel: template.channel,
+          channels: template.channels,
+          subject: template.subject,
+          html_body: template.html_body,
+          dedupe_window_seconds: template.dedupe_window_seconds,
           is_active: template.is_active,
           category: template.category,
           variables: template.variables,
@@ -199,9 +211,13 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
             <MessageSquare className="h-4 w-4" />
             Templates
           </TabsTrigger>
-          <TabsTrigger value="logs" className="flex items-center gap-2">
+            <TabsTrigger value="logs" className="flex items-center gap-2">
             <History className="h-4 w-4" />
             Histórico
+          </TabsTrigger>
+          <TabsTrigger value="settings" className="flex items-center gap-2">
+            <Plus className="h-4 w-4" />
+            Configurações
           </TabsTrigger>
         </TabsList>
 
@@ -245,11 +261,18 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
                         <Badge variant={template.is_active ? "default" : "secondary"} className="shrink-0">
                           {template.is_active ? 'Ativo' : 'Inativo'}
                         </Badge>
-                        <Badge variant="outline" className="capitalize shrink-0">
-                          {template.channel}
-                        </Badge>
+                        <div className="flex gap-1">
+                          {(template.channels || [template.channel]).map(ch => (
+                            <Badge key={ch} variant="outline" className="capitalize shrink-0">
+                              {ch}
+                            </Badge>
+                          ))}
+                        </div>
                       </div>
-                      <code className="text-[10px] text-muted-foreground block truncate">{template.slug}</code>
+                      <div className="flex flex-col gap-0.5 mt-1">
+                        <code className="text-[10px] text-muted-foreground block truncate">Slug: {template.slug}</code>
+                        <code className="text-[10px] text-primary font-bold block truncate">Evento: {template.event_key || 'N/A'}</code>
+                      </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <Switch 
@@ -278,20 +301,46 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-xs uppercase text-muted-foreground font-bold">Canal</Label>
-                      <Select 
-                        value={template.channel} 
-                        onValueChange={(val: NotificationChannel) => handleLocalUpdate(template.id, { channel: val })}
-                      >
-                        <SelectTrigger className="bg-background h-9">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="whatsapp">WhatsApp</SelectItem>
-                          <SelectItem value="system">Sistema (Interno)</SelectItem>
-                          <SelectItem value="email">E-mail</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <Label className="text-xs uppercase text-muted-foreground font-bold">Chave do Evento (Dispatcher)</Label>
+                      <Input 
+                        value={template.event_key || ''} 
+                        onChange={(e) => handleLocalUpdate(template.id, { event_key: e.target.value })}
+                        className="bg-background h-9 border-primary/50"
+                        placeholder="ex: new_lead_received"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 shrink-0">
+                    <div className="space-y-2">
+                      <Label className="text-xs uppercase text-muted-foreground font-bold">Canais Ativos</Label>
+                      <div className="flex flex-wrap gap-2 p-2 border rounded-md bg-background">
+                        {['system', 'whatsapp', 'email', 'push'].map((ch) => (
+                          <div key={ch} className="flex items-center gap-1.5">
+                            <Switch 
+                              id={`ch-${template.id}-${ch}`}
+                              checked={(template.channels || []).includes(ch as any)}
+                              onCheckedChange={(checked) => {
+                                const current = template.channels || [];
+                                const next = checked 
+                                  ? [...current, ch as any]
+                                  : current.filter(c => c !== ch);
+                                handleLocalUpdate(template.id, { channels: next });
+                              }}
+                            />
+                            <Label htmlFor={`ch-${template.id}-${ch}`} className="text-[10px] capitalize">{ch}</Label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs uppercase text-muted-foreground font-bold">Deduplicação (segundos)</Label>
+                      <Input 
+                        type="number"
+                        value={template.dedupe_window_seconds || 60} 
+                        onChange={(e) => handleLocalUpdate(template.id, { dedupe_window_seconds: parseInt(e.target.value) })}
+                        className="bg-background h-9"
+                      />
                     </div>
                   </div>
 
@@ -301,7 +350,27 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
                       value={template.title || ''} 
                       onChange={(e) => handleLocalUpdate(template.id, { title: e.target.value })}
                       className="bg-background h-9"
-                      placeholder="Título da notificação ou assunto do e-mail"
+                      placeholder="Título da notificação interna (Push)"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-xs uppercase text-muted-foreground font-bold">Assunto do E-mail</Label>
+                    <Input 
+                      value={template.subject || ''} 
+                      onChange={(e) => handleLocalUpdate(template.id, { subject: e.target.value })}
+                      className="bg-background h-9 border-blue-200"
+                      placeholder="Assunto que o cliente verá no e-mail"
+                    />
+                  </div>
+
+                  <div className="space-y-2 flex-1 flex flex-col min-h-[120px]">
+                    <Label className="text-xs uppercase text-muted-foreground font-bold">Corpo do E-mail (HTML)</Label>
+                    <Textarea 
+                      value={template.html_body || ''} 
+                      onChange={(e) => handleLocalUpdate(template.id, { html_body: e.target.value })}
+                      className="flex-1 font-mono text-[10px] bg-background resize-none border-blue-200"
+                      placeholder="<html>... Use {{variavel}} para e-mail</html>"
                     />
                   </div>
 
@@ -333,6 +402,33 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
 
                   <div className="flex items-center justify-between gap-2 pt-4 border-t mt-auto shrink-0">
                     <div className="flex items-center gap-2">
+                      <Button 
+                        variant="secondary" 
+                        size="sm" 
+                        onClick={async () => {
+                          const { data: { user } } = await supabase.auth.getUser();
+                          if (!user) return;
+                          toast.promise(
+                            notificationService.send({
+                              eventKey: template.event_key || template.slug,
+                              organizationId: user.user_metadata?.organization_id || '',
+                              userId: user.id,
+                              variables: { nome: user.user_metadata?.name || 'Admin', lead: 'Teste de Notificação' },
+                              isTest: true
+                            }),
+                            {
+                              loading: 'Enviando teste...',
+                              success: 'Teste enviado!',
+                              error: 'Falha no teste.'
+                            }
+                          );
+                        }}
+                        className="h-8 text-xs gap-1"
+                      >
+                        <Bell className="h-3 w-3" />
+                        Testar
+                      </Button>
+                    </div>
                     <div className="flex items-center gap-2">
                       <Button 
                         variant="outline" 
@@ -370,8 +466,7 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
                         </span>
                       )}
                     </div>
-                    </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 mt-4 pt-2 border-t border-dashed">
                       <span className="text-[9px] text-muted-foreground">ID: {template.id.split('-')[0]}...</span>
                     </div>
                   </div>
@@ -451,6 +546,63 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
                     )}
                   </tbody>
                 </table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="settings" className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Configurações de E-mail (Resend)</CardTitle>
+              <CardDescription>Configure o remetente padrão e dados de integração do Resend.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label>Nome do Remetente</Label>
+                  <Input 
+                    value={settings?.from_name || ''} 
+                    onChange={(e) => setSettings({ ...settings, from_name: e.target.value })}
+                    placeholder="ex: Vimob"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>E-mail do Remetente</Label>
+                  <Input 
+                    value={settings?.from_email || ''} 
+                    onChange={(e) => setSettings({ ...settings, from_email: e.target.value })}
+                    placeholder="ex: notificacoes@seudominio.com.br"
+                  />
+                  <p className="text-[10px] text-muted-foreground">O domínio deve estar verificado no Resend.</p>
+                </div>
+                <div className="space-y-2">
+                  <Label>Reply-To (E-mail de resposta)</Label>
+                  <Input 
+                    value={settings?.reply_to || ''} 
+                    onChange={(e) => setSettings({ ...settings, reply_to: e.target.value })}
+                    placeholder="ex: contato@seudominio.com.br"
+                  />
+                </div>
+              </div>
+              <div className="pt-4 border-t">
+                <Button 
+                  onClick={async () => {
+                    const { error } = await supabase
+                      .from('notification_settings' as any)
+                      .upsert({
+                        organization_id: user?.user_metadata?.organization_id,
+                        from_name: settings.from_name,
+                        from_email: settings.from_email,
+                        reply_to: settings.reply_to,
+                        updated_at: new Date().toISOString()
+                      });
+                    if (error) toast.error('Erro ao salvar: ' + error.message);
+                    else toast.success('Configurações salvas!');
+                  }}
+                >
+                  Salvar Configurações
+                </Button>
               </div>
             </CardContent>
           </Card>

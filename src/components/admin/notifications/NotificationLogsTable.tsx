@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Table,
@@ -12,8 +13,9 @@ import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
-
+import { Button } from "@/components/ui/button";
 export function NotificationLogsTable() {
+  const [selectedLog, setSelectedLog] = useState<any>(null);
   const { data: logs, isLoading, error } = useQuery({
     queryKey: ["notification-logs"],
     queryFn: async () => {
@@ -52,64 +54,97 @@ export function NotificationLogsTable() {
   }
 
   return (
-    <div className="rounded-md border">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Data</TableHead>
-            <TableHead>Template</TableHead>
-            <TableHead>Canal</TableHead>
-            <TableHead>Destinatário</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Execução</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {logs?.length === 0 ? (
+    <div className="space-y-4">
+      <div className="rounded-md border bg-card">
+        <Table>
+          <TableHeader>
             <TableRow>
-              <TableCell colSpan={5} className="text-center py-10 text-muted-foreground">
-                Nenhum log encontrado.
-              </TableCell>
+              <TableHead>Data</TableHead>
+              <TableHead>Template</TableHead>
+              <TableHead>Canal</TableHead>
+              <TableHead>Destinatário</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Execução</TableHead>
+              <TableHead></TableHead>
             </TableRow>
-          ) : (
-            logs?.map((log: any) => (
-              <TableRow key={log.id}>
-                <TableCell className="whitespace-nowrap">
-                  {format(new Date(log.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
-                </TableCell>
-                <TableCell>
-                  <div className="font-medium">{log.notification_templates?.name || 'N/A'}</div>
-                  <div className="text-xs text-muted-foreground">{log.notification_templates?.slug || log.template_id}</div>
-                </TableCell>
-                <TableCell>
-                  <Badge variant="outline" className="capitalize">
-                    {log.channel}
-                  </Badge>
-                </TableCell>
-                <TableCell className="max-w-[200px] truncate">
-                  {log.recipient}
-                </TableCell>
-                <TableCell>
-                  {log.status === "sent" ? (
-                    <Badge className="bg-green-500/10 text-green-500 hover:bg-green-500/20 border-green-500/20 gap-1">
-                      <CheckCircle2 className="h-3 w-3" />
-                      Enviado
-                    </Badge>
-                  ) : (
-                    <Badge variant="destructive" className="gap-1">
-                      <AlertCircle className="h-3 w-3" />
-                      Falhou
-                    </Badge>
-                  )}
-                </TableCell>
-                <TableCell className="font-mono text-[10px]">
-                  {log.payload?.executionTime || 'N/A'}
+          </TableHeader>
+          <TableBody>
+            {logs?.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
+                  Nenhum log encontrado.
                 </TableCell>
               </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
+            ) : (
+              logs?.map((log: any) => (
+                <TableRow key={log.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedLog(log)}>
+                  <TableCell className="whitespace-nowrap text-xs">
+                    {format(new Date(log.created_at), "dd/MM HH:mm:ss", { locale: ptBR })}
+                  </TableCell>
+                  <TableCell>
+                    <div className="font-medium text-xs">{log.notification_templates?.name || 'N/A'}</div>
+                    <div className="text-[10px] text-muted-foreground">{log.notification_templates?.slug || log.template_id}</div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className="capitalize text-[10px]">
+                      {log.channel}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="max-w-[150px] truncate text-xs">
+                    {log.recipient}
+                  </TableCell>
+                  <TableCell>
+                    {log.status === "sent" ? (
+                      <Badge className="bg-green-500/10 text-green-500 hover:bg-green-500/20 border-green-500/20 text-[10px] h-5 gap-1">
+                        <CheckCircle2 className="h-2 w-2" />
+                        Sucesso
+                      </Badge>
+                    ) : (
+                      <Badge variant="destructive" className="text-[10px] h-5 gap-1">
+                        <AlertCircle className="h-2 w-2" />
+                        Falha
+                      </Badge>
+                    )}
+                  </TableCell>
+                  <TableCell className="font-mono text-[10px] text-muted-foreground">
+                    {log.payload?.executionTime || 'N/A'}
+                  </TableCell>
+                  <TableCell>
+                     {log.is_test && <Badge variant="secondary" className="text-[8px] h-4">Teste</Badge>}
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      {selectedLog && (
+        <div className="p-4 border rounded-md bg-muted/30 space-y-4 animate-in fade-in slide-in-from-top-1">
+          <div className="flex items-center justify-between">
+            <h4 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Detalhes do Payload</h4>
+            <Button variant="ghost" size="sm" onClick={() => setSelectedLog(null)} className="h-7 text-xs">Fechar</Button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-muted-foreground uppercase">Conteúdo Enviado</label>
+              <div className="p-3 bg-background border rounded text-xs whitespace-pre-wrap font-sans">
+                {selectedLog.payload?.formattedMessage || 'Sem conteúdo'}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-muted-foreground uppercase">Resposta Técnica / Erro</label>
+              <pre className="p-3 bg-black text-green-400 border rounded text-[10px] overflow-auto max-h-[200px]">
+                {JSON.stringify(selectedLog.response || selectedLog.error, null, 2)}
+              </pre>
+            </div>
+          </div>
+          <div className="flex gap-4 text-[10px] text-muted-foreground border-t pt-2">
+            <span>Dedupe Key: {selectedLog.dedupe_key || 'N/A'}</span>
+            <span>ID: {selectedLog.id}</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

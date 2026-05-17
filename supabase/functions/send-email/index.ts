@@ -17,33 +17,65 @@ serve(async (req) => {
 
   try {
     const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
-    const { to, template_key, variables } = await req.json();
+    const { to, template_key, variables, organization_id } = await req.json();
 
-    // 1. Buscar template no banco
-    const { data: template, error: templateError } = await supabase
-      .from("email_templates")
+    // 1. Buscar configurações de e-mail (remetente)
+    const { data: settings } = await supabase
+      .from("notification_settings")
       .select("*")
-      .eq("key", template_key)
-      .eq("active", true)
-      .single();
+      .eq("organization_id", organization_id)
+      .maybeSingle();
 
-    if (templateError || !template) {
-      throw new Error(`Template not found: ${template_key}`);
+    const fromName = settings?.from_name || "Vimob";
+    const fromEmail = settings?.from_email || "onboarding@resend.dev";
+    const replyTo = settings?.reply_to;
+
+    // 2. Buscar template no banco (prioriza notification_templates que tem subject/html_body)
+    let subject = "";
+    let html = "";
+
+    const { data: nt } = await supabase
+      .from("notification_templates")
+      .select("subject, html_body, message")
+      .eq("slug", template_key)
+      .maybeSingle();
+
+    if (nt) {
+      subject = nt.subject || "Notificação Vimob";
+      html = nt.html_body || nt.message; // Fallback para message se html_body estiver vazio
+    } else {
+      // Fallback para email_templates antigo se existir
+      const { data: et } = await supabase
+        .from("email_templates")
+        .select("*")
+        .eq("key", template_key)
+        .maybeSingle();
+      
+      if (et) {
+        subject = et.subject;
+        html = et.html;
+      }
     }
 
-    // 2. Substituir variáveis no assunto e no HTML
-    let subject = template.subject;
-    let html = template.html;
+    if (!html) {
+      throw new Error(`Template not found or has no content: ${template_key}`);
+    }
 
+    // 3. Substituir variáveis
     if (variables) {
       Object.entries(variables).forEach(([key, value]) => {
-        const regex = new RegExp(`{{${key}}}`, "g");
+        const regex = new RegExp(`{{${key}}}|{${key}}`, "g");
         subject = subject.replace(regex, String(value));
         html = html.replace(regex, String(value));
       });
     }
 
-    // 3. Enviar via Resend
+    // 4. Enviar via Resend
+    if (!RESEND_API_KEY) {
+       console.error("RESEND_API_KEY not found in environment variables");
+       throw new Error("RESEND_API_KEY not configured");
+    }
+
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -51,17 +83,18 @@ serve(async (req) => {
         Authorization: `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: "Vimob <notificacoes@seudominio.com.br>",
+        from: `${fromName} <${fromEmail}>`,
         to: [to],
         subject: subject,
         html: html,
+        reply_to: replyTo
       }),
     });
 
     const resData = await res.json();
     const status = res.ok ? "success" : "error";
 
-    // 4. Salvar log
+    // 5. Salvar log
     await supabase.from("email_logs").insert({
       template_key,
       recipient_email: to,
@@ -79,6 +112,7 @@ serve(async (req) => {
       status: 200,
     });
   } catch (error) {
+    console.error("Error in send-email function:", error);
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 400,
