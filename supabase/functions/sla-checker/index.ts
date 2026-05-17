@@ -113,18 +113,19 @@ Deno.serve(async (req) => {
 
         // Create notification for assigned user
         if (lead.notify_assignee && lead.assigned_user_id) {
-          await fetch(`${SUPABASE_URL}/functions/v1/notification-service`, {
+          await fetch(`${SUPABASE_URL}/functions/v1/notification-dispatcher`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
               "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
             },
             body: JSON.stringify({
-              templateSlug: "sla_warning",
-              organizationId: lead.organization_id,
-              userId: lead.assigned_user_id,
+              event_key: "sla_warning",
+              organization_id: lead.organization_id,
+              user_id: lead.assigned_user_id,
               variables: { lead_name: lead.lead_name, minutes: Math.floor(elapsedSeconds / 60) },
-              leadId: lead.lead_id
+              lead_id: lead.lead_id,
+              dedupe_key: `sla_warning:${lead.lead_id}:${now.getHours()}` // dedupe por hora
             }),
           });
         }
@@ -165,18 +166,19 @@ Deno.serve(async (req) => {
 
         // Create notification for assigned user
         if (lead.notify_assignee && lead.assigned_user_id) {
-          await fetch(`${SUPABASE_URL}/functions/v1/notification-service`, {
+          await fetch(`${SUPABASE_URL}/functions/v1/notification-dispatcher`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
               "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
             },
             body: JSON.stringify({
-              templateSlug: "sla_overdue",
-              organizationId: lead.organization_id,
-              userId: lead.assigned_user_id,
+              event_key: "sla_overdue",
+              organization_id: lead.organization_id,
+              user_id: lead.assigned_user_id,
               variables: { lead_name: lead.lead_name, minutes: Math.floor(elapsedSeconds / 60) },
-              leadId: lead.lead_id
+              lead_id: lead.lead_id,
+              dedupe_key: `sla_overdue:${lead.lead_id}:${now.getHours()}`
             }),
           });
         }
@@ -193,13 +195,20 @@ Deno.serve(async (req) => {
           if (managers) {
             for (const manager of managers) {
               if (manager.id !== lead.assigned_user_id) {
-                await supabase.from("notifications").insert({
-                  user_id: manager.id,
-                  organization_id: lead.organization_id,
-                  title: "🚨 SLA estourado na equipe",
-                  content: `O lead "${lead.lead_name}" está há ${Math.floor(elapsedSeconds / 60)} minutos sem resposta.`,
-                  type: "error",
-                  lead_id: lead.lead_id,
+                await fetch(`${SUPABASE_URL}/functions/v1/notification-dispatcher`, {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+                  },
+                  body: JSON.stringify({
+                    event_key: "sla_overdue_manager",
+                    organization_id: lead.organization_id,
+                    user_id: manager.id,
+                    variables: { lead_name: lead.lead_name, minutes: Math.floor(elapsedSeconds / 60) },
+                    lead_id: lead.lead_id,
+                    dedupe_key: `sla_overdue_manager:${lead.lead_id}:${manager.id}:${now.getHours()}`
+                  }),
                 });
               }
             }
