@@ -28,7 +28,9 @@ import {
   ChevronUp,
   Settings,
   Mail,
-  Edit2
+  Edit2,
+  Save,
+  Lightbulb
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -279,7 +281,7 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
   return (
     <div className="space-y-6">
       <Tabs value={activeSubTab} onValueChange={setActiveSubTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 max-w-[600px]">
+        <TabsList className="grid w-full grid-cols-4 max-w-[800px]">
           <TabsTrigger value="templates" className="flex items-center gap-2">
             <MessageSquare className="h-4 w-4" />
             Templates
@@ -287,6 +289,10 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
           <TabsTrigger value="logs" className="flex items-center gap-2">
             <History className="h-4 w-4" />
             Histórico
+          </TabsTrigger>
+          <TabsTrigger value="test_settings" className="flex items-center gap-2">
+            <Settings className="h-4 w-4" />
+            Configuração de Teste
           </TabsTrigger>
           <TabsTrigger value="settings" className="flex items-center gap-2">
             <Mail className="h-4 w-4" />
@@ -306,68 +312,6 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
             </Button>
           </div>
 
-          <Card className="bg-blue-50/30 border-blue-100 shadow-none">
-            <CardHeader className="py-3">
-              <div className="flex items-center gap-2">
-                <Settings className="h-4 w-4 text-blue-600" />
-                <CardTitle className="text-sm font-semibold text-blue-900">Configuração de Teste de Notificações</CardTitle>
-              </div>
-              <CardDescription className="text-xs text-blue-700/70">
-                Selecione um usuário para receber as notificações de teste disparadas abaixo.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pb-4 pt-0">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-                <div className="space-y-1.5">
-                  <Label className="text-[10px] uppercase font-bold text-blue-900/60">Organização</Label>
-                  <Select 
-                    value={selectedTestOrgId} 
-                    onValueChange={(val) => {
-                      setSelectedTestOrgId(val);
-                      setSelectedTestUserId('');
-                      fetchTestUsers(val);
-                    }}
-                  >
-                    <SelectTrigger className="h-9 bg-white border-blue-200">
-                      <SelectValue placeholder="Selecione a Organização" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {testOrgs.map(org => (
-                        <SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label className="text-[10px] uppercase font-bold text-blue-900/60">Usuário de Teste</Label>
-                  <Select 
-                    value={selectedTestUserId} 
-                    onValueChange={setSelectedTestUserId}
-                    disabled={!selectedTestOrgId || loadingTestUsers}
-                  >
-                    <SelectTrigger className="h-9 bg-white border-blue-200">
-                      <SelectValue placeholder={loadingTestUsers ? "Carregando..." : "Selecione o Usuário"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {testUsers.map(user => (
-                        <SelectItem key={user.id} value={user.id}>
-                          {user.name} ({user.email})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <Button 
-                  onClick={handleSaveTestConfig} 
-                  className="h-9 bg-blue-600 hover:bg-blue-700 text-white"
-                >
-                  Salvar Configuração de Teste
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {templates.length === 0 ? (
@@ -687,7 +631,15 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
                                       organizationId: targetOrgId,
                                       userId: targetData.id,
                                       recipient: targetData.whatsapp || targetData.phone || targetData.email || undefined,
-                                      variables: { nome: targetData.name || 'Admin', lead: 'Teste de Notificação' },
+                                      variables: { 
+                                        nome: targetData.name || 'Admin', 
+                                        lead: 'Teste de Notificação',
+                                        lead_name: 'Lead de Teste',
+                                        organization_name: 'Organização de Teste',
+                                        source: 'Manual',
+                                        from_stage: 'Novo',
+                                        to_stage: 'Em Negociação'
+                                      },
                                       isTest: true
                                     }),
                                     {
@@ -845,6 +797,81 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="test_settings" className="mt-6 space-y-6">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Settings className="h-5 w-5 text-primary" />
+                <CardTitle>Configuração de Teste de Notificações</CardTitle>
+              </div>
+              <CardDescription>
+                Defina o destinatário padrão para todas as notificações enviadas via botão "Testar Envio".
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+                <div className="space-y-2">
+                  <Label>Organização de Teste</Label>
+                  <Select 
+                    value={selectedTestOrgId} 
+                    onValueChange={(val) => {
+                      setSelectedTestOrgId(val);
+                      setSelectedTestUserId('');
+                      fetchTestUsers(val);
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a Organização" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {testOrgs.map(org => (
+                        <SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Usuário de Teste</Label>
+                  <Select 
+                    value={selectedTestUserId} 
+                    onValueChange={setSelectedTestUserId}
+                    disabled={!selectedTestOrgId || loadingTestUsers}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={loadingTestUsers ? "Carregando..." : "Selecione o Usuário"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {testUsers.map(user => (
+                        <SelectItem key={user.id} value={user.id}>
+                          {user.name} ({user.email})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[10px] text-muted-foreground">O usuário selecionado receberá as mensagens em todos os canais ativos no template.</p>
+                </div>
+
+                <Button 
+                  onClick={handleSaveTestConfig} 
+                  className="w-full"
+                >
+                  <Save className="h-4 w-4 mr-2" />
+                  Salvar Configuração de Teste
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <div className="bg-amber-50 border border-amber-200 p-4 rounded-lg flex gap-3">
+            <Lightbulb className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+            <div className="text-sm text-amber-900">
+              <p className="font-semibold mb-1">Dica para Testes</p>
+              <p>Após salvar esta configuração, vá para a aba <strong>Templates</strong> e clique em <strong>Testar Envio</strong> em qualquer template para verificar o formato e a entrega.</p>
+            </div>
+          </div>
         </TabsContent>
 
         <TabsContent value="settings" className="mt-6">

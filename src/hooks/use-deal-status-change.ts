@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useCreateCommissionOnWon, useCreateReceivableOnWon } from './use-create-commission';
+import { notifyLeadWon } from './use-lead-notifications';
 
 interface ChangeDealStatusParams {
   leadId: string;
@@ -156,22 +157,25 @@ export function useDealStatusChange() {
             : undefined
         });
 
-        // Send WhatsApp notification for won deal using centralized service
+        // Send notification for won deal using centralized service
         if (variables.userId) {
           try {
-            const { notificationService } = await import('@/services/NotificationService');
-            await notificationService.send({
-              eventKey: 'deal_won',
-              templateSlug: 'deal_won_whatsapp', // Mantido para compatibilidade se o template ainda não tiver event_key
-              dedupeKey: `deal_won:${variables.leadId}`,
+            // Fetch organization name for the notification
+            const { data: orgData } = await supabase
+              .from('organizations')
+              .select('name')
+              .eq('id', variables.organizationId)
+              .maybeSingle();
+
+            await notifyLeadWon({
+              leadId: variables.leadId,
+              leadName: variables.leadName,
               organizationId: variables.organizationId,
-              userId: variables.userId,
-              variables: {
-                lead_name: variables.leadName
-              }
+              organizationName: orgData?.name || 'Organização',
+              assignedUserId: variables.userId
             });
           } catch (err) {
-            console.error('WhatsApp won notification failed:', err);
+            console.error('Lead won notification failed:', err);
           }
         }
       } else if (newStatus === 'lost') {
