@@ -31,7 +31,7 @@ Deno.serve(async (req) => {
 
     console.log(`[NotificationDispatcher] Processing event: ${event_key} for org: ${organization_id}`);
 
-    // 1. Fetch template by event_key
+    // 1. Fetch template by event_key or slug
     const { data: template, error: templateError } = await supabase
       .from('notification_templates')
       .select('*')
@@ -40,8 +40,13 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (templateError || !template) {
+      // Se não encontrou template ativo, logar e retornar erro silencioso para não quebrar fluxos
       console.warn(`[NotificationDispatcher] Template for event ${event_key} not found or inactive.`);
-      return new Response(JSON.stringify({ success: false, error: 'Template not found' }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: 'Template not found or inactive',
+        details: { event_key, organization_id } 
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // 2. Check Deduplication

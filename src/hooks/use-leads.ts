@@ -335,6 +335,25 @@ export function useCreateLead() {
         assignedUserId: lead.assigned_user_id,
         source: lead.source || 'manual',
       });
+
+      // NOVO: Notificação de boas-vindas para novos leads via Dispatcher
+      if (data.id && lead.phone) {
+        try {
+          await notificationService.send({
+            templateSlug: 'welcome_system',
+            organizationId: organizationId,
+            userId: lead.assigned_user_id,
+            recipient: lead.phone,
+            variables: {
+              nome: lead.name,
+              corretor: (allUsers.find(u => u.id === lead.assigned_user_id))?.name || 'nossa equipe'
+            },
+            dedupeKey: `welcome:${data.id}`
+          });
+        } catch (err) {
+          console.error('Welcome notification failed:', err);
+        }
+      }
       
       return data;
     },
