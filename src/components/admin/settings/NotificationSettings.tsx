@@ -21,11 +21,12 @@ import {
   MessageSquare,
   History,
   CheckCircle2,
-  XCircle
+  XCircle,
+  Bell
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { NotificationTemplate, NotificationChannel } from '@/services/NotificationService';
+import { NotificationTemplate, NotificationChannel, notificationService } from '@/services/NotificationService';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -366,6 +367,33 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
 
                   <div className="flex items-center justify-between gap-2 pt-4 border-t mt-auto shrink-0">
                     <div className="flex items-center gap-2">
+                      <Button 
+                        variant="secondary" 
+                        size="sm" 
+                        onClick={async () => {
+                          const { data: { user } } = await supabase.auth.getUser();
+                          if (!user) return;
+                          toast.promise(
+                            notificationService.send({
+                              eventKey: template.event_key || template.slug,
+                              organizationId: user.user_metadata?.organization_id || '',
+                              userId: user.id,
+                              variables: { nome: user.user_metadata?.name || 'Admin', lead: 'Teste de Notificação' },
+                              isTest: true
+                            }),
+                            {
+                              loading: 'Enviando teste...',
+                              success: 'Teste enviado!',
+                              error: 'Falha no teste.'
+                            }
+                          );
+                        }}
+                        className="h-8 text-xs gap-1"
+                      >
+                        <Bell className="h-3 w-3" />
+                        Testar
+                      </Button>
+                    </div>
                     <div className="flex items-center gap-2">
                       <Button 
                         variant="outline" 
