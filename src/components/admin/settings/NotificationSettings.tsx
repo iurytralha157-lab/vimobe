@@ -245,11 +245,18 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
                         <Badge variant={template.is_active ? "default" : "secondary"} className="shrink-0">
                           {template.is_active ? 'Ativo' : 'Inativo'}
                         </Badge>
-                        <Badge variant="outline" className="capitalize shrink-0">
-                          {template.channel}
-                        </Badge>
+                        <div className="flex gap-1">
+                          {(template.channels || [template.channel]).map(ch => (
+                            <Badge key={ch} variant="outline" className="capitalize shrink-0">
+                              {ch}
+                            </Badge>
+                          ))}
+                        </div>
                       </div>
-                      <code className="text-[10px] text-muted-foreground block truncate">{template.slug}</code>
+                      <div className="flex flex-col gap-0.5 mt-1">
+                        <code className="text-[10px] text-muted-foreground block truncate">Slug: {template.slug}</code>
+                        <code className="text-[10px] text-primary font-bold block truncate">Evento: {template.event_key || 'N/A'}</code>
+                      </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <Switch 
@@ -278,20 +285,46 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-xs uppercase text-muted-foreground font-bold">Canal</Label>
-                      <Select 
-                        value={template.channel} 
-                        onValueChange={(val: NotificationChannel) => handleLocalUpdate(template.id, { channel: val })}
-                      >
-                        <SelectTrigger className="bg-background h-9">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="whatsapp">WhatsApp</SelectItem>
-                          <SelectItem value="system">Sistema (Interno)</SelectItem>
-                          <SelectItem value="email">E-mail</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <Label className="text-xs uppercase text-muted-foreground font-bold">Chave do Evento (Dispatcher)</Label>
+                      <Input 
+                        value={template.event_key || ''} 
+                        onChange={(e) => handleLocalUpdate(template.id, { event_key: e.target.value })}
+                        className="bg-background h-9 border-primary/50"
+                        placeholder="ex: new_lead_received"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 shrink-0">
+                    <div className="space-y-2">
+                      <Label className="text-xs uppercase text-muted-foreground font-bold">Canais Ativos</Label>
+                      <div className="flex flex-wrap gap-2 p-2 border rounded-md bg-background">
+                        {['system', 'whatsapp', 'email', 'push'].map((ch) => (
+                          <div key={ch} className="flex items-center gap-1.5">
+                            <Switch 
+                              id={`ch-${template.id}-${ch}`}
+                              checked={(template.channels || []).includes(ch as any)}
+                              onCheckedChange={(checked) => {
+                                const current = template.channels || [];
+                                const next = checked 
+                                  ? [...current, ch as any]
+                                  : current.filter(c => c !== ch);
+                                handleLocalUpdate(template.id, { channels: next });
+                              }}
+                            />
+                            <Label htmlFor={`ch-${template.id}-${ch}`} className="text-[10px] capitalize">{ch}</Label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs uppercase text-muted-foreground font-bold">Deduplicação (segundos)</Label>
+                      <Input 
+                        type="number"
+                        value={template.dedupe_window_seconds || 60} 
+                        onChange={(e) => handleLocalUpdate(template.id, { dedupe_window_seconds: parseInt(e.target.value) })}
+                        className="bg-background h-9"
+                      />
                     </div>
                   </div>
 
