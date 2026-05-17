@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -32,6 +33,7 @@ import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 
 export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
+  const { isSuperAdmin } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
   const [templates, setTemplates] = useState<NotificationTemplate[]>([]);
@@ -432,7 +434,7 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
                       )}
                     </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 mt-4 pt-2 border-t border-dashed">
                       <span className="text-[9px] text-muted-foreground">ID: {template.id.split('-')[0]}...</span>
                     </div>
                   </div>
