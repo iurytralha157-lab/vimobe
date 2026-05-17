@@ -332,34 +332,33 @@ Deno.serve(async (req) => {
         // Send welcome whatsapp
         let welcomeResult: any = { sent: false };
         if (contactWhatsapp) {
-          welcomeResult = await sendWelcomeWhatsApp(
-            supabaseAdmin,
-            existingUser.organization_id || targetOrgId,
-            org.name,
-            callerProfile?.name || 'Administrador',
-            contactWhatsapp,
-            name || existingUser.name,
-            email,
-            generatedPassword,
-          );
-        }
-
-        console.log(`Auth entry created for orphan user: ${email}`);
-        return new Response(JSON.stringify({
-          success: true,
-          user: {
-            id: existingUser.id,
-            email,
-            name: name || existingUser.name,
-            role,
-          },
-          wasAuthOrphan: true,
+        welcomeResult = await sendUserNotifications(
+          supabaseUrl,
+          serviceRoleKey,
+          existingUser.organization_id || targetOrgId,
+          name || existingUser.name,
+          email,
+          contactWhatsapp,
           generatedPassword,
-          whatsappSent: welcomeResult.sent,
-        }), {
-          status: 200,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+        );
+      }
+
+      console.log(`Auth entry created for orphan user: ${email}`);
+      return new Response(JSON.stringify({
+        success: true,
+        user: {
+          id: existingUser.id,
+          email,
+          name: name || existingUser.name,
+          role,
+        },
+        wasAuthOrphan: true,
+        generatedPassword,
+        whatsappSent: welcomeResult.success,
+      }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
       }
 
       // If user exists without organization, add them to the current org
@@ -466,32 +465,31 @@ Deno.serve(async (req) => {
       // Send notification for multi-org existing user
       let welcomeResult: any = { sent: false };
       if (contactWhatsapp) {
-        welcomeResult = await sendWelcomeWhatsApp(
-          supabaseAdmin,
-          targetOrgId,
-          org.name,
-          callerProfile?.name || 'Administrador',
-          contactWhatsapp,
-          existingUser.name,
-          email,
-        );
-      }
+      welcomeResult = await sendUserNotifications(
+        supabaseUrl,
+        serviceRoleKey,
+        targetOrgId,
+        existingUser.name,
+        email,
+        contactWhatsapp,
+      );
+    }
 
-      return new Response(JSON.stringify({
-        success: true,
-        user: {
-          id: existingUser.id,
-          email,
-          name: existingUser.name,
-          role,
-        },
-        wasMultiOrg: true,
-        whatsappSent: welcomeResult.sent,
-        message: `Usuário adicionado à organização ${org.name}. O acesso será feito com a senha existente.`,
-      }), {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    return new Response(JSON.stringify({
+      success: true,
+      user: {
+        id: existingUser.id,
+        email,
+        name: existingUser.name,
+        role,
+      },
+      wasMultiOrg: true,
+      whatsappSent: welcomeResult.success,
+      message: `Usuário adicionado à organização ${org.name}. O acesso será feito com a senha existente.`,
+    }), {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
     }
 
     // ========== NEW USER FLOW ==========
@@ -557,19 +555,18 @@ Deno.serve(async (req) => {
     // 4. Send welcome WhatsApp with credentials
     let welcomeResult: any = { sent: false };
     if (contactWhatsapp) {
-      welcomeResult = await sendWelcomeWhatsApp(
-        supabaseAdmin,
+      welcomeResult = await sendUserNotifications(
+        supabaseUrl,
+        serviceRoleKey,
         targetOrgId,
-        org.name,
-        callerProfile?.name || 'Administrador',
-        contactWhatsapp,
         name,
         email,
+        contactWhatsapp,
         generatedPassword,
       );
     }
 
-    console.log(`User created successfully: ${email} in org ${org.name} (whatsapp sent: ${welcomeResult.sent})`);
+    console.log(`User created successfully: ${email} in org ${org.name} (whatsapp sent: ${welcomeResult.success})`);
 
     return new Response(JSON.stringify({
       success: true,
@@ -580,7 +577,7 @@ Deno.serve(async (req) => {
         role,
       },
       generatedPassword,
-      whatsappSent: welcomeResult.sent,
+      whatsappSent: welcomeResult.success,
       whatsappReason: welcomeResult.reason || null,
     }), {
       status: 200,
