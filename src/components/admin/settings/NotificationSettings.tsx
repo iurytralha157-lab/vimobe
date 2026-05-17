@@ -39,6 +39,22 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 
+const EVENT_KEY_OPTIONS = [
+  { value: 'deal_won', label: 'Lead Ganho (CRM)', category: 'Vendas' },
+  { value: 'new_lead_received', label: 'Novo Lead (Automático)', category: 'Leads' },
+  { value: 'manual_lead_registered', label: 'Novo Lead (Manual)', category: 'Leads' },
+  { value: 'lead_reentry', label: 'Reentrada de Lead', category: 'Leads' },
+  { value: 'welcome_lead', label: 'Boas-vindas ao Lead', category: 'Leads' },
+  { value: 'new_appointment', label: 'Novo Agendamento', category: 'Agenda' },
+  { value: 'appointment_reminder', label: 'Lembrete de Agendamento', category: 'Agenda' },
+  { value: 'ranking_update', label: 'Atualização de Ranking', category: 'Equipe' },
+  { value: 'ranking_event', label: 'Evento de Gamificação', category: 'Equipe' },
+  { value: 'credentials_access', label: 'Credenciais de Acesso', category: 'Sistema' },
+  { value: 'welcome_user', label: 'Boas-vindas ao Sistema', category: 'Sistema' },
+  { value: 'whatsapp_disconnected', label: 'WhatsApp Desconectado', category: 'WhatsApp' },
+  { value: 'system_announcement', label: 'Comunicado do Sistema', category: 'Sistema' },
+];
+
 export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
   const { isSuperAdmin, user, profile } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -238,7 +254,7 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
   const handleAddTemplate = async () => {
     const timestamp = Date.now();
     const defaultName = 'Novo Template';
-    const defaultEventKey = `evento_${timestamp}`;
+    const defaultEventKey = ''; // Inicia vazio para forçar seleção ou indicar que precisa configurar
     const defaultMessage = 'Olá {nome}, sua mensagem aqui.';
     
     const newTemplate = {
@@ -266,7 +282,8 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
       const created = data as any;
       setTemplates([created, ...templates]);
       setOriginalTemplates([JSON.parse(JSON.stringify(created)), ...originalTemplates]);
-      toast.success('Novo template criado!');
+      setExpandedTemplateId(created.id); // Expandir automaticamente o novo template
+      toast.success('Novo template criado! Selecione a chave do evento para configurar o disparo.');
     } catch (error: any) {
       toast.error('Erro ao criar template: ' + error.message);
     }
@@ -466,14 +483,47 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
                             </div>
                             
                             <div className="space-y-1">
-                              <Label className="text-[10px] uppercase text-muted-foreground font-bold">Chave do Evento (Dispatcher)</Label>
-                              <Input 
-                                value={template.event_key || ''} 
-                                onChange={(e) => handleLocalUpdate(template.id, { event_key: e.target.value })}
-                                className="bg-background border-primary/30 h-8 text-sm"
-                                placeholder="ex: novo_lead_atribuido"
-                              />
-                              <p className="text-[9px] text-muted-foreground">Usada para disparar esta notificação via código ou automação.</p>
+                              <Label className="text-[10px] uppercase text-muted-foreground font-bold">Chave do Evento (Disparo)</Label>
+                              <div className="space-y-2">
+                                <Select 
+                                  value={EVENT_KEY_OPTIONS.some(o => o.value === template.event_key) ? template.event_key : 'custom'} 
+                                  onValueChange={(val) => {
+                                    if (val !== 'custom') {
+                                      handleLocalUpdate(template.id, { event_key: val });
+                                    }
+                                  }}
+                                >
+                                  <SelectTrigger className="h-8 text-xs border-primary/30">
+                                    <SelectValue placeholder="Selecione o disparo" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {EVENT_KEY_OPTIONS.map((opt) => (
+                                      <SelectItem key={opt.value} value={opt.value}>
+                                        <div className="flex flex-col py-0.5">
+                                          <span className="text-[11px] font-medium leading-tight">{opt.label}</span>
+                                          <span className="text-[9px] text-muted-foreground font-mono">{opt.value}</span>
+                                        </div>
+                                      </SelectItem>
+                                    ))}
+                                    <SelectItem value="custom" className="text-primary font-medium">Outro (digitar manualmente)</SelectItem>
+                                  </SelectContent>
+                                </Select>
+
+                                {(!EVENT_KEY_OPTIONS.some(o => o.value === template.event_key) || template.event_key === 'custom') && (
+                                  <Input 
+                                    value={template.event_key === 'custom' ? '' : (template.event_key || '')} 
+                                    onChange={(e) => handleLocalUpdate(template.id, { event_key: e.target.value })}
+                                    className="bg-background border-dashed h-8 text-xs font-mono"
+                                    placeholder="Digite a chave manual (ex: gatilho_especifico)"
+                                  />
+                                )}
+                              </div>
+                              {template.event_key && templates.some(t => t.id !== template.id && t.event_key === template.event_key && t.is_active) && (
+                                <p className="text-[9px] text-amber-600 font-medium animate-pulse">
+                                  Atenção: Já existe outro template ativo para este disparo.
+                                </p>
+                              )}
+                              <p className="text-[9px] text-muted-foreground italic">Este é o ID que liga o código do sistema a este template.</p>
                             </div>
 
                             <div className="space-y-1">
