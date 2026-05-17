@@ -8,7 +8,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Edit, Mail, Search } from "lucide-react";
+import { Edit, Mail, Search, AlertCircle, Send } from "lucide-react";
 
 export default function EmailTemplates() {
   const queryClient = useQueryClient();
@@ -47,6 +47,25 @@ export default function EmailTemplates() {
       toast.error("Erro ao atualizar template: " + error.message);
     },
   });
+  const sendTestEmail = useMutation({
+    mutationFn: async (template: any) => {
+      const { data, error } = await supabase.functions.invoke("send-email", {
+        body: {
+          to: "teste@exemplo.com", // O usuário pode mudar no prompt
+          template_key: template.key,
+          variables: { nome: "Usuário Teste", email: "teste@exemplo.com" }
+        }
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      toast.success("E-mail de teste enviado com sucesso!");
+    },
+    onError: (error) => {
+      toast.error("Erro ao enviar e-mail de teste: " + error.message);
+    },
+  });
 
   const renderPreview = (html: string) => {
     let preview = html;
@@ -60,13 +79,28 @@ export default function EmailTemplates() {
   if (isLoading) return <div className="p-8 text-center">Carregando templates...</div>;
 
   return (
-    <div className="container mx-auto py-8 space-y-8">
+    <div className="container mx-auto py-4 space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">Templates de Email</h1>
-          <p className="text-muted-foreground">Gerencie as comunicações transacionais do sistema.</p>
+          <h1 className="text-2xl font-bold">Templates de E-mail (Resend)</h1>
+          <p className="text-muted-foreground">Gerencie as comunicações transacionais enviadas via Edge Function.</p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => window.open('https://resend.com', '_blank')}>
+            Ir para Resend
+          </Button>
         </div>
       </div>
+
+      <Card className="bg-amber-50 border-amber-200">
+        <CardContent className="p-4 flex items-start gap-3">
+          <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5" />
+          <div className="text-sm text-amber-800">
+            <p className="font-semibold">Configuração Necessária</p>
+            <p>Certifique-se de que a variável de ambiente <code>RESEND_API_KEY</code> está configurada no seu projeto Supabase para que os envios funcionem.</p>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardContent className="p-0">
