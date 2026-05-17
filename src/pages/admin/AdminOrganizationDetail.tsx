@@ -324,13 +324,25 @@ export default function AdminOrganizationDetail() {
         try {
           const { notificationService } = await import('@/services/NotificationService');
           await notificationService.send({
-            templateSlug: 'new_user_credentials_whatsapp',
+            eventKey: 'credentials_access',
             organizationId: id,
-            recipient: newUser.email, // Or phone if we had it, but email is primary for login
+            recipient: newUser.email,
             variables: {
               user_name: newUser.name,
               email: newUser.email,
               password: newUser.password
+            }
+          });
+
+          // Also send welcome notification
+          await notificationService.send({
+            eventKey: 'welcome_user',
+            organizationId: id,
+            userId: data.user?.id, // Use ID if available
+            recipient: newUser.email,
+            variables: {
+              user_name: newUser.name,
+              email: newUser.email
             }
           });
         } catch (err) {

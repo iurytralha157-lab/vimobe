@@ -103,7 +103,7 @@ Deno.serve(async (req) => {
                 "Authorization": `Bearer ${supabaseServiceKey}`,
               },
               body: JSON.stringify({
-                event_key: interval.minutes === 0 ? "event_starting" : "event_reminder_user",
+                event_key: "appointment_reminder",
                 organization_id: event.organization_id,
                 user_id: event.user_id,
                 lead_id: event.lead_id,
@@ -140,7 +140,7 @@ Deno.serve(async (req) => {
                   "Authorization": `Bearer ${supabaseServiceKey}`,
                 },
                 body: JSON.stringify({
-                  event_key: "event_reminder_lead",
+                  event_key: "appointment_reminder",
                   organization_id: event.organization_id,
                   recipient: event.lead.phone,
                   lead_id: event.lead.id,
