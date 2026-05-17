@@ -23,7 +23,12 @@ import {
   History,
   CheckCircle2,
   XCircle,
-  Bell
+  Bell,
+  ChevronDown,
+  ChevronUp,
+  Settings,
+  Mail,
+  Edit2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -42,6 +47,7 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
   const [activeSubTab, setActiveSubTab] = useState('templates');
   const [changedIds, setChangedIds] = useState<Set<string>>(new Set());
   const [settings, setSettings] = useState<any>(null);
+  const [expandedTemplateId, setExpandedTemplateId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -145,13 +151,22 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
   };
 
   const handleAddTemplate = async () => {
+    const timestamp = Date.now();
+    const defaultName = 'Novo Template';
+    const defaultEventKey = `evento_${timestamp}`;
+    const defaultMessage = 'Olá {nome}, sua mensagem aqui.';
+    
     const newTemplate = {
-      name: 'Novo Template',
-      slug: `new_template_${Date.now()}`,
-      channel: 'whatsapp' as NotificationChannel,
-      message: 'Olá {name}, sua mensagem aqui.',
+      name: defaultName,
+      slug: `template_${timestamp}`,
+      event_key: defaultEventKey,
+      channel: 'system' as NotificationChannel,
+      channels: ['system'],
+      message: defaultMessage,
+      subject: `Notificação: ${defaultName}`,
+      html_body: defaultMessage,
       category: 'info',
-      variables: ['name'],
+      variables: ['nome'],
       is_active: true
     };
 
@@ -206,18 +221,18 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
   return (
     <div className="space-y-6">
       <Tabs value={activeSubTab} onValueChange={setActiveSubTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 max-w-[400px]">
+        <TabsList className="grid w-full grid-cols-3 max-w-[600px]">
           <TabsTrigger value="templates" className="flex items-center gap-2">
             <MessageSquare className="h-4 w-4" />
             Templates
           </TabsTrigger>
-            <TabsTrigger value="logs" className="flex items-center gap-2">
+          <TabsTrigger value="logs" className="flex items-center gap-2">
             <History className="h-4 w-4" />
             Histórico
           </TabsTrigger>
           <TabsTrigger value="settings" className="flex items-center gap-2">
-            <Plus className="h-4 w-4" />
-            Configurações
+            <Mail className="h-4 w-4" />
+            Configurações de E-mail
           </TabsTrigger>
         </TabsList>
 
@@ -248,231 +263,301 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
                 </CardContent>
               </Card>
             ) : (
-              templates.map((template) => (
-              <Card key={template.id} className={cn(
-                "overflow-hidden transition-all border-2 flex flex-col h-full",
-                changedIds.has(template.id) ? "border-primary shadow-md" : "border-transparent"
-              )}>
-                <CardHeader className="bg-muted/30 pb-4 shrink-0">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <CardTitle className="text-base truncate">{template.name}</CardTitle>
-                        <Badge variant={template.is_active ? "default" : "secondary"} className="shrink-0">
-                          {template.is_active ? 'Ativo' : 'Inativo'}
-                        </Badge>
-                        <div className="flex gap-1">
-                          {(template.channels || [template.channel]).map(ch => (
-                            <Badge key={ch} variant="outline" className="capitalize shrink-0">
-                              {ch}
-                            </Badge>
-                          ))}
+              templates.map((template) => {
+                const isExpanded = expandedTemplateId === template.id;
+                const activeChannels = template.channels || [template.channel];
+                
+                // Pre-fill logic for existing templates with empty fields
+                const handleExpand = () => {
+                  if (expandedTemplateId === template.id) {
+                    setExpandedTemplateId(null);
+                  } else {
+                    setExpandedTemplateId(template.id);
+                    
+                    // Pre-fill logic if empty
+                    const updates: Partial<NotificationTemplate> = {};
+                    let hasUpdates = false;
+                    
+                    if (!template.event_key) {
+                      updates.event_key = `evento_${template.slug || template.id.split('-')[0]}`;
+                      hasUpdates = true;
+                    }
+                    if (!template.subject) {
+                      updates.subject = `Notificação: ${template.name}`;
+                      hasUpdates = true;
+                    }
+                    if (!template.html_body && template.message) {
+                      updates.html_body = template.message;
+                      hasUpdates = true;
+                    }
+                    
+                    if (hasUpdates) {
+                      handleLocalUpdate(template.id, updates);
+                    }
+                  }
+                };
+
+                return (
+                  <Card key={template.id} className={cn(
+                    "overflow-hidden transition-all border-2 mb-4",
+                    changedIds.has(template.id) ? "border-primary shadow-sm" : "border-muted"
+                  )}>
+                    <div 
+                      className={cn(
+                        "p-4 flex items-center justify-between cursor-pointer hover:bg-muted/30 transition-colors",
+                        isExpanded && "border-b bg-muted/20"
+                      )}
+                      onClick={handleExpand}
+                    >
+                      <div className="flex items-center gap-4 min-w-0 flex-1">
+                        <div className="space-y-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold truncate">{template.name}</span>
+                            <div className="flex gap-1 flex-wrap">
+                              {activeChannels.map(ch => (
+                                <Badge key={ch} variant="secondary" className="text-[10px] capitalize px-1.5 h-5">
+                                  {ch === 'system' ? 'Sistema' : ch}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
+                            <span>Slug: <code className="bg-muted px-1 rounded">{template.slug}</code></span>
+                            {template.event_key && (
+                              <span>Evento: <code className="text-primary font-medium">{template.event_key}</code></span>
+                            )}
+                          </div>
                         </div>
                       </div>
-                      <div className="flex flex-col gap-0.5 mt-1">
-                        <code className="text-[10px] text-muted-foreground block truncate">Slug: {template.slug}</code>
-                        <code className="text-[10px] text-primary font-bold block truncate">Evento: {template.event_key || 'N/A'}</code>
+
+                      <div className="flex items-center gap-3 ml-4" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center gap-2 pr-3 border-r mr-1">
+                          <span className="text-[10px] text-muted-foreground hidden sm:inline">
+                            {template.is_active ? 'Ativo' : 'Inativo'}
+                          </span>
+                          <Switch 
+                            checked={template.is_active} 
+                            onCheckedChange={(checked) => handleLocalUpdate(template.id, { is_active: checked })}
+                          />
+                        </div>
+                        
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="text-destructive h-8 w-8 hover:bg-destructive/10" 
+                          onClick={() => handleDeleteTemplate(template.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                        
+                        <Button 
+                          variant={isExpanded ? "default" : "outline"}
+                          size="sm"
+                          className="h-8 text-xs gap-1.5"
+                          onClick={handleExpand}
+                        >
+                          <Edit2 className="h-3.5 w-3.5" />
+                          {isExpanded ? "Fechar" : "Editar"}
+                        </Button>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <Switch 
-                        checked={template.is_active} 
-                        onCheckedChange={(checked) => handleLocalUpdate(template.id, { is_active: checked })}
-                      />
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="text-destructive h-8 w-8 hover:bg-destructive/10" 
-                        onClick={() => handleDeleteTemplate(template.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-6 space-y-4 flex-1 flex flex-col">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 shrink-0">
-                    <div className="space-y-2">
-                      <Label className="text-xs uppercase text-muted-foreground font-bold">Nome amigável</Label>
-                      <Input 
-                        value={template.name} 
-                        onChange={(e) => handleLocalUpdate(template.id, { name: e.target.value })}
-                        className="bg-background h-9"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-xs uppercase text-muted-foreground font-bold">Chave do Evento (Dispatcher)</Label>
-                      <Input 
-                        value={template.event_key || ''} 
-                        onChange={(e) => handleLocalUpdate(template.id, { event_key: e.target.value })}
-                        className="bg-background h-9 border-primary/50"
-                        placeholder="ex: new_lead_received"
-                      />
-                    </div>
-                  </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 shrink-0">
-                    <div className="space-y-2">
-                      <Label className="text-xs uppercase text-muted-foreground font-bold">Canais Ativos</Label>
-                      <div className="flex flex-wrap gap-2 p-2 border rounded-md bg-background">
-                        {['system', 'whatsapp', 'email', 'push'].map((ch) => (
-                          <div key={ch} className="flex items-center gap-1.5">
-                            <Switch 
-                              id={`ch-${template.id}-${ch}`}
-                              checked={(template.channels || []).includes(ch as any)}
-                              onCheckedChange={(checked) => {
-                                const current = template.channels || [];
-                                const next = checked 
-                                  ? [...current, ch as any]
-                                  : current.filter(c => c !== ch);
-                                handleLocalUpdate(template.id, { channels: next });
-                              }}
-                            />
-                            <Label htmlFor={`ch-${template.id}-${ch}`} className="text-[10px] capitalize">{ch}</Label>
+                    {isExpanded && (
+                      <CardContent className="pt-6 space-y-6 animate-in fade-in slide-in-from-top-2 duration-200">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="space-y-4">
+                            <div className="space-y-2">
+                              <Label className="text-xs uppercase text-muted-foreground font-bold">Nome do Template</Label>
+                              <Input 
+                                value={template.name} 
+                                onChange={(e) => handleLocalUpdate(template.id, { name: e.target.value })}
+                                className="bg-background"
+                              />
+                            </div>
+                            
+                            <div className="space-y-2">
+                              <Label className="text-xs uppercase text-muted-foreground font-bold">Chave do Evento (Dispatcher)</Label>
+                              <Input 
+                                value={template.event_key || ''} 
+                                onChange={(e) => handleLocalUpdate(template.id, { event_key: e.target.value })}
+                                className="bg-background border-primary/30"
+                                placeholder="ex: novo_lead_atribuido"
+                              />
+                              <p className="text-[10px] text-muted-foreground">Usada para disparar esta notificação via código ou automação.</p>
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label className="text-xs uppercase text-muted-foreground font-bold">Canais de Envio</Label>
+                              <div className="grid grid-cols-2 gap-2 p-3 border rounded-md bg-muted/10">
+                                {['system', 'whatsapp', 'email', 'push'].map((ch) => (
+                                  <div key={ch} className="flex items-center justify-between gap-2 p-1.5 rounded-sm hover:bg-muted/50">
+                                    <Label htmlFor={`ch-${template.id}-${ch}`} className="text-xs capitalize cursor-pointer">
+                                      {ch === 'system' ? 'Sistema (Interno)' : ch}
+                                    </Label>
+                                    <Switch 
+                                      id={`ch-${template.id}-${ch}`}
+                                      checked={(template.channels || []).includes(ch as any)}
+                                      onCheckedChange={(checked) => {
+                                        const current = template.channels || [];
+                                        const next = checked 
+                                          ? [...current, ch as any]
+                                          : current.filter(c => c !== ch);
+                                        handleLocalUpdate(template.id, { channels: next });
+                                      }}
+                                    />
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label className="text-xs uppercase text-muted-foreground font-bold">Janela de Deduplicação</Label>
+                              <div className="flex items-center gap-2">
+                                <Input 
+                                  type="number"
+                                  value={template.dedupe_window_seconds || 60} 
+                                  onChange={(e) => handleLocalUpdate(template.id, { dedupe_window_seconds: parseInt(e.target.value) })}
+                                  className="bg-background w-24"
+                                />
+                                <span className="text-xs text-muted-foreground">segundos</span>
+                              </div>
+                              <p className="text-[10px] text-muted-foreground">Evita envios repetidos do mesmo evento para o mesmo usuário neste intervalo.</p>
+                            </div>
                           </div>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-xs uppercase text-muted-foreground font-bold">Deduplicação (segundos)</Label>
-                      <Input 
-                        type="number"
-                        value={template.dedupe_window_seconds || 60} 
-                        onChange={(e) => handleLocalUpdate(template.id, { dedupe_window_seconds: parseInt(e.target.value) })}
-                        className="bg-background h-9"
-                      />
-                    </div>
-                  </div>
 
-                  <div className="space-y-2">
-                    <Label className="text-xs uppercase text-muted-foreground font-bold">Título / Assunto</Label>
-                    <Input 
-                      value={template.title || ''} 
-                      onChange={(e) => handleLocalUpdate(template.id, { title: e.target.value })}
-                      className="bg-background h-9"
-                      placeholder="Título da notificação interna (Push)"
-                    />
-                  </div>
+                          <div className="space-y-4">
+                            <div className="space-y-2">
+                              <Label className="text-xs uppercase text-muted-foreground font-bold">Título / Assunto (Push/Sistema)</Label>
+                              <Input 
+                                value={template.title || ''} 
+                                onChange={(e) => handleLocalUpdate(template.id, { title: e.target.value })}
+                                className="bg-background"
+                                placeholder="Título da notificação"
+                              />
+                            </div>
 
-                  <div className="space-y-2">
-                    <Label className="text-xs uppercase text-muted-foreground font-bold">Assunto do E-mail</Label>
-                    <Input 
-                      value={template.subject || ''} 
-                      onChange={(e) => handleLocalUpdate(template.id, { subject: e.target.value })}
-                      className="bg-background h-9 border-blue-200"
-                      placeholder="Assunto que o cliente verá no e-mail"
-                    />
-                  </div>
+                            <div className="space-y-2">
+                              <Label className="text-xs uppercase text-muted-foreground font-bold">Assunto do E-mail</Label>
+                              <Input 
+                                value={template.subject || ''} 
+                                onChange={(e) => handleLocalUpdate(template.id, { subject: e.target.value })}
+                                className="bg-background border-blue-100"
+                                placeholder="Assunto do e-mail para o cliente"
+                              />
+                            </div>
 
-                  <div className="space-y-2 flex-1 flex flex-col min-h-[120px]">
-                    <Label className="text-xs uppercase text-muted-foreground font-bold">Corpo do E-mail (HTML)</Label>
-                    <Textarea 
-                      value={template.html_body || ''} 
-                      onChange={(e) => handleLocalUpdate(template.id, { html_body: e.target.value })}
-                      className="flex-1 font-mono text-[10px] bg-background resize-none border-blue-200"
-                      placeholder="<html>... Use {{variavel}} para e-mail</html>"
-                    />
-                  </div>
+                            <div className="space-y-2">
+                              <Label className="text-xs uppercase text-muted-foreground font-bold">Mensagem Principal (WhatsApp/Push)</Label>
+                              <Textarea 
+                                value={template.message} 
+                                onChange={(e) => {
+                                  handleLocalUpdate(template.id, { message: e.target.value });
+                                  // Update html_body if it was identical
+                                  if (template.html_body === template.message || !template.html_body) {
+                                    handleLocalUpdate(template.id, { html_body: e.target.value });
+                                  }
+                                }}
+                                className="font-mono text-xs bg-background min-h-[100px] resize-none"
+                              />
+                            </div>
 
-                  <div className="space-y-2 flex-1 flex flex-col min-h-[180px]">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-xs uppercase text-muted-foreground font-bold">Mensagem do Template</Label>
-                      <span className="text-[10px] text-muted-foreground italic">Markdown suportado</span>
-                    </div>
-                    <Textarea 
-                      value={template.message} 
-                      onChange={(e) => handleLocalUpdate(template.id, { message: e.target.value })}
-                      className="flex-1 font-mono text-xs bg-background resize-none leading-relaxed"
-                    />
-                    <div className="bg-muted/20 p-2 rounded-md border border-dashed mt-2">
-                      <p className="text-[10px] text-muted-foreground mb-1.5 font-medium">Variáveis disponíveis:</p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {template.variables && template.variables.length > 0 ? (
-                          template.variables.map((v, i) => (
-                            <Badge key={i} variant="secondary" className="text-[9px] font-mono px-1.5 py-0 h-4">
-                              {`{${v}}`}
-                            </Badge>
-                          ))
-                        ) : (
-                          <span className="text-[9px] text-muted-foreground italic">Nenhuma variável configurada</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
+                            <div className="space-y-2">
+                              <Label className="text-xs uppercase text-muted-foreground font-bold">Corpo do E-mail (HTML)</Label>
+                              <Textarea 
+                                value={template.html_body || ''} 
+                                onChange={(e) => handleLocalUpdate(template.id, { html_body: e.target.value })}
+                                className="font-mono text-[10px] bg-background min-h-[100px] resize-none border-blue-100"
+                                placeholder="<html>...</html>"
+                              />
+                            </div>
 
-                  <div className="flex items-center justify-between gap-2 pt-4 border-t mt-auto shrink-0">
-                    <div className="flex items-center gap-2">
-                      <Button 
-                        variant="secondary" 
-                        size="sm" 
-                        onClick={async () => {
-                          const { data: { user } } = await supabase.auth.getUser();
-                          if (!user) return;
-                          toast.promise(
-                            notificationService.send({
-                              eventKey: template.event_key || template.slug,
-                              organizationId: profile?.organization_id || user.user_metadata?.organization_id || '',
-                              userId: user.id,
-                              variables: { nome: user.user_metadata?.name || 'Admin', lead: 'Teste de Notificação' },
-                              isTest: true
-                            }),
-                            {
-                              loading: 'Enviando teste...',
-                              success: 'Teste enviado!',
-                              error: 'Falha no teste.'
-                            }
-                          );
-                        }}
-                        className="h-8 text-xs gap-1"
-                      >
-                        <Bell className="h-3 w-3" />
-                        Testar
-                      </Button>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => handleCancelEdit(template.id)}
-                        disabled={saving === template.id || !changedIds.has(template.id)}
-                        className={cn(
-                          "h-8 text-xs",
-                          !changedIds.has(template.id) && "opacity-50 cursor-not-allowed"
-                        )}
-                      >
-                        Descartar
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        onClick={() => handleSaveTemplate(template.id)}
-                        disabled={saving === template.id || !changedIds.has(template.id)}
-                        className={cn(
-                          "gap-2 h-8 text-xs",
-                          changedIds.has(template.id) ? "bg-green-600 hover:bg-green-700" : "bg-muted"
-                        )}
-                      >
-                        {saving === template.id ? (
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                        ) : (
-                          <CheckCircle2 className="h-3 w-3" />
-                        )}
-                        Salvar
-                      </Button>
-                      
-                      {!changedIds.has(template.id) && (
-                        <span className="text-[10px] text-muted-foreground flex items-center gap-1.5 ml-2">
-                          <CheckCircle2 className="h-3 w-3 text-green-500" />
-                          Salvo
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2 mt-4 pt-2 border-t border-dashed">
-                      <span className="text-[9px] text-muted-foreground">ID: {template.id.split('-')[0]}...</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              ))
+                            <div className="bg-muted/30 p-3 rounded-md border border-dashed">
+                              <p className="text-[10px] text-muted-foreground mb-2 font-medium">Variáveis disponíveis:</p>
+                              <div className="flex flex-wrap gap-1.5">
+                                {template.variables && template.variables.length > 0 ? (
+                                  template.variables.map((v, i) => (
+                                    <Badge key={i} variant="outline" className="text-[9px] font-mono bg-background">
+                                      {`{${v}}`}
+                                    </Badge>
+                                  ))
+                                ) : (
+                                  <span className="text-[9px] text-muted-foreground italic">Nenhuma variável configurada</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between gap-4 pt-6 border-t mt-4">
+                          <div className="flex items-center gap-2">
+                            <Button 
+                              variant="secondary" 
+                              size="sm" 
+                              onClick={async () => {
+                                const { data: { user } } = await supabase.auth.getUser();
+                                if (!user) return;
+                                toast.promise(
+                                  notificationService.send({
+                                    eventKey: template.event_key || template.slug,
+                                    organizationId: profile?.organization_id || user.user_metadata?.organization_id || '',
+                                    userId: user.id,
+                                    variables: { nome: user.user_metadata?.name || 'Admin', lead: 'Teste de Notificação' },
+                                    isTest: true
+                                  }),
+                                  {
+                                    loading: 'Enviando teste...',
+                                    success: 'Teste enviado!',
+                                    error: 'Falha no teste.'
+                                  }
+                                );
+                              }}
+                              className="h-9 gap-2"
+                            >
+                              <Bell className="h-4 w-4" />
+                              Testar Envio
+                            </Button>
+                          </div>
+
+                          <div className="flex items-center gap-3">
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={() => handleCancelEdit(template.id)}
+                              disabled={saving === template.id || !changedIds.has(template.id)}
+                              className="h-9"
+                            >
+                              Descartar
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              onClick={() => handleSaveTemplate(template.id)}
+                              disabled={saving === template.id || !changedIds.has(template.id)}
+                              className={cn(
+                                "gap-2 h-9 px-6",
+                                changedIds.has(template.id) ? "bg-primary shadow-sm" : ""
+                              )}
+                            >
+                              {saving === template.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <CheckCircle2 className="h-4 w-4" />
+                              )}
+                              Salvar Alterações
+                            </Button>
+                            
+                            {!changedIds.has(template.id) && (
+                              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-green-500/10 text-green-600 text-[10px] font-medium border border-green-200/50">
+                                <CheckCircle2 className="h-3 w-3" />
+                                Sincronizado
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </CardContent>
+                    )}
+                  </Card>
+                );
+              })
             )}
           </div>
         </TabsContent>
