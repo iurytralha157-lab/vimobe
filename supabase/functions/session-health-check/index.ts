@@ -124,14 +124,20 @@ Deno.serve(async (req) => {
 
             const displayName = session.display_name || session.instance_name;
 
-            // Notify session owner
-            await supabase.from("notifications").insert({
-              user_id: session.owner_user_id,
-              organization_id: session.organization_id,
-              title: "⚠️ WhatsApp Desconectado!",
-              content: `A sessão "${displayName}" perdeu a conexão. Verifique e reconecte o WhatsApp.`,
-              type: "warning",
-              is_read: false,
+            // Notify session owner via Dispatcher
+            await fetch(`${SUPABASE_URL}/functions/v1/notification-dispatcher`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+              },
+              body: JSON.stringify({
+                event_key: "whatsapp_disconnected",
+                organization_id: session.organization_id,
+                user_id: session.owner_user_id,
+                variables: { nome_sessao: displayName },
+                dedupe_key: `whatsapp_disconnected:${session.id}:${session.owner_user_id}`
+              }),
             });
 
             // Notify admins
@@ -143,15 +149,22 @@ Deno.serve(async (req) => {
               .neq("id", session.owner_user_id);
 
             if (admins && admins.length > 0) {
-              const adminNotifications = admins.map((admin: any) => ({
-                user_id: admin.id,
-                organization_id: session.organization_id,
-                title: "⚠️ WhatsApp Desconectado!",
-                content: `A sessão "${displayName}" perdeu a conexão. O responsável foi notificado.`,
-                type: "warning",
-                is_read: false,
-              }));
-              await supabase.from("notifications").insert(adminNotifications);
+              for (const admin of admins) {
+                await fetch(`${SUPABASE_URL}/functions/v1/notification-dispatcher`, {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+                  },
+                  body: JSON.stringify({
+                    event_key: "whatsapp_disconnected_admin",
+                    organization_id: session.organization_id,
+                    user_id: admin.id,
+                    variables: { nome_sessao: displayName },
+                    dedupe_key: `whatsapp_disconnected:${session.id}:${admin.id}`
+                  }),
+                });
+              }
             }
 
             await supabase
