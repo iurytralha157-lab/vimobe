@@ -18,10 +18,10 @@ export default function EmailLogs() {
   if (isLoading) return <div className="p-8 text-center">Carregando logs...</div>;
 
   return (
-    <div className="container mx-auto py-8 space-y-8">
+    <div className="container mx-auto py-4 space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Logs de Email</h1>
-        <p className="text-muted-foreground">Histórico de envios transacionais.</p>
+        <h1 className="text-2xl font-bold">Logs de E-mail (Resend)</h1>
+        <p className="text-muted-foreground">Histórico de envios transacionais via Edge Function.</p>
       </div>
 
       <Card>
