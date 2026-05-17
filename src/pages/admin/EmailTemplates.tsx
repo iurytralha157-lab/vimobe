@@ -32,7 +32,7 @@ export default function EmailTemplates() {
           name: template.name,
           subject: template.subject,
           html: template.html,
-          active: template.active,
+          is_active: template.active,
           updated_at: new Date().toISOString(),
         })
         .eq("id", template.id);
