@@ -91,7 +91,7 @@ export function useTeamRanking(dateRange?: { from: Date; to: Date }) {
           const lastLead = lastWonByUser.get(userId);
           
           await notificationService.send({
-            templateSlug: 'ranking_update_whatsapp',
+            eventKey: 'ranking_update',
             organizationId: organizationId,
             userId: userId,
             variables: {

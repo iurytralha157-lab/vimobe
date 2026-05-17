@@ -123,7 +123,7 @@ export async function notifyLeadCreated({
   for (const notification of notifications) {
     try {
       await notificationService.send({
-        templateSlug: 'new_lead_system',
+        eventKey: 'new_lead_received',
         organizationId: notification.organization_id,
         userId: notification.user_id,
         leadId: notification.lead_id,

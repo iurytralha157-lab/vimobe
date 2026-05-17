@@ -83,7 +83,7 @@ export function useWhatsAppHealthMonitor() {
     try {
       // Create notification for the session owner via service
       await notificationService.send({
-        templateSlug: 'whatsapp_disconnected_system',
+        eventKey: 'whatsapp_disconnected',
         organizationId: organizationId,
         userId: ownerId,
         variables: {
@@ -111,7 +111,7 @@ export function useWhatsAppHealthMonitor() {
 
         for (const adminNotif of adminNotifications) {
           await notificationService.send({
-            templateSlug: 'whatsapp_disconnected_system',
+            eventKey: 'whatsapp_disconnected',
             organizationId: adminNotif.organization_id,
             userId: adminNotif.user_id,
             variables: {

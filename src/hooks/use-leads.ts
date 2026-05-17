@@ -351,7 +351,7 @@ export function useCreateLead() {
           }
 
           await notificationService.send({
-            templateSlug: 'welcome_system',
+            eventKey: 'welcome_lead',
             organizationId: organizationId,
             userId: lead.assigned_user_id,
             recipient: lead.phone,
