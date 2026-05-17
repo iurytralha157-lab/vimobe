@@ -35,7 +35,7 @@ Deno.serve(async (req) => {
     const { data: template, error: templateError } = await supabase
       .from('notification_templates')
       .select('*')
-      .eq('event_key', event_key)
+      .or(`event_key.eq.${event_key},slug.eq.${event_key}`)
       .eq('is_active', true)
       .maybeSingle();
 
