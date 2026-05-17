@@ -658,12 +658,25 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
                                       recipient: targetData.whatsapp || targetData.phone || targetData.email || undefined,
                                       variables: { 
                                         nome: targetData.name || 'Admin', 
+                                        user_name: targetData.name || 'Admin',
+                                        email: targetData.email || 'contato@exemplo.com.br',
+                                        password: '********',
                                         lead: 'Teste de Notificação',
                                         lead_name: 'Lead de Teste',
+                                        nome_lead: 'Lead de Teste',
                                         organization_name: 'Organização de Teste',
                                         source: 'Manual',
                                         from_stage: 'Novo',
-                                        to_stage: 'Em Negociação'
+                                        to_stage: 'Em Negociação',
+                                        titulo: 'Visita Técnica',
+                                        title: 'Visita Técnica',
+                                        horario: '14:30',
+                                        time: '14:30',
+                                        date: '17/05/2026',
+                                        data: '17/05/2026',
+                                        position: '1º',
+                                        total_sales: '12',
+                                        last_lead: 'Casa de Praia'
                                       },
                                       isTest: true
                                     }),
