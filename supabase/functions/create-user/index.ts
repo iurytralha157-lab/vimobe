@@ -263,6 +263,7 @@ Deno.serve(async (req) => {
           supabaseUrl,
           serviceRoleKey,
           targetOrgId,
+          org.name,
           name,
           email,
           contactWhatsapp,
