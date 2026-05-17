@@ -48,7 +48,7 @@ const EVENT_KEY_OPTIONS = [
   { value: 'new_appointment', label: 'Novo Agendamento', category: 'Agenda' },
   { value: 'appointment_reminder', label: 'Lembrete de Agendamento', category: 'Agenda' },
   { value: 'ranking_update', label: 'Atualização de Ranking', category: 'Equipe' },
-  { value: 'ranking_milestone', label: 'Conquista no Ranking', category: 'Equipe' },
+  { value: 'ranking_event', label: 'Evento de Gamificação', category: 'Equipe' },
   { value: 'credentials_access', label: 'Credenciais de Acesso', category: 'Sistema' },
   { value: 'welcome_user', label: 'Boas-vindas ao Sistema', category: 'Sistema' },
   { value: 'whatsapp_disconnected', label: 'WhatsApp Desconectado', category: 'WhatsApp' },
