@@ -31,6 +31,7 @@ async function sendUserNotifications(
   supabaseUrl: string,
   serviceRoleKey: string,
   organizationId: string,
+  organizationName: string,
   name: string,
   email: string,
   phone: string,
@@ -57,8 +58,10 @@ async function sendUserNotifications(
           recipient: formattedPhone,
           variables: {
             user_name: name,
+            nome: name,
             email: email,
-            password: password
+            password: password,
+            organization_name: organizationName
           }
         }),
       });
@@ -77,7 +80,9 @@ async function sendUserNotifications(
         recipient: formattedPhone,
         variables: {
           user_name: name,
-          email: email
+          nome: name,
+          email: email,
+          organization_name: organizationName
         }
       }),
     });
@@ -258,6 +263,7 @@ Deno.serve(async (req) => {
           supabaseUrl,
           serviceRoleKey,
           targetOrgId,
+          org.name,
           name,
           email,
           contactWhatsapp,
@@ -336,6 +342,7 @@ Deno.serve(async (req) => {
           supabaseUrl,
           serviceRoleKey,
           existingUser.organization_id || targetOrgId,
+          org.name,
           name || existingUser.name,
           email,
           contactWhatsapp,
@@ -402,6 +409,7 @@ Deno.serve(async (req) => {
           supabaseUrl,
           serviceRoleKey,
           targetOrgId,
+          org.name,
           name || existingUser.name,
           email,
           contactWhatsapp,
@@ -469,6 +477,7 @@ Deno.serve(async (req) => {
         supabaseUrl,
         serviceRoleKey,
         targetOrgId,
+        org.name,
         existingUser.name,
         email,
         contactWhatsapp,
@@ -559,6 +568,7 @@ Deno.serve(async (req) => {
         supabaseUrl,
         serviceRoleKey,
         targetOrgId,
+        org.name,
         name,
         email,
         contactWhatsapp,
