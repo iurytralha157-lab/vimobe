@@ -310,68 +310,6 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
             </Button>
           </div>
 
-          <Card className="bg-blue-50/30 border-blue-100 shadow-none">
-            <CardHeader className="py-3">
-              <div className="flex items-center gap-2">
-                <Settings className="h-4 w-4 text-blue-600" />
-                <CardTitle className="text-sm font-semibold text-blue-900">Configuração de Teste de Notificações</CardTitle>
-              </div>
-              <CardDescription className="text-xs text-blue-700/70">
-                Selecione um usuário para receber as notificações de teste disparadas abaixo.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pb-4 pt-0">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-                <div className="space-y-1.5">
-                  <Label className="text-[10px] uppercase font-bold text-blue-900/60">Organização</Label>
-                  <Select 
-                    value={selectedTestOrgId} 
-                    onValueChange={(val) => {
-                      setSelectedTestOrgId(val);
-                      setSelectedTestUserId('');
-                      fetchTestUsers(val);
-                    }}
-                  >
-                    <SelectTrigger className="h-9 bg-white border-blue-200">
-                      <SelectValue placeholder="Selecione a Organização" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {testOrgs.map(org => (
-                        <SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label className="text-[10px] uppercase font-bold text-blue-900/60">Usuário de Teste</Label>
-                  <Select 
-                    value={selectedTestUserId} 
-                    onValueChange={setSelectedTestUserId}
-                    disabled={!selectedTestOrgId || loadingTestUsers}
-                  >
-                    <SelectTrigger className="h-9 bg-white border-blue-200">
-                      <SelectValue placeholder={loadingTestUsers ? "Carregando..." : "Selecione o Usuário"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {testUsers.map(user => (
-                        <SelectItem key={user.id} value={user.id}>
-                          {user.name} ({user.email})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <Button 
-                  onClick={handleSaveTestConfig} 
-                  className="h-9 bg-blue-600 hover:bg-blue-700 text-white"
-                >
-                  Salvar Configuração de Teste
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {templates.length === 0 ? (
