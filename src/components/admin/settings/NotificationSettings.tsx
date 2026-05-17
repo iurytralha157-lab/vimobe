@@ -482,14 +482,42 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
                             </div>
                             
                             <div className="space-y-1">
-                              <Label className="text-[10px] uppercase text-muted-foreground font-bold">Chave do Evento (Dispatcher)</Label>
-                              <Input 
-                                value={template.event_key || ''} 
-                                onChange={(e) => handleLocalUpdate(template.id, { event_key: e.target.value })}
-                                className="bg-background border-primary/30 h-8 text-sm"
-                                placeholder="ex: novo_lead_atribuido"
-                              />
-                              <p className="text-[9px] text-muted-foreground">Usada para disparar esta notificação via código ou automação.</p>
+                              <Label className="text-[10px] uppercase text-muted-foreground font-bold">Chave do Evento (Disparo)</Label>
+                              <div className="space-y-2">
+                                <Select 
+                                  value={EVENT_KEY_OPTIONS.some(o => o.value === template.event_key) ? template.event_key : 'custom'} 
+                                  onValueChange={(val) => {
+                                    if (val !== 'custom') {
+                                      handleLocalUpdate(template.id, { event_key: val });
+                                    }
+                                  }}
+                                >
+                                  <SelectTrigger className="h-8 text-xs border-primary/30">
+                                    <SelectValue placeholder="Selecione o disparo" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {EVENT_KEY_OPTIONS.map((opt) => (
+                                      <SelectItem key={opt.value} value={opt.value}>
+                                        <div className="flex flex-col py-0.5">
+                                          <span className="text-[11px] font-medium leading-tight">{opt.label}</span>
+                                          <span className="text-[9px] text-muted-foreground font-mono">{opt.value}</span>
+                                        </div>
+                                      </SelectItem>
+                                    ))}
+                                    <SelectItem value="custom" className="text-primary font-medium">Outro (digitar manualmente)</SelectItem>
+                                  </SelectContent>
+                                </Select>
+
+                                {(!EVENT_KEY_OPTIONS.some(o => o.value === template.event_key) || template.event_key === 'custom') && (
+                                  <Input 
+                                    value={template.event_key === 'custom' ? '' : (template.event_key || '')} 
+                                    onChange={(e) => handleLocalUpdate(template.id, { event_key: e.target.value })}
+                                    className="bg-background border-dashed h-8 text-xs font-mono"
+                                    placeholder="Digite a chave manual (ex: gatilho_especifico)"
+                                  />
+                                )}
+                              </div>
+                              <p className="text-[9px] text-muted-foreground italic">Este é o ID que liga o código do sistema a este template.</p>
                             </div>
 
                             <div className="space-y-1">
