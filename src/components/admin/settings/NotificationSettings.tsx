@@ -33,7 +33,7 @@ import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 
 export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
-  const { isSuperAdmin, user } = useAuth();
+  const { isSuperAdmin, user, profile } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
   const [templates, setTemplates] = useState<NotificationTemplate[]>([]);
