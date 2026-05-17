@@ -46,7 +46,7 @@ export function useTeamRanking(dateRange?: { from: Date; to: Date }) {
       // Fetch won leads in current month — only count, no R$ values
       const { data: wonLeads, error: leadsError } = await supabase
         .from("leads")
-        .select("id, assigned_user_id")
+        .select("id, assigned_user_id, name")
         .eq("organization_id", organizationId)
         .eq("deal_status", "won")
         .gte("won_at", monthStart)
@@ -57,12 +57,13 @@ export function useTeamRanking(dateRange?: { from: Date; to: Date }) {
 
       // Count per user
       const countMap = new Map<string, number>();
+      const lastWonByUser = new Map<string, any>();
+
       (wonLeads || []).forEach((l) => {
         if (l.assigned_user_id) {
-          countMap.set(
-            l.assigned_user_id,
-            (countMap.get(l.assigned_user_id) || 0) + 1
-          );
+          const currentCount = countMap.get(l.assigned_user_id) || 0;
+          countMap.set(l.assigned_user_id, currentCount + 1);
+          lastWonByUser.set(l.assigned_user_id, l);
         }
       });
 
@@ -82,8 +83,33 @@ export function useTeamRanking(dateRange?: { from: Date; to: Date }) {
       const myEntry = ranking.find((r) => r.isCurrentUser);
       const myPosition = myEntry?.position ?? null;
 
+      // DISPARAR NOTIFICAÇÃO DE ATUALIZAÇÃO DE RANKING se houver mudanças significativas
+      // (Isso é um "side effect" no queryFn, geralmente evitado, mas útil aqui para trigger sob demanda)
+      if (myEntry && myEntry.closedCount > 0) {
+        try {
+          const { notificationService } = await import('@/services/NotificationService');
+          const lastLead = lastWonByUser.get(userId);
+          
+          await notificationService.send({
+            templateSlug: 'ranking_update_whatsapp',
+            organizationId: organizationId,
+            userId: userId,
+            variables: {
+              user_name: myEntry.userName,
+              position: String(myPosition),
+              total_sales: String(myEntry.closedCount),
+              last_lead: lastLead?.name || 'Venda'
+            },
+            dedupeKey: `ranking_update:${userId}:${myEntry.closedCount}` // Só notifica se o contador mudar
+          });
+        } catch (err) {
+          console.error('Failed to trigger ranking notification:', err);
+        }
+      }
+
       return { ranking, myPosition };
     },
     enabled: !!organizationId && !!userId,
+    staleTime: 1000 * 60 * 5, // 5 minutos de cache
   });
 }

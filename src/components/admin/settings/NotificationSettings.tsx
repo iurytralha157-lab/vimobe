@@ -133,10 +133,35 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
         .from('notification_logs')
         .select('*, template:notification_templates(name, slug), user:users(name, email)')
         .order('created_at', { ascending: false })
-        .limit(100);
+        .limit(200);
       
       if (logsError) throw logsError;
       setLogs(logsData || []);
+
+      // Configurar canal em tempo real para o histórico
+      const channel = supabase
+        .channel('notification_logs_realtime')
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'notification_logs' },
+          async (payload) => {
+            // Busca os detalhes do novo log para manter a consistência do join
+            const { data: newLog } = await supabase
+              .from('notification_logs')
+              .select('*, template:notification_templates(name, slug), user:users(name, email)')
+              .eq('id', payload.new.id)
+              .single();
+            
+            if (newLog) {
+              setLogs(prev => [newLog, ...prev.slice(0, 199)]);
+            }
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
 
       const { data: settingsData } = await supabase
         .from('notification_settings' as any)
