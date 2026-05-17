@@ -9,7 +9,7 @@ export default function EmailLogs() {
   const { data: logs, isLoading } = useQuery({
     queryKey: ["email-logs"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("email_logs" as any).select("*").order("created_at", { ascending: false });
+      const { data, error } = await supabase.from("email_logs" as any).select("*").order("sent_at", { ascending: false });
       if (error) throw error;
       return data;
     },
