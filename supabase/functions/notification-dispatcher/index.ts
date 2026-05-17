@@ -84,7 +84,7 @@ Deno.serve(async (req) => {
       const startTime = performance.now();
 
       try {
-        if (channel === 'system' && userId) {
+        if (channel === 'system' && user_id) {
           const { error } = await supabase.from('notifications').insert({
             user_id: userId,
             organization_id: organizationId,
