@@ -184,8 +184,8 @@ export const AppHeader = React.memo(function AppHeader({
           {resolvedTheme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
         </Button>
 
-        {/* Notifications circle - Only for Super Admins */}
-        {isSuperAdmin && (
+        {/* Notifications circle */}
+        {user && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button 
