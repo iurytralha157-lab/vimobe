@@ -439,8 +439,6 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
                   </div>
                 </CardContent>
               </Card>
-                </CardContent>
-              </Card>
               ))
             )}
           </div>
