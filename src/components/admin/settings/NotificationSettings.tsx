@@ -70,13 +70,13 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
       setOriginalTemplates(JSON.parse(JSON.stringify(data)));
 
       const { data: logsData, error: logsError } = await supabase
-        .from('notification_logs' as any)
-        .select('*')
+        .from('notification_logs')
+        .select('*, template:notification_templates(name, slug), user:users(name, email)')
         .order('created_at', { ascending: false })
         .limit(100);
       
       if (logsError) throw logsError;
-      setLogs(logsData as any[] || []);
+      setLogs(logsData || []);
 
       const { data: settingsData } = await supabase
         .from('notification_settings' as any)
@@ -627,7 +627,7 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
                             </Badge>
                           </td>
                           <td className="px-4 py-3 text-muted-foreground truncate max-w-[150px]">
-                            {log.recipient}
+                            {log.user?.name || log.recipient || 'N/A'}
                           </td>
                           <td className="px-4 py-3">
                             {log.status === 'sent' ? (

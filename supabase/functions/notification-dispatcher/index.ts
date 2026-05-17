@@ -167,7 +167,12 @@ Deno.serve(async (req) => {
       return { channel, result };
     }));
 
-    return new Response(JSON.stringify({ success: true, results: dispatchResults }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    const allFailed = dispatchResults.length > 0 && dispatchResults.every(r => !r.result.success);
+    return new Response(JSON.stringify({ 
+      success: !allFailed, 
+      results: dispatchResults,
+      error: allFailed ? 'All channels failed to send' : null 
+    }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
   } catch (error) {
     console.error("Notification Dispatcher Error:", error);
