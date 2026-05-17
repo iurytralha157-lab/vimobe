@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useCreateCommissionOnWon, useCreateReceivableOnWon } from './use-create-commission';
+import { notifyLeadWon } from './use-lead-notifications';
 
 interface ChangeDealStatusParams {
   leadId: string;
