@@ -80,7 +80,9 @@ async function sendUserNotifications(
         recipient: formattedPhone,
         variables: {
           user_name: name,
-          email: email
+          nome: name,
+          email: email,
+          organization_name: organizationName
         }
       }),
     });
