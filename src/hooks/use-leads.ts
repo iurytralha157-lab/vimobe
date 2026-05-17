@@ -211,14 +211,10 @@ export function useCreateLead() {
               if (leadData?.assigned_user_id) {
                 await notificationService.send({
                   eventKey: 'lead_reentry',
-                  templateSlug: 'lead_reentry_system',
                   organizationId: organizationId,
                   userId: leadData.assigned_user_id,
                   leadId: existingLead.id,
                   dedupeKey: `lead_reentry:${existingLead.id}`,
-                  organizationId: organizationId,
-                  userId: leadData.assigned_user_id,
-                  leadId: existingLead.id,
                   variables: {
                     lead_name: lead.name,
                     source: lead.source || 'manual'
