@@ -149,7 +149,7 @@ Deno.serve(async (req) => {
           template_id: template.id,
           organization_id: organization_id,
           user_id: user_id,
-          recipient: recipient || userId || 'system',
+          recipient: recipient || user_id || 'system',
           channel: channel,
           payload: { variables, formattedTitle, formattedMessage, dedupe_key: finalDedupeKey, executionTime },
           response: result,
