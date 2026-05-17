@@ -47,6 +47,7 @@ export default function EmailTemplates() {
       toast.error("Erro ao atualizar template: " + error.message);
     },
   });
+
   const sendTestEmail = useMutation({
     mutationFn: async (params: { key: string, test_recipient: string }) => {
       const { data, error } = await supabase.functions.invoke("send-email", {
@@ -125,7 +126,21 @@ export default function EmailTemplates() {
                       {template.active ? 'Ativo' : 'Inativo'}
                     </span>
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right flex justify-end gap-1">
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      title="Enviar Teste"
+                      onClick={() => {
+                        const email = prompt("Para qual e-mail deseja enviar o teste?", "seuemail@exemplo.com");
+                        if (email) {
+                          sendTestEmail.mutate({ key: template.key, test_recipient: email });
+                        }
+                      }}
+                      disabled={sendTestEmail.isPending}
+                    >
+                      <Send className={`h-4 w-4 ${sendTestEmail.isPending ? 'animate-pulse' : ''}`} />
+                    </Button>
                     <Dialog open={editingTemplate?.id === template.id} onOpenChange={(open) => !open && setEditingTemplate(null)}>
                       <DialogTrigger asChild>
                         <Button variant="ghost" size="icon" onClick={() => setEditingTemplate({ ...template })}>
@@ -187,6 +202,13 @@ export default function EmailTemplates() {
                   </TableCell>
                 </TableRow>
               ))}
+              {templates?.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                    Nenhum template encontrado. Execute o SQL de migração.
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </CardContent>
