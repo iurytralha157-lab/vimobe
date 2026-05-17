@@ -47,6 +47,7 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
   const [activeSubTab, setActiveSubTab] = useState('templates');
   const [changedIds, setChangedIds] = useState<Set<string>>(new Set());
   const [settings, setSettings] = useState<any>(null);
+  const [expandedTemplateId, setExpandedTemplateId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchData();
