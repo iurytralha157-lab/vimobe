@@ -433,11 +433,12 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
                         </span>
                       )}
                     </div>
-                  </div>
                     <div className="flex items-center gap-2 mt-4 pt-2 border-t border-dashed">
                       <span className="text-[9px] text-muted-foreground">ID: {template.id.split('-')[0]}...</span>
                     </div>
                   </div>
+                </CardContent>
+              </Card>
                 </CardContent>
               </Card>
               ))
