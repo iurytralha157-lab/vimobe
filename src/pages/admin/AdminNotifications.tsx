@@ -2,10 +2,12 @@ import { useState } from 'react';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Bell, MessageSquare, Smartphone, Monitor, History, BarChart3, Search } from 'lucide-react';
+import { Bell, MessageSquare, Smartphone, Monitor, History, BarChart3, Search, Mail } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { NotificationSettings } from '@/components/admin/settings/NotificationSettings';
 import { NotificationLogsTable } from '@/components/admin/notifications/NotificationLogsTable';
+import EmailTemplates from './EmailTemplates';
+import EmailLogs from './EmailLogs';
 
 export default function AdminNotifications() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -31,11 +33,15 @@ export default function AdminNotifications() {
           </div>
         </div>
 
-        <Tabs defaultValue="templates" className="space-y-4">
-          <TabsList className="grid grid-cols-2 md:grid-cols-6 h-auto p-1 bg-muted/50 border">
+        <Tabs defaultValue="email-resend" className="space-y-4">
+          <TabsList className="grid grid-cols-2 md:grid-cols-7 h-auto p-1 bg-muted/50 border">
+            <TabsTrigger value="email-resend" className="flex items-center gap-2 py-2">
+              <Mail className="h-4 w-4" />
+              <span className="hidden md:inline">E-mail (Resend)</span>
+            </TabsTrigger>
             <TabsTrigger value="templates" className="flex items-center gap-2 py-2">
               <Bell className="h-4 w-4" />
-              <span className="hidden md:inline">Templates</span>
+              <span className="hidden md:inline">Notificações</span>
             </TabsTrigger>
             <TabsTrigger value="whatsapp" className="flex items-center gap-2 py-2">
               <MessageSquare className="h-4 w-4" />
@@ -58,6 +64,21 @@ export default function AdminNotifications() {
               <span className="hidden md:inline">Analytics</span>
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="email-resend" className="space-y-4">
+            <Tabs defaultValue="templates-resend" className="w-full">
+              <TabsList>
+                <TabsTrigger value="templates-resend">Templates de E-mail</TabsTrigger>
+                <TabsTrigger value="logs-resend">Logs de Envio</TabsTrigger>
+              </TabsList>
+              <TabsContent value="templates-resend">
+                <EmailTemplates />
+              </TabsContent>
+              <TabsContent value="logs-resend">
+                <EmailLogs />
+              </TabsContent>
+            </Tabs>
+          </TabsContent>
 
           <TabsContent value="templates" className="space-y-4">
             <NotificationSettings />
@@ -97,3 +118,4 @@ export default function AdminNotifications() {
     </AdminLayout>
   );
 }
+
