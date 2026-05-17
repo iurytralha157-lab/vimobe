@@ -293,3 +293,65 @@ export async function notifyLeadMoved({
     }
   }
 }
+
+interface NotifyLeadWonParams {
+  leadId: string;
+  leadName: string;
+  organizationId: string;
+  organizationName: string;
+  assignedUserId?: string | null;
+}
+
+/**
+ * Notifica sobre fechamento de negócio (Lead Ganho).
+ */
+export async function notifyLeadWon({
+  leadId,
+  leadName,
+  organizationId,
+  organizationName,
+  assignedUserId,
+}: NotifyLeadWonParams): Promise<void> {
+  const notifiedUserIds = new Set<string>();
+  
+  // 1. Notificar o vendedor atribuído
+  if (assignedUserId) {
+    notifiedUserIds.add(assignedUserId);
+  }
+
+  // 2. Notificar administradores da organização
+  try {
+    const { data: admins } = await supabase
+      .from('users')
+      .select('id')
+      .eq('organization_id', organizationId)
+      .eq('role', 'admin')
+      .eq('is_active', true);
+
+    if (admins) {
+      for (const admin of admins) {
+        notifiedUserIds.add(admin.id);
+      }
+    }
+  } catch (error) {
+    console.error('Erro ao buscar administradores para notificação de venda:', error);
+  }
+
+  // Disparar para todos os usuários identificados
+  for (const userId of notifiedUserIds) {
+    try {
+      await notificationService.send({
+        eventKey: 'deal_won',
+        organizationId,
+        userId,
+        leadId,
+        variables: {
+          lead_name: leadName,
+          organization_name: organizationName
+        }
+      });
+    } catch (error) {
+      console.error(`Erro ao disparar notificação de venda para usuário ${userId}:`, error);
+    }
+  }
+}
