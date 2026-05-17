@@ -88,7 +88,6 @@ export default function SystemSettingsPage() {
   const tabs: AnimatedTabItem[] = useMemo(() => [
     { value: 'media', label: 'Mídia', icon: ImageIcon },
     { value: 'integrations', label: 'Integrações Externas', icon: Share2 },
-    { value: 'communication', label: 'Comunicação Interna', icon: Megaphone },
     { value: 'maintenance', label: 'Manutenção e Atualizações', icon: Wrench },
     { value: 'notifications', label: 'Notificações', icon: Bell },
   ], []);
