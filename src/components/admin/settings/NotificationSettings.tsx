@@ -504,18 +504,29 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
                                     .limit(1)
                                     .maybeSingle();
                                   
-                                  const targetUser = superAdmin || user;
-                                  if (!targetUser) return;
+                                  let targetData: { id: string, email?: string, whatsapp?: string, phone?: string, name?: string, organization_id?: string | null } | null = superAdmin;
                                   
-                                  const targetOrgId = targetUser.organization_id || profile?.organization_id || '';
+                                  if (!targetData && user) {
+                                    // Fallback to current user profile
+                                    const { data: userProfile } = await supabase
+                                      .from('users')
+                                      .select('id, email, whatsapp, phone, name, organization_id')
+                                      .eq('id', user.id)
+                                      .single();
+                                    targetData = userProfile;
+                                  }
+
+                                  if (!targetData) return;
+                                  
+                                  const targetOrgId = targetData.organization_id || profile?.organization_id || '';
                                   
                                   toast.promise(
                                     notificationService.send({
                                       eventKey: template.event_key || template.slug,
                                       organizationId: targetOrgId,
-                                      userId: targetUser.id,
-                                      recipient: targetUser.whatsapp || targetUser.phone || targetUser.email || undefined,
-                                      variables: { nome: targetUser.name || 'Admin', lead: 'Teste de Notificação' },
+                                      userId: targetData.id,
+                                      recipient: targetData.whatsapp || targetData.phone || targetData.email || undefined,
+                                      variables: { nome: targetData.name || 'Admin', lead: 'Teste de Notificação' },
                                       isTest: true
                                     }),
                                     {
