@@ -147,9 +147,6 @@ export default function SystemSettingsPage() {
             <IntegrationsSettings settings={settings} onUpdate={handleUpdate} />
           </TabsContent>
 
-          <TabsContent value="communication" className="mt-0">
-            <InternalCommunicationSettings settings={settings} onUpdate={handleUpdate} />
-          </TabsContent>
 
           <TabsContent value="maintenance" className="mt-0">
             <MaintenanceSettings settings={settings} onUpdate={handleUpdate} />
