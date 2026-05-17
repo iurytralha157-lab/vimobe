@@ -129,6 +129,29 @@ export default function Onboarding() {
     }
   };
 
+  const handleCNPJLookup = async () => {
+    const cleanCNPJ = form.cnpj.replace(/\D/g, '');
+    if (cleanCNPJ.length !== 14) return;
+    setLoading(true);
+    const data = await fetchCNPJData(cleanCNPJ);
+    if (data) {
+      setForm((prev) => ({
+        ...prev,
+        company_name: data.nome_fantasia || data.razao_social,
+        company_address: data.logradouro || '',
+        company_city: data.municipio && data.uf ? `${data.municipio} - ${data.uf}` : '',
+        company_neighborhood: data.bairro || '',
+        company_number: data.numero || '',
+        company_email: data.email || '',
+        company_phone: data.ddd_telefone_1 || '',
+      }));
+      toast.success('Dados encontrados!');
+    } else {
+      toast.error('CNPJ não encontrado');
+    }
+    setLoading(false);
+  };
+
   const handleNext = () => {
     if (step === 2 && (!form.responsible_name || !form.responsible_email)) {
       toast.error('Preencha os campos obrigatórios');
