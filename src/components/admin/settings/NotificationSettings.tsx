@@ -33,7 +33,7 @@ import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 
 export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
-  const { isSuperAdmin } = useAuth();
+  const { isSuperAdmin, user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
   const [templates, setTemplates] = useState<NotificationTemplate[]>([]);
@@ -41,6 +41,7 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
   const [logs, setLogs] = useState<any[]>([]);
   const [activeSubTab, setActiveSubTab] = useState('templates');
   const [changedIds, setChangedIds] = useState<Set<string>>(new Set());
+  const [settings, setSettings] = useState<any>(null);
 
   useEffect(() => {
     fetchData();
@@ -64,15 +65,19 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
 
       const { data: logsData, error: logsError } = await supabase
         .from('notification_logs' as any)
-        .select(`
-          *,
-          template:notification_templates(name, slug)
-        `)
+        .select('*')
         .order('created_at', { ascending: false })
         .limit(100);
       
       if (logsError) throw logsError;
       setLogs(logsData as any[] || []);
+
+      const { data: settingsData } = await supabase
+        .from('notification_settings' as any)
+        .select('*')
+        .maybeSingle();
+      
+      if (settingsData) setSettings(settingsData);
     } catch (error: any) {
       console.error('Erro ao buscar dados:', error);
       toast.error('Não foi possível carregar os templates. Verifique se as tabelas foram criadas.');
