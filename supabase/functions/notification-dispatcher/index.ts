@@ -86,12 +86,12 @@ Deno.serve(async (req) => {
       try {
         if (channel === 'system' && user_id) {
           const { error } = await supabase.from('notifications').insert({
-            user_id: userId,
-            organization_id: organizationId,
+            user_id: user_id,
+            organization_id: organization_id,
             title: formattedTitle || template.name,
             content: formattedMessage,
             type: template.category || 'info',
-            lead_id: leadId || null,
+            lead_id: lead_id || null,
             is_read: false,
           });
           result = { success: !error, error };
@@ -103,15 +103,14 @@ Deno.serve(async (req) => {
               "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
             },
             body: JSON.stringify({
-              organization_id: organizationId,
-              user_id: userId,
+              organization_id: organization_id,
+              user_id: user_id,
               phone: recipient,
               message: formattedMessage,
             }),
           });
           result = { success: resp.ok };
         } else if (channel === 'email') {
-          // Placeholder for Resend (will be implemented in Etapa 4)
           const resp = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
             method: "POST",
             headers: {
@@ -125,7 +124,7 @@ Deno.serve(async (req) => {
             }),
           });
           result = { success: resp.ok };
-        } else if (channel === 'push' && userId) {
+        } else if (channel === 'push' && user_id) {
           const resp = await fetch(`${SUPABASE_URL}/functions/v1/send-push`, {
             method: "POST",
             headers: {
@@ -133,10 +132,10 @@ Deno.serve(async (req) => {
               "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
             },
             body: JSON.stringify({
-              user_id: userId,
+              user_id: user_id,
               title: formattedTitle || template.name,
               body: formattedMessage,
-              data: { lead_id: leadId }
+              data: { lead_id: lead_id }
             }),
           });
           result = { success: resp.ok };
@@ -148,8 +147,8 @@ Deno.serve(async (req) => {
         // Log each channel send
         await supabase.from('notification_logs').insert({
           template_id: template.id,
-          organization_id: organizationId,
-          user_id: userId,
+          organization_id: organization_id,
+          user_id: user_id,
           recipient: recipient || userId || 'system',
           channel: channel,
           payload: { variables, formattedTitle, formattedMessage, dedupe_key: finalDedupeKey, executionTime },
