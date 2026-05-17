@@ -342,6 +342,7 @@ Deno.serve(async (req) => {
           supabaseUrl,
           serviceRoleKey,
           existingUser.organization_id || targetOrgId,
+          org.name,
           name || existingUser.name,
           email,
           contactWhatsapp,
