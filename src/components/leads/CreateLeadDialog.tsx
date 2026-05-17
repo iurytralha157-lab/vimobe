@@ -277,13 +277,14 @@ export function CreateLeadDialog({
           const assignedUser = allUsers.find(u => u.id === formData.assigned_user_id);
           
           await notificationService.send({
-            templateSlug: 'manual_lead_registered_whatsapp',
+            eventKey: 'manual_lead_registered',
             organizationId: organization?.id || '',
             userId: formData.assigned_user_id,
             variables: {
               lead_name: formData.name,
               user_name: assignedUser?.name || 'Corretor'
-            }
+            },
+            dedupeKey: `manual_lead:${formData.phone}`
           });
         } catch (err) {
           console.error('Manual lead notification failed:', err);
