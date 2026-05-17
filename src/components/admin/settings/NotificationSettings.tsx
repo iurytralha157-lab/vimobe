@@ -99,6 +99,10 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
           title: template.title,
           message: template.message,
           channel: template.channel,
+          channels: template.channels,
+          subject: template.subject,
+          html_body: template.html_body,
+          dedupe_window_seconds: template.dedupe_window_seconds,
           is_active: template.is_active,
           category: template.category,
           variables: template.variables,
@@ -346,7 +350,27 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
                       value={template.title || ''} 
                       onChange={(e) => handleLocalUpdate(template.id, { title: e.target.value })}
                       className="bg-background h-9"
-                      placeholder="Título da notificação ou assunto do e-mail"
+                      placeholder="Título da notificação interna (Push)"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-xs uppercase text-muted-foreground font-bold">Assunto do E-mail</Label>
+                    <Input 
+                      value={template.subject || ''} 
+                      onChange={(e) => handleLocalUpdate(template.id, { subject: e.target.value })}
+                      className="bg-background h-9 border-blue-200"
+                      placeholder="Assunto que o cliente verá no e-mail"
+                    />
+                  </div>
+
+                  <div className="space-y-2 flex-1 flex flex-col min-h-[120px]">
+                    <Label className="text-xs uppercase text-muted-foreground font-bold">Corpo do E-mail (HTML)</Label>
+                    <Textarea 
+                      value={template.html_body || ''} 
+                      onChange={(e) => handleLocalUpdate(template.id, { html_body: e.target.value })}
+                      className="flex-1 font-mono text-[10px] bg-background resize-none border-blue-200"
+                      placeholder="<html>... Use {{variavel}} para e-mail</html>"
                     />
                   </div>
 
