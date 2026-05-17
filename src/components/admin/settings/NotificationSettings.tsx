@@ -591,7 +591,7 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
                     const { error } = await supabase
                       .from('notification_settings' as any)
                       .upsert({
-                        organization_id: user?.user_metadata?.organization_id,
+                        organization_id: profile?.organization_id || user?.user_metadata?.organization_id,
                         from_name: settings.from_name,
                         from_email: settings.from_email,
                         reply_to: settings.reply_to,
