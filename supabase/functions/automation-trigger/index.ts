@@ -327,34 +327,31 @@ Deno.serve(async (req) => {
 
         console.log(`Created execution ${execution.id} for automation ${automation.id}`);
 
-        // Send "automation started" notification
+        // Send "automation started" notification via Dispatcher
         const notifyUserId = data.lead_id 
           ? (await supabaseAdmin.from("leads").select("assigned_user_id").eq("id", data.lead_id).single()).data?.assigned_user_id 
           : automation.created_by;
         
         if (notifyUserId) {
-          // Fetch organization name
-          let organizationName = "";
-          const { data: org } = await supabaseAdmin
-            .from("organizations")
-            .select("name")
-            .eq("id", organizationId)
-            .single();
-          if (org) {
-            organizationName = org.name;
-          }
-
-          const orgSuffix = organizationName ? ` na *${organizationName}*` : "";
-
-          await supabaseAdmin.from("notifications").insert({
-            user_id: notifyUserId,
-            organization_id: organizationId,
-            title: "🤖 Automação Iniciada",
-            content: `"${automation.name}" iniciou para ${leadName}${orgSuffix}`,
-            type: "automation",
-            lead_id: data.lead_id || null,
+          await fetch(`${SUPABASE_URL}/functions/v1/notification-dispatcher`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+            },
+            body: JSON.stringify({
+              event_key: "automation_started",
+              organization_id: organizationId,
+              user_id: notifyUserId,
+              lead_id: data.lead_id || null,
+              variables: {
+                nome_automacao: automation.name,
+                nome_lead: leadName
+              },
+              dedupe_key: `automation_started:${automation.id}:${data.lead_id || notifyUserId}`
+            }),
           });
-          console.log(`Notification sent: automation started for ${leadName} at ${organizationName}`);
+          console.log(`Notification dispatched: automation started for ${leadName}`);
         }
 
         // Call executor to process the first node

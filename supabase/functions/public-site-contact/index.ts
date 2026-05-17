@@ -257,8 +257,7 @@ Deno.serve(async (req) => {
       // If no distribution queue matches, handle_lead_intake assigns to the first admin as fallback.
     }
 
-    // Create notification for the assigned user (admin or distributed user)
-    // First, get the current assigned user
+    // Create notification via Dispatcher
     const { data: currentLead } = await supabase
       .from('leads')
       .select('assigned_user_id')
@@ -266,13 +265,23 @@ Deno.serve(async (req) => {
       .single();
 
     if (currentLead?.assigned_user_id) {
-      await supabase.from('notifications').insert({
-        user_id: currentLead.assigned_user_id,
-        organization_id: organization_id,
-        lead_id: leadId,
-        title: 'Novo lead do site',
-        content: `${name} entrou em contato pelo site${property_code ? ` sobre o imóvel ${property_code}` : ''}`,
-        type: 'new_lead'
+      await fetch(`${supabaseUrl}/functions/v1/notification-dispatcher`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${supabaseServiceKey}`,
+        },
+        body: JSON.stringify({
+          event_key: "new_lead_received",
+          organization_id: organization_id,
+          user_id: currentLead.assigned_user_id,
+          lead_id: leadId,
+          variables: {
+            nome: name,
+            imovel: property_code || 'Geral'
+          },
+          dedupe_key: `new_lead:${leadId}`
+        }),
       });
     }
 
@@ -286,16 +295,26 @@ Deno.serve(async (req) => {
       .neq('id', currentLead?.assigned_user_id || '00000000-0000-0000-0000-000000000000');
 
     if (admins && admins.length > 0) {
-      const notifications = admins.map(admin => ({
-        user_id: admin.id,
-        organization_id: organization_id,
-        lead_id: leadId,
-        title: 'Novo lead do site',
-        content: `${name} entrou em contato pelo site${property_code ? ` sobre o imóvel ${property_code}` : ''}`,
-        type: 'new_lead'
-      }));
-
-      await supabase.from('notifications').insert(notifications);
+      for (const admin of admins) {
+        await fetch(`${supabaseUrl}/functions/v1/notification-dispatcher`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${supabaseServiceKey}`,
+          },
+          body: JSON.stringify({
+            event_key: "new_lead_received",
+            organization_id: organization_id,
+            user_id: admin.id,
+            lead_id: leadId,
+            variables: {
+              nome: name,
+              imovel: property_code || 'Geral'
+            },
+            dedupe_key: `new_lead:${leadId}:${admin.id}`
+          }),
+        });
+      }
     }
 
     return new Response(
