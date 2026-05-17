@@ -109,7 +109,8 @@ Deno.serve(async (req) => {
               message: formattedMessage,
             }),
           });
-          result = { success: resp.ok };
+          const data = await resp.json();
+          result = { success: resp.ok && data.success !== false, data, error: data.error };
         } else if (channel === 'email') {
           const resp = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
             method: "POST",
@@ -120,10 +121,12 @@ Deno.serve(async (req) => {
             body: JSON.stringify({
               to: recipient,
               template_key: template.slug,
-              variables: variables
+              variables: variables,
+              organization_id: organization_id
             }),
           });
-          result = { success: resp.ok };
+          const data = await resp.json();
+          result = { success: resp.ok, data, error: data.error };
         } else if (channel === 'push' && user_id) {
           const resp = await fetch(`${SUPABASE_URL}/functions/v1/send-push`, {
             method: "POST",
@@ -138,7 +141,8 @@ Deno.serve(async (req) => {
               data: { lead_id: lead_id }
             }),
           });
-          result = { success: resp.ok };
+          const data = await resp.json();
+          result = { success: resp.ok && data.success !== false, data, error: data.error };
         }
 
         const endTime = performance.now();
@@ -151,7 +155,16 @@ Deno.serve(async (req) => {
           user_id: user_id,
           recipient: recipient || user_id || 'system',
           channel: channel,
-          payload: { variables, formattedTitle, formattedMessage, dedupe_key: finalDedupeKey, executionTime },
+          payload: { 
+            variables, 
+            formattedTitle, 
+            formattedMessage, 
+            dedupe_key: finalDedupeKey, 
+            executionTime,
+            template_name: template.name,
+            lead_id: lead_id,
+            is_test: is_test
+          },
           response: result,
           status: result.success ? 'sent' : 'failed',
           error: result.error ? String(result.error) : null,
@@ -167,7 +180,12 @@ Deno.serve(async (req) => {
       return { channel, result };
     }));
 
-    return new Response(JSON.stringify({ success: true, results: dispatchResults }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    const allFailed = dispatchResults.length > 0 && dispatchResults.every(r => !r.result.success);
+    return new Response(JSON.stringify({ 
+      success: !allFailed, 
+      results: dispatchResults,
+      error: allFailed ? 'All channels failed to send' : null 
+    }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
   } catch (error) {
     console.error("Notification Dispatcher Error:", error);

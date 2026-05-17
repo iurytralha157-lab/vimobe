@@ -70,13 +70,13 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
       setOriginalTemplates(JSON.parse(JSON.stringify(data)));
 
       const { data: logsData, error: logsError } = await supabase
-        .from('notification_logs' as any)
-        .select('*')
+        .from('notification_logs')
+        .select('*, template:notification_templates(name, slug), user:users(name, email)')
         .order('created_at', { ascending: false })
         .limit(100);
       
       if (logsError) throw logsError;
-      setLogs(logsData as any[] || []);
+      setLogs(logsData || []);
 
       const { data: settingsData } = await supabase
         .from('notification_settings' as any)
@@ -518,7 +518,19 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
 
                                   if (!targetData) return;
                                   
-                                  const targetOrgId = targetData.organization_id || profile?.organization_id || '';
+                                  let targetOrgId = targetData.organization_id || profile?.organization_id;
+                                  
+                                  if (!targetOrgId) {
+                                    const { data: orgs } = await supabase.from('organizations').select('id').limit(1);
+                                    if (orgs && orgs.length > 0) {
+                                      targetOrgId = orgs[0].id;
+                                    }
+                                  }
+                                  
+                                  if (!targetOrgId) {
+                                    toast.error('Nenhuma organização encontrada para o teste');
+                                    return;
+                                  }
                                   
                                   toast.promise(
                                     notificationService.send({
@@ -598,7 +610,7 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
               <CardDescription>Acompanhe em tempo real as notificações enviadas pelo sistema.</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="rounded-md border">
+              <div className="rounded-md border overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead className="bg-muted/50 border-b">
                     <tr>
@@ -607,7 +619,7 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
                       <th className="px-4 py-3 text-left font-medium">Canal</th>
                       <th className="px-4 py-3 text-left font-medium">Destinatário</th>
                       <th className="px-4 py-3 text-left font-medium">Status</th>
-                      <th className="px-4 py-3 text-left font-medium">Tempo</th>
+                      <th className="px-4 py-3 text-left font-medium">Ações</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -615,7 +627,12 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
                       logs.map((log) => (
                         <tr key={log.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
                           <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
-                            {format(new Date(log.created_at), 'dd/MM HH:mm', { locale: ptBR })}
+                            <div className="flex flex-col">
+                              <span>{format(new Date(log.created_at), 'dd/MM HH:mm', { locale: ptBR })}</span>
+                              {log.is_test && (
+                                <Badge variant="secondary" className="w-fit text-[8px] h-3 px-1 mt-0.5 bg-blue-100 text-blue-600 border-blue-200">TESTE</Badge>
+                              )}
+                            </div>
                           </td>
                           <td className="px-4 py-3">
                             <div className="font-medium">{log.template?.name || 'Manual / Sistema'}</div>
@@ -623,31 +640,47 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
                           </td>
                           <td className="px-4 py-3">
                             <Badge variant="outline" className="capitalize text-[10px]">
-                              {log.channel}
+                              {log.channel === 'system' ? 'Sistema' : log.channel}
                             </Badge>
                           </td>
-                          <td className="px-4 py-3 text-muted-foreground truncate max-w-[150px]">
-                            {log.recipient}
+                          <td className="px-4 py-3 text-muted-foreground">
+                            <div className="flex flex-col">
+                              <span className="font-medium text-foreground">{log.user?.name || log.recipient || 'N/A'}</span>
+                              {log.user?.email && <span className="text-[10px] opacity-70">{log.user.email}</span>}
+                            </div>
                           </td>
                           <td className="px-4 py-3">
-                            {log.status === 'sent' ? (
-                              <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-green-500/10 text-green-600 w-fit">
-                                <CheckCircle2 className="h-3 w-3" />
-                                <span className="text-[10px] font-medium">Enviado</span>
-                              </div>
-                            ) : (
-                              <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-destructive/10 text-destructive w-fit">
-                                <XCircle className="h-3 w-3" />
-                                <span className="text-[10px] font-medium">Erro</span>
-                              </div>
-                            )}
+                            <div className="flex items-center gap-2">
+                              {log.status === 'sent' ? (
+                                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-green-500/10 text-green-600 w-fit">
+                                  <CheckCircle2 className="h-3 w-3" />
+                                  <span className="text-[10px] font-medium">Sucesso</span>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-destructive/10 text-destructive w-fit">
+                                  <XCircle className="h-3 w-3" />
+                                  <span className="text-[10px] font-medium">Erro</span>
+                                </div>
+                              )}
+                              {log.payload?.executionTime && (
+                                <span className="text-[9px] text-muted-foreground font-mono">
+                                  ({log.payload.executionTime})
+                                </span>
+                              )}
+                            </div>
                           </td>
                           <td className="px-4 py-3">
-                            {log.payload?.executionTime && (
-                              <span className="text-[10px] text-muted-foreground font-mono">
-                                {log.payload.executionTime}
-                              </span>
-                            )}
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-7 text-[10px] gap-1"
+                              onClick={() => {
+                                console.log('Log details:', log);
+                                alert(`Payload: ${JSON.stringify(log.payload, null, 2)}\n\nResponse: ${JSON.stringify(log.response, null, 2)}`);
+                              }}
+                            >
+                              Detalhes
+                            </Button>
                           </td>
                         </tr>
                       ))
