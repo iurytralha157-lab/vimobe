@@ -221,18 +221,18 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
   return (
     <div className="space-y-6">
       <Tabs value={activeSubTab} onValueChange={setActiveSubTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 max-w-[400px]">
+        <TabsList className="grid w-full grid-cols-3 max-w-[600px]">
           <TabsTrigger value="templates" className="flex items-center gap-2">
             <MessageSquare className="h-4 w-4" />
             Templates
           </TabsTrigger>
-            <TabsTrigger value="logs" className="flex items-center gap-2">
+          <TabsTrigger value="logs" className="flex items-center gap-2">
             <History className="h-4 w-4" />
             Histórico
           </TabsTrigger>
           <TabsTrigger value="settings" className="flex items-center gap-2">
-            <Plus className="h-4 w-4" />
-            Configurações
+            <Mail className="h-4 w-4" />
+            Configurações de E-mail
           </TabsTrigger>
         </TabsList>
 
