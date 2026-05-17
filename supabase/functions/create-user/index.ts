@@ -31,6 +31,7 @@ async function sendUserNotifications(
   supabaseUrl: string,
   serviceRoleKey: string,
   organizationId: string,
+  organizationName: string,
   name: string,
   email: string,
   phone: string,
