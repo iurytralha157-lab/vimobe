@@ -39,6 +39,22 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 
+const EVENT_KEY_OPTIONS = [
+  { value: 'deal_won', label: 'Lead Ganho (CRM)', category: 'Vendas' },
+  { value: 'new_lead_received', label: 'Novo Lead (Automático)', category: 'Leads' },
+  { value: 'manual_lead_registered', label: 'Novo Lead (Manual)', category: 'Leads' },
+  { value: 'lead_reentry', label: 'Reentrada de Lead', category: 'Leads' },
+  { value: 'welcome_lead', label: 'Boas-vindas ao Lead', category: 'Leads' },
+  { value: 'new_appointment', label: 'Novo Agendamento', category: 'Agenda' },
+  { value: 'appointment_reminder', label: 'Lembrete de Agendamento', category: 'Agenda' },
+  { value: 'ranking_update', label: 'Atualização de Ranking', category: 'Equipe' },
+  { value: 'ranking_milestone', label: 'Conquista no Ranking', category: 'Equipe' },
+  { value: 'credentials_access', label: 'Credenciais de Acesso', category: 'Sistema' },
+  { value: 'welcome_user', label: 'Boas-vindas ao Sistema', category: 'Sistema' },
+  { value: 'whatsapp_disconnected', label: 'WhatsApp Desconectado', category: 'WhatsApp' },
+  { value: 'system_announcement', label: 'Comunicado do Sistema', category: 'Sistema' },
+];
+
 export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
   const { isSuperAdmin, user, profile } = useAuth();
   const [loading, setLoading] = useState(true);
