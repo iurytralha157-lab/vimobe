@@ -33,7 +33,7 @@ import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 
 export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
-  const { isSuperAdmin, user } = useAuth();
+  const { isSuperAdmin, user, profile } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
   const [templates, setTemplates] = useState<NotificationTemplate[]>([]);
@@ -411,7 +411,7 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
                           toast.promise(
                             notificationService.send({
                               eventKey: template.event_key || template.slug,
-                              organizationId: user.user_metadata?.organization_id || '',
+                              organizationId: profile?.organization_id || user.user_metadata?.organization_id || '',
                               userId: user.id,
                               variables: { nome: user.user_metadata?.name || 'Admin', lead: 'Teste de Notificação' },
                               isTest: true
@@ -591,7 +591,7 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
                     const { error } = await supabase
                       .from('notification_settings' as any)
                       .upsert({
-                        organization_id: user?.user_metadata?.organization_id,
+                        organization_id: profile?.organization_id || user?.user_metadata?.organization_id,
                         from_name: settings.from_name,
                         from_email: settings.from_email,
                         reply_to: settings.reply_to,

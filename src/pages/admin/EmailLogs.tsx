@@ -9,7 +9,7 @@ export default function EmailLogs() {
   const { data: logs, isLoading } = useQuery({
     queryKey: ["email-logs"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("email_logs" as any).select("*").order("created_at", { ascending: false });
+      const { data, error } = await supabase.from("email_logs" as any).select("*").order("sent_at", { ascending: false });
       if (error) throw error;
       return data;
     },
@@ -40,7 +40,7 @@ export default function EmailLogs() {
               {logs?.map((log: any) => (
                 <TableRow key={log.id}>
                   <TableCell className="text-xs whitespace-nowrap">
-                    {format(new Date(log.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                    {format(new Date(log.sent_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
                   </TableCell>
                   <TableCell className="font-mono text-xs">{log.template_key}</TableCell>
                   <TableCell>{log.recipient_email}</TableCell>
