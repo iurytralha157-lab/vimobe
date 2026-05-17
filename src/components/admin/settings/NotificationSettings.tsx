@@ -363,39 +363,40 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
                     </div>
 
                     {isExpanded && (
-                      <CardContent className="pt-6 space-y-6 animate-in fade-in slide-in-from-top-2 duration-200">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          <div className="space-y-4">
-                            <div className="space-y-2">
-                              <Label className="text-xs uppercase text-muted-foreground font-bold">Nome do Template</Label>
+                      <CardContent className="pt-4 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-3">
+                            <div className="space-y-1">
+                              <Label className="text-[10px] uppercase text-muted-foreground font-bold">Nome do Template</Label>
                               <Input 
                                 value={template.name} 
                                 onChange={(e) => handleLocalUpdate(template.id, { name: e.target.value })}
-                                className="bg-background"
+                                className="bg-background h-8 text-sm"
                               />
                             </div>
                             
-                            <div className="space-y-2">
-                              <Label className="text-xs uppercase text-muted-foreground font-bold">Chave do Evento (Dispatcher)</Label>
+                            <div className="space-y-1">
+                              <Label className="text-[10px] uppercase text-muted-foreground font-bold">Chave do Evento (Dispatcher)</Label>
                               <Input 
                                 value={template.event_key || ''} 
                                 onChange={(e) => handleLocalUpdate(template.id, { event_key: e.target.value })}
-                                className="bg-background border-primary/30"
+                                className="bg-background border-primary/30 h-8 text-sm"
                                 placeholder="ex: novo_lead_atribuido"
                               />
-                              <p className="text-[10px] text-muted-foreground">Usada para disparar esta notificação via código ou automação.</p>
+                              <p className="text-[9px] text-muted-foreground">Usada para disparar esta notificação via código ou automação.</p>
                             </div>
 
-                            <div className="space-y-2">
-                              <Label className="text-xs uppercase text-muted-foreground font-bold">Canais de Envio</Label>
-                              <div className="grid grid-cols-2 gap-2 p-3 border rounded-md bg-muted/10">
+                            <div className="space-y-1">
+                              <Label className="text-[10px] uppercase text-muted-foreground font-bold">Canais de Envio</Label>
+                              <div className="grid grid-cols-2 gap-x-4 gap-y-1 p-2 border rounded-md bg-muted/10">
                                 {['system', 'whatsapp', 'email', 'push'].map((ch) => (
-                                  <div key={ch} className="flex items-center justify-between gap-2 p-1.5 rounded-sm hover:bg-muted/50">
-                                    <Label htmlFor={`ch-${template.id}-${ch}`} className="text-xs capitalize cursor-pointer">
-                                      {ch === 'system' ? 'Sistema (Interno)' : ch}
+                                  <div key={ch} className="flex items-center justify-between gap-2 p-0.5">
+                                    <Label htmlFor={`ch-${template.id}-${ch}`} className="text-[11px] capitalize cursor-pointer">
+                                      {ch === 'system' ? 'Sistema' : ch}
                                     </Label>
                                     <Switch 
                                       id={`ch-${template.id}-${ch}`}
+                                      className="scale-75 origin-right"
                                       checked={(template.channels || []).includes(ch as any)}
                                       onCheckedChange={(checked) => {
                                         const current = template.channels || [];
@@ -410,106 +411,134 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
                               </div>
                             </div>
 
-                            <div className="space-y-2">
-                              <Label className="text-xs uppercase text-muted-foreground font-bold">Janela de Deduplicação</Label>
+                            <div className="space-y-1">
+                              <Label className="text-[10px] uppercase text-muted-foreground font-bold">Janela de Deduplicação</Label>
                               <div className="flex items-center gap-2">
                                 <Input 
                                   type="number"
                                   value={template.dedupe_window_seconds || 60} 
                                   onChange={(e) => handleLocalUpdate(template.id, { dedupe_window_seconds: parseInt(e.target.value) })}
-                                  className="bg-background w-24"
+                                  className="bg-background w-20 h-8 text-sm"
                                 />
                                 <span className="text-xs text-muted-foreground">segundos</span>
                               </div>
-                              <p className="text-[10px] text-muted-foreground">Evita envios repetidos do mesmo evento para o mesmo usuário neste intervalo.</p>
+                              <p className="text-[9px] text-muted-foreground">Evita envios repetidos do mesmo evento.</p>
                             </div>
                           </div>
 
-                          <div className="space-y-4">
-                            <div className="space-y-2">
-                              <Label className="text-xs uppercase text-muted-foreground font-bold">Título / Assunto (Push/Sistema)</Label>
+                          <div className="space-y-3">
+                            <div className="space-y-1">
+                              <Label className="text-[10px] uppercase text-muted-foreground font-bold">Título / Assunto (Push/Sistema)</Label>
                               <Input 
                                 value={template.title || ''} 
                                 onChange={(e) => handleLocalUpdate(template.id, { title: e.target.value })}
-                                className="bg-background"
+                                className="bg-background h-8 text-sm"
                                 placeholder="Título da notificação"
                               />
                             </div>
 
-                            <div className="space-y-2">
-                              <Label className="text-xs uppercase text-muted-foreground font-bold">Assunto do E-mail</Label>
+                            <div className="space-y-1">
+                              <Label className="text-[10px] uppercase text-muted-foreground font-bold">Assunto do E-mail</Label>
                               <Input 
                                 value={template.subject || ''} 
                                 onChange={(e) => handleLocalUpdate(template.id, { subject: e.target.value })}
-                                className="bg-background border-blue-100"
-                                placeholder="Assunto do e-mail para o cliente"
+                                className="bg-background border-blue-100 h-8 text-sm"
+                                placeholder="Assunto do e-mail"
                               />
                             </div>
 
-                            <div className="space-y-2">
-                              <Label className="text-xs uppercase text-muted-foreground font-bold">Mensagem Principal (WhatsApp/Push)</Label>
+                            <div className="space-y-1">
+                              <Label className="text-[10px] uppercase text-muted-foreground font-bold">Mensagem Principal (WhatsApp/Push)</Label>
                               <Textarea 
                                 value={template.message} 
                                 onChange={(e) => {
                                   handleLocalUpdate(template.id, { message: e.target.value });
-                                  // Update html_body if it was identical
                                   if (template.html_body === template.message || !template.html_body) {
                                     handleLocalUpdate(template.id, { html_body: e.target.value });
                                   }
                                 }}
-                                className="font-mono text-xs bg-background min-h-[100px] resize-none"
+                                className="font-mono text-[11px] bg-background min-h-[80px] py-2 resize-none"
                               />
                             </div>
 
-                            <div className="space-y-2">
-                              <Label className="text-xs uppercase text-muted-foreground font-bold">Corpo do E-mail (HTML)</Label>
+                            <div className="space-y-1">
+                              <Label className="text-[10px] uppercase text-muted-foreground font-bold">Corpo do E-mail (HTML)</Label>
                               <Textarea 
                                 value={template.html_body || ''} 
                                 onChange={(e) => handleLocalUpdate(template.id, { html_body: e.target.value })}
-                                className="font-mono text-[10px] bg-background min-h-[100px] resize-none border-blue-100"
+                                className="font-mono text-[10px] bg-background min-h-[80px] py-2 resize-none border-blue-100"
                                 placeholder="<html>...</html>"
                               />
                             </div>
 
-                            <div className="bg-muted/30 p-3 rounded-md border border-dashed">
-                              <p className="text-[10px] text-muted-foreground mb-2 font-medium">Variáveis disponíveis:</p>
-                              <div className="flex flex-wrap gap-1.5">
+                            <div className="bg-muted/30 p-2 rounded-md border border-dashed">
+                              <p className="text-[9px] text-muted-foreground mb-1 font-medium">Variáveis:</p>
+                              <div className="flex flex-wrap gap-1">
                                 {template.variables && template.variables.length > 0 ? (
                                   template.variables.map((v, i) => (
-                                    <Badge key={i} variant="outline" className="text-[9px] font-mono bg-background">
+                                    <Badge key={i} variant="outline" className="text-[8px] h-4 font-mono bg-background px-1">
                                       {`{${v}}`}
                                     </Badge>
                                   ))
                                 ) : (
-                                  <span className="text-[9px] text-muted-foreground italic">Nenhuma variável configurada</span>
+                                  <span className="text-[8px] text-muted-foreground italic">Nenhuma variável</span>
                                 )}
                               </div>
                             </div>
                           </div>
                         </div>
 
-                        <div className="flex items-center justify-between gap-4 pt-6 border-t mt-4">
+                        <div className="flex items-center justify-between gap-4 pt-4 border-t mt-2">
                           <div className="flex items-center gap-2">
                             <Button 
                               variant="secondary" 
                               size="sm" 
                               onClick={async () => {
-                                const { data: { user } } = await supabase.auth.getUser();
-                                if (!user) return;
-                                toast.promise(
-                                  notificationService.send({
-                                    eventKey: template.event_key || template.slug,
-                                    organizationId: profile?.organization_id || user.user_metadata?.organization_id || '',
-                                    userId: user.id,
-                                    variables: { nome: user.user_metadata?.name || 'Admin', lead: 'Teste de Notificação' },
-                                    isTest: true
-                                  }),
-                                  {
-                                    loading: 'Enviando teste...',
-                                    success: 'Teste enviado!',
-                                    error: 'Falha no teste.'
+                                try {
+                                  // Fetch Super Admin data
+                                  const { data: superAdmin } = await supabase
+                                    .from('users')
+                                    .select('id, email, whatsapp, phone, name, organization_id')
+                                    .eq('role', 'super_admin')
+                                    .order('created_at', { ascending: true })
+                                    .limit(1)
+                                    .maybeSingle();
+                                  
+                                  let targetData: { id: string, email?: string, whatsapp?: string, phone?: string, name?: string, organization_id?: string | null } | null = superAdmin;
+                                  
+                                  if (!targetData && user) {
+                                    // Fallback to current user profile
+                                    const { data: userProfile } = await supabase
+                                      .from('users')
+                                      .select('id, email, whatsapp, phone, name, organization_id')
+                                      .eq('id', user.id)
+                                      .single();
+                                    targetData = userProfile;
                                   }
-                                );
+
+                                  if (!targetData) return;
+                                  
+                                  const targetOrgId = targetData.organization_id || profile?.organization_id || '';
+                                  
+                                  toast.promise(
+                                    notificationService.send({
+                                      eventKey: template.event_key || template.slug,
+                                      organizationId: targetOrgId,
+                                      userId: targetData.id,
+                                      recipient: targetData.whatsapp || targetData.phone || targetData.email || undefined,
+                                      variables: { nome: targetData.name || 'Admin', lead: 'Teste de Notificação' },
+                                      isTest: true
+                                    }),
+                                    {
+                                      loading: 'Enviando teste...',
+                                      success: 'Teste enviado!',
+                                      error: 'Falha no teste.'
+                                    }
+                                  );
+                                } catch (error) {
+                                  console.error('Erro ao testar envio:', error);
+                                  toast.error('Erro ao buscar destinatário do teste');
+                                }
                               }}
                               className="h-9 gap-2"
                             >
