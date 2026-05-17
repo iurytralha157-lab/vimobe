@@ -161,7 +161,9 @@ export function useDealStatusChange() {
           try {
             const { notificationService } = await import('@/services/NotificationService');
             await notificationService.send({
-              templateSlug: 'deal_won_whatsapp',
+              eventKey: 'deal_won',
+              templateSlug: 'deal_won_whatsapp', // Mantido para compatibilidade se o template ainda não tiver event_key
+              dedupeKey: `deal_won:${variables.leadId}`,
               organizationId: variables.organizationId,
               userId: variables.userId,
               variables: {
