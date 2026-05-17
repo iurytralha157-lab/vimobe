@@ -254,7 +254,7 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
   const handleAddTemplate = async () => {
     const timestamp = Date.now();
     const defaultName = 'Novo Template';
-    const defaultEventKey = `evento_${timestamp}`;
+    const defaultEventKey = ''; // Inicia vazio para forçar seleção ou indicar que precisa configurar
     const defaultMessage = 'Olá {nome}, sua mensagem aqui.';
     
     const newTemplate = {
