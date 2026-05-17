@@ -86,7 +86,16 @@ export function MemberAvailabilityDialog({
 
   const toggleGlobalAllDay = (checked: boolean) => {
     setGlobalAllDay(checked);
-    setSchedules(prev => prev.map(s => ({ ...s, is_all_day: checked })));
+    setSchedules(prev => prev.map(s => ({ ...s, is_all_day: s.is_active ? checked : s.is_all_day })));
+  };
+
+  const toggleDayAllDay = (dayOfWeek: number, checked: boolean) => {
+    setSchedules(prev => prev.map(s => 
+      s.day_of_week === dayOfWeek ? { ...s, is_all_day: checked } : s
+    ));
+    
+    // If we turn off one day's all_day, global is no longer true
+    if (!checked) setGlobalAllDay(false);
   };
 
   const handleSave = async () => {
@@ -133,11 +142,14 @@ export function MemberAvailabilityDialog({
           </div>
         ) : (
           <div className="space-y-4 overflow-y-auto overflow-x-hidden max-h-[55vh]">
-            {/* Global 24h toggle */}
+            {/* Global setting helper */}
             <div className="flex items-center justify-between p-3 rounded-xl bg-muted/50 border">
               <div className="flex items-center gap-2">
                 <Clock className="h-4 w-4 text-primary" />
-                <span className="text-sm font-medium">Disponível 24 horas</span>
+                <div>
+                  <span className="text-sm font-medium block">Marcar todos como 24h</span>
+                  <span className="text-[10px] text-muted-foreground">Define 24h para todos os dias ativos</span>
+                </div>
               </div>
               <Switch 
                 checked={globalAllDay} 
@@ -176,46 +188,64 @@ export function MemberAvailabilityDialog({
                       {getDayName(schedule.day_of_week, true)}
                     </span>
 
-                    {schedule.is_active && !globalAllDay && (
-                      <div className="flex items-center gap-1 min-w-0 flex-1">
-                        <Select
-                          value={schedule.start_time}
-                          onValueChange={(v) => updateDayTime(schedule.day_of_week, 'start_time', v)}
-                        >
-                          <SelectTrigger className="h-7 text-xs flex-1 min-w-0 px-2">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {TIME_OPTIONS.map(time => (
-                              <SelectItem key={time} value={time} className="text-xs">
-                                {time}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <span className="text-xs text-muted-foreground shrink-0">–</span>
-                        <Select
-                          value={schedule.end_time}
-                          onValueChange={(v) => updateDayTime(schedule.day_of_week, 'end_time', v)}
-                        >
-                          <SelectTrigger className="h-7 text-xs flex-1 min-w-0 px-2">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {TIME_OPTIONS.map(time => (
-                              <SelectItem key={time} value={time} className="text-xs">
-                                {time}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
+                    {schedule.is_active && (
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <div className="flex items-center gap-1">
+                          <Switch
+                            id={`all-day-${schedule.day_of_week}`}
+                            checked={schedule.is_all_day}
+                            onCheckedChange={(checked) => toggleDayAllDay(schedule.day_of_week, checked)}
+                            className="scale-75"
+                          />
+                          <Label htmlFor={`all-day-${schedule.day_of_week}`} className="text-[10px] uppercase font-bold text-muted-foreground cursor-pointer">
+                            24h
+                          </Label>
+                        </div>
 
-                    {schedule.is_active && globalAllDay && (
-                      <Badge variant="secondary" className="text-xs">
-                        24h
-                      </Badge>
+                        {!schedule.is_all_day && (
+                          <div className="flex items-center gap-1 min-w-0 flex-1">
+                            <Select
+                              value={schedule.start_time}
+                              onValueChange={(v) => updateDayTime(schedule.day_of_week, 'start_time', v)}
+                            >
+                              <SelectTrigger className="h-7 text-xs flex-1 min-w-0 px-2">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {TIME_OPTIONS.map(time => (
+                                  <SelectItem key={time} value={time} className="text-xs">
+                                    {time}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <span className="text-xs text-muted-foreground shrink-0">–</span>
+                            <Select
+                              value={schedule.end_time}
+                              onValueChange={(v) => updateDayTime(schedule.day_of_week, 'end_time', v)}
+                            >
+                              <SelectTrigger className="h-7 text-xs flex-1 min-w-0 px-2">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {TIME_OPTIONS.map(time => (
+                                  <SelectItem key={time} value={time} className="text-xs">
+                                    {time}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
+                        
+                        {schedule.is_all_day && (
+                          <div className="flex-1 flex justify-center">
+                            <Badge variant="secondary" className="text-[10px] py-0 h-5 px-2">
+                              Dia Inteiro
+                            </Badge>
+                          </div>
+                        )}
+                      </div>
                     )}
 
                     {!schedule.is_active && (
