@@ -88,7 +88,6 @@ export default function SystemSettingsPage() {
   const tabs: AnimatedTabItem[] = useMemo(() => [
     { value: 'media', label: 'Mídia', icon: ImageIcon },
     { value: 'integrations', label: 'Integrações Externas', icon: Share2 },
-    { value: 'communication', label: 'Comunicação Interna', icon: Megaphone },
     { value: 'maintenance', label: 'Manutenção e Atualizações', icon: Wrench },
     { value: 'notifications', label: 'Notificações', icon: Bell },
   ], []);
@@ -148,9 +147,6 @@ export default function SystemSettingsPage() {
             <IntegrationsSettings settings={settings} onUpdate={handleUpdate} />
           </TabsContent>
 
-          <TabsContent value="communication" className="mt-0">
-            <InternalCommunicationSettings settings={settings} onUpdate={handleUpdate} />
-          </TabsContent>
 
           <TabsContent value="maintenance" className="mt-0">
             <MaintenanceSettings settings={settings} onUpdate={handleUpdate} />

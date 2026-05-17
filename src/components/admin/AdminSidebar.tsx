@@ -29,7 +29,6 @@ const navItems = [
   { icon: Building2, label: 'Organizações', path: '/admin/organizations' },
   { icon: Users, label: 'Usuários', path: '/admin/users' },
   { icon: Package, label: 'Planos', path: '/admin/plans' },
-  { icon: Database, label: 'Banco de Dados', path: '/admin/database' },
   { icon: ClipboardList, label: 'Onboarding', path: '/admin/onboarding' },
   { icon: Lightbulb, label: 'Solicitações', path: '/admin/requests' },
   { icon: Megaphone, label: 'Comunicados', path: '/admin/announcements' },
