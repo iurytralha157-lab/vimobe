@@ -239,7 +239,7 @@ export function useCreateScheduleEvent() {
 
         if (userData) {
           await notificationService.send({
-            templateSlug: 'new_appointment_whatsapp',
+            eventKey: 'new_appointment',
             organizationId: userData.organization_id || '',
             userId: data.user_id,
             variables: {
