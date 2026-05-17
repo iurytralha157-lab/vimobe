@@ -1913,6 +1913,101 @@ export type Database = {
           },
         ]
       }
+      email_logs: {
+        Row: {
+          error_message: string | null
+          id: string
+          organization_id: string | null
+          recipient_email: string
+          sent_at: string | null
+          status: string
+          subject: string | null
+          template_id: string | null
+          template_key: string | null
+        }
+        Insert: {
+          error_message?: string | null
+          id?: string
+          organization_id?: string | null
+          recipient_email: string
+          sent_at?: string | null
+          status: string
+          subject?: string | null
+          template_id?: string | null
+          template_key?: string | null
+        }
+        Update: {
+          error_message?: string | null
+          id?: string
+          organization_id?: string | null
+          recipient_email?: string
+          sent_at?: string | null
+          status?: string
+          subject?: string | null
+          template_id?: string | null
+          template_key?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_logs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_logs_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "email_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_templates: {
+        Row: {
+          created_at: string | null
+          html: string
+          id: string
+          is_active: boolean | null
+          key: string
+          name: string
+          organization_id: string | null
+          subject: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          html: string
+          id?: string
+          is_active?: boolean | null
+          key: string
+          name: string
+          organization_id?: string | null
+          subject?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          html?: string
+          id?: string
+          is_active?: boolean | null
+          key?: string
+          name?: string
+          organization_id?: string | null
+          subject?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_templates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       feature_requests: {
         Row: {
           admin_response: string | null
@@ -4198,8 +4293,10 @@ export type Database = {
         Row: {
           channel: string
           created_at: string | null
+          dedupe_key: string | null
           error: string | null
           id: string
+          is_test: boolean | null
           organization_id: string | null
           payload: Json | null
           recipient: string | null
@@ -4211,8 +4308,10 @@ export type Database = {
         Insert: {
           channel: string
           created_at?: string | null
+          dedupe_key?: string | null
           error?: string | null
           id?: string
+          is_test?: boolean | null
           organization_id?: string | null
           payload?: Json | null
           recipient?: string | null
@@ -4224,8 +4323,10 @@ export type Database = {
         Update: {
           channel?: string
           created_at?: string | null
+          dedupe_key?: string | null
           error?: string | null
           id?: string
+          is_test?: boolean | null
           organization_id?: string | null
           payload?: Json | null
           recipient?: string | null
@@ -4258,19 +4359,73 @@ export type Database = {
           },
         ]
       }
+      notification_settings: {
+        Row: {
+          admin_emails: string[] | null
+          created_at: string | null
+          enabled_channels: string[] | null
+          from_email: string | null
+          from_name: string | null
+          id: string
+          organization_id: string | null
+          reply_to: string | null
+          test_email: string | null
+          test_phone: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          admin_emails?: string[] | null
+          created_at?: string | null
+          enabled_channels?: string[] | null
+          from_email?: string | null
+          from_name?: string | null
+          id?: string
+          organization_id?: string | null
+          reply_to?: string | null
+          test_email?: string | null
+          test_phone?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          admin_emails?: string[] | null
+          created_at?: string | null
+          enabled_channels?: string[] | null
+          from_email?: string | null
+          from_name?: string | null
+          id?: string
+          organization_id?: string | null
+          reply_to?: string | null
+          test_email?: string | null
+          test_phone?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_settings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notification_templates: {
         Row: {
           category: string | null
           channel: string
+          channels: string[] | null
           created_at: string | null
+          dedupe_window_seconds: number | null
           editable_by_admin: boolean | null
           event_key: string | null
+          html_body: string | null
           id: string
           is_active: boolean | null
           message: string
           name: string
           organization_id: string | null
           slug: string
+          subject: string | null
           title: string | null
           updated_at: string | null
           variables: string[] | null
@@ -4278,15 +4433,19 @@ export type Database = {
         Insert: {
           category?: string | null
           channel: string
+          channels?: string[] | null
           created_at?: string | null
+          dedupe_window_seconds?: number | null
           editable_by_admin?: boolean | null
           event_key?: string | null
+          html_body?: string | null
           id?: string
           is_active?: boolean | null
           message: string
           name: string
           organization_id?: string | null
           slug: string
+          subject?: string | null
           title?: string | null
           updated_at?: string | null
           variables?: string[] | null
@@ -4294,15 +4453,19 @@ export type Database = {
         Update: {
           category?: string | null
           channel?: string
+          channels?: string[] | null
           created_at?: string | null
+          dedupe_window_seconds?: number | null
           editable_by_admin?: boolean | null
           event_key?: string | null
+          html_body?: string | null
           id?: string
           is_active?: boolean | null
           message?: string
           name?: string
           organization_id?: string | null
           slug?: string
+          subject?: string | null
           title?: string | null
           updated_at?: string | null
           variables?: string[] | null
