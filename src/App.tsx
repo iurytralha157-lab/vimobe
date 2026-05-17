@@ -89,6 +89,9 @@ const AdminDatabase = lazy(() => import("./pages/admin/AdminDatabase"));
 const AdminOnboarding = lazy(() => import("./pages/admin/AdminOnboarding"));
 const AdminNotifications = lazy(() => import("./pages/admin/AdminNotifications"));
 const Checkout = lazy(() => import("./pages/Checkout"));
+const EmailTemplates = lazy(() => import("./pages/admin/EmailTemplates"));
+const EmailLogs = lazy(() => import("./pages/admin/EmailLogs"));
+
 
 // Subscription page is now part of Settings tab
 
@@ -244,9 +247,11 @@ function AppRoutes() {
             <Route path="/admin/settings" element={<SuperAdminRoute><AdminSettings /></SuperAdminRoute>} />
             <Route path="/admin/requests" element={<SuperAdminRoute><AdminRequests /></SuperAdminRoute>} />
             <Route path="/admin/audit" element={<SuperAdminRoute><AdminAudit /></SuperAdminRoute>} />
+            <Route path="/admin/email-templates" element={<SuperAdminRoute><EmailTemplates /></SuperAdminRoute>} />
+            <Route path="/admin/email-logs" element={<SuperAdminRoute><EmailLogs /></SuperAdminRoute>} />
             <Route path="/admin/onboarding" element={<SuperAdminRoute><AdminOnboarding /></SuperAdminRoute>} />
             <Route path="/admin/notifications" element={<AdminRoute><AdminNotifications /></AdminRoute>} />
-            
+
             {/* Regular Routes */}
 
             <Route path="/" element={<Navigate to={getDefaultRedirect()} replace />} />
