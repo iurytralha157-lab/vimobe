@@ -56,19 +56,14 @@ const notificationCategories = {
 type CategoryKey = keyof typeof notificationCategories;
 
 export default function Notifications() {
-  const { isSuperAdmin, loading: authLoading } = useAuth();
+  const { profile, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
   const [categoryFilter, setCategoryFilter] = useState<CategoryKey>('all');
 
-  useEffect(() => {
-    if (!authLoading && !isSuperAdmin) {
-      navigate('/dashboard');
-    }
-  }, [authLoading, isSuperAdmin, navigate]);
-
-  if (authLoading || !isSuperAdmin) return null;
+  if (authLoading) return null;
+  if (!profile) return null;
 
   const { data: notifications = [], isLoading } = useNotifications();
   const markAsRead = useMarkNotificationRead();
