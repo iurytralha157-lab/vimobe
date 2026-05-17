@@ -142,11 +142,14 @@ export function MemberAvailabilityDialog({
           </div>
         ) : (
           <div className="space-y-4 overflow-y-auto overflow-x-hidden max-h-[55vh]">
-            {/* Global 24h toggle */}
+            {/* Global setting helper */}
             <div className="flex items-center justify-between p-3 rounded-xl bg-muted/50 border">
               <div className="flex items-center gap-2">
                 <Clock className="h-4 w-4 text-primary" />
-                <span className="text-sm font-medium">Disponível 24 horas</span>
+                <div>
+                  <span className="text-sm font-medium block">Marcar todos como 24h</span>
+                  <span className="text-[10px] text-muted-foreground">Define 24h para todos os dias ativos</span>
+                </div>
               </div>
               <Switch 
                 checked={globalAllDay} 
