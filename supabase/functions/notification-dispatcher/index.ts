@@ -155,7 +155,16 @@ Deno.serve(async (req) => {
           user_id: user_id,
           recipient: recipient || user_id || 'system',
           channel: channel,
-          payload: { variables, formattedTitle, formattedMessage, dedupe_key: finalDedupeKey, executionTime },
+          payload: { 
+            variables, 
+            formattedTitle, 
+            formattedMessage, 
+            dedupe_key: finalDedupeKey, 
+            executionTime,
+            template_name: template.name,
+            lead_id: lead_id,
+            is_test: is_test
+          },
           response: result,
           status: result.success ? 'sent' : 'failed',
           error: result.error ? String(result.error) : null,
