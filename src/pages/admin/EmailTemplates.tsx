@@ -122,8 +122,8 @@ export default function EmailTemplates() {
                   <TableCell className="font-medium">{template.name}</TableCell>
                   <TableCell>{template.subject}</TableCell>
                   <TableCell>
-                    <span className={`px-2 py-1 rounded-full text-xs ${template.active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                      {template.active ? 'Ativo' : 'Inativo'}
+                    <span className={`px-2 py-1 rounded-full text-xs ${template.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                      {template.is_active ? 'Ativo' : 'Inativo'}
                     </span>
                   </TableCell>
                   <TableCell className="text-right flex justify-end gap-1">
