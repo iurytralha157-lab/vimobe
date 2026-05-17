@@ -151,13 +151,22 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
   };
 
   const handleAddTemplate = async () => {
+    const timestamp = Date.now();
+    const defaultName = 'Novo Template';
+    const defaultEventKey = `evento_${timestamp}`;
+    const defaultMessage = 'Olá {nome}, sua mensagem aqui.';
+    
     const newTemplate = {
-      name: 'Novo Template',
-      slug: `new_template_${Date.now()}`,
-      channel: 'whatsapp' as NotificationChannel,
-      message: 'Olá {name}, sua mensagem aqui.',
+      name: defaultName,
+      slug: `template_${timestamp}`,
+      event_key: defaultEventKey,
+      channel: 'system' as NotificationChannel,
+      channels: ['system'],
+      message: defaultMessage,
+      subject: `Notificação: ${defaultName}`,
+      html_body: defaultMessage,
       category: 'info',
-      variables: ['name'],
+      variables: ['nome'],
       is_active: true
     };
 
