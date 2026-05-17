@@ -411,7 +411,7 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
                           toast.promise(
                             notificationService.send({
                               eventKey: template.event_key || template.slug,
-                              organizationId: user.user_metadata?.organization_id || '',
+                              organizationId: profile?.organization_id || user.user_metadata?.organization_id || '',
                               userId: user.id,
                               variables: { nome: user.user_metadata?.name || 'Admin', lead: 'Teste de Notificação' },
                               isTest: true
