@@ -23,7 +23,12 @@ import {
   History,
   CheckCircle2,
   XCircle,
-  Bell
+  Bell,
+  ChevronDown,
+  ChevronUp,
+  Settings,
+  Mail,
+  Edit2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
