@@ -48,12 +48,12 @@ export default function EmailTemplates() {
     },
   });
   const sendTestEmail = useMutation({
-    mutationFn: async (template: any) => {
+    mutationFn: async (params: { key: string, test_recipient: string }) => {
       const { data, error } = await supabase.functions.invoke("send-email", {
         body: {
-          to: "teste@exemplo.com", // O usuário pode mudar no prompt
-          template_key: template.key,
-          variables: { nome: "Usuário Teste", email: "teste@exemplo.com" }
+          to: params.test_recipient,
+          template_key: params.key,
+          variables: { nome: "Usuário Teste", email: params.test_recipient }
         }
       });
       if (error) throw error;
@@ -63,7 +63,7 @@ export default function EmailTemplates() {
       toast.success("E-mail de teste enviado com sucesso!");
     },
     onError: (error) => {
-      toast.error("Erro ao enviar e-mail de teste: " + error.message);
+      toast.error("Erro ao enviar e-mail de teste: " + (error.message || "Verifique se a Edge Function está implantada e se a API Key do Resend foi configurada."));
     },
   });
 
