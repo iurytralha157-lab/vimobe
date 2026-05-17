@@ -282,7 +282,8 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
       const created = data as any;
       setTemplates([created, ...templates]);
       setOriginalTemplates([JSON.parse(JSON.stringify(created)), ...originalTemplates]);
-      toast.success('Novo template criado!');
+      setExpandedTemplateId(created.id); // Expandir automaticamente o novo template
+      toast.success('Novo template criado! Selecione a chave do evento para configurar o disparo.');
     } catch (error: any) {
       toast.error('Erro ao criar template: ' + error.message);
     }
