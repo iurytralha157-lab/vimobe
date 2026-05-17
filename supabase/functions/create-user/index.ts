@@ -254,26 +254,25 @@ Deno.serve(async (req) => {
         // Send welcome whatsapp
         let welcomeResult: any = { sent: false };
         if (contactWhatsapp) {
-          welcomeResult = await sendWelcomeWhatsApp(
-            supabaseAdmin,
-            targetOrgId,
-            org.name,
-            callerProfile?.name || 'Administrador',
-            contactWhatsapp,
-            name,
-            email,
-            generatedPassword,
-          );
-        }
-
-        return new Response(JSON.stringify({
-          success: true,
-          user: { id: authMatch.id, email, name, role },
-          wasAuthOrphan: true,
+        welcomeResult = await sendUserNotifications(
+          supabaseUrl,
+          serviceRoleKey,
+          targetOrgId,
+          name,
+          email,
+          contactWhatsapp,
           generatedPassword,
-          whatsappSent: welcomeResult.sent,
-          message: 'Usuário recuperado de cadastro órfão. Nova senha enviada.',
-        }), {
+        );
+      }
+
+      return new Response(JSON.stringify({
+        success: true,
+        user: { id: authMatch.id, email, name, role },
+        wasAuthOrphan: true,
+        generatedPassword,
+        whatsappSent: welcomeResult.success,
+        message: 'Usuário recuperado de cadastro órfão. Nova senha enviada.',
+      }), {
           status: 200,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
@@ -400,29 +399,28 @@ Deno.serve(async (req) => {
         // Send notification for existing user
         let welcomeResult: any = { sent: false };
         if (contactWhatsapp) {
-          welcomeResult = await sendWelcomeWhatsApp(
-            supabaseAdmin,
-            targetOrgId,
-            org.name,
-            callerProfile?.name || 'Administrador',
-            contactWhatsapp,
-            name || existingUser.name,
-            email,
-          );
-        }
+        welcomeResult = await sendUserNotifications(
+          supabaseUrl,
+          serviceRoleKey,
+          targetOrgId,
+          name || existingUser.name,
+          email,
+          contactWhatsapp,
+        );
+      }
 
-        return new Response(JSON.stringify({
-          success: true,
-          user: {
-            id: existingUser.id,
-            email,
-            name: name || existingUser.name,
-            role,
-          },
-          wasOrphan: true,
-          whatsappSent: welcomeResult.sent,
-          message: 'Usuário existente vinculado à organização. A senha atual dele continua válida.',
-        }), {
+      return new Response(JSON.stringify({
+        success: true,
+        user: {
+          id: existingUser.id,
+          email,
+          name: name || existingUser.name,
+          role,
+        },
+        wasOrphan: true,
+        whatsappSent: welcomeResult.success,
+        message: 'Usuário existente vinculado à organização. A senha atual dele continua válida.',
+      }), {
           status: 200,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
