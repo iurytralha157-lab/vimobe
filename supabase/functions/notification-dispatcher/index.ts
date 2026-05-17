@@ -69,10 +69,15 @@ Deno.serve(async (req) => {
 
     if (variables) {
       Object.entries(variables).forEach(([key, value]) => {
-        const placeholder = `{${key}}`;
-        formattedMessage = formattedMessage.replace(new RegExp(placeholder, 'g'), String(value));
+        // Replace {variable_name} with the value, case-insensitive
+        const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regex = new RegExp(`\\{\\s*${escapedKey}\\s*\\}`, 'gi');
+        
+        const stringValue = value !== null && value !== undefined ? String(value) : '';
+        
+        formattedMessage = formattedMessage.replace(regex, stringValue);
         if (formattedTitle) {
-          formattedTitle = formattedTitle.replace(new RegExp(placeholder, 'g'), String(value));
+          formattedTitle = formattedTitle.replace(regex, stringValue);
         }
       });
     }
