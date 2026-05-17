@@ -518,7 +518,19 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
 
                                   if (!targetData) return;
                                   
-                                  const targetOrgId = targetData.organization_id || profile?.organization_id || '';
+                                  let targetOrgId = targetData.organization_id || profile?.organization_id;
+                                  
+                                  if (!targetOrgId) {
+                                    const { data: orgs } = await supabase.from('organizations').select('id').limit(1);
+                                    if (orgs && orgs.length > 0) {
+                                      targetOrgId = orgs[0].id;
+                                    }
+                                  }
+                                  
+                                  if (!targetOrgId) {
+                                    toast.error('Nenhuma organização encontrada para o teste');
+                                    return;
+                                  }
                                   
                                   toast.promise(
                                     notificationService.send({
