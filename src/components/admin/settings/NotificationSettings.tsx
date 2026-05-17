@@ -207,9 +207,13 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
             <MessageSquare className="h-4 w-4" />
             Templates
           </TabsTrigger>
-          <TabsTrigger value="logs" className="flex items-center gap-2">
+            <TabsTrigger value="logs" className="flex items-center gap-2">
             <History className="h-4 w-4" />
             Histórico
+          </TabsTrigger>
+          <TabsTrigger value="settings" className="flex items-center gap-2">
+            <Plus className="h-4 w-4" />
+            Configurações
           </TabsTrigger>
         </TabsList>
 
@@ -518,6 +522,63 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
                     )}
                   </tbody>
                 </table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="settings" className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Configurações de E-mail (Resend)</CardTitle>
+              <CardDescription>Configure o remetente padrão e dados de integração do Resend.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label>Nome do Remetente</Label>
+                  <Input 
+                    value={settings?.from_name || ''} 
+                    onChange={(e) => setSettings({ ...settings, from_name: e.target.value })}
+                    placeholder="ex: Vimob"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>E-mail do Remetente</Label>
+                  <Input 
+                    value={settings?.from_email || ''} 
+                    onChange={(e) => setSettings({ ...settings, from_email: e.target.value })}
+                    placeholder="ex: notificacoes@seudominio.com.br"
+                  />
+                  <p className="text-[10px] text-muted-foreground">O domínio deve estar verificado no Resend.</p>
+                </div>
+                <div className="space-y-2">
+                  <Label>Reply-To (E-mail de resposta)</Label>
+                  <Input 
+                    value={settings?.reply_to || ''} 
+                    onChange={(e) => setSettings({ ...settings, reply_to: e.target.value })}
+                    placeholder="ex: contato@seudominio.com.br"
+                  />
+                </div>
+              </div>
+              <div className="pt-4 border-t">
+                <Button 
+                  onClick={async () => {
+                    const { error } = await supabase
+                      .from('notification_settings' as any)
+                      .upsert({
+                        organization_id: user?.user_metadata?.organization_id,
+                        from_name: settings.from_name,
+                        from_email: settings.from_email,
+                        reply_to: settings.reply_to,
+                        updated_at: new Date().toISOString()
+                      });
+                    if (error) toast.error('Erro ao salvar: ' + error.message);
+                    else toast.success('Configurações salvas!');
+                  }}
+                >
+                  Salvar Configurações
+                </Button>
               </div>
             </CardContent>
           </Card>
