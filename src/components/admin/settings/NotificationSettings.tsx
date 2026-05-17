@@ -518,6 +518,11 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
                                   />
                                 )}
                               </div>
+                              {template.event_key && templates.some(t => t.id !== template.id && t.event_key === template.event_key && t.is_active) && (
+                                <p className="text-[9px] text-amber-600 font-medium animate-pulse">
+                                  Atenção: Já existe outro template ativo para este disparo.
+                                </p>
+                              )}
                               <p className="text-[9px] text-muted-foreground italic">Este é o ID que liga o código do sistema a este template.</p>
                             </div>
 
