@@ -48,10 +48,68 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
   const [changedIds, setChangedIds] = useState<Set<string>>(new Set());
   const [settings, setSettings] = useState<any>(null);
   const [expandedTemplateId, setExpandedTemplateId] = useState<string | null>(null);
+  const [testOrgs, setTestOrgs] = useState<any[]>([]);
+  const [testUsers, setTestUsers] = useState<any[]>([]);
+  const [selectedTestOrgId, setSelectedTestOrgId] = useState<string>('');
+  const [selectedTestUserId, setSelectedTestUserId] = useState<string>('');
+  const [loadingTestUsers, setLoadingTestUsers] = useState(false);
 
   useEffect(() => {
     fetchData();
+    loadTestConfig();
   }, []);
+
+  const loadTestConfig = async () => {
+    try {
+      const saved = localStorage.getItem('notification_test_config');
+      if (saved) {
+        const { orgId, userId } = JSON.parse(saved);
+        setSelectedTestOrgId(orgId);
+        setSelectedTestUserId(userId);
+        if (orgId) {
+          fetchTestUsers(orgId);
+        }
+      }
+      
+      const { data: orgs } = await supabase
+        .from('organizations')
+        .select('id, name')
+        .order('name');
+      
+      if (orgs) setTestOrgs(orgs);
+    } catch (error) {
+      console.error('Erro ao carregar config de teste:', error);
+    }
+  };
+
+  const fetchTestUsers = async (orgId: string) => {
+    setLoadingTestUsers(true);
+    try {
+      const { data } = await supabase
+        .from('users')
+        .select('id, name, email')
+        .eq('organization_id', orgId)
+        .order('name');
+      
+      if (data) setTestUsers(data);
+    } catch (error) {
+      console.error('Erro ao buscar usuários:', error);
+    } finally {
+      setLoadingTestUsers(false);
+    }
+  };
+
+  const handleSaveTestConfig = () => {
+    if (!selectedTestOrgId || !selectedTestUserId) {
+      toast.error('Selecione organização e usuário para o teste');
+      return;
+    }
+    localStorage.setItem('notification_test_config', JSON.stringify({
+      orgId: selectedTestOrgId,
+      userId: selectedTestUserId
+    }));
+    toast.success('Configuração de teste salva!');
+  };
 
   const fetchData = async () => {
     setLoading(true);
@@ -247,6 +305,69 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
               Novo Template
             </Button>
           </div>
+
+          <Card className="bg-blue-50/30 border-blue-100 shadow-none">
+            <CardHeader className="py-3">
+              <div className="flex items-center gap-2">
+                <Settings className="h-4 w-4 text-blue-600" />
+                <CardTitle className="text-sm font-semibold text-blue-900">Configuração de Teste de Notificações</CardTitle>
+              </div>
+              <CardDescription className="text-xs text-blue-700/70">
+                Selecione um usuário para receber as notificações de teste disparadas abaixo.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pb-4 pt-0">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                <div className="space-y-1.5">
+                  <Label className="text-[10px] uppercase font-bold text-blue-900/60">Organização</Label>
+                  <Select 
+                    value={selectedTestOrgId} 
+                    onValueChange={(val) => {
+                      setSelectedTestOrgId(val);
+                      setSelectedTestUserId('');
+                      fetchTestUsers(val);
+                    }}
+                  >
+                    <SelectTrigger className="h-9 bg-white border-blue-200">
+                      <SelectValue placeholder="Selecione a Organização" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {testOrgs.map(org => (
+                        <SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-[10px] uppercase font-bold text-blue-900/60">Usuário de Teste</Label>
+                  <Select 
+                    value={selectedTestUserId} 
+                    onValueChange={setSelectedTestUserId}
+                    disabled={!selectedTestOrgId || loadingTestUsers}
+                  >
+                    <SelectTrigger className="h-9 bg-white border-blue-200">
+                      <SelectValue placeholder={loadingTestUsers ? "Carregando..." : "Selecione o Usuário"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {testUsers.map(user => (
+                        <SelectItem key={user.id} value={user.id}>
+                          {user.name} ({user.email})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <Button 
+                  onClick={handleSaveTestConfig} 
+                  className="h-9 bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  Salvar Configuração de Teste
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {templates.length === 0 ? (
@@ -495,19 +616,42 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
                               size="sm" 
                               onClick={async () => {
                                 try {
-                                  // Fetch Super Admin data
-                                  const { data: superAdmin } = await supabase
-                                    .from('users')
-                                    .select('id, email, whatsapp, phone, name, organization_id')
-                                    .eq('role', 'super_admin')
-                                    .order('created_at', { ascending: true })
-                                    .limit(1)
-                                    .maybeSingle();
-                                  
-                                  let targetData: { id: string, email?: string, whatsapp?: string, phone?: string, name?: string, organization_id?: string | null } | null = superAdmin;
+                                  let targetData: { id: string, email?: string, whatsapp?: string, phone?: string, name?: string, organization_id?: string | null } | null = null;
+                                  let targetOrgId: string | null = null;
+
+                                  // Tenta carregar configuração de teste salva
+                                  const saved = localStorage.getItem('notification_test_config');
+                                  if (saved) {
+                                    const { orgId, userId } = JSON.parse(saved);
+                                    if (userId) {
+                                      const { data: testUser } = await supabase
+                                        .from('users')
+                                        .select('id, email, whatsapp, phone, name, organization_id')
+                                        .eq('id', userId)
+                                        .maybeSingle();
+                                      
+                                      if (testUser) {
+                                        targetData = testUser;
+                                        targetOrgId = orgId || testUser.organization_id;
+                                      }
+                                    }
+                                  }
+
+                                  // Se não houver config salva, busca Super Admin como fallback
+                                  if (!targetData) {
+                                    const { data: superAdmin } = await supabase
+                                      .from('users')
+                                      .select('id, email, whatsapp, phone, name, organization_id')
+                                      .eq('role', 'super_admin')
+                                      .order('created_at', { ascending: true })
+                                      .limit(1)
+                                      .maybeSingle();
+                                    
+                                    targetData = superAdmin;
+                                  }
                                   
                                   if (!targetData && user) {
-                                    // Fallback to current user profile
+                                    // Fallback final para o usuário atual
                                     const { data: userProfile } = await supabase
                                       .from('users')
                                       .select('id, email, whatsapp, phone, name, organization_id')
@@ -516,9 +660,14 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
                                     targetData = userProfile;
                                   }
 
-                                  if (!targetData) return;
+                                  if (!targetData) {
+                                    toast.error('Nenhum usuário configurado para teste');
+                                    return;
+                                  }
                                   
-                                  let targetOrgId = targetData.organization_id || profile?.organization_id;
+                                  if (!targetOrgId) {
+                                    targetOrgId = targetData.organization_id || profile?.organization_id;
+                                  }
                                   
                                   if (!targetOrgId) {
                                     const { data: orgs } = await supabase.from('organizations').select('id').limit(1);
