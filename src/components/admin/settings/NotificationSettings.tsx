@@ -28,7 +28,9 @@ import {
   ChevronUp,
   Settings,
   Mail,
-  Edit2
+  Edit2,
+  Save,
+  Lightbulb
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
