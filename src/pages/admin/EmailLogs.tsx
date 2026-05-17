@@ -40,7 +40,7 @@ export default function EmailLogs() {
               {logs?.map((log: any) => (
                 <TableRow key={log.id}>
                   <TableCell className="text-xs whitespace-nowrap">
-                    {format(new Date(log.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                    {format(new Date(log.sent_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
                   </TableCell>
                   <TableCell className="font-mono text-xs">{log.template_key}</TableCell>
                   <TableCell>{log.recipient_email}</TableCell>
