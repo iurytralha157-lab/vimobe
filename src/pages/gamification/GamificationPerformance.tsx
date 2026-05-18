@@ -98,8 +98,7 @@ export default function GamificationPerformance() {
           { label: 'Ligações', value: thisMonthEvents.filter(e => e.action_type === 'call_made').length },
           { label: 'Propostas/Vendas', value: thisMonthEvents.filter(e => ['sale_closed', 'contract_signed', 'proposal_sent'].includes(e.action_type)).length },
           { label: 'Reuniões/Visitas', value: thisMonthEvents.filter(e => ['visit_scheduled', 'visit_confirmed', 'meeting_held'].includes(e.action_type)).length },
-          { label: 'Missões/Outros', value: thisMonthEvents.filter(e => ['mission_bonus', 'prospecting_report', 'lead_created_manual', 'property_created'].includes(e.action_type)).length },
-          { label: 'Missões/Outros', value: thisMonthEvents.filter(e => ['mission_bonus', 'prospecting_report', 'lead_created_manual', 'property_created'].includes(e.action_type)).length },
+          { label: 'Lead/Outros', value: thisMonthEvents.filter(e => ['mission_bonus', 'lead_created_manual', 'property_created'].includes(e.action_type)).length },
         ]
       };
     },
