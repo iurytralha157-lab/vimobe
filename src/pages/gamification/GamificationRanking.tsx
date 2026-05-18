@@ -19,11 +19,13 @@ import {
   Filter,
   FileText,
   Users2,
-  Presentation
+  Presentation,
+  Volume2,
+  VolumeX
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import confetti from 'canvas-confetti';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -78,6 +80,37 @@ export default function GamificationRanking() {
   const [rankingType, setRankingType] = useState('general');
   const [datePreset, setDatePreset] = useState<DatePreset>('thisMonth');
   const [customDateRange, setCustomDateRange] = useState<{ from: Date; to: Date } | null>(null);
+  const [isMuted, setIsMuted] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const hasInteracted = useRef(false);
+
+  // Load sound effect
+  useEffect(() => {
+    const audio = new Audio('https://fbiovhgrkuxvnyfvxqov.supabase.co/storage/v1/object/public/system-assets/senna-victory.mp3');
+    audio.volume = 0.5;
+    audioRef.current = audio;
+
+    const handleInteraction = () => {
+      hasInteracted.current = true;
+      window.removeEventListener('click', handleInteraction);
+    };
+    window.addEventListener('click', handleInteraction);
+
+    return () => {
+      window.removeEventListener('click', handleInteraction);
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
+  }, []);
+
+  const playVictorySound = () => {
+    if (audioRef.current && !isMuted && hasInteracted.current) {
+      audioRef.current.currentTime = 0;
+      audioRef.current.play().catch(e => console.log('Audio play failed:', e));
+    }
+  };
 
   const dateRange = useMemo(() => {
     if (datePreset === 'custom' && customDateRange) {
@@ -205,15 +238,19 @@ export default function GamificationRanking() {
     if (leaderboard && leaderboard.length > 0 && leaderboard[0].total_points > 0) {
       const currentTopUser = leaderboard[0];
       if (prevTopUserId && prevTopUserId !== currentTopUser.user_id) {
+        // Celebration!
         confetti({
           particleCount: 150,
           spread: 70,
           origin: { y: 0.6 },
           colors: ['#FFD700', '#FFA500', '#FF4500']
         });
+        
+        playVictorySound();
+
         toast.success(`${currentTopUser.profiles?.name} assumiu a LIDERANÇA! 🏆`, {
           icon: <PartyPopper className="text-yellow-500" />,
-          duration: 5000,
+          duration: 8000,
         });
       }
       setPrevTopUserId(currentTopUser.user_id);
@@ -257,10 +294,20 @@ export default function GamificationRanking() {
               </h2>
             </div>
 
-            <div className="absolute top-4 lg:top-8 right-4 lg:right-8 text-right">
-              <div className="flex items-center gap-1 text-emerald-500 text-[10px] lg:text-base font-bold animate-pulse">
-                <div className="w-1.5 h-1.5 lg:w-2 lg:h-2 rounded-full bg-emerald-500" />
-                LIVE
+            <div className="absolute top-4 lg:top-8 right-4 lg:right-8 flex items-center gap-4">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 rounded-full bg-background/20 backdrop-blur-md hover:bg-background/40"
+                onClick={() => setIsMuted(!isMuted)}
+              >
+                {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+              </Button>
+              <div className="text-right">
+                <div className="flex items-center gap-1 text-emerald-500 text-[10px] lg:text-base font-bold animate-pulse">
+                  <div className="w-1.5 h-1.5 lg:w-2 lg:h-2 rounded-full bg-emerald-500" />
+                  LIVE
+                </div>
               </div>
             </div>
 
@@ -411,41 +458,58 @@ export default function GamificationRanking() {
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4 space-y-2 scrollbar-thin scrollbar-thumb-muted-foreground/20 scrollbar-track-transparent">
+          <div className="flex-1 overflow-y-auto p-3 lg:p-4 space-y-2 lg:space-y-3 scrollbar-thin scrollbar-thumb-muted-foreground/20 scrollbar-track-transparent">
             {leaderboard?.map((user, index) => {
               const isTop3 = index < 3;
               return (
                 <div 
                   key={user.id} 
                   className={cn(
-                    "group flex items-center gap-2 lg:gap-3 p-2 lg:p-3 rounded-xl transition-all duration-300 border border-transparent hover:border-indigo-500/20 hover:bg-indigo-500/5",
-                    isTop3 && "bg-muted/50"
+                    "group flex items-center gap-2 lg:gap-4 p-2.5 lg:p-3 rounded-2xl transition-all duration-300 border",
+                    isTop3 
+                      ? "bg-indigo-50/30 dark:bg-indigo-950/20 border-indigo-100/50 dark:border-indigo-900/30" 
+                      : "bg-card border-transparent hover:border-border hover:bg-muted/30"
                   )}
                 >
                   <div className={cn(
-                    "w-6 h-6 flex items-center justify-center rounded-md text-[10px] font-black",
-                    index === 0 ? "bg-yellow-500 text-yellow-950" : 
-                    index === 1 ? "bg-slate-300 text-slate-700" :
-                    index === 2 ? "bg-amber-600 text-white" : "bg-muted text-muted-foreground"
+                    "w-7 h-7 lg:w-8 lg:h-8 flex items-center justify-center rounded-full text-[10px] lg:text-xs font-black shrink-0 shadow-sm",
+                    index === 0 ? "bg-gradient-to-br from-yellow-400 to-yellow-600 text-yellow-950" : 
+                    index === 1 ? "bg-gradient-to-br from-slate-200 to-slate-400 text-slate-800" :
+                    index === 2 ? "bg-gradient-to-br from-amber-500 to-amber-700 text-white" : "bg-muted text-muted-foreground"
                   )}>
                     {index + 1}
                   </div>
                   
-                  <Avatar className="h-8 w-8 lg:h-10 lg:w-10 border border-border shrink-0 transition-transform lg:group-hover:scale-105">
-                    <AvatarImage src={user.profiles?.avatar_url || undefined} />
-                    <AvatarFallback className="text-[10px] lg:text-xs font-bold">{getInitials(user.profiles?.name || '')}</AvatarFallback>
-                  </Avatar>
-
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs lg:text-sm font-bold truncate leading-tight">{user.profiles?.name}</p>
-                    <p className="text-[9px] lg:text-[10px] text-muted-foreground font-medium uppercase tracking-tighter">Corretor Ativo</p>
+                  <div className="relative shrink-0">
+                    <Avatar className="h-10 w-10 lg:h-12 lg:w-12 border-2 border-background shadow-md transition-transform lg:group-hover:scale-110">
+                      <AvatarImage src={user.profiles?.avatar_url || undefined} />
+                      <AvatarFallback className="text-[10px] lg:text-xs font-bold bg-muted">{getInitials(user.profiles?.name || '')}</AvatarFallback>
+                    </Avatar>
+                    {isTop3 && (
+                      <div className="absolute -top-1 -right-1">
+                        {index === 0 && <Crown className="h-4 w-4 text-yellow-500 fill-yellow-500" />}
+                        {index === 1 && <Medal className="h-4 w-4 text-slate-400 fill-slate-400" />}
+                        {index === 2 && <Award className="h-4 w-4 text-amber-600 fill-amber-600" />}
+                      </div>
+                    )}
                   </div>
 
-                  <div className="text-right shrink-0">
-                    <p className="text-xs lg:text-sm font-black text-indigo-600 dark:text-indigo-400">
-                      {rankingType === 'vgv' ? user.total_points.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }) : user.total_points.toLocaleString()}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm lg:text-base font-bold truncate leading-tight text-foreground">{user.profiles?.name}</p>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                      <p className="text-[10px] lg:text-[11px] text-muted-foreground font-semibold uppercase tracking-wider">Corretor de Elite</p>
+                    </div>
+                  </div>
+
+                  <div className="text-right shrink-0 px-1 lg:px-2">
+                    <p className={cn(
+                      "font-black tracking-tight",
+                      rankingType === 'vgv' ? "text-indigo-600 dark:text-indigo-400 text-xs lg:text-sm" : "text-indigo-600 dark:text-indigo-400 text-base lg:text-lg"
+                    )}>
+                      {rankingType === 'vgv' ? formatRankingValue(user.total_points, rankingType) : user.total_points.toLocaleString()}
                     </p>
-                    <p className="text-[8px] lg:text-[9px] uppercase font-bold text-muted-foreground tracking-widest">{rankingType === 'vgv' ? 'VGV' : 'PTS'}</p>
+                    <p className="text-[8px] lg:text-[10px] uppercase font-bold text-muted-foreground/60 tracking-widest leading-none mt-0.5">{rankingType === 'vgv' ? 'VGV Total' : 'Pontos'}</p>
                   </div>
                 </div>
               );
