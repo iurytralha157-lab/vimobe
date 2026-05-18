@@ -98,53 +98,54 @@ function KPICardItem({
       <Tooltip>
         <TooltipTrigger asChild>
           <Card className={cn(
-            "card-hover cursor-default",
+            "card-hover cursor-default overflow-hidden",
             isHighlighted && "bg-gradient-to-r from-chart-5/10 to-chart-5/5 border-chart-5/30"
           )}>
             <CardContent className={cn("p-4", isHighlighted && "py-5")}>
-              <div className={cn(
-                "flex items-center gap-3",
-                isHighlighted ? "justify-between" : "justify-between"
-              )}>
-                <div className="min-w-0 flex-1">
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center justify-between">
                   <p className={cn(
-                    "text-muted-foreground",
+                    "text-muted-foreground font-medium uppercase tracking-wider",
                     isHighlighted ? "text-xs sm:text-sm" : "text-[10px] sm:text-xs"
                   )}>
                     {title}
                   </p>
+                  <div className={cn(
+                    "rounded-lg flex items-center justify-center flex-shrink-0 hidden lg:flex",
+                    isHighlighted ? "h-10 w-10 sm:h-12 sm:w-12" : "h-8 w-8 sm:h-9 sm:w-9"
+                  )} style={{ backgroundColor: `hsl(var(--${accentColor}) / 0.1)` }}>
+                    <Icon 
+                      className={cn(
+                        isHighlighted ? "h-5 w-5 sm:h-6 sm:w-6" : "h-4 w-4 sm:h-5 sm:w-5"
+                      )} 
+                      style={{ color: `hsl(var(--${accentColor}))` }} 
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-col">
                   <p className={cn(
-                    "font-bold mt-0.5",
-                    isHighlighted ? "text-xl sm:text-3xl" : "text-lg sm:text-2xl"
+                    "font-bold leading-tight",
+                    isHighlighted ? "text-2xl sm:text-3xl" : "text-xl sm:text-2xl"
                   )}>
                     {formatValue(value, format)}
                   </p>
+                  
                   {hasTrend && (
-                    <div className="flex items-center gap-0.5 mt-1">
+                    <div className="flex items-center gap-1 mt-1">
                       {isPositive ? (
                         <TrendingUp className="h-3 w-3 text-emerald-500" />
                       ) : (
                         <TrendingDown className="h-3 w-3 text-destructive" />
                       )}
                       <span className={cn(
-                        "text-[10px] sm:text-xs font-medium",
+                        "text-[10px] sm:text-xs font-semibold",
                         isPositive ? "text-emerald-500" : "text-destructive"
                       )}>
                         {trend > 0 ? '+' : ''}{trend}%
                       </span>
                     </div>
                   )}
-                </div>
-                <div className={cn(
-                  "rounded-lg flex items-center justify-center flex-shrink-0",
-                  isHighlighted ? "h-10 w-10 sm:h-12 sm:w-12" : "h-8 w-8 sm:h-9 sm:w-9"
-                )} style={{ backgroundColor: `hsl(var(--${accentColor}) / 0.1)` }}>
-                  <Icon 
-                    className={cn(
-                      isHighlighted ? "h-5 w-5 sm:h-6 sm:w-6" : "h-4 w-4 sm:h-5 sm:w-5"
-                    )} 
-                    style={{ color: `hsl(var(--${accentColor}))` }} 
-                  />
                 </div>
               </div>
             </CardContent>
