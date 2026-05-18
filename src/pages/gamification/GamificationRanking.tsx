@@ -232,9 +232,9 @@ export default function GamificationRanking() {
   const topThree = leaderboard?.slice(0, 3) || [];
 
   return (
-    <div className="flex flex-col gap-6 animate-in fade-in duration-700 pb-10">
+    <div className="flex flex-col gap-4 lg:gap-6 animate-in fade-in duration-700 pb-10">
       
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 h-auto lg:h-[calc(100vh-180px)] min-h-[600px] overflow-visible lg:overflow-hidden">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 h-auto lg:h-[calc(100vh-210px)] min-h-[500px] lg:min-h-0 overflow-visible lg:overflow-hidden">
         
         {/* LEFT SIDE: PODIUM (Arena) */}
         <div className="lg:col-span-8 flex flex-col gap-6 h-full overflow-hidden">
@@ -244,7 +244,7 @@ export default function GamificationRanking() {
                 <Trophy className="h-5 w-5 lg:h-6 lg:w-6 text-yellow-500" />
               </div>
               <h2 className="text-lg lg:text-2xl font-black italic uppercase tracking-tighter text-indigo-900 dark:text-indigo-100">
-                Arena {
+                Arena Imobiliária {
                   rankingType === 'general' ? 'de Elite' : 
                   rankingType === 'calls' ? 'de Ligações' :
                   rankingType === 'proposals' ? 'de Propostas' :
@@ -352,7 +352,7 @@ export default function GamificationRanking() {
         </div>
 
         {/* RIGHT SIDE: LIST (The Field) */}
-        <div className="lg:col-span-4 flex flex-col overflow-hidden border rounded-2xl bg-card shadow-none h-[500px] lg:h-full">
+        <div className="lg:col-span-4 flex flex-col overflow-hidden border rounded-2xl bg-card shadow-none h-auto lg:h-full min-h-[400px]">
           <div className="p-4 border-b bg-muted/30 space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-base lg:text-lg font-bold flex items-center gap-2">
