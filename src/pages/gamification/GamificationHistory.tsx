@@ -141,10 +141,12 @@ export default function GamificationHistory() {
                         <TableCell className="text-center font-bold text-emerald-600">
                           +{item.points_earned}
                         </TableCell>
-                        <TableCell className="text-sm">
+                         <TableCell className="text-sm">
                           {item.metadata?.count ? (
-                            <span className="text-muted-foreground italic">
-                              {item.metadata.count} {item.metadata.count === 1 ? 'item' : 'itens'}
+                            <span className="text-muted-foreground">
+                              {item.metadata.count}
+                              {item.metadata.unit_points && ` × ${item.metadata.unit_points} pts`}
+                              {item.metadata.source && ` • Origem: ${item.metadata.source}`}
                             </span>
                           ) : (
                             <span className="text-muted-foreground">-</span>
