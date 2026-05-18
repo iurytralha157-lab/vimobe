@@ -96,10 +96,10 @@ export function RecentActivitiesTable() {
                           {ACTION_LABELS[actionType] || actionType}
                         </span>
                       </div>
-                      {activity.metadata?.count && (
+                      {count > 0 && unitPoints > 0 && (
                         <span className="text-[10px] text-muted-foreground ml-6">
-                          {activity.metadata.count} × {activity.metadata.unit_points} pts
-                          {activity.metadata.source && ` • ${activity.metadata.source}`}
+                          {count} × {unitPoints} pts = {activity.points_earned}
+                          {sourceModule && sourceModule !== 'system' && ` • ${sourceModule}`}
                         </span>
                       )}
                     </div>
