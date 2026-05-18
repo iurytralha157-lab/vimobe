@@ -76,6 +76,7 @@ function formatRankingValue(value: number, type: string): string {
 
 export default function GamificationRanking() {
   const { organization } = useAuth();
+  const isMobile = !!window.matchMedia('(max-width: 767px)').matches;
   const [prevTopUserId, setPrevTopUserId] = useState<string | null>(null);
   const [rankingType, setRankingType] = useState('general');
   const [datePreset, setDatePreset] = useState<DatePreset>('thisMonth');
@@ -295,14 +296,16 @@ export default function GamificationRanking() {
             </div>
 
             <div className="absolute top-4 lg:top-8 right-4 lg:right-8 flex items-center gap-4">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 rounded-full bg-background/20 backdrop-blur-md hover:bg-background/40"
-                onClick={() => setIsMuted(!isMuted)}
-              >
-                {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
-              </Button>
+              {!isMobile && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 rounded-full bg-background/20 backdrop-blur-md hover:bg-background/40"
+                  onClick={() => setIsMuted(!isMuted)}
+                >
+                  {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+                </Button>
+              )}
               <div className="text-right">
                 <div className="flex items-center gap-1 text-emerald-500 text-[10px] lg:text-base font-bold animate-pulse">
                   <div className="w-1.5 h-1.5 lg:w-2 lg:h-2 rounded-full bg-emerald-500" />
