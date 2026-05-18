@@ -14,7 +14,7 @@ BEGIN
   -- Check module
   SELECT is_enabled INTO v_module_enabled 
   FROM public.organization_modules 
-  WHERE organization_id = v_org_id AND module_key = 'gamification';
+  WHERE organization_id = v_org_id AND module_name = 'gamification';
 
   IF v_module_enabled IS NOT TRUE THEN
     RETURN NEW;
@@ -52,7 +52,7 @@ BEGIN
 
   SELECT is_enabled INTO v_module_enabled 
   FROM public.organization_modules 
-  WHERE organization_id = v_org_id AND module_key = 'gamification';
+  WHERE organization_id = v_org_id AND module_name = 'gamification';
 
   IF v_module_enabled IS NOT TRUE THEN
     RETURN NEW;
@@ -90,7 +90,7 @@ BEGIN
 
   SELECT is_enabled INTO v_module_enabled 
   FROM public.organization_modules 
-  WHERE organization_id = v_org_id AND module_key = 'gamification';
+  WHERE organization_id = v_org_id AND module_name = 'gamification';
 
   IF v_module_enabled IS NOT TRUE THEN
     RETURN NEW;
