@@ -7,6 +7,8 @@ import {
   TrendingUp,
   TrendingDown,
   CalendarCheck,
+  Building2,
+  Eye,
   LucideIcon
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
