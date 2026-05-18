@@ -6,6 +6,8 @@ import { Progress } from '@/components/ui/progress';
 import { Target, CheckCircle2, Flame, Clock } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 export function MissionsWidget() {
   const { user, organization } = useAuth();
@@ -40,6 +42,7 @@ export function MissionsWidget() {
           ...mission,
           current_count: progress?.current_count || 0,
           is_completed: progress?.is_completed || false,
+          completed_at: progress?.completed_at || null,
         };
       });
     },
@@ -90,6 +93,11 @@ export function MissionsWidget() {
                     {mission.is_completed && <CheckCircle2 className="h-3 w-3 shrink-0" />}
                     {mission.title}
                   </h4>
+                  {mission.is_completed && mission.completed_at && (
+                    <p className="text-[10px] text-emerald-600 font-medium">
+                      Concluída em {format(new Date(mission.completed_at), "dd/MM 'às' HH:mm", { locale: ptBR })}
+                    </p>
+                  )}
                   <p className="text-[11px] text-muted-foreground line-clamp-1">{mission.description}</p>
                 </div>
                 <div className="shrink-0 text-right">

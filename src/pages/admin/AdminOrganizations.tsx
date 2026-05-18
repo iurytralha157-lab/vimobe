@@ -8,7 +8,8 @@ import {
   MoreHorizontal,
   Power,
   PowerOff,
-  Trash2 } from
+  Trash2,
+  Trophy } from
 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { AdminLayout } from '@/components/admin/AdminLayout';
@@ -18,6 +19,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { cn } from '@/lib/utils';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -49,7 +53,28 @@ import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 export default function AdminOrganizations() {
-  const { organizations, loadingOrgs, createOrganization, updateOrganization, deleteOrganization } = useSuperAdmin();
+  const { organizations, loadingOrgs, createOrganization, updateOrganization, deleteOrganization, updateModuleAccess } = useSuperAdmin();
+  
+  const { data: allOrgModules, refetch: refetchAllModules } = useQuery({
+    queryKey: ['all-organizations-modules'],
+    queryFn: async () => {
+      const { data } = await supabase.from('organization_modules').select('*');
+      return data || [];
+    }
+  });
+
+  const isModuleEnabled = (orgId: string, moduleName: string) => {
+    return allOrgModules?.some(m => m.organization_id === orgId && m.module_name === moduleName && m.is_enabled) || false;
+  };
+
+  const handleModuleToggle = async (orgId: string, moduleName: string, enabled: boolean) => {
+    await updateModuleAccess.mutateAsync({
+      organizationId: orgId,
+      moduleName,
+      isEnabled: enabled
+    });
+    refetchAllModules();
+  };
   const { startImpersonate } = useAuth();
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
@@ -293,6 +318,11 @@ export default function AdminOrganizations() {
                           <DropdownMenuItem onClick={() => handleImpersonate(org.id, org.name)}>
                             <Eye className="h-4 w-4 mr-2" />
                             Entrar como Admin
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => handleModuleToggle(org.id, 'gamification', !isModuleEnabled(org.id, 'gamification'))}>
+                            <Trophy className={cn("h-4 w-4 mr-2", isModuleEnabled(org.id, 'gamification') ? "text-orange-500" : "text-muted-foreground")} />
+                            {isModuleEnabled(org.id, 'gamification') ? 'Desativar Gamificação' : 'Ativar Gamificação'}
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
