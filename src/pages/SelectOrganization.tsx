@@ -94,7 +94,7 @@ export default function SelectOrganization() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-6">
+    <div className="dark min-h-screen flex items-center justify-center bg-background p-6">
       <div className="w-full max-w-5xl space-y-10">
         {/* Header */}
         <div className="text-center space-y-4">
