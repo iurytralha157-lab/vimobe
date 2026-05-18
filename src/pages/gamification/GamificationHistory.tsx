@@ -114,6 +114,7 @@ export default function GamificationHistory() {
                   <TableHead>Data</TableHead>
                   <TableHead>Ação</TableHead>
                   <TableHead className="text-center">Pontos</TableHead>
+                  <TableHead>Detalhes</TableHead>
                   <TableHead>Origem</TableHead>
                 </TableRow>
               </TableHeader>
@@ -139,6 +140,15 @@ export default function GamificationHistory() {
                         </TableCell>
                         <TableCell className="text-center font-bold text-emerald-600">
                           +{item.points_earned}
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {item.metadata?.count ? (
+                            <span className="text-muted-foreground italic">
+                              {item.metadata.count} {item.metadata.count === 1 ? 'item' : 'itens'}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
                         </TableCell>
                         <TableCell>
                           <Badge variant="secondary" className="text-[10px] uppercase">
