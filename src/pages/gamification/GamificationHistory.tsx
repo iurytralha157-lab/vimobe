@@ -15,33 +15,38 @@ import { ptBR } from 'date-fns/locale';
 import { Phone, MessageSquare, UserCheck, Calendar, Info } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-
-const SOURCE_LABELS: Record<string, string> = {
-  whatsapp: 'WhatsApp / Grupos',
-  spreadsheet: 'Planilha de Frios',
-  referral: 'Indicação',
-  recontact: 'Recontato de Base',
-  canvassing: 'Panfletagem / PAP',
-  other: 'Outros',
-};
+import { useState } from 'react';
 
 export default function GamificationHistory() {
-  const { user } = useAuth();
+  const { user, profile, isSuperAdmin } = useAuth();
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
-  const { data: reports, isLoading } = useQuery({
-    queryKey: ['prospecting-reports-history', user?.id],
+  const isAdmin = profile?.role === 'admin' || isSuperAdmin;
+  const targetUserId = selectedUserId || user?.id;
+
+  const { data: history, isLoading } = useQuery({
+    queryKey: ['gamification-history-events', targetUserId],
     queryFn: async () => {
-      if (!user?.id) return [];
+      if (!targetUserId) return [];
       const { data, error } = await supabase
-        .from('prospecting_reports' as any)
+        .from('gamification_events')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', targetUserId)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
       return data as any[];
     },
-    enabled: !!user?.id,
+    enabled: !!targetUserId,
+  });
+
+  const { data: users } = useQuery({
+    queryKey: ['org-users-gamification'],
+    queryFn: async () => {
+      const { data } = await supabase.from('users' as any).select('id, name');
+      return data || [];
+    },
+    enabled: isAdmin
   });
 
   if (isLoading) {
@@ -55,19 +60,37 @@ export default function GamificationHistory() {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="space-y-1">
-        <h2 className="text-2xl font-bold tracking-tight">Meu Histórico de Prospecção</h2>
-        <p className="text-muted-foreground">Veja todos os seus lançamentos manuais e o impacto deles.</p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="space-y-1">
+          <h2 className="text-2xl font-bold tracking-tight">Transparência e Histórico</h2>
+          <p className="text-muted-foreground">Veja todas as ações que geraram pontos no sistema.</p>
+        </div>
+        
+        {isAdmin && users && (
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium">Filtrar Usuário:</span>
+            <select 
+              className="flex h-9 w-[200px] rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              value={selectedUserId || ''}
+              onChange={(e) => setSelectedUserId(e.target.value || null)}
+            >
+              <option value="">Meu Histórico</option>
+              {users.map((u: any) => (
+                <option key={u.id} value={u.id}>{u.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
             <Calendar className="h-5 w-5 text-primary" />
-            Lançamentos Realizados
+            Registro de Atividades
           </CardTitle>
           <CardDescription>
-            Lista cronológica de todas as suas atividades de prospecção ativa.
+            Detalhamento de pontos ganhos por ação realizada.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -76,58 +99,42 @@ export default function GamificationHistory() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Data</TableHead>
+                  <TableHead>Ação</TableHead>
+                  <TableHead className="text-center">Pontos</TableHead>
                   <TableHead>Origem</TableHead>
-                  <TableHead className="text-center">Ligações</TableHead>
-                  <TableHead className="text-center">Mensagens</TableHead>
-                  <TableHead className="text-center">Contatos</TableHead>
-                  <TableHead>Observações</TableHead>
+                  <TableHead>Metadata</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {!reports || reports.length === 0 ? (
+                {!history || history.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                      Nenhum relatório de prospecção enviado ainda.
+                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                      Nenhuma atividade registrada neste período.
                     </TableCell>
                   </TableRow>
                 ) : (
-                  reports.map((report) => (
-                    <TableRow key={report.id}>
+                  history.map((item) => (
+                    <TableRow key={item.id}>
                       <TableCell className="font-medium whitespace-nowrap">
-                        {format(new Date(report.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                        {format(new Date(item.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline" className="font-normal">
-                          {SOURCE_LABELS[report.source] || report.source}
+                        <Badge variant="outline" className="font-semibold">
+                          {item.event_type}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-center">
-                        <div className="flex items-center justify-center gap-1.5">
-                          <Phone className="h-3 w-3 text-muted-foreground" />
-                          <span>{report.calls}</span>
-                        </div>
+                      <TableCell className="text-center font-bold text-emerald-600">
+                        +{item.points_earned}
                       </TableCell>
-                      <TableCell className="text-center">
-                        <div className="flex items-center justify-center gap-1.5">
-                          <MessageSquare className="h-3 w-3 text-muted-foreground" />
-                          <span>{report.messages}</span>
-                        </div>
+                      <TableCell>
+                        <Badge variant="secondary" className="text-[10px] uppercase">
+                          {item.source_module || 'Sistema'}
+                        </Badge>
                       </TableCell>
-                      <TableCell className="text-center">
-                        <div className="flex items-center justify-center gap-1.5">
-                          <UserCheck className="h-3 w-3 text-muted-foreground" />
-                          <span>{report.contacts}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="max-w-[200px] truncate group relative">
-                        {report.description ? (
-                          <div className="flex items-center gap-1">
-                            <Info className="h-3 w-3 text-blue-500 shrink-0" />
-                            <span className="truncate">{report.description}</span>
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground italic text-xs">-</span>
-                        )}
+                      <TableCell className="max-w-[200px] truncate">
+                        <span className="text-xs text-muted-foreground">
+                          {item.metadata ? JSON.stringify(item.metadata).slice(0, 50) + '...' : '-'}
+                        </span>
                       </TableCell>
                     </TableRow>
                   ))

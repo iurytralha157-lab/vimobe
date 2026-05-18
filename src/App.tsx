@@ -17,6 +17,7 @@ import { ScrollToTop } from "@/components/ScrollToTop";
 import { useSystemBranding } from "@/hooks/use-system-branding";
 import { SetupGuideDialog } from "@/components/setup-guide/SetupGuideDialog";
 import { MetricsPanel } from "@/components/MetricsPanel";
+import { ModuleGuard } from "@/components/guards/ModuleGuard";
 
 // Public site root — separate bundle, no CRM providers
 const PublicAppRoot = lazy(() => import("./PublicAppRoot"));
@@ -303,6 +304,16 @@ function AppRoutes() {
             <Route path="/telecom/customers" element={<ProtectedRoute><TelecomCustomers /></ProtectedRoute>} />
             <Route path="/telecom/billing" element={<ProtectedRoute><TelecomBilling /></ProtectedRoute>} />
             
+
+            {/* Gamification Module */}
+            <Route path="/gamificacao" element={<ProtectedRoute><ModuleGuard module="gamification"><GamificationLayout /></ModuleGuard></ProtectedRoute>}>
+              <Route index element={<GamificationRanking />} />
+              <Route index element={<GamificationRanking />} />
+              <Route path="dashboard" element={<GamificationDashboard />} />
+              <Route path="performance" element={<GamificationPerformance />} />
+              <Route path="historico" element={<GamificationHistory />} />
+              <Route path="configuracoes" element={<GamificationAdmin />} />
+            </Route>
 
             {/* Automations */}
             <Route path="/automations" element={<ProtectedRoute><PermissionGuard permission="automations_view"><Automations /></PermissionGuard></ProtectedRoute>} />

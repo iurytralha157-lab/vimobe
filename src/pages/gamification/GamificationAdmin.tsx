@@ -1,18 +1,45 @@
 import { GamificationSettings } from '@/components/gamification/GamificationSettings';
 import { MissionManager } from '@/components/gamification/MissionManager';
+import { ManualEntryForm } from '@/components/gamification/ManualEntryForm';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Settings, Target, ClipboardCheck } from 'lucide-react';
 
 export default function GamificationAdmin() {
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-10">
       <div className="space-y-1">
         <h2 className="text-2xl font-bold tracking-tight">Gestão de Gamificação</h2>
-        <p className="text-muted-foreground">Configure as regras de pontuação e missões para sua equipe.</p>
+        <p className="text-muted-foreground">Configure as regras de pontuação, missões e aprove lançamentos manuais.</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-        <GamificationSettings />
-        <MissionManager />
-      </div>
+      <Tabs defaultValue="rules" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="rules" className="gap-2">
+            <Settings className="h-4 w-4" />
+            Regras de Pontuação
+          </TabsTrigger>
+          <TabsTrigger value="missions" className="gap-2">
+            <Target className="h-4 w-4" />
+            Missões
+          </TabsTrigger>
+          <TabsTrigger value="manual" className="gap-2">
+            <ClipboardCheck className="h-4 w-4" />
+            Aprovações Manuais
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="rules">
+          <GamificationSettings />
+        </TabsContent>
+        
+        <TabsContent value="missions">
+          <MissionManager />
+        </TabsContent>
+
+        <TabsContent value="manual">
+          <ManualEntryForm />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

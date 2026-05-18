@@ -14,17 +14,18 @@ export default function GamificationLayout() {
 
   const tabs = useMemo(() => {
     const items = [
-      { value: '/gamificacao', label: 'Arena de Ranking', icon: Trophy },
-      { value: '/gamificacao/dashboard', label: 'Meu Desempenho', icon: LayoutDashboard },
-      { value: '/gamificacao/performance', label: 'Inteligência', icon: BarChart3 },
+      { value: '/gamificacao', label: 'Arena', icon: Trophy },
+      { value: '/gamificacao/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+      { value: '/gamificacao/performance', label: 'Rankings', icon: BarChart3 },
       { value: '/gamificacao/historico', label: 'Histórico', icon: History },
+      { value: '/gamificacao/configuracoes', label: 'Admin', icon: Settings },
     ];
 
     if (profile?.role === 'admin' || isSuperAdmin) {
-      items.push({ value: '/gamificacao/configuracoes', label: 'Configurações', icon: Settings });
+      return items;
     }
 
-    return items;
+    return items.filter(i => i.value !== '/gamificacao/configuracoes');
   }, [profile?.role, isSuperAdmin]);
 
 

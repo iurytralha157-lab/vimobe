@@ -181,6 +181,11 @@ const allNavItems: NavItem[] = [{
     labelKey: 'financial',
     path: '/obras/financeiro'
   }]
+}, {
+  icon: Trophy,
+  labelKey: 'gamification',
+  path: '/gamificacao',
+  module: 'gamification'
 }];
 
 const bottomItems: NavItem[] = [{
