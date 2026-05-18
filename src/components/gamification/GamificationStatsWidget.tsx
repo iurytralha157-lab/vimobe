@@ -3,27 +3,52 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { Trophy, Star, Zap, TrendingUp } from 'lucide-react';
+import { Trophy, Star, Zap } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useEffect } from 'react';
 
 export function GamificationStatsWidget() {
   const { user, organization } = useAuth();
 
-  const { data: stats, isLoading } = useQuery({
-    queryKey: ['gamification-stats', user?.id],
+  const { data: totalPoints, isLoading, refetch } = useQuery({
+    queryKey: ['gamification-total-points-agg', user?.id],
     queryFn: async () => {
-      if (!user?.id) return null;
+      if (!user?.id) return 0;
       const { data, error } = await supabase
-        .from('user_gamification_stats' as any)
-        .select('*')
-        .eq('user_id', user.id)
-        .maybeSingle();
+        .from('gamification_events')
+        .select('points_earned')
+        .eq('user_id', user.id);
       
       if (error) throw error;
-      return data;
+      return (data || []).reduce((acc, curr) => acc + (curr.points_earned || 0), 0);
     },
     enabled: !!user?.id,
   });
+
+  // Realtime update
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const channel = supabase
+      .channel(`user-points-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'gamification_events',
+          filter: `user_id=eq.${user.id}`
+        },
+        () => {
+          refetch();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, refetch]);
 
   if (isLoading) {
     return (
@@ -37,10 +62,10 @@ export function GamificationStatsWidget() {
     );
   }
 
-  const points = (stats as any)?.total_points || 0;
-  const level = (stats as any)?.current_level || 1;
-  const nextLevelPoints = level * 1000; // Simplified logic: each level is 1000 points
-  const progress = Math.min((points % 1000) / 10, 100);
+  const points = totalPoints || 0;
+  const level = Math.floor(points / 1000) + 1;
+  const pointsInCurrentLevel = points % 1000;
+  const progress = (pointsInCurrentLevel / 1000) * 100;
 
   return (
     <Card className="bg-gradient-to-br from-indigo-500/10 to-purple-500/10 border-indigo-500/20">
@@ -70,11 +95,11 @@ export function GamificationStatsWidget() {
               <Zap className="h-3 w-3 text-yellow-500" />
               Progresso do Nível
             </span>
-            <span>{points % 1000} / 1000 XP</span>
+            <span>{pointsInCurrentLevel} / 1000 XP</span>
           </div>
           <Progress value={progress} className="h-2 bg-indigo-500/20" />
           <p className="text-[10px] text-muted-foreground text-center italic">
-            Ganhe mais {1000 - (points % 1000)} pontos para o próximo nível!
+            Ganhe mais {1000 - pointsInCurrentLevel} pontos para o próximo nível!
           </p>
         </div>
       </CardContent>

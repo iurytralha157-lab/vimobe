@@ -12,10 +12,18 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Phone, MessageSquare, UserCheck, Calendar, Info } from 'lucide-react';
+import { Calendar } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { useState } from 'react';
+import { ACTION_LABELS, SOURCE_LABELS } from '@/lib/gamification-labels';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function GamificationHistory() {
   const { user, profile, isSuperAdmin } = useAuth();
@@ -25,11 +33,12 @@ export default function GamificationHistory() {
   const targetUserId = selectedUserId || user?.id;
 
   const { data: history, isLoading } = useQuery({
-    queryKey: ['gamification-history-events', targetUserId],
+    queryKey: ['gamification-history-logs', targetUserId],
     queryFn: async () => {
       if (!targetUserId) return [];
+      // Reading from logs for consistency and better details
       const { data, error } = await supabase
-        .from('gamification_events')
+        .from('gamification_activity_logs')
         .select('*')
         .eq('user_id', targetUserId)
         .order('created_at', { ascending: false });
@@ -41,7 +50,7 @@ export default function GamificationHistory() {
   });
 
   const { data: users } = useQuery({
-    queryKey: ['org-users-gamification'],
+    queryKey: ['org-users-gamification-list'],
     queryFn: async () => {
       const { data } = await supabase.from('users' as any).select('id, name');
       return data || [];
@@ -68,17 +77,21 @@ export default function GamificationHistory() {
         
         {isAdmin && users && (
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium">Filtrar Usuário:</span>
-            <select 
-              className="flex h-9 w-[200px] rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              value={selectedUserId || ''}
-              onChange={(e) => setSelectedUserId(e.target.value || null)}
+            <span className="text-sm font-medium whitespace-nowrap">Filtrar Usuário:</span>
+            <Select 
+              value={selectedUserId || 'me'} 
+              onValueChange={(val) => setSelectedUserId(val === 'me' ? null : val)}
             >
-              <option value="">Meu Histórico</option>
-              {users.map((u: any) => (
-                <option key={u.id} value={u.id}>{u.name}</option>
-              ))}
-            </select>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Selecione um usuário" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="me">Meu Histórico</SelectItem>
+                {users.map((u: any) => (
+                  <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         )}
       </div>
@@ -94,7 +107,7 @@ export default function GamificationHistory() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="rounded-md border">
+          <div className="rounded-md border overflow-hidden">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -102,42 +115,39 @@ export default function GamificationHistory() {
                   <TableHead>Ação</TableHead>
                   <TableHead className="text-center">Pontos</TableHead>
                   <TableHead>Origem</TableHead>
-                  <TableHead>Metadata</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {!history || history.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                      Nenhuma atividade registrada neste período.
+                    <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                      Nenhuma atividade registrada ainda.
                     </TableCell>
                   </TableRow>
                 ) : (
-                  history.map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell className="font-medium whitespace-nowrap">
-                        {format(new Date(item.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="font-semibold">
-                          {item.event_type}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-center font-bold text-emerald-600">
-                        +{item.points_earned}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary" className="text-[10px] uppercase">
-                          {item.source_module || 'Sistema'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="max-w-[200px] truncate">
-                        <span className="text-xs text-muted-foreground">
-                          {item.metadata ? JSON.stringify(item.metadata).slice(0, 50) + '...' : '-'}
-                        </span>
-                      </TableCell>
-                    </TableRow>
-                  ))
+                  history.map((item) => {
+                    const actionType = item.action_type || item.event_type;
+                    return (
+                      <TableRow key={item.id}>
+                        <TableCell className="font-medium whitespace-nowrap">
+                          {format(new Date(item.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="font-semibold">
+                            {ACTION_LABELS[actionType] || actionType}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-center font-bold text-emerald-600">
+                          +{item.points_earned}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="secondary" className="text-[10px] uppercase">
+                            {SOURCE_LABELS[item.source_module] || item.source_module || 'Sistema'}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
                 )}
               </TableBody>
             </Table>
