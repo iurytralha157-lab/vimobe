@@ -14,11 +14,26 @@ import {
   SelectValue 
 } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Send, History, CheckCircle2, Clock, XCircle } from 'lucide-react';
+import { Send, History, CheckCircle2, Clock, XCircle, Info } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
 import { useState } from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const ACTION_OPTIONS = [
   { value: 'call_made', label: 'Ligação Externa' },
@@ -97,19 +112,21 @@ export function ManualEntryForm() {
   });
 
   const approveMutation = useMutation({
-    mutationFn: async ({ id, status }: { id: string, status: string }) => {
+    mutationFn: async ({ id, status, reason }: { id: string, status: string, reason?: string }) => {
       const { error } = await supabase
         .from('gamification_manual_entries' as any)
         .update({ 
           status, 
           approved_by: user?.id, 
-          approved_at: new Date().toISOString() 
+          approved_at: new Date().toISOString(),
+          rejection_reason: reason || null
         })
         .eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pending-manual-entries'] });
+      queryClient.invalidateQueries({ queryKey: ['my-manual-entries'] });
       queryClient.invalidateQueries({ queryKey: ['gamification-leaderboard-full'] });
       toast.success('Status atualizado com sucesso!');
     }
@@ -191,12 +208,26 @@ export function ManualEntryForm() {
                     <p className="text-sm font-bold truncate">{ACTION_OPTIONS.find(o => o.value === entry.action_key)?.label || entry.action_key}</p>
                     <p className="text-[10px] text-muted-foreground">{format(new Date(entry.created_at), 'dd/MM HH:mm')}</p>
                   </div>
-                  <Badge variant={entry.status === 'approved' ? 'default' : entry.status === 'rejected' ? 'destructive' : 'secondary'}>
-                    {entry.status === 'approved' ? <CheckCircle2 className="h-3 w-3 mr-1" /> : 
-                     entry.status === 'rejected' ? <XCircle className="h-3 w-3 mr-1" /> : 
-                     <Clock className="h-3 w-3 mr-1" />}
-                    {entry.status}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    {entry.status === 'rejected' && entry.rejection_reason && (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Info className="h-3 w-3 text-red-400 cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="max-w-[200px] text-xs">Motivo: {entry.rejection_reason}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )}
+                    <Badge variant={entry.status === 'approved' ? 'default' : entry.status === 'rejected' ? 'destructive' : 'secondary'}>
+                      {entry.status === 'approved' ? <CheckCircle2 className="h-3 w-3 mr-1" /> : 
+                       entry.status === 'rejected' ? <XCircle className="h-3 w-3 mr-1" /> : 
+                       <Clock className="h-3 w-3 mr-1" />}
+                      {entry.status === 'approved' ? 'Aprovado' : entry.status === 'rejected' ? 'Rejeitado' : 'Pendente'}
+                    </Badge>
+                  </div>
                 </div>
               ))}
               {(!myEntries || myEntries.length === 0) && (
@@ -226,17 +257,51 @@ export function ManualEntryForm() {
                           variant="ghost" 
                           className="h-7 w-7 p-0 text-emerald-600"
                           onClick={() => approveMutation.mutate({ id: entry.id, status: 'approved' })}
+                          title="Aprovar"
                         >
                           <CheckCircle2 className="h-4 w-4" />
                         </Button>
-                        <Button 
-                          size="sm" 
-                          variant="ghost" 
-                          className="h-7 w-7 p-0 text-red-600"
-                          onClick={() => approveMutation.mutate({ id: entry.id, status: 'rejected' })}
-                        >
-                          <XCircle className="h-4 w-4" />
-                        </Button>
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button 
+                              size="sm" 
+                              variant="ghost" 
+                              className="h-7 w-7 p-0 text-red-600"
+                              title="Rejeitar"
+                            >
+                              <XCircle className="h-4 w-4" />
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Rejeitar Solicitação</DialogTitle>
+                              <DialogDescription>
+                                Informe o motivo da rejeição para o corretor.
+                              </DialogDescription>
+                            </DialogHeader>
+                            <div className="py-4">
+                              <Label htmlFor="reason">Motivo</Label>
+                              <Textarea 
+                                id="reason" 
+                                placeholder="Ex: Evidência insuficiente, duplicidade..." 
+                                className="mt-2"
+                                onBlur={(e) => (entry._temp_reason = e.target.value)}
+                              />
+                            </div>
+                            <DialogFooter>
+                              <Button 
+                                variant="destructive" 
+                                onClick={() => approveMutation.mutate({ 
+                                  id: entry.id, 
+                                  status: 'rejected', 
+                                  reason: entry._temp_reason 
+                                })}
+                              >
+                                Confirmar Rejeição
+                              </Button>
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
                       </div>
                     </div>
                     {entry.notes && <p className="text-[10px] text-muted-foreground italic border-t pt-1">"{entry.notes}"</p>}
