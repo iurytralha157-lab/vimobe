@@ -7,6 +7,8 @@ import {
   TrendingUp,
   TrendingDown,
   CalendarCheck,
+  Building2,
+  Eye,
   LucideIcon
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -36,6 +38,8 @@ interface KPIData {
   overduePayables?: number;
   paidCommissions?: number;
   scheduledVisits?: number;
+  propertyCount?: number;
+  siteVisits?: number;
 }
 
 interface KPICardsProps {
@@ -43,6 +47,8 @@ interface KPICardsProps {
   isLoading?: boolean;
   periodLabel?: string;
   scheduledVisits?: number;
+  propertyCount?: number;
+  siteVisits?: number;
 }
 
 interface KPICardItemProps {
@@ -169,7 +175,7 @@ function KPICardSkeleton() {
   );
 }
 
-export function KPICards({ data, isLoading, periodLabel = 'Últimos 30 dias', scheduledVisits }: KPICardsProps) {
+export function KPICards({ data, isLoading, periodLabel = 'Últimos 30 dias', scheduledVisits, propertyCount, siteVisits }: KPICardsProps) {
   if (isLoading) {
     return (
       <div className="space-y-3">
@@ -178,9 +184,10 @@ export function KPICards({ data, isLoading, periodLabel = 'Últimos 30 dias', sc
             <KPICardSkeleton key={i} />
           ))}
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
-          <KPICardSkeleton />
-          <KPICardSkeleton />
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <KPICardSkeleton key={i + 4} />
+          ))}
         </div>
       </div>
     );
@@ -230,6 +237,22 @@ export function KPICards({ data, isLoading, periodLabel = 'Últimos 30 dias', sc
       format: 'number',
       accentColor: 'chart-1',
     },
+    {
+      title: 'Imóveis',
+      value: propertyCount ?? 0,
+      icon: Building2,
+      tooltip: 'Total de imóveis cadastrados',
+      format: 'number',
+      accentColor: 'chart-1',
+    },
+    {
+      title: 'Site',
+      value: siteVisits ?? 0,
+      icon: Eye,
+      tooltip: `Visitas ao site no período - ${periodLabel}`,
+      format: 'number',
+      accentColor: 'chart-2',
+    },
   ];
 
   const salesKpi: KPICardItemProps = {
@@ -242,24 +265,14 @@ export function KPICards({ data, isLoading, periodLabel = 'Últimos 30 dias', sc
   };
 
   return (
-    <div className="space-y-3 lg:space-y-0">
-      {/* Desktop: 5 colunas, todos juntos */}
-      <div className="hidden lg:grid lg:grid-cols-6 gap-3">
+    <div className="space-y-3">
+      {/* Mobile: Grid de 2 colunas para manter legibilidade */}
+      <div className="grid grid-cols-2 gap-2">
         {kpis.map((kpi) => (
           <KPICardItem key={kpi.title} {...kpi} />
         ))}
-        <KPICardItem {...salesKpi} />
       </div>
-      
-      {/* Mobile: Layout original com VGV destacado */}
-      <div className="lg:hidden space-y-3">
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          {kpis.map((kpi) => (
-            <KPICardItem key={kpi.title} {...kpi} />
-          ))}
-        </div>
-        <KPICardItem {...salesKpi} isHighlighted />
-      </div>
+      <KPICardItem {...salesKpi} isHighlighted />
     </div>
   );
 }
