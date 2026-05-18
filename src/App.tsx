@@ -304,6 +304,16 @@ function AppRoutes() {
             <Route path="/telecom/billing" element={<ProtectedRoute><TelecomBilling /></ProtectedRoute>} />
             
 
+            {/* Gamification Module */}
+            <Route path="/gamificacao" element={<ProtectedRoute><ModuleGuard module="gamification"><GamificationLayout /></ModuleGuard></ProtectedRoute>}>
+              <index element={<GamificationRanking />} />
+              <Route index element={<GamificationRanking />} />
+              <Route path="dashboard" element={<GamificationDashboard />} />
+              <Route path="performance" element={<GamificationPerformance />} />
+              <Route path="historico" element={<GamificationHistory />} />
+              <Route path="configuracoes" element={<GamificationAdmin />} />
+            </Route>
+
             {/* Automations */}
             <Route path="/automations" element={<ProtectedRoute><PermissionGuard permission="automations_view"><Automations /></PermissionGuard></ProtectedRoute>} />
             
