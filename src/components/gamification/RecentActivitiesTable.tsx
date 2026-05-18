@@ -31,6 +31,18 @@ const ACTION_ICONS: Record<string, any> = {
   property_created: Star,
 };
 
+interface GameificationLog {
+  id: string;
+  user_id: string;
+  organization_id: string;
+  action_type: string;
+  points_earned: number;
+  reference_id: string | null;
+  metadata: Record<string, any> | null;
+  created_at: string;
+  idempotency_key?: string;
+}
+
 export function RecentActivitiesTable() {
   const { user } = useAuth();
 
@@ -46,7 +58,7 @@ export function RecentActivitiesTable() {
         .limit(20);
       
       if (error) throw error;
-      return data as any[];
+      return data as GameificationLog[];
     },
     enabled: !!user?.id,
   });
@@ -67,8 +79,13 @@ export function RecentActivitiesTable() {
           </TableHeader>
           <TableBody>
             {activities.map((activity) => {
-              const actionType = (activity.event_type || activity.action_type) as string;
+              const actionType = (activity.action_type) as string;
               const Icon = ACTION_ICONS[actionType] || Star;
+              const metadata = activity.metadata as any;
+              const count = metadata?.count || 0;
+              const unitPoints = metadata?.unit_points || 0;
+              const sourceModule = metadata?.source_module || 'system';
+              
               return (
                 <TableRow key={activity.id}>
                   <TableCell className="font-medium">
@@ -79,10 +96,10 @@ export function RecentActivitiesTable() {
                           {ACTION_LABELS[actionType] || actionType}
                         </span>
                       </div>
-                      {activity.metadata?.count && (
+                      {count > 0 && unitPoints > 0 && (
                         <span className="text-[10px] text-muted-foreground ml-6">
-                          {activity.metadata.count} × {activity.metadata.unit_points} pts
-                          {activity.metadata.source && ` • ${activity.metadata.source}`}
+                          {count} × {unitPoints} pts = {activity.points_earned}
+                          {sourceModule && sourceModule !== 'system' && ` • ${sourceModule}`}
                         </span>
                       )}
                     </div>

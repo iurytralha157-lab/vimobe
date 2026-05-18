@@ -56,7 +56,11 @@ export default function GamificationPerformance() {
         return {
           name: format(day, 'eee', { locale: ptBR }),
           pontos: dayEvents.reduce((acc, curr) => acc + (curr.points_earned || 0), 0),
-          acoes: dayEvents.reduce((acc, curr) => acc + (((curr.metadata as any)?.count) || 1), 0)
+          // Count real actions: use metadata.count if available (from reports), otherwise count rows
+          acoes: dayEvents.reduce((acc, curr) => {
+            const metadata = (curr.metadata as any) || {};
+            return acc + (metadata.count || 1);
+          }, 0)
         };
       });
 
@@ -73,7 +77,10 @@ export default function GamificationPerformance() {
       const growth = lastMonthPoints === 0 ? 100 : Math.round(((thisMonthPoints - lastMonthPoints) / lastMonthPoints) * 100);
 
       const daysInMonthSoFar = now.getDate();
-      const avgActionsPerDay = Math.round((thisMonthEvents.reduce((acc, e) => acc + (((e.metadata as any)?.count) || 1), 0) / daysInMonthSoFar) * 10) / 10;
+      const avgActionsPerDay = Math.round((thisMonthEvents.reduce((acc, e) => {
+        const metadata = (e.metadata as any) || {};
+        return acc + (metadata.count || 1);
+      }, 0) / daysInMonthSoFar) * 10) / 10;
 
       // Real Efficiency calculation: (Positive outcomes / total actions)
       const positiveTypes = ['sale_closed', 'contract_signed', 'proposal_sent', 'visit_scheduled', 'visit_confirmed', 'meeting_held'];
@@ -90,7 +97,10 @@ export default function GamificationPerformance() {
           points: thisMonthPoints,
           growth,
           avgActionsPerDay,
-          totalActions: thisMonthEvents.length,
+          totalActions: thisMonthEvents.reduce((acc, e) => {
+            const metadata = (e.metadata as any) || {};
+            return acc + (metadata.count || 1);
+          }, 0),
           efficiency,
           consistency
         },
