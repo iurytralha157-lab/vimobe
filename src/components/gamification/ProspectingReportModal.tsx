@@ -98,9 +98,14 @@ export function ProspectingReportModal() {
       console.log("Insert success:", data);
 
       toast.success('Relatório de prospecção enviado! Pontos creditados.');
+      // Invalidar todas as queries relacionadas à gamificação
       queryClient.invalidateQueries({ queryKey: ['gamification-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['gamification-total-points-agg'] });
       queryClient.invalidateQueries({ queryKey: ['gamification-leaderboard'] });
+      queryClient.invalidateQueries({ queryKey: ['gamification-leaderboard-full'] });
       queryClient.invalidateQueries({ queryKey: ['gamification-recent-activities'] });
+      queryClient.invalidateQueries({ queryKey: ['gamification-history-logs'] });
+      queryClient.invalidateQueries({ queryKey: ['gamification-performance'] });
       setOpen(false);
       form.reset();
     } catch (error: any) {

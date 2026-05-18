@@ -56,7 +56,7 @@ export default function GamificationPerformance() {
         return {
           name: format(day, 'eee', { locale: ptBR }),
           pontos: dayEvents.reduce((acc, curr) => acc + (curr.points_earned || 0), 0),
-          acoes: dayEvents.length
+          acoes: dayEvents.reduce((acc, curr) => acc + (((curr.metadata as any)?.count) || 1), 0)
         };
       });
 
@@ -73,7 +73,7 @@ export default function GamificationPerformance() {
       const growth = lastMonthPoints === 0 ? 100 : Math.round(((thisMonthPoints - lastMonthPoints) / lastMonthPoints) * 100);
 
       const daysInMonthSoFar = now.getDate();
-      const avgActionsPerDay = Math.round((thisMonthEvents.length / daysInMonthSoFar) * 10) / 10;
+      const avgActionsPerDay = Math.round((thisMonthEvents.reduce((acc, e) => acc + (((e.metadata as any)?.count) || 1), 0) / daysInMonthSoFar) * 10) / 10;
 
       // Real Efficiency calculation: (Positive outcomes / total actions)
       const positiveTypes = ['sale_closed', 'contract_signed', 'proposal_sent', 'visit_scheduled', 'visit_confirmed', 'meeting_held'];
@@ -95,9 +95,9 @@ export default function GamificationPerformance() {
           consistency
         },
         distribution: [
-          { label: 'Ligações', value: thisMonthEvents.filter(e => e.action_type === 'call_made').length },
-          { label: 'Propostas/Vendas', value: thisMonthEvents.filter(e => ['sale_closed', 'contract_signed', 'proposal_sent'].includes(e.action_type)).length },
-          { label: 'Reuniões/Visitas', value: thisMonthEvents.filter(e => ['visit_scheduled', 'visit_confirmed', 'meeting_held'].includes(e.action_type)).length },
+          { label: 'Ligações', value: thisMonthEvents.filter(e => e.action_type === 'call_made').reduce((acc, e) => acc + (((e.metadata as any)?.count) || 1), 0) },
+          { label: 'Propostas/Vendas', value: thisMonthEvents.filter(e => ['sale_closed', 'contract_signed', 'proposal_sent'].includes(e.action_type)).reduce((acc, e) => acc + (((e.metadata as any)?.count) || 1), 0) },
+          { label: 'Reuniões/Visitas', value: thisMonthEvents.filter(e => ['visit_scheduled', 'visit_confirmed', 'meeting_held'].includes(e.action_type)).reduce((acc, e) => acc + (((e.metadata as any)?.count) || 1), 0) },
           { label: 'Lead/Outros', value: thisMonthEvents.filter(e => ['mission_bonus', 'lead_created_manual', 'property_created'].includes(e.action_type)).length },
         ]
       };
