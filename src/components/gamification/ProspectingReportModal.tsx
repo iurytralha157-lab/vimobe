@@ -94,7 +94,7 @@ export function ProspectingReportModal() {
       
       console.log("Inserting data into Supabase:", dataToInsert);
 
-      const { data, error } = await supabase.from('prospecting_reports' as any).insert(dataToInsert).select();
+      const { data, error } = await supabase.from('prospecting_reports').insert(dataToInsert).select();
 
       if (error) {
         console.error("Supabase insert error:", error);
@@ -215,7 +215,7 @@ export function ProspectingReportModal() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="flex items-center gap-1 text-xs">
-                      <Send className="h-3 w-3" /> Propostas
+                      <Send className="h-3 w-3" /> Propostas Enviadas
                     </FormLabel>
                     <FormControl>
                       <Input type="number" {...field} />
