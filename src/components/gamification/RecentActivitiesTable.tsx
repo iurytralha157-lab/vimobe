@@ -72,11 +72,18 @@ export function RecentActivitiesTable() {
               return (
                 <TableRow key={activity.id}>
                   <TableCell className="font-medium">
-                    <div className="flex items-center gap-2">
-                      <Icon className="h-4 w-4 text-primary shrink-0" />
-                      <span className="truncate max-w-[150px] sm:max-w-none">
-                        {ACTION_LABELS[actionType] || actionType}
-                      </span>
+                    <div className="flex flex-col gap-0.5">
+                      <div className="flex items-center gap-2">
+                        <Icon className="h-4 w-4 text-primary shrink-0" />
+                        <span className="truncate max-w-[150px] sm:max-w-none">
+                          {ACTION_LABELS[actionType] || actionType}
+                        </span>
+                      </div>
+                      {activity.metadata?.count && (
+                        <span className="text-[10px] text-muted-foreground ml-6">
+                          Quantidade: {activity.metadata.count}
+                        </span>
+                      )}
                     </div>
                   </TableCell>
                   <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
