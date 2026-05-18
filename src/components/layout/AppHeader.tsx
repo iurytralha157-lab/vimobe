@@ -102,7 +102,7 @@ export const AppHeader = React.memo(function AppHeader({
   return (
     <header className="sticky top-0 z-40 h-16 flex items-center px-4 md:px-6 bg-background/80 backdrop-blur-md border-b border-border/10">
       {/* Page title - aligned with content */}
-      {title && <h1 className="text-xl font-bold text-foreground ml-2 lg:ml-0 tracking-tight">{title}</h1>}
+      {title && <h1 className="text-base sm:text-xl font-bold text-foreground ml-2 lg:ml-0 tracking-tight truncate max-w-[140px] xs:max-w-[180px] sm:max-w-none">{title}</h1>}
 
       {/* Right side actions - Capsule style redesign */}
       <div className="flex items-center gap-3 ml-auto">
@@ -174,15 +174,17 @@ export const AppHeader = React.memo(function AppHeader({
           </DropdownMenu>
         )}
 
-        {/* Theme toggle circle */}
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')} 
-          className="h-10 w-10 rounded-full bg-card dark:bg-[#111] transition-all duration-300"
-        >
-          {resolvedTheme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-        </Button>
+        {/* Theme toggle circle - Desktop Only */}
+        {!isMobile && (
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')} 
+            className="h-10 w-10 rounded-full bg-card dark:bg-[#111] transition-all duration-300 shrink-0"
+          >
+            {resolvedTheme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+          </Button>
+        )}
 
         {/* Notifications circle */}
         {user && (
