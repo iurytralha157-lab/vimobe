@@ -2,7 +2,6 @@ import { supabase } from "@/integrations/supabase/client";
 
 /**
  * Gamification Notifier logic for handling position changes and goal achievements.
- * This should ideally run within a database trigger or edge function scheduled task.
  */
 export async function handleGamificationNotifications(
   organizationId: string,
@@ -11,19 +10,18 @@ export async function handleGamificationNotifications(
   metadata: any
 ) {
   try {
-    // 1. Get user details for notification
-    const { data: profile } = await supabase
-      .from('profiles')
+    // 1. Get user details for notification (casting to any to avoid complex TS types for profiles table)
+    const { data: profile } = await (supabase
+      .from('profiles' as any)
       .select('name, email')
       .eq('id', userId)
-      .single();
+      .single() as any);
 
     if (!profile) return;
 
     // 2. Prepare notification content based on type
     let title = '';
     let message = '';
-    let eventKey = 'gamification_alert';
 
     if (type === 'ranking_change') {
       const { newRank, oldRank } = metadata;
@@ -39,7 +37,7 @@ export async function handleGamificationNotifications(
     }
 
     // 3. Insert into existing notifications table
-    await supabase.from('notifications').insert({
+    await supabase.from('notifications' as any).insert({
       organization_id: organizationId,
       user_id: userId,
       title,
@@ -51,7 +49,6 @@ export async function handleGamificationNotifications(
 
     // 4. Send email via NotificationService if email is available
     if (profile.email) {
-      // Assuming a dedicated eventKey for gamification exists or fallback
       try {
         const { notificationService } = await import('@/services/NotificationService');
         await notificationService.send({
@@ -74,3 +71,4 @@ export async function handleGamificationNotifications(
     console.error('Gamification notification error:', error);
   }
 }
+
