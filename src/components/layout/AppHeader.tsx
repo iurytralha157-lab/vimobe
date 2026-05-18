@@ -174,15 +174,17 @@ export const AppHeader = React.memo(function AppHeader({
           </DropdownMenu>
         )}
 
-        {/* Theme toggle circle */}
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')} 
-          className="h-10 w-10 rounded-full bg-card dark:bg-[#111] transition-all duration-300"
-        >
-          {resolvedTheme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-        </Button>
+        {/* Theme toggle circle - Desktop Only */}
+        {!isMobile && (
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')} 
+            className="h-10 w-10 rounded-full bg-card dark:bg-[#111] transition-all duration-300 shrink-0"
+          >
+            {resolvedTheme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+          </Button>
+        )}
 
         {/* Notifications circle */}
         {user && (
