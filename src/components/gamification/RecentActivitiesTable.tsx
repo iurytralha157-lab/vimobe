@@ -81,7 +81,8 @@ export function RecentActivitiesTable() {
                       </div>
                       {activity.metadata?.count && (
                         <span className="text-[10px] text-muted-foreground ml-6">
-                          Quantidade: {activity.metadata.count}
+                          {activity.metadata.count} × {activity.metadata.unit_points} pts
+                          {activity.metadata.source && ` • ${activity.metadata.source}`}
                         </span>
                       )}
                     </div>
