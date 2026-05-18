@@ -38,7 +38,6 @@ import { useQueryClient } from '@tanstack/react-query';
 const formSchema = z.object({
   calls: z.coerce.number().min(0).default(0),
   visits: z.coerce.number().min(0).default(0),
-  property_capturing: z.coerce.number().min(0).default(0),
   proposals_sent: z.coerce.number().min(0).default(0),
   source: z.string().min(1, 'Selecione a origem'),
   description: z.string().optional(),
@@ -57,7 +56,6 @@ export function ProspectingReportModal() {
     defaultValues: {
       calls: 0,
       visits: 0,
-      property_capturing: 0,
       proposals_sent: 0,
       source: '',
       description: '',
@@ -79,7 +77,6 @@ export function ProspectingReportModal() {
         organization_id: organization.id,
         calls: values.calls,
         visits: values.visits,
-        property_capturing: values.property_capturing,
         proposals_sent: values.proposals_sent,
         source: values.source,
         description: values.description || null,
@@ -161,21 +158,6 @@ export function ProspectingReportModal() {
                   <FormItem>
                     <FormLabel className="flex items-center gap-1 text-xs">
                       <Home className="h-3 w-3" /> Visitas
-                    </FormLabel>
-                    <FormControl>
-                      <Input type="number" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="property_capturing"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="flex items-center gap-1 text-xs">
-                      <ClipboardList className="h-3 w-3" /> Captação
                     </FormLabel>
                     <FormControl>
                       <Input type="number" {...field} />
