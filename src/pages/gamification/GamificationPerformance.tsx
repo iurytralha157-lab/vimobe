@@ -56,7 +56,7 @@ export default function GamificationPerformance() {
         return {
           name: format(day, 'eee', { locale: ptBR }),
           pontos: dayEvents.reduce((acc, curr) => acc + (curr.points_earned || 0), 0),
-          acoes: dayEvents.reduce((acc, curr) => acc + (curr.metadata?.count || 1), 0)
+          acoes: dayEvents.reduce((acc, curr) => acc + (((curr.metadata as any)?.count) || 1), 0)
         };
       });
 
