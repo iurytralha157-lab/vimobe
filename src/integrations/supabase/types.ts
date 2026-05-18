@@ -6059,45 +6059,54 @@ export type Database = {
       prospecting_reports: {
         Row: {
           calls: number | null
+          confirmed_visits: number | null
           contacts: number | null
           created_at: string | null
           description: string | null
           id: string
+          meetings: number | null
           messages: number | null
           metadata: Json | null
           organization_id: string | null
           property_capturing: number | null
           proposals_sent: number | null
+          scheduled_visits: number | null
           source: string | null
           user_id: string | null
           visits: number | null
         }
         Insert: {
           calls?: number | null
+          confirmed_visits?: number | null
           contacts?: number | null
           created_at?: string | null
           description?: string | null
           id?: string
+          meetings?: number | null
           messages?: number | null
           metadata?: Json | null
           organization_id?: string | null
           property_capturing?: number | null
           proposals_sent?: number | null
+          scheduled_visits?: number | null
           source?: string | null
           user_id?: string | null
           visits?: number | null
         }
         Update: {
           calls?: number | null
+          confirmed_visits?: number | null
           contacts?: number | null
           created_at?: string | null
           description?: string | null
           id?: string
+          meetings?: number | null
           messages?: number | null
           metadata?: Json | null
           organization_id?: string | null
           property_capturing?: number | null
           proposals_sent?: number | null
+          scheduled_visits?: number | null
           source?: string | null
           user_id?: string | null
           visits?: number | null
@@ -8307,6 +8316,10 @@ export type Database = {
           stage_order: number
         }[]
       }
+      get_gamification_points: {
+        Args: { p_action_type: string; p_org_id: string }
+        Returns: number
+      }
       get_lead_sources_data: {
         Args: {
           p_date_from?: string
@@ -8503,6 +8516,10 @@ export type Database = {
         }[]
       }
       sync_historical_commissions: { Args: never; Returns: Json }
+      sync_user_level_and_xp: {
+        Args: { p_org_id: string; p_points: number; p_user_id: string }
+        Returns: undefined
+      }
       try_acquire_execution_step_lock: {
         Args: { p_execution_id: string; p_max_lock_age_seconds?: number }
         Returns: string

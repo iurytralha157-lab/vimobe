@@ -344,7 +344,7 @@ const App = () => {
   if (publicMode) {
     return (
       <QueryClientProvider client={queryClient}>
-        <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
           <TooltipProvider>
             <BrowserRouter>
               <Suspense fallback={null}>
@@ -360,7 +360,7 @@ const App = () => {
   // CRM MODE
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
+      <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
         <TooltipProvider>
           <BrandingAndPwa />
           <Toaster />
