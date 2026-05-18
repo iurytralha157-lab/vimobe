@@ -32,7 +32,7 @@ export default function GamificationLayout() {
   const activeTab = location.pathname;
 
   return (
-    <AppLayout title="Gamificação">
+    <AppLayout title="Arena Imobiliária">
       <div className="space-y-6">
         <AnimatedTabNav 
           tabs={tabs} 
