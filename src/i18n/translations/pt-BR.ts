@@ -35,6 +35,7 @@ export const ptBR = {
     schedule: 'Agenda',
     conversations: 'Conversas',
     properties: 'Imóveis',
+    gamification: 'Gamificação',
     propertiesAll: 'Todos os Imóveis',
     propertiesRentals: 'Aluguel',
     propertiesCondos: 'Condomínios',
