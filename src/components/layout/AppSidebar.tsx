@@ -183,7 +183,7 @@ const allNavItems: NavItem[] = [{
   }]
 }, {
   icon: Trophy,
-  labelKey: 'gamification',
+  labelKey: 'arena',
   path: '/gamificacao',
   module: 'gamification'
 }];
