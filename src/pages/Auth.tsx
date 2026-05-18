@@ -263,7 +263,7 @@ export default function Auth() {
   const showBg = loginBgUrl && bgLoaded;
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row bg-background relative overflow-x-hidden">
+    <div className="dark min-h-screen flex flex-col lg:flex-row bg-background relative overflow-x-hidden">
       {/* Mobile background: full screen background on mobile */}
       <div className="lg:hidden absolute inset-0 w-full h-full overflow-hidden pointer-events-none">
         {loginBgUrl ? (
