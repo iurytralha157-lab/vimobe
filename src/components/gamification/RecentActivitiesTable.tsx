@@ -12,6 +12,7 @@ import {
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Star, TrendingUp, Phone, MessageSquare, UserCheck, Trophy, FileText, Presentation, Users2, Calendar } from 'lucide-react';
+import { ACTION_LABELS } from '@/lib/gamification-labels';
 
 const ACTION_ICONS: Record<string, any> = {
   call_made: Phone,
@@ -30,23 +31,6 @@ const ACTION_ICONS: Record<string, any> = {
   property_created: Star,
 };
 
-const ACTION_LABELS: Record<string, string> = {
-  call_made: 'Ligação',
-  message_sent: 'Mensagem',
-  contact_made: 'Contato',
-  visit_scheduled: 'Visita Agendada',
-  sale_closed: 'Venda',
-  prospecting_report: 'Relatório de Prospecção',
-  mission_bonus: 'Bônus de Missão',
-  meeting_held: 'Reunião Realizada',
-  meeting_scheduled: 'Reunião Agendada',
-  proposal_sent: 'Proposta',
-  contract_signed: 'Contrato Assinado',
-  visit_confirmed: 'Visita Realizada',
-  lead_created_manual: 'Cadastro de Lead',
-  property_created: 'Captação de Imóvel',
-};
-
 export function RecentActivitiesTable() {
   const { user } = useAuth();
 
@@ -59,7 +43,7 @@ export function RecentActivitiesTable() {
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
-        .limit(10);
+        .limit(20);
       
       if (error) throw error;
       return data as any[];
@@ -71,38 +55,42 @@ export function RecentActivitiesTable() {
   if (!activities || activities.length === 0) return <div className="p-8 text-center text-sm text-muted-foreground">Nenhuma atividade registrada ainda.</div>;
 
   return (
-    <div className="rounded-md border">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Ação</TableHead>
-            <TableHead>Data</TableHead>
-            <TableHead className="text-right">Pontos</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {activities.map((activity) => {
-            const actionType = (activity.event_type || activity.action_type) as string;
-            const Icon = ACTION_ICONS[actionType] || Star;
-            return (
-              <TableRow key={activity.id}>
-                <TableCell className="font-medium">
-                  <div className="flex items-center gap-2">
-                    <Icon className="h-4 w-4 text-primary shrink-0" />
-                    <span>{ACTION_LABELS[actionType] || actionType}</span>
-                  </div>
-                </TableCell>
-                <TableCell className="text-xs text-muted-foreground">
-                  {format(new Date(activity.created_at), "dd 'de' MMM, HH:mm", { locale: ptBR })}
-                </TableCell>
-                <TableCell className="text-right font-bold text-emerald-600">
-                  +{activity.points_earned}
-                </TableCell>
-              </TableRow>
-            );
-          })}
-        </TableBody>
-      </Table>
+    <div className="rounded-md border overflow-hidden">
+      <div className="max-h-[420px] overflow-y-auto">
+        <Table>
+          <TableHeader className="sticky top-0 bg-background z-10 shadow-sm">
+            <TableRow>
+              <TableHead>Ação</TableHead>
+              <TableHead>Data</TableHead>
+              <TableHead className="text-right">Pontos</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {activities.map((activity) => {
+              const actionType = (activity.event_type || activity.action_type) as string;
+              const Icon = ACTION_ICONS[actionType] || Star;
+              return (
+                <TableRow key={activity.id}>
+                  <TableCell className="font-medium">
+                    <div className="flex items-center gap-2">
+                      <Icon className="h-4 w-4 text-primary shrink-0" />
+                      <span className="truncate max-w-[150px] sm:max-w-none">
+                        {ACTION_LABELS[actionType] || actionType}
+                      </span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                    {format(new Date(activity.created_at), "dd 'de' MMM, HH:mm", { locale: ptBR })}
+                  </TableCell>
+                  <TableCell className="text-right font-bold text-emerald-600">
+                    +{activity.points_earned}
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 }
