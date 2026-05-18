@@ -218,6 +218,8 @@ export default function Dashboard() {
             isLoading={statsLoading} 
             periodLabel={periodLabel}
             scheduledVisits={scheduledVisitsCount}
+            propertyCount={propertyCount}
+            siteVisits={siteVisits}
           />
 
           {/* Charts Tabs */}
