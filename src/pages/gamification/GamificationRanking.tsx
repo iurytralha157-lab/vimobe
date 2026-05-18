@@ -168,7 +168,7 @@ export default function GamificationRanking() {
           sales: ['sale_closed', 'contract_signed'],
           meetings: ['meeting_held'],
           visits: ['visit_scheduled', 'visit_confirmed'],
-          general: ['call_made', 'message_sent', 'proposal_sent', 'sale_closed', 'contract_signed', 'meeting_held', 'visit_scheduled', 'visit_confirmed', 'mission_bonus', 'prospecting_report', 'lead_created_manual', 'property_created']
+          general: ['call_made', 'message_sent', 'proposal_sent', 'sale_closed', 'contract_signed', 'meeting_held', 'visit_scheduled', 'visit_confirmed', 'mission_bonus', 'lead_created_manual', 'property_created']
         };
         const types = typeMap[rankingType] || [];
         if (types.length > 0) {
