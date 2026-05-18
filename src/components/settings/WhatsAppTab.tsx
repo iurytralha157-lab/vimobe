@@ -479,7 +479,7 @@ export function WhatsAppTab() {
 
         {/* Delete Confirmation Dialog */}
         <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-          <DialogContent>
+          <DialogContent className="w-[95%] max-w-[400px] rounded-lg">
             <DialogHeader>
               <DialogTitle>Excluir Conexão</DialogTitle>
               <DialogDescription>
@@ -487,14 +487,15 @@ export function WhatsAppTab() {
                 Esta ação não pode ser desfeita.
               </DialogDescription>
             </DialogHeader>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+            <DialogFooter className="flex flex-row justify-end gap-3 sm:gap-2 pt-2">
+              <Button variant="outline" onClick={() => setDeleteDialogOpen(false)} className="flex-1 sm:flex-none">
                 Cancelar
               </Button>
               <Button
                 variant="destructive"
                 onClick={handleDeleteSession}
-                disabled={deleteSession.isPending}>
+                disabled={deleteSession.isPending}
+                className="flex-1 sm:flex-none">
 
                 {deleteSession.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                 Excluir
