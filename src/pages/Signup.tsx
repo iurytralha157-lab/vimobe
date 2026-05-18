@@ -142,7 +142,7 @@ export default function Signup() {
 
   if (status === 'creating' || status === 'success') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-accent/20 p-4">
+      <div className="dark min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-accent/20 p-4">
         <Card className="w-full max-w-md border-border/50 shadow-soft">
           <CardContent className="pt-8 pb-8 text-center">
             {status === 'creating' && (
