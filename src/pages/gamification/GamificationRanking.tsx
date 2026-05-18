@@ -85,18 +85,22 @@ export default function GamificationRanking() {
 
       if (rankingType !== 'general') {
         if (rankingType === 'vgv') {
-        const { data: vgvData, error: vgvError } = await (supabase as any)
-            .from('gamification_sales_metrics')
-            .select('user_id, sale_value')
+          // Real VGV from leads table
+          const { data: vgvLeads, error: vgvError } = await supabase
+            .from('leads')
+            .select('assigned_user_id, valor_interesse')
             .eq('organization_id', organization.id)
-            .gte('created_at', dateRange.from.toISOString())
-            .lte('created_at', dateRange.to.toISOString());
+            .eq('deal_status', 'won')
+            .gte('won_at', dateRange.from.toISOString())
+            .lte('won_at', dateRange.to.toISOString());
           
           if (vgvError) throw vgvError;
           
           const vgvByUser: Record<string, number> = {};
-          vgvData?.forEach((v: any) => {
-            vgvByUser[v.user_id] = (vgvByUser[v.user_id] || 0) + Number(v.sale_value);
+          vgvLeads?.forEach((l: any) => {
+            if (l.assigned_user_id) {
+              vgvByUser[l.assigned_user_id] = (vgvByUser[l.assigned_user_id] || 0) + Number(l.valor_interesse || 0);
+            }
           });
           
           const { data: users } = await supabase.from('users' as any).select('id, name, avatar_url').eq('organization_id', organization.id);
