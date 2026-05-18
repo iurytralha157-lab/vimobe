@@ -37,7 +37,9 @@ import { useQueryClient } from '@tanstack/react-query';
 
 const formSchema = z.object({
   calls: z.coerce.number().min(0).default(0),
-  visits: z.coerce.number().min(0).default(0),
+  scheduled_visits: z.coerce.number().min(0).default(0),
+  confirmed_visits: z.coerce.number().min(0).default(0),
+  meetings: z.coerce.number().min(0).default(0),
   proposals_sent: z.coerce.number().min(0).default(0),
   source: z.string().min(1, 'Selecione a origem'),
   description: z.string().optional(),
@@ -55,7 +57,9 @@ export function ProspectingReportModal() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       calls: 0,
-      visits: 0,
+      scheduled_visits: 0,
+      confirmed_visits: 0,
+      meetings: 0,
       proposals_sent: 0,
       source: '',
       description: '',
@@ -76,7 +80,9 @@ export function ProspectingReportModal() {
         user_id: user.id,
         organization_id: organization.id,
         calls: values.calls,
-        visits: values.visits,
+        scheduled_visits: values.scheduled_visits,
+        confirmed_visits: values.confirmed_visits,
+        meetings: values.meetings,
         proposals_sent: values.proposals_sent,
         source: values.source,
         description: values.description || null,
@@ -88,7 +94,7 @@ export function ProspectingReportModal() {
       
       console.log("Inserting data into Supabase:", dataToInsert);
 
-      const { data, error } = await supabase.from('prospecting_reports' as any).insert(dataToInsert).select();
+      const { data, error } = await supabase.from('prospecting_reports').insert(dataToInsert).select();
 
       if (error) {
         console.error("Supabase insert error:", error);
@@ -160,11 +166,41 @@ export function ProspectingReportModal() {
               />
               <FormField
                 control={form.control}
-                name="visits"
+                name="scheduled_visits"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="flex items-center gap-1 text-xs">
-                      <Home className="h-3 w-3" /> Visitas
+                      <PlusCircle className="h-3 w-3" /> Visitas Agendadas
+                    </FormLabel>
+                    <FormControl>
+                      <Input type="number" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="confirmed_visits"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-1 text-xs">
+                      <Home className="h-3 w-3" /> Visitas Confirmadas
+                    </FormLabel>
+                    <FormControl>
+                      <Input type="number" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="meetings"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-1 text-xs">
+                      <UserCheck className="h-3 w-3" /> Reuniões
                     </FormLabel>
                     <FormControl>
                       <Input type="number" {...field} />
@@ -179,7 +215,7 @@ export function ProspectingReportModal() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="flex items-center gap-1 text-xs">
-                      <Send className="h-3 w-3" /> Propostas
+                      <Send className="h-3 w-3" /> Propostas Enviadas
                     </FormLabel>
                     <FormControl>
                       <Input type="number" {...field} />
