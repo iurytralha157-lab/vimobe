@@ -36,6 +36,8 @@ interface KPIData {
   overduePayables?: number;
   paidCommissions?: number;
   scheduledVisits?: number;
+  propertyCount?: number;
+  siteVisits?: number;
 }
 
 interface KPICardsProps {
@@ -43,6 +45,8 @@ interface KPICardsProps {
   isLoading?: boolean;
   periodLabel?: string;
   scheduledVisits?: number;
+  propertyCount?: number;
+  siteVisits?: number;
 }
 
 interface KPICardItemProps {
