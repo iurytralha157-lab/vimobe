@@ -26,22 +26,35 @@ const SOURCE_LABELS: Record<string, string> = {
 };
 
 export default function GamificationHistory() {
-  const { user } = useAuth();
+  const { user, profile, isSuperAdmin } = useAuth();
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
-  const { data: reports, isLoading } = useQuery({
-    queryKey: ['prospecting-reports-history', user?.id],
+  const isAdmin = profile?.role === 'admin' || isSuperAdmin;
+  const targetUserId = selectedUserId || user?.id;
+
+  const { data: history, isLoading } = useQuery({
+    queryKey: ['gamification-history-events', targetUserId],
     queryFn: async () => {
-      if (!user?.id) return [];
+      if (!targetUserId) return [];
       const { data, error } = await supabase
-        .from('prospecting_reports' as any)
+        .from('gamification_events')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', targetUserId)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
       return data as any[];
     },
-    enabled: !!user?.id,
+    enabled: !!targetUserId,
+  });
+
+  const { data: users } = useQuery({
+    queryKey: ['org-users-gamification'],
+    queryFn: async () => {
+      const { data } = await supabase.from('users' as any).select('id, name');
+      return data || [];
+    },
+    enabled: isAdmin
   });
 
   if (isLoading) {
