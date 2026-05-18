@@ -84,6 +84,30 @@ export default function GamificationRanking() {
         .lte('created_at', dateRange.to.toISOString());
 
       if (rankingType !== 'general') {
+        if (rankingType === 'vgv') {
+          const { data: vgvData, error: vgvError } = await supabase
+            .from('gamification_sales_metrics')
+            .select('user_id, sale_value')
+            .eq('organization_id', organization.id)
+            .gte('created_at', dateRange.from.toISOString())
+            .lte('created_at', dateRange.to.toISOString());
+          
+          if (vgvError) throw vgvError;
+          
+          const vgvByUser: Record<string, number> = {};
+          vgvData?.forEach((v: any) => {
+            vgvByUser[v.user_id] = (vgvByUser[v.user_id] || 0) + Number(v.sale_value);
+          });
+          
+          const { data: users } = await supabase.from('users' as any).select('id, name, avatar_url').eq('organization_id', organization.id);
+          return (users || []).map((u: any) => ({
+            id: u.id,
+            user_id: u.id,
+            total_points: vgvByUser[u.id] || 0,
+            profiles: { name: u.name, avatar_url: u.avatar_url }
+          })).sort((a, b) => b.total_points - a.total_points) as LeaderboardUser[];
+        }
+
         const typeMap: Record<string, string[]> = {
           calls: ['call_made'],
           proposals: ['proposal_sent'],
@@ -207,6 +231,7 @@ export default function GamificationRanking() {
                   rankingType === 'sales' ? 'de Vendas' :
                   rankingType === 'meetings' ? 'de Reuniões' :
                   rankingType === 'visits' ? 'de Visitas' :
+                  rankingType === 'vgv' ? 'de VGV Financeiro' :
                   'de Elite'
                 }
               </h2>
@@ -235,8 +260,10 @@ export default function GamificationRanking() {
                   </div>
                   <div className="bg-slate-300/30 w-full rounded-t-2xl p-3 lg:p-6 text-center min-h-[100px] lg:min-h-[160px] flex flex-col justify-center border-x border-t border-slate-300/50 backdrop-blur-sm">
                     <p className="font-bold text-xs lg:text-base truncate w-full px-1 mb-1">{topThree[1].profiles?.name}</p>
-                    <p className="text-xl lg:text-3xl font-black text-slate-700 leading-none">{topThree[1].total_points.toLocaleString()}</p>
-                    <p className="text-[9px] lg:text-[11px] uppercase font-bold text-slate-500 tracking-widest mt-2 lg:mt-3">Pontos</p>
+                    <p className="text-xl lg:text-3xl font-black text-slate-700 leading-none">
+                      {rankingType === 'vgv' ? topThree[1].total_points.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : topThree[1].total_points.toLocaleString()}
+                    </p>
+                    <p className="text-[9px] lg:text-[11px] uppercase font-bold text-slate-500 tracking-widest mt-2 lg:mt-3">{rankingType === 'vgv' ? 'VGV' : 'Pontos'}</p>
                   </div>
                 </div>
               )}
@@ -259,8 +286,10 @@ export default function GamificationRanking() {
                   <div className="bg-gradient-to-b from-yellow-500/30 via-yellow-500/10 to-transparent w-full rounded-t-3xl p-4 lg:p-8 text-center min-h-[140px] lg:min-h-[240px] flex flex-col justify-center border-x border-t border-yellow-500/60 shadow-[0_-15px_50px_rgba(234,179,8,0.15)] backdrop-blur-sm relative overflow-hidden">
                     <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-yellow-300 to-transparent opacity-50" />
                     <p className="font-black text-sm lg:text-xl truncate w-full mb-1 lg:mb-2 px-1 text-indigo-950 dark:text-white">{topThree[0].profiles?.name}</p>
-                    <p className="text-3xl lg:text-5xl font-black text-yellow-600 drop-shadow-md leading-none">{topThree[0].total_points.toLocaleString()}</p>
-                    <p className="text-[10px] lg:text-sm uppercase font-black text-yellow-700 tracking-[0.2em] mt-3 lg:mt-4">Campeão</p>
+                    <p className="text-3xl lg:text-5xl font-black text-yellow-600 drop-shadow-md leading-none">
+                      {rankingType === 'vgv' ? topThree[0].total_points.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : topThree[0].total_points.toLocaleString()}
+                    </p>
+                    <p className="text-[10px] lg:text-sm uppercase font-black text-yellow-700 tracking-[0.2em] mt-3 lg:mt-4">{rankingType === 'vgv' ? 'VGV Total' : 'Campeão'}</p>
                   </div>
                 </div>
               )}
@@ -279,8 +308,10 @@ export default function GamificationRanking() {
                   </div>
                   <div className="bg-amber-600/20 w-full rounded-t-xl p-3 lg:p-5 text-center min-h-[80px] lg:min-h-[130px] flex flex-col justify-center border-x border-t border-amber-600/40 backdrop-blur-sm">
                     <p className="font-bold text-[10px] lg:text-sm truncate w-full px-1 mb-1">{topThree[2].profiles?.name}</p>
-                    <p className="text-lg lg:text-2xl font-black text-amber-800 leading-none">{topThree[2].total_points.toLocaleString()}</p>
-                    <p className="text-[9px] lg:text-[10px] uppercase font-bold text-amber-600 tracking-widest mt-2 lg:mt-3">Pontos</p>
+                    <p className="text-lg lg:text-2xl font-black text-amber-800 leading-none">
+                      {rankingType === 'vgv' ? topThree[2].total_points.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : topThree[2].total_points.toLocaleString()}
+                    </p>
+                    <p className="text-[9px] lg:text-[10px] uppercase font-bold text-amber-600 tracking-widest mt-2 lg:mt-3">{rankingType === 'vgv' ? 'VGV' : 'Pontos'}</p>
                   </div>
                 </div>
               )}
@@ -318,7 +349,8 @@ export default function GamificationRanking() {
                          rankingType === 'proposals' ? 'Propostas' :
                          rankingType === 'sales' ? 'Vendas' :
                          rankingType === 'meetings' ? 'Reuniões' :
-                         rankingType === 'visits' ? 'Visitas' : 'Filtrar'}
+                          rankingType === 'visits' ? 'Visitas' : 
+                          rankingType === 'vgv' ? 'VGV Financeiro' : 'Filtrar'}
                       </span>
                     </Button>
                   </DropdownMenuTrigger>
@@ -340,6 +372,9 @@ export default function GamificationRanking() {
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setRankingType('visits')} className={cn(rankingType === 'visits' && "bg-muted")}>
                       <Users2 className="mr-2 h-4 w-4" /> Visitas
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setRankingType('vgv')} className={cn(rankingType === 'vgv' && "bg-muted")}>
+                      <BadgeDollarSign className="mr-2 h-4 w-4 text-emerald-500" /> Ranking de VGV
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -378,8 +413,10 @@ export default function GamificationRanking() {
                   </div>
 
                   <div className="text-right shrink-0">
-                    <p className="text-xs lg:text-sm font-black text-indigo-600 dark:text-indigo-400">{user.total_points.toLocaleString()}</p>
-                    <p className="text-[8px] lg:text-[9px] uppercase font-bold text-muted-foreground tracking-widest">PTS</p>
+                    <p className="text-xs lg:text-sm font-black text-indigo-600 dark:text-indigo-400">
+                      {rankingType === 'vgv' ? user.total_points.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }) : user.total_points.toLocaleString()}
+                    </p>
+                    <p className="text-[8px] lg:text-[9px] uppercase font-bold text-muted-foreground tracking-widest">{rankingType === 'vgv' ? 'VGV' : 'PTS'}</p>
                   </div>
                 </div>
               );
