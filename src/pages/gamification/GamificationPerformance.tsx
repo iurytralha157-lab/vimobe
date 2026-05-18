@@ -56,7 +56,11 @@ export default function GamificationPerformance() {
         return {
           name: format(day, 'eee', { locale: ptBR }),
           pontos: dayEvents.reduce((acc, curr) => acc + (curr.points_earned || 0), 0),
-          acoes: dayEvents.reduce((acc, curr) => acc + (((curr.metadata as any)?.count) || 1), 0)
+          // Count real actions: use metadata.count if available (from reports), otherwise count rows
+          acoes: dayEvents.reduce((acc, curr) => {
+            const metadata = (curr.metadata as any) || {};
+            return acc + (metadata.count || 1);
+          }, 0)
         };
       });
 
