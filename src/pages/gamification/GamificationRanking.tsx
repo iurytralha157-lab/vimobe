@@ -332,7 +332,7 @@ export default function GamificationRanking() {
                     <p className="font-bold text-[10px] sm:text-xs lg:text-base truncate w-full px-1 mb-0.5 sm:mb-1 text-slate-700 dark:text-slate-200">{topThree[1].profiles?.name}</p>
                     <p className={cn(
                       "font-black text-slate-800 dark:text-slate-100 leading-none tracking-tighter",
-                      rankingType === 'vgv' ? "text-sm sm:text-base lg:text-2xl" : "text-lg sm:text-xl lg:text-3xl"
+                      rankingType === 'vgv' ? "text-[10px] sm:text-base lg:text-2xl" : "text-lg sm:text-xl lg:text-3xl"
                     )}>
                       {formatRankingValue(topThree[1].total_points, rankingType)}
                     </p>
@@ -361,7 +361,7 @@ export default function GamificationRanking() {
                     <p className="font-black text-xs sm:text-sm lg:text-xl truncate w-full mb-1 lg:mb-2 px-1 text-indigo-950 dark:text-white">{topThree[0].profiles?.name}</p>
                     <p className={cn(
                       "font-black text-yellow-600 drop-shadow-md leading-none tracking-tighter",
-                      rankingType === 'vgv' ? "text-lg sm:text-2xl lg:text-4xl" : "text-2xl sm:text-3xl lg:text-5xl"
+                      rankingType === 'vgv' ? "text-sm sm:text-2xl lg:text-4xl" : "text-2xl sm:text-3xl lg:text-5xl"
                     )}>
                       {formatRankingValue(topThree[0].total_points, rankingType)}
                     </p>
@@ -386,7 +386,7 @@ export default function GamificationRanking() {
                     <p className="font-bold text-[9px] sm:text-[10px] lg:text-sm truncate w-full px-1 mb-0.5 sm:mb-1 text-amber-900 dark:text-amber-200">{topThree[2].profiles?.name}</p>
                     <p className={cn(
                       "font-black text-amber-800 dark:text-amber-300 leading-none tracking-tighter",
-                      rankingType === 'vgv' ? "text-xs sm:text-sm lg:text-xl" : "text-base sm:text-lg lg:text-2xl"
+                      rankingType === 'vgv' ? "text-[9px] sm:text-sm lg:text-xl" : "text-base sm:text-lg lg:text-2xl"
                     )}>
                       {formatRankingValue(topThree[2].total_points, rankingType)}
                     </p>
