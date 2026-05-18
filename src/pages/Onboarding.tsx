@@ -183,7 +183,7 @@ export default function Onboarding() {
 
   if (submitted) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4 relative overflow-hidden">
+      <div className="dark min-h-screen flex items-center justify-center bg-background p-4 relative overflow-hidden">
         {/* Mobile background: full screen background on mobile */}
         <div className="lg:hidden absolute inset-0 w-full h-full overflow-hidden pointer-events-none">
           {loginBgUrl ? (
