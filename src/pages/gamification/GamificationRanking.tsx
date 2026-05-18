@@ -85,7 +85,7 @@ export default function GamificationRanking() {
 
       if (rankingType !== 'general') {
         if (rankingType === 'vgv') {
-          const { data: vgvData, error: vgvError } = await supabase
+        const { data: vgvData, error: vgvError } = await (supabase as any)
             .from('gamification_sales_metrics')
             .select('user_id, sale_value')
             .eq('organization_id', organization.id)
