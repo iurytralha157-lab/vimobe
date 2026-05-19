@@ -83,10 +83,23 @@ Deno.serve(async (req) => {
     if (enrichedVariables.titulo && !enrichedVariables.title) enrichedVariables.title = enrichedVariables.titulo;
     if (enrichedVariables.title && !enrichedVariables.titulo) enrichedVariables.titulo = enrichedVariables.title;
 
-    // Auto-fetch organization name if needed
-    if ((formattedMessage.includes('{organization_name}') || formattedTitle.includes('{organization_name}')) && !enrichedVariables.organization_name) {
+    // Fetch user organizations count to decide if we show organization name
+    let showOrganizationName = false;
+    if (user_id) {
+      const { count } = await supabase
+        .from('organization_members')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user_id);
+      showOrganizationName = (count || 0) > 1;
+    }
+
+    // Auto-fetch organization name if needed and user has multiple orgs
+    if (showOrganizationName && (formattedMessage.includes('{organization_name}') || formattedTitle.includes('{organization_name}')) && !enrichedVariables.organization_name) {
       const { data: org } = await supabase.from('organizations').select('name').eq('id', organization_id).maybeSingle();
       if (org) enrichedVariables.organization_name = org.name;
+    } else if (!showOrganizationName) {
+      // Remove placeholder if user has only one org
+      enrichedVariables.organization_name = '';
     }
 
     if (enrichedVariables) {
@@ -95,14 +108,23 @@ Deno.serve(async (req) => {
         const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         const regex = new RegExp(`\\{\\s*${escapedKey}\\s*\\}`, 'gi');
         
-        const stringValue = value !== null && value !== undefined ? String(value) : '';
+        let stringValue = value !== null && value !== undefined ? String(value) : '';
         
+        // If organization_name is empty, also try to clean up prefixes like "Organização: " or "🏢 "
+        if (key === 'organization_name' && !stringValue) {
+          formattedMessage = formattedMessage.replace(new RegExp(`(🏢 )?Organização:?\\s*\\{${escapedKey}\\}`, 'gi'), '');
+          formattedMessage = formattedMessage.replace(new RegExp(`\\n?🏢\\s*\\{${escapedKey}\\}`, 'gi'), '');
+        }
+
         formattedMessage = formattedMessage.replace(regex, stringValue);
         if (formattedTitle) {
           formattedTitle = formattedTitle.replace(regex, stringValue);
         }
       });
     }
+
+    // Cleanup extra newlines that might be left after removing org
+    formattedMessage = formattedMessage.replace(/\n\n+/g, '\n\n').trim();
 
     // 4. Dispatch for each channel
     const channels = template.channels || [template.channel];
