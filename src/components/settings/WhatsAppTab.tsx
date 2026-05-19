@@ -464,13 +464,13 @@ export function WhatsAppTab() {
                                 className="h-8 w-8 p-0 shrink-0"
                                 disabled={syncAvatars.isPending}
                                 onClick={() => {
-                                  syncAvatars.mutate({ sessionId: session.id }, {
+                                  syncAvatars.mutate(session.id, {
                                     onSuccess: (d: any) => toast({ title: "Avatares sincronizados", description: `${d?.updated || 0} contatos atualizados` }),
                                     onError: (e: any) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
                                   });
                                 }}
                               >
-                                {syncAvatars.isPending && syncAvatars.variables?.sessionId === session.id
+                                {syncAvatars.isPending && syncAvatars.variables === session.id
                                   ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
                                   : <ImageIcon className="w-3.5 h-3.5" />}
                               </Button>
