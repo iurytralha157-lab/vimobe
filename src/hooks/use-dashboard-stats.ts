@@ -168,10 +168,38 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
         }
 
         const totalLeads = count || 0;
-        const closedLeads = leads?.filter(l => l.deal_status === 'won').length || 0;
-        const totalSalesValue = leads?.filter(l => l.deal_status === 'won')
-          .reduce((sum, l) => sum + (Number(l.valor_interesse) || 0), 0) || 0;
-        
+
+        // Vendas ganhas: filtrar por won_at (data da venda), não por created_at
+        let wonQuery = supabase
+          .from('leads')
+          .select('id, valor_interesse, assigned_user_id, source, lead_meta!left(campaign_id, adset_id, ad_id)')
+          .eq('organization_id', organizationId)
+          .eq('deal_status', 'won')
+          .gte('won_at', currentFrom.toISOString())
+          .lte('won_at', currentTo.toISOString());
+
+        if (filters?.campaignId) wonQuery = wonQuery.eq('lead_meta.campaign_id', filters.campaignId);
+        if (filters?.adSetId) wonQuery = wonQuery.eq('lead_meta.adset_id', filters.adSetId);
+        if (filters?.adId) wonQuery = wonQuery.eq('lead_meta.ad_id', filters.adId);
+        if (filters?.userId) wonQuery = wonQuery.eq('assigned_user_id', filters.userId);
+        if (filters?.source) wonQuery = wonQuery.eq('source', filters.source);
+        if (filters?.teamId) {
+          const { data: teamMembers } = await supabase
+            .from('team_members')
+            .select('user_id')
+            .eq('team_id', filters.teamId);
+          if (teamMembers?.length) {
+            wonQuery = wonQuery.in('assigned_user_id', teamMembers.map(m => m.user_id));
+          }
+        }
+
+        const { data: wonLeads } = await wonQuery;
+        const closedLeads = wonLeads?.length || 0;
+        const totalSalesValue = (wonLeads || []).reduce(
+          (sum, l: any) => sum + (Number(l.valor_interesse) || 0),
+          0
+        );
+
         const respTimes = leads?.filter(l => l.first_response_seconds != null)
           .map(l => Number(l.first_response_seconds)) || [];
         const avgRespSec = respTimes.length > 0 
