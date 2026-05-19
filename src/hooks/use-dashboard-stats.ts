@@ -168,10 +168,38 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
         }
 
         const totalLeads = count || 0;
-        const closedLeads = leads?.filter(l => l.deal_status === 'won').length || 0;
-        const totalSalesValue = leads?.filter(l => l.deal_status === 'won')
-          .reduce((sum, l) => sum + (Number(l.valor_interesse) || 0), 0) || 0;
-        
+
+        // Vendas ganhas: filtrar por won_at (data da venda), não por created_at
+        let wonQuery = supabase
+          .from('leads')
+          .select('id, valor_interesse, assigned_user_id, source, lead_meta!left(campaign_id, adset_id, ad_id)')
+          .eq('organization_id', organizationId)
+          .eq('deal_status', 'won')
+          .gte('won_at', currentFrom.toISOString())
+          .lte('won_at', currentTo.toISOString());
+
+        if (filters?.campaignId) wonQuery = wonQuery.eq('lead_meta.campaign_id', filters.campaignId);
+        if (filters?.adSetId) wonQuery = wonQuery.eq('lead_meta.adset_id', filters.adSetId);
+        if (filters?.adId) wonQuery = wonQuery.eq('lead_meta.ad_id', filters.adId);
+        if (filters?.userId) wonQuery = wonQuery.eq('assigned_user_id', filters.userId);
+        if (filters?.source) wonQuery = wonQuery.eq('source', filters.source);
+        if (filters?.teamId) {
+          const { data: teamMembers } = await supabase
+            .from('team_members')
+            .select('user_id')
+            .eq('team_id', filters.teamId);
+          if (teamMembers?.length) {
+            wonQuery = wonQuery.in('assigned_user_id', teamMembers.map(m => m.user_id));
+          }
+        }
+
+        const { data: wonLeads } = await wonQuery;
+        const closedLeads = wonLeads?.length || 0;
+        const totalSalesValue = (wonLeads || []).reduce(
+          (sum, l: any) => sum + (Number(l.valor_interesse) || 0),
+          0
+        );
+
         const respTimes = leads?.filter(l => l.first_response_seconds != null)
           .map(l => Number(l.first_response_seconds)) || [];
         const avgRespSec = respTimes.length > 0 
@@ -469,8 +497,8 @@ export function useTopBrokers(filters?: DashboardFilters) {
 
       if (filters?.dateRange) {
         query = query
-          .gte('created_at', filters.dateRange.from.toISOString())
-          .lte('created_at', filters.dateRange.to.toISOString());
+          .gte('won_at', filters.dateRange.from.toISOString())
+          .lte('won_at', filters.dateRange.to.toISOString());
       }
 
       if (filters?.userId) {
@@ -709,8 +737,8 @@ export function useDealsEvolutionData(filters?: DashboardFilters) {
       const dateTo = filters?.dateRange?.to || now;
       const daysDiff = differenceInDays(dateTo, dateFrom);
       
-      // Build base query
-      let selectString = 'id, created_at, deal_status, assigned_user_id, source';
+      // Build base query — buscar leads que entraram OU foram ganhos OU foram perdidos no período
+      let selectString = 'id, created_at, won_at, lost_at, deal_status, assigned_user_id, source';
       if (filters?.campaignId || filters?.adSetId || filters?.adId) {
         selectString += ', lead_meta!inner(campaign_id, adset_id, ad_id)';
       }
@@ -719,8 +747,11 @@ export function useDealsEvolutionData(filters?: DashboardFilters) {
         .from('leads')
         .select(selectString)
         .eq('organization_id', organizationId!)
-        .gte('created_at', dateFrom.toISOString())
-        .lte('created_at', dateTo.toISOString());
+        .or(
+          `and(created_at.gte.${dateFrom.toISOString()},created_at.lte.${dateTo.toISOString()}),` +
+          `and(won_at.gte.${dateFrom.toISOString()},won_at.lte.${dateTo.toISOString()}),` +
+          `and(lost_at.gte.${dateFrom.toISOString()},lost_at.lte.${dateTo.toISOString()})`
+        );
 
       // Apply Meta filters
       if (filters?.campaignId) {
@@ -793,22 +824,39 @@ export function useDealsEvolutionData(filters?: DashboardFilters) {
         intervals = intervals.filter((_, i) => i % step === 0);
       }
 
-      // Group leads by interval
+      // Group leads by interval — usa a DATA CORRETA para cada categoria:
+      // - abertos: created_at (entrada do lead)
+      // - ganhos: won_at (data da venda)
+      // - perdas: lost_at (data da perda)
+      const inRange = (iso: string | null, start: Date, end: Date) => {
+        if (!iso) return false;
+        const d = new Date(iso);
+        return d >= start && d < end;
+      };
+
       const result: DealsEvolutionPoint[] = intervals.map((intervalStart, index) => {
-        const intervalEnd = index < intervals.length - 1 
-          ? intervals[index + 1] 
+        const intervalEnd = index < intervals.length - 1
+          ? intervals[index + 1]
           : dateTo;
-        
-        const intervalLeads = leads.filter((lead: any) => {
-          const leadDate = new Date(lead.created_at);
-          return leadDate >= intervalStart && leadDate < intervalEnd;
-        });
+
+        const ganhos = leads.filter((l: any) =>
+          l.deal_status === 'won' && inRange(l.won_at, intervalStart, intervalEnd)
+        ).length;
+
+        const perdas = leads.filter((l: any) =>
+          l.deal_status === 'lost' && inRange(l.lost_at, intervalStart, intervalEnd)
+        ).length;
+
+        const abertos = leads.filter((l: any) =>
+          (l.deal_status === 'open' || !l.deal_status) &&
+          inRange(l.created_at, intervalStart, intervalEnd)
+        ).length;
 
         return {
           date: formatLabel(intervalStart),
-          ganhos: intervalLeads.filter((l: any) => l.deal_status === 'won').length,
-          perdas: intervalLeads.filter((l: any) => l.deal_status === 'lost').length,
-          abertos: intervalLeads.filter((l: any) => l.deal_status === 'open' || !l.deal_status).length,
+          ganhos,
+          perdas,
+          abertos,
         };
       });
 
