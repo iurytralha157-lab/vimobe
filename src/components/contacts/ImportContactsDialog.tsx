@@ -397,39 +397,73 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
       { header: 'Status', key: 'Status', width: 12 },
       { header: 'Pipeline', key: 'Pipeline', width: 15 },
       { header: 'Estagio', key: 'Estagio', width: 15 },
-      { header: 'Responsavel', key: 'Responsavel', width: 20 },
+      { header: 'Responsavel', key: 'Responsavel', width: 25 },
       { header: 'Tags', key: 'Tags', width: 30 },
       { header: 'Fonte', key: 'Fonte', width: 15 },
       { header: 'Motivo de perda', key: 'Motivo de perda', width: 25 },
       { header: 'Mensagem', key: 'Mensagem', width: 40 },
     ];
 
-    worksheet.addRow({ 
-      Nome: 'João Silva', 
-      Telefone: '5511999998888', 
-      Email: 'joao@email.com', 
-      Status: 'Aberto', 
-      Pipeline: 'Vendas', 
-      Estagio: 'Base', 
-      Responsavel: 'Carlos', 
-      Tags: 'quente, investidor', 
-      Fonte: 'Facebook Ads',
-      'Motivo de perda': '',
-      Mensagem: 'Interessado no imóvel' 
-    });
+    // Get a sample user and pipeline for the template
+    const sampleUser = users[0]?.name || 'Corretor Exemplo';
+    const firstPipeline = pipelines[0]?.name || 'Vendas';
+    const firstStage = stagesData[0]?.name || 'Novo Lead';
 
-    worksheet.getRow(1).font = { bold: true };
+    worksheet.addRows([
+      { 
+        Nome: 'João Silva', 
+        Telefone: '5511999998888', 
+        Email: 'joao@email.com', 
+        Status: 'Aberto', 
+        Pipeline: firstPipeline, 
+        Estagio: firstStage, 
+        Responsavel: sampleUser, 
+        Tags: 'quente, investidor', 
+        Fonte: 'Facebook Ads',
+        'Motivo de perda': '',
+        Mensagem: 'Interessado no imóvel de alto padrão' 
+      },
+      { 
+        Nome: 'Maria Souza', 
+        Telefone: '5511977776666', 
+        Email: 'maria@email.com', 
+        Status: 'Ganho', 
+        Pipeline: firstPipeline, 
+        Estagio: 'Contrato Assinado', 
+        Responsavel: sampleUser, 
+        Tags: 'imediato', 
+        Fonte: 'Indicação',
+        'Motivo de perda': '',
+        Mensagem: 'Cliente já fechou negócio' 
+      },
+      { 
+        Nome: 'Pedro Oliveira', 
+        Telefone: '5511955554444', 
+        Email: 'pedro@email.com', 
+        Status: 'Perdido', 
+        Pipeline: firstPipeline, 
+        Estagio: 'Desqualificado', 
+        Responsavel: sampleUser, 
+        Tags: 'curioso', 
+        Fonte: 'Instagram',
+        'Motivo de perda': 'Preço acima do orçamento',
+        Mensagem: 'Não possui perfil no momento' 
+      }
+    ]);
+
+    worksheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
     worksheet.getRow(1).fill = {
       type: 'pattern',
       pattern: 'solid',
-      fgColor: { argb: 'FFE0E0E0' }
+      fgColor: { argb: 'FF000000' }
     };
+    worksheet.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' };
 
     const buffer = await workbook.xlsx.writeBuffer();
     const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = 'modelo_importacao_crm.xlsx';
+    link.download = 'modelo_importacao_completa_crm.xlsx';
     link.click();
     URL.revokeObjectURL(link.href);
   };

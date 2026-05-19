@@ -557,14 +557,23 @@ async function sendAutomationNotification(
     let notifyUserId: string | null = automation.created_by || null;
     let organizationName = "";
 
-    // Fetch organization name
-    const { data: org } = await supabase
-      .from("organizations")
-      .select("name")
-      .eq("id", execution.organization_id)
-      .single();
-    if (org) {
-      organizationName = org.name;
+    // Check if user has multiple organizations
+    if (notifyUserId) {
+      const { count } = await supabase
+        .from('organization_members')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', notifyUserId);
+      
+      if (count && count > 1) {
+        const { data: org } = await supabase
+          .from("organizations")
+          .select("name")
+          .eq("id", execution.organization_id)
+          .single();
+        if (org) {
+          organizationName = org.name;
+        }
+      }
     }
 
     if (execution.lead_id) {
@@ -577,13 +586,13 @@ async function sendAutomationNotification(
     }
     if (!notifyUserId) return;
     const isSuccess = status === "completed";
-    const title = isSuccess ? "✅ Automação Concluída" : "❌ Automação Falhou";
+    const title = isSuccess ? "⚡ Automação Concluída" : "❌ Automação Falhou";
     const translated = errorMessage ? translateError(errorMessage) : "";
     
     const orgSuffix = organizationName ? ` na *${organizationName}*` : "";
     const content = isSuccess
-      ? `"${automation.name}" finalizou para ${leadName}${orgSuffix}`
-      : `"${automation.name}" falhou para ${leadName}${orgSuffix}: ${translated}`;
+      ? `A automação "${automation.name}" para o lead ${leadName} foi concluída com sucesso${orgSuffix}.`
+      : `A automação "${automation.name}" para o lead ${leadName} falhou${orgSuffix}: ${translated}`;
 
     await supabase.from("notifications").insert({
       user_id: notifyUserId,
@@ -1162,7 +1171,7 @@ async function replaceVariables(
   }
   if (execution.lead_id) {
     const { data: lead } = await supabase
-      .from("leads").select("*, organization:organizations(name)")
+      .from("leads").select("*")
       .eq("id", execution.lead_id).single();
     if (lead) {
       result = result.replace(/\{\{lead\.name\}\}/g, lead.name || "");
@@ -1172,7 +1181,6 @@ async function replaceVariables(
       result = result.replace(/\{\{lead\.message\}\}/g, lead.message || "");
       result = result.replace(/\{\{lead\.valor_interesse\}\}/g,
         lead.valor_interesse ? `R$ ${Number(lead.valor_interesse).toLocaleString("pt-BR")}` : "");
-      result = result.replace(/\{\{organization\.name\}\}/g, lead.organization?.name || "");
     }
     const { data: customer } = await supabase
       .from("telecom_customers").select("*").eq("lead_id", execution.lead_id).maybeSingle();
