@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { format, addMinutes, differenceInMinutes } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -6,7 +6,7 @@ import {
   MapPin, X, User, Search, Clock, Plus, Send, Building2, Users,
   CheckCircle, CheckCircle2, Trash2, Lock, Edit2, Video, ClipboardList, Eye,
 } from "lucide-react";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -81,6 +81,7 @@ export function EventSheet({
   const [date, setDate] = useState<Date | undefined>(undefined);
   const [time, setTime] = useState("");
   const [duration, setDuration] = useState(30);
+  const durationTouched = useRef(false);
 
   // Lead selector
   const [leadSearch, setLeadSearch] = useState("");
@@ -91,6 +92,7 @@ export function EventSheet({
 
   // Assignee picker
   const [showAssigneePicker, setShowAssigneePicker] = useState(false);
+  const [pendingAssigneeIds, setPendingAssigneeIds] = useState<string[]>([]);
   const { assignees, addAssignee, removeAssignee } = useScheduleEventAssignees(event?.id);
   const { comments, addComment, isAdding } = useScheduleComments(event?.id);
   const [commentText, setCommentText] = useState("");
@@ -121,26 +123,49 @@ export function EventSheet({
       setSelectedLeadId(leadId || null);
       setSelectedLeadName(leadName || null);
       setDuration(30);
+      durationTouched.current = false;
     }
+    setPendingAssigneeIds([]);
     setCommentText("");
   }, [open, event, defaultUserId, defaultDate, leadId, leadName]);
+
+  // Efeito para ajustar duração padrão
+  useEffect(() => {
+    if (locked || durationTouched.current) return;
+    if (selectedType === "visit" || selectedType === "meeting") {
+      setDuration(60);
+    } else {
+      setDuration(30);
+    }
+  }, [selectedType, locked]);
 
   const typeConf = eventTypes.find((t) => t.type === selectedType) || eventTypes[3];
   const TypeIcon = typeConf.icon;
 
-  // Lista combinada de responsáveis (principal + assignees)
+  // Lista combinada de responsáveis (principal + assignees + pendentes)
   const allAssignees = useMemo(() => {
-    const list: { id: string; name: string; avatar_url: string | null; primary: boolean }[] = [];
+    const list: { id: string; name: string; avatar_url: string | null; primary: boolean; pending?: boolean }[] = [];
     const primary = users.find((u) => u.id === primaryUserId);
     if (primary) list.push({ ...primary, primary: true });
+    
+    // Assignees vindos do banco
     assignees.forEach((a) => {
       if (a.id !== primaryUserId) list.push({ ...a, primary: false });
     });
+
+    // Assignees pendentes (em criação)
+    pendingAssigneeIds.forEach(id => {
+      const u = users.find(user => user.id === id);
+      if (u && !list.some(item => item.id === u.id)) {
+        list.push({ ...u, primary: false, pending: true });
+      }
+    });
+
     return list;
-  }, [users, primaryUserId, assignees]);
+  }, [users, primaryUserId, assignees, pendingAssigneeIds]);
 
   const availableUsers = users.filter(
-    (u) => u.id !== primaryUserId && !assignees.some((a) => a.id === u.id),
+    (u) => u.id !== primaryUserId && !assignees.some((a) => a.id === u.id) && !pendingAssigneeIds.includes(u.id),
   );
 
   const handleSubmit = async () => {
@@ -164,7 +189,14 @@ export function EventSheet({
     if (event) {
       await updateEvent.mutateAsync({ id: event.id, ...payload });
     } else {
-      await createEvent.mutateAsync(payload);
+      const created = await createEvent.mutateAsync(payload);
+      // Se houver responsáveis pendentes, adiciona-os agora
+      if (created?.id && pendingAssigneeIds.length > 0) {
+        // Dispara inserções em paralelo, mas não precisa travar o fechamento da Sheet
+        pendingAssigneeIds.forEach(userId => {
+          addAssignee(userId);
+        });
+      }
     }
     onOpenChange(false);
   };
@@ -194,14 +226,18 @@ export function EventSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="w-full sm:max-w-[420px] p-0 flex flex-col bg-[var(--color-background-secondary)] border-l border-white/10"
+        className="w-full sm:max-w-[420px] p-0 flex flex-col bg-card border-l border-border shadow-2xl"
       >
+        <SheetHeader className="sr-only">
+          <SheetTitle>{isExisting ? "Detalhes da Atividade" : "Nova Atividade"}</SheetTitle>
+        </SheetHeader>
+
         {/* Header */}
-        <div className="px-5 py-4 border-b border-white/10 shrink-0">
-          <div className="flex items-center justify-between mb-2">
+        <div className="px-5 py-4 border-b border-border shrink-0 bg-muted/20">
+          <div className="flex items-center justify-between mb-3">
             <span
-              className="inline-flex items-center gap-1.5 text-[10px] font-semibold px-2 py-1 rounded-full"
-              style={{ background: `${typeConf.color}28`, color: typeConf.color }}
+              className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full shadow-sm"
+              style={{ background: `${typeConf.color}20`, color: typeConf.color, border: `1px solid ${typeConf.color}40` }}
             >
               <TypeIcon size={11} />
               {typeConf.label}
@@ -209,8 +245,8 @@ export function EventSheet({
             {isExisting && (
               <span
                 className={cn(
-                  "text-[10px] font-semibold px-2 py-1 rounded-full",
-                  isCompleted ? "bg-emerald-500/15 text-emerald-400" : "bg-amber-500/15 text-amber-400",
+                  "text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full shadow-sm",
+                  isCompleted ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30" : "bg-amber-500/15 text-amber-400 border border-amber-500/30",
                 )}
               >
                 {isCompleted ? "Concluída" : (event?.status === "confirmed" ? "Confirmado" : "Pendente")}
@@ -218,24 +254,26 @@ export function EventSheet({
             )}
           </div>
           {locked ? (
-            <h2 className="text-lg font-semibold text-foreground leading-tight">{title || "Sem título"}</h2>
+            <h2 className="text-xl font-bold text-foreground leading-tight">{title || "Sem título"}</h2>
           ) : (
-            <Input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Assunto da atividade"
-              className="text-lg font-semibold h-auto border-0 bg-transparent px-0 py-1 focus-visible:ring-0 placeholder:text-muted-foreground/50"
-            />
+            <div className="bg-muted/40 rounded-lg px-3 py-1.5 focus-within:ring-1 focus-within:ring-primary/50 transition-all border border-transparent focus-within:border-primary/20">
+              <Input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Assunto da atividade"
+                className="text-xl font-bold h-auto border-0 bg-transparent px-0 py-0 focus-visible:ring-0 placeholder:text-muted-foreground/40"
+              />
+            </div>
           )}
           {locked && (
-            <div className="mt-2 flex items-center gap-1.5 text-[11px] text-muted-foreground">
-              <Lock size={11} /> Atividade concluída — somente leitura
+            <div className="mt-2 flex items-center gap-1.5 text-[11px] text-muted-foreground font-medium">
+              <Lock size={11} className="text-muted-foreground/70" /> Atividade concluída — somente leitura
             </div>
           )}
         </div>
 
         {/* Body scroll */}
-        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
           {/* Tipo */}
           {!locked && (
             <Field label="Tipo de atividade">
@@ -330,21 +368,29 @@ export function EventSheet({
           <Field label="Responsáveis" icon={Users}>
             <div className="flex items-center gap-2 flex-wrap">
               {allAssignees.map((a) => (
-                <div key={a.id} className="group relative inline-flex items-center gap-1.5 pl-1 pr-2 py-1 rounded-full bg-white/5 border border-white/10">
-                  <Avatar className="h-6 w-6">
+                <div key={a.id} className="group relative">
+                  <Avatar className={cn(
+                    "h-8 w-8 ring-2 ring-background transition-transform hover:scale-105",
+                    a.primary ? "ring-primary/20" : "ring-background"
+                  )} title={a.name}>
                     <AvatarImage src={a.avatar_url || undefined} />
-                    <AvatarFallback className="text-[10px] bg-primary/20 text-primary">
+                    <AvatarFallback className="text-[10px] bg-primary/20 text-primary font-bold">
                       {a.name.split(" ").slice(0, 2).map((p) => p[0]).join("").toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
-                  <span className="text-xs font-medium">{a.name}</span>
                   {!locked && !a.primary && (
                     <button
-                      onClick={() => removeAssignee(a.id)}
-                      className="ml-1 text-muted-foreground hover:text-destructive"
+                      onClick={() => {
+                        if (a.pending) {
+                          setPendingAssigneeIds(prev => prev.filter(id => id !== a.id));
+                        } else {
+                          removeAssignee(a.id);
+                        }
+                      }}
+                      className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity border border-background"
                       aria-label="Remover responsável"
                     >
-                      <X size={10} />
+                      <X size={8} strokeWidth={3} />
                     </button>
                   )}
                 </div>
@@ -353,10 +399,10 @@ export function EventSheet({
                 <Popover open={showAssigneePicker} onOpenChange={setShowAssigneePicker}>
                   <PopoverTrigger asChild>
                     <button
-                      className="h-7 w-7 rounded-full border border-dashed border-white/20 text-muted-foreground hover:border-primary hover:text-primary flex items-center justify-center"
+                      className="h-8 w-8 rounded-full border border-dashed border-border text-muted-foreground hover:border-primary hover:text-primary flex items-center justify-center transition-colors bg-muted/20"
                       type="button"
                     >
-                      <Plus size={12} />
+                      <Plus size={14} />
                     </button>
                   </PopoverTrigger>
                   <PopoverContent className="p-0 w-[260px]" align="start">
@@ -372,9 +418,11 @@ export function EventSheet({
                                 if (isExisting) {
                                   addAssignee(u.id);
                                 } else {
-                                  // Em criação, define como responsável principal se vazio,
-                                  // senão precisará criar primeiro para adicionar múltiplos
-                                  if (!primaryUserId) setPrimaryUserId(u.id);
+                                  if (!primaryUserId) {
+                                    setPrimaryUserId(u.id);
+                                  } else if (!pendingAssigneeIds.includes(u.id)) {
+                                    setPendingAssigneeIds(prev => [...prev, u.id]);
+                                  }
                                 }
                                 setShowAssigneePicker(false);
                               }}
@@ -395,11 +443,6 @@ export function EventSheet({
                 </Popover>
               )}
             </div>
-            {!isExisting && (
-              <p className="text-[10px] text-muted-foreground mt-1.5">
-                Para adicionar múltiplos responsáveis, salve a atividade primeiro.
-              </p>
-            )}
             {!locked && !primaryUserId && (
               <Select value={primaryUserId} onValueChange={setPrimaryUserId}>
                 <SelectTrigger className="mt-2 h-9 text-xs">
@@ -444,7 +487,7 @@ export function EventSheet({
               {locked ? (
                 <p className="text-sm">{durationOptions.find((d) => d.value === duration)?.label}</p>
               ) : (
-                <Select value={String(duration)} onValueChange={(v) => setDuration(Number(v))}>
+                <Select value={String(duration)} onValueChange={(v) => { setDuration(Number(v)); durationTouched.current = true; }}>
                   <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {durationOptions.map((opt) => (
