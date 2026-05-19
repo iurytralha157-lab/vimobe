@@ -170,11 +170,7 @@ export function useCreateWhatsAppSession() {
       const body = provider === "evolution_go"
         ? {
             action: "instance.create",
-            body: {
-              instanceName: uniqueInstanceName,
-              qrcode: true,
-              webhook: webhookUrl ? { url: webhookUrl, base64: true, events: ["all"] } : undefined,
-            },
+            body: { name: uniqueInstanceName },
           }
         : { action: "createInstance", instanceName: uniqueInstanceName };
 
@@ -188,8 +184,38 @@ export function useCreateWhatsAppSession() {
       const failed = provider === "evolution_go" ? !result?.ok : !result?.success;
       if (failed) {
         await supabase.from("whatsapp_sessions").delete().eq("id", session.id);
-        throw new Error(result?.error || result?.data?.error || "Failed to create instance");
+        const msg =
+          result?.error ||
+          result?.data?.error?.message ||
+          result?.data?.message ||
+          result?.data?.error ||
+          "Failed to create instance";
+        throw new Error(msg);
       }
+
+      // For evolution_go: persist UUID and trigger connect with webhook
+      if (provider === "evolution_go") {
+        const evoId: string | undefined =
+          result?.data?.data?.id || result?.data?.instance?.id || result?.data?.id;
+        if (evoId) {
+          await supabase
+            .from("whatsapp_sessions")
+            .update({ instance_id: evoId } as any)
+            .eq("id", session.id);
+          (session as any).instance_id = evoId;
+        }
+
+        // Connect (registers webhook and starts QR generation)
+        await supabase.functions.invoke("evolution-go-proxy", {
+          body: {
+            action: "instance.connect",
+            instance_id: evoId,
+            body: { webhookUrl, subscribe: ["ALL"], immediate: true },
+          },
+        });
+      }
+
+
 
       return {
         session: {
@@ -260,17 +286,35 @@ export function useDeleteWhatsAppSession() {
 
 export function useGetQRCode() {
   return useMutation({
-    mutationFn: async (instanceName: string) => {
-      const { data, error } = await supabase.functions.invoke("evolution-proxy", {
-        body: {
-          action: "getQRCode",
-          instanceName,
-        },
-      });
+    mutationFn: async (
+      arg: string | { provider: WhatsAppProvider; instanceName: string; sessionId?: string; instanceId?: string | null },
+    ) => {
+      // Legacy: string => evolution-proxy
+      if (typeof arg === "string") {
+        const { data, error } = await supabase.functions.invoke("evolution-proxy", {
+          body: { action: "getQRCode", instanceName: arg },
+        });
+        if (error) throw error;
+        if (!data.success) throw new Error(data.error || "Failed to get QR code");
+        return data.data;
+      }
 
+      if (arg.provider === "evolution_go") {
+        const { data, error } = await supabase.functions.invoke("evolution-go-proxy", {
+          body: { action: "instance.qr", session_id: arg.sessionId, instance_id: arg.instanceId ?? undefined },
+        });
+        if (error) throw error;
+        if (!data?.ok) throw new Error(data?.error || "Failed to get QR code");
+        // Normalize shape to { base64 } expected by UI
+        const qr = data?.data?.data?.qrcode ?? data?.data?.qrcode ?? null;
+        return { base64: qr, qrcode: qr };
+      }
+
+      const { data, error } = await supabase.functions.invoke("evolution-proxy", {
+        body: { action: "getQRCode", instanceName: arg.instanceName },
+      });
       if (error) throw error;
       if (!data.success) throw new Error(data.error || "Failed to get QR code");
-
       return data.data;
     },
   });
@@ -278,21 +322,45 @@ export function useGetQRCode() {
 
 export function useGetConnectionStatus() {
   return useMutation({
-    mutationFn: async (instanceName: string) => {
-      const { data, error } = await supabase.functions.invoke("evolution-proxy", {
-        body: {
-          action: "getConnectionStatus",
-          instanceName,
-        },
-      });
+    mutationFn: async (
+      arg: string | { provider: WhatsAppProvider; instanceName: string; sessionId?: string; instanceId?: string | null },
+    ) => {
+      if (typeof arg === "string") {
+        const { data, error } = await supabase.functions.invoke("evolution-proxy", {
+          body: { action: "getConnectionStatus", instanceName: arg },
+        });
+        if (error) throw error;
+        if (!data.success) throw new Error(data.error || "Failed to get status");
+        return data.data;
+      }
 
+      if (arg.provider === "evolution_go") {
+        const { data, error } = await supabase.functions.invoke("evolution-go-proxy", {
+          body: { action: "instance.status", session_id: arg.sessionId, instance_id: arg.instanceId ?? undefined },
+        });
+        if (error) throw error;
+        if (!data?.ok) {
+          if (data?.status === 404) return { instanceNotFound: true };
+          throw new Error(data?.error || "Failed to get status");
+        }
+        const s = data?.data?.data ?? data?.data ?? {};
+        return {
+          connected: s.Connected === true || s.connected === true,
+          state: s.LoggedIn || s.Connected ? "open" : "close",
+          instance: { wuid: s.jid || s.Name || null },
+        };
+      }
+
+      const { data, error } = await supabase.functions.invoke("evolution-proxy", {
+        body: { action: "getConnectionStatus", instanceName: arg.instanceName },
+      });
       if (error) throw error;
       if (!data.success) throw new Error(data.error || "Failed to get status");
-
       return data.data;
     },
   });
 }
+
 
 export function useSetWebhook() {
   return useMutation({
@@ -496,9 +564,17 @@ export function useQRCodePolling(session: WhatsAppSession | null) {
     
     const pollQRCode = async () => {
       try {
+        const provider = (session.provider || "evolution") as WhatsAppProvider;
+        const arg = {
+          provider,
+          instanceName: session.instance_name,
+          sessionId: session.id,
+          instanceId: session.instance_id,
+        };
+
         // Check connection status first
-        const status = await getStatus.mutateAsync(session.instance_name);
-        
+        const status = await getStatus.mutateAsync(arg);
+
         // Check if instance doesn't exist in Evolution API
         if (status?.instanceNotFound) {
           console.log("Instance not found in Evolution API, needs recreation");
@@ -507,31 +583,31 @@ export function useQRCodePolling(session: WhatsAppSession | null) {
           setIsPolling(false);
           return true; // Stop polling
         }
-        
+
         const isConnected = status?.connected === true || status?.state === "open";
-        
+
         if (isConnected) {
           setConnectionStatus("connected");
           setQrCode(null);
           setIsPolling(false);
-          
+
           // Update database status
           await supabase
             .from("whatsapp_sessions")
-            .update({ 
+            .update({
               status: "connected",
               phone_number: status?.instance?.wuid?.split("@")[0] || null,
               last_connected_at: new Date().toISOString()
             })
             .eq("id", session.id);
-          
+
           queryClient.invalidateQueries({ queryKey: ["whatsapp-sessions"] });
           return true;
         }
-        
+
         // Get QR Code
-        const qrData = await getQRCode.mutateAsync(session.instance_name);
-        
+        const qrData = await getQRCode.mutateAsync(arg);
+
         if (qrData?.qrcode) {
           setQrCode(qrData.qrcode);
           setConnectionStatus("waiting_qr");
@@ -539,13 +615,14 @@ export function useQRCodePolling(session: WhatsAppSession | null) {
           setQrCode(qrData.base64);
           setConnectionStatus("waiting_qr");
         }
-        
+
         return false;
       } catch (error) {
         console.error("Polling error:", error);
         return false;
       }
     };
+
 
     // Initial poll
     const connected = await pollQRCode();

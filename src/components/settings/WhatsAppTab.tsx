@@ -88,26 +88,36 @@ export function WhatsAppTab() {
   }, [selectedSession, qrDialogOpen]);
 
   // Função de check separada para usar no polling
-  const checkConnection = useCallback(async (instanceName: string, sessionId: string): Promise<boolean | null> => {
+  const checkConnection = useCallback(async (session: WhatsAppSession): Promise<boolean | null> => {
     try {
-      const { data, error } = await supabase.functions.invoke("evolution-proxy", {
-        body: { action: "getConnectionStatus", instanceName }
-      });
+      const isGo = session.provider === "evolution_go";
+      const { data, error } = await supabase.functions.invoke(
+        isGo ? "evolution-go-proxy" : "evolution-proxy",
+        {
+          body: isGo
+            ? { action: "instance.status", session_id: session.id, instance_id: session.instance_id ?? undefined }
+            : { action: "getConnectionStatus", instanceName: session.instance_name },
+        },
+      );
 
       if (error) throw error;
-      if (!data?.success) return null;
+      const ok = isGo ? data?.ok : data?.success;
+      if (!ok) return null;
 
-      const result = data.data;
+      const result = isGo ? (data?.data?.data ?? data?.data) : data.data;
 
-      const isConnected = 
-        result?.state === "open" || 
-        result?.connected === true;
+      const isConnected = isGo
+        ? (result?.Connected === true || result?.connected === true || result?.LoggedIn === true)
+        : (result?.state === "open" || result?.connected === true);
 
       if (isConnected) {
-        await supabase.
-        from("whatsapp_sessions").
-        update({ status: "connected", phone_number: result?.phone || result?.instance?.wuid?.split("@")[0] || null }).
-        eq("id", sessionId);
+        const phone = isGo
+          ? (result?.jid?.split("@")[0] || null)
+          : (result?.phone || result?.instance?.wuid?.split("@")[0] || null);
+        await supabase
+          .from("whatsapp_sessions")
+          .update({ status: "connected", phone_number: phone })
+          .eq("id", session.id);
 
         return true;
       }
@@ -118,12 +128,13 @@ export function WhatsAppTab() {
     }
   }, []);
 
+
   // Verificar conexão manualmente
   const handleVerifyConnection = async (session: WhatsAppSession) => {
     setVerifyingSessionId(session.id);
 
     try {
-      const connected = await checkConnection(session.instance_name, session.id);
+      const connected = await checkConnection(session);
 
       if (connected === true) {
         toast({ title: "✅ Conectado!", description: "WhatsApp está online" });
@@ -132,8 +143,8 @@ export function WhatsAppTab() {
       } else {
         // Retry once before marking disconnected
         await new Promise(resolve => setTimeout(resolve, 2000));
-        const retryResult = await checkConnection(session.instance_name, session.id);
-        
+        const retryResult = await checkConnection(session);
+
         if (retryResult === true) {
           toast({ title: "✅ Conectado!", description: "WhatsApp está online" });
         } else {
@@ -163,10 +174,7 @@ export function WhatsAppTab() {
         return;
       }
 
-      const connected = await checkConnection(
-        selectedSessionRef.current.instance_name,
-        selectedSessionRef.current.id
-      );
+      const connected = await checkConnection(selectedSessionRef.current);
 
       if (connected === true) {
         toast({ title: "Conectado!", description: "WhatsApp conectado com sucesso" });
@@ -179,6 +187,7 @@ export function WhatsAppTab() {
 
     return () => clearInterval(pollInterval);
   }, [qrDialogOpen, selectedSession?.id, checkConnection, queryClient]);
+
 
   const handleCreateSession = async () => {
     if (!instanceName.trim()) return;
@@ -194,36 +203,28 @@ export function WhatsAppTab() {
       setSelectedSession(result.session);
       setQrDialogOpen(true);
 
-      if (newProvider === "evolution_go") {
-        // For Evolution Go, fetch QR via the new proxy
-        try {
-          const { data } = await supabase.functions.invoke("evolution-go-proxy", {
-            body: { action: "instance.qr", session_id: result.session.id },
-          });
-          const qr = data?.data?.qrcode || data?.data?.base64 || data?.data?.code;
-          if (qr) setQrCode(qr);
-        } catch (e) {
-          console.error("Evolution Go QR error:", e);
-        }
-      } else {
-        await refreshQRCode(result.session.instance_name);
-      }
+      await refreshQRCode(result.session);
     } catch (error) {
       console.error("Error creating session:", error);
     }
   };
 
-  const refreshQRCode = async (instanceName: string) => {
+  const refreshQRCode = async (session: WhatsAppSession) => {
     setIsRefreshingQr(true);
     try {
-      const data = await getQRCode.mutateAsync(instanceName);
-      if (data?.qrcode) {
-        setQrCode(data.qrcode);
-      } else if (data?.base64) {
-        setQrCode(data.base64);
-      } else if (data?.code) {
-        setQrCode(data.code);
-      }
+      const isGo = session.provider === "evolution_go";
+      const data = await getQRCode.mutateAsync(
+        isGo
+          ? {
+              provider: "evolution_go",
+              instanceName: session.instance_name,
+              sessionId: session.id,
+              instanceId: session.instance_id,
+            }
+          : session.instance_name,
+      );
+      const qr = data?.qrcode || data?.base64 || data?.code;
+      if (qr) setQrCode(qr);
     } catch (error) {
       console.error("Error getting QR code:", error);
     } finally {
@@ -233,7 +234,17 @@ export function WhatsAppTab() {
 
   const checkConnectionStatus = async (session: WhatsAppSession) => {
     try {
-      const data = await getConnectionStatus.mutateAsync(session.instance_name);
+      const isGo = session.provider === "evolution_go";
+      const data = await getConnectionStatus.mutateAsync(
+        isGo
+          ? {
+              provider: "evolution_go",
+              instanceName: session.instance_name,
+              sessionId: session.id,
+              instanceId: session.instance_id,
+            }
+          : session.instance_name,
+      );
       if (data?.state === "open" || data?.connected === true) {
         toast({ title: "Conectado!", description: "WhatsApp conectado com sucesso" });
         setQrDialogOpen(false);
@@ -248,22 +259,34 @@ export function WhatsAppTab() {
     setSelectedSession(session);
     setQrDialogOpen(true);
     try {
-      await refreshQRCode(session.instance_name);
+      await refreshQRCode(session);
     } catch {
-      // If QR fails (instance may not exist), try recreating the instance first
+      // Reconnect attempt
       try {
-        await supabase.functions.invoke("evolution-proxy", {
-          body: { action: "createInstance", instanceName: session.instance_name },
-        });
-        // Wait a moment for the instance to be ready
+        if (session.provider === "evolution_go") {
+          const webhookUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/evolution-go-webhook`;
+          await supabase.functions.invoke("evolution-go-proxy", {
+            body: {
+              action: "instance.connect",
+              session_id: session.id,
+              instance_id: session.instance_id ?? undefined,
+              body: { webhookUrl, subscribe: ["ALL"], immediate: true },
+            },
+          });
+        } else {
+          await supabase.functions.invoke("evolution-proxy", {
+            body: { action: "createInstance", instanceName: session.instance_name },
+          });
+        }
         await new Promise(r => setTimeout(r, 2000));
-        await refreshQRCode(session.instance_name);
+        await refreshQRCode(session);
       } catch (e) {
         console.error("Failed to recreate instance:", e);
         toast({ title: "Erro", description: "Não foi possível reconectar. Tente excluir e criar uma nova conexão.", variant: "destructive" });
       }
     }
   };
+
 
   const handleOpenAccessDialog = (session: WhatsAppSession) => {
     setSelectedSession(session);
@@ -567,7 +590,7 @@ export function WhatsAppTab() {
               <div className="flex gap-2 mt-4">
                 <Button
                   variant="outline"
-                  onClick={() => selectedSession && refreshQRCode(selectedSession.instance_name)}
+                  onClick={() => selectedSession && refreshQRCode(selectedSession)}
                   disabled={isRefreshingQr}>
 
                   <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshingQr ? "animate-spin" : ""}`} />
