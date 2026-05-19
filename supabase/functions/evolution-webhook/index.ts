@@ -1660,7 +1660,8 @@ async function createLeadFromConversation(
   contactPhone: string,
   firstMessage: string,
   isFromAds: boolean = false,
-  adSource: string | null = null
+  adSource: string | null = null,
+  hubCtx: { rule: any | null; adContext: any; utm: Record<string, string> } | null = null
 ) {
   try {
     console.log(`Attempting to create lead: phone=${contactPhone}, session_owner=${session.owner_user_id}, org=${session.organization_id}, isFromAds=${isFromAds}, adSource=${adSource}`);
