@@ -378,6 +378,7 @@ export default function Agenda() {
                 viewMode={viewMode as any}
                 onEditEvent={openEventSheet}
                 onEventUpdate={(id, updates) => updateEventMutation.mutate({ id, ...updates })}
+                showThirtyMinLines={showThirtyMinLines}
                 onQuickCreate={(date) => {
                   setSelectedDate(date);
                   openCreateSheet();
