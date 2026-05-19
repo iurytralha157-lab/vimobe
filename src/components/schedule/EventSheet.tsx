@@ -406,50 +406,21 @@ export function EventSheet({
                   )}
                 </div>
               ) : !locked ? (
-                <Popover open={showPropertySelector} onOpenChange={setShowPropertySelector}>
-                  <PopoverTrigger asChild>
+                <PropertyPickerDialog
+                  properties={allProperties as any}
+                  selectedPropertyId={selectedPropertyId}
+                  onSelect={(p) => {
+                    setSelectedPropertyId(p.id);
+                    setSelectedPropertyLabel(
+                      `${p.code ? p.code + ' · ' : ''}${p.title || 'Imóvel'}`
+                    );
+                  }}
+                  trigger={
                     <Button variant="outline" size="sm" className="w-full justify-start text-muted-foreground border-dashed">
                       <Search className="mr-2 h-3 w-3" /> Vincular um imóvel...
                     </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="p-0 w-[380px]" align="start">
-                    <Command shouldFilter={false}>
-                      <CommandInput
-                        placeholder="Buscar por código, título ou bairro..."
-                        value={propertySearch}
-                        onValueChange={setPropertySearch}
-                      />
-                      <CommandList>
-                        <CommandEmpty>Nenhum imóvel encontrado.</CommandEmpty>
-                        <CommandGroup>
-                          {searchedProperties.slice(0, 20).map((p: any) => {
-                            const label = `${p.code ? p.code + ' · ' : ''}${p.title || 'Imóvel'}`;
-                            return (
-                              <CommandItem
-                                key={p.id}
-                                value={p.id}
-                                onSelect={() => {
-                                  setSelectedPropertyId(p.id);
-                                  setSelectedPropertyLabel(label);
-                                  setShowPropertySelector(false);
-                                  setPropertySearch("");
-                                }}
-                              >
-                                <Building2 className="h-3.5 w-3.5 mr-2 text-muted-foreground shrink-0" />
-                                <div className="flex flex-col min-w-0">
-                                  <span className="text-sm font-medium truncate">{label}</span>
-                                  <span className="text-[10px] text-muted-foreground truncate">
-                                    {[p.bairro, p.cidade, p.uf].filter(Boolean).join(", ") || "Sem localização"}
-                                  </span>
-                                </div>
-                              </CommandItem>
-                            );
-                          })}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
+                  }
+                />
               ) : (
                 <span className="text-sm text-muted-foreground">Sem imóvel</span>
               )}
