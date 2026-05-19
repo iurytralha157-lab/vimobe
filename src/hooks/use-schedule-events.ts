@@ -124,6 +124,20 @@ export function useScheduleEvents(options: UseScheduleEventsOptions = {}) {
   return useQuery({
     queryKey: ['schedule-events', options],
     queryFn: async () => {
+      let assignedEventIds: string[] = [];
+
+      // Se houver filtro de usuário, buscamos eventos onde ele é co-responsável
+      if (options.userId) {
+        const { data: assignments } = await supabase
+          .from('schedule_event_assignees')
+          .select('event_id')
+          .eq('user_id', options.userId);
+        
+        if (assignments && assignments.length > 0) {
+          assignedEventIds = assignments.map(a => a.event_id);
+        }
+      }
+
       let query = supabase
         .from('schedule_events')
         .select(`
@@ -138,7 +152,12 @@ export function useScheduleEvents(options: UseScheduleEventsOptions = {}) {
         .order('start_time', { ascending: true });
 
       if (options.userId) {
-        query = query.eq('user_id', options.userId);
+        if (assignedEventIds.length > 0) {
+          // Filtra onde ele é o dono OU onde ele está na lista de co-responsáveis
+          query = query.or(`user_id.eq.${options.userId},id.in.(${assignedEventIds.join(',')})`);
+        } else {
+          query = query.eq('user_id', options.userId);
+        }
       }
 
       if (options.leadId) {
