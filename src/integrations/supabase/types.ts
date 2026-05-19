@@ -8551,6 +8551,7 @@ export type Database = {
           message_id: string
           message_type: string | null
           read_at: string | null
+          remote_jid: string | null
           sender_jid: string | null
           sender_name: string | null
           sent_at: string
@@ -8573,6 +8574,7 @@ export type Database = {
           message_id: string
           message_type?: string | null
           read_at?: string | null
+          remote_jid?: string | null
           sender_jid?: string | null
           sender_name?: string | null
           sent_at?: string
@@ -8595,6 +8597,7 @@ export type Database = {
           message_id?: string
           message_type?: string | null
           read_at?: string | null
+          remote_jid?: string | null
           sender_jid?: string | null
           sender_name?: string | null
           sent_at?: string
