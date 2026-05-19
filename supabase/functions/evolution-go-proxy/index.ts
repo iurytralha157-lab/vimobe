@@ -157,11 +157,17 @@ async function callEvolutionGo(c: ProxyCall) {
   }
 
   // For Evolution Go, the global API_KEY is often required for all calls.
-  // We only use the instance token if it's explicitly provided and not the default.
+  // We use the global API_KEY by default as it usually has management permissions.
   const headers: Record<string, string> = {
-    "apikey": (c.token && c.token !== "default_token") ? c.token : API_KEY,
+    "apikey": API_KEY,
     "Content-Type": "application/json",
   };
+  
+  // If a specific token is provided, we can include it in a separate header if the API supports it
+  // or use it as apikey if it's explicitly required. For instance management, API_KEY is usually preferred.
+  if (c.token && c.token !== "default_token" && c.path.includes("/send")) {
+    headers["apikey"] = c.token;
+  }
   
   if (c.instanceId) headers["instanceId"] = c.instanceId;
 

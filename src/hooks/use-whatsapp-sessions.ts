@@ -217,9 +217,14 @@ export function useCreateWhatsAppSession() {
         await supabase.functions.invoke("evolution-go-proxy", {
           body: {
             action: "instance.connect",
+            session_id: session.id,
             instance_id: evoId,
             token,
-            body: { webhookUrl, subscribe: ["ALL"], immediate: true },
+            body: { 
+              webhookUrl: `${webhookUrl}?instance_id=${evoId}`, 
+              subscribe: ["ALL"], 
+              immediate: true 
+            },
           },
         });
       }
