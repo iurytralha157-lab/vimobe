@@ -61,6 +61,7 @@ export function WhatsAppTab() {
   const [accessDialogOpen, setAccessDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [instanceName, setInstanceName] = useState("");
+  const [newProvider, setNewProvider] = useState<"evolution" | "evolution_go">("evolution_go");
   const [selectedSession, setSelectedSession] = useState<WhatsAppSession | null>(null);
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [isRefreshingQr, setIsRefreshingQr] = useState(false);
@@ -172,14 +173,30 @@ export function WhatsAppTab() {
     if (!instanceName.trim()) return;
 
     try {
-      const result = await createSession.mutateAsync(instanceName.trim());
+      const result = await createSession.mutateAsync({
+        displayName: instanceName.trim(),
+        provider: newProvider,
+      });
       setCreateDialogOpen(false);
       setInstanceName("");
 
       setSelectedSession(result.session);
       setQrDialogOpen(true);
 
-      await refreshQRCode(instanceName.trim());
+      if (newProvider === "evolution_go") {
+        // For Evolution Go, fetch QR via the new proxy
+        try {
+          const { data } = await supabase.functions.invoke("evolution-go-proxy", {
+            body: { action: "instance.qr", session_id: result.session.id },
+          });
+          const qr = data?.data?.qrcode || data?.data?.base64 || data?.data?.code;
+          if (qr) setQrCode(qr);
+        } catch (e) {
+          console.error("Evolution Go QR error:", e);
+        }
+      } else {
+        await refreshQRCode(result.session.instance_name);
+      }
     } catch (error) {
       console.error("Error creating session:", error);
     }
@@ -400,6 +417,21 @@ export function WhatsAppTab() {
               </SheetDescription>
             </SheetHeader>
             <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Provedor</Label>
+                <Select value={newProvider} onValueChange={(v) => setNewProvider(v as any)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="evolution_go">Evolution Go (Novo, recomendado)</SelectItem>
+                    <SelectItem value="evolution">Evolution (Legado)</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Evolution Go é a nova versão em Go, mais rápida e estável. Use para conexões novas.
+                </p>
+              </div>
               <div className="space-y-2">
                 <Label>Nome da Instância</Label>
                 <Input
