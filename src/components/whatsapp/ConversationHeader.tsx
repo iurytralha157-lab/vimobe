@@ -30,6 +30,8 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { StartAutomationDialog } from "./StartAutomationDialog";
+import { LabelsPopover } from "./LabelsPopover";
+import { useChatLabels } from "@/hooks/use-whatsapp-labels";
 import { Link } from "react-router-dom";
 import { formatPhoneForDisplay } from "@/lib/phone-utils";
 import { cn } from "@/lib/utils";
