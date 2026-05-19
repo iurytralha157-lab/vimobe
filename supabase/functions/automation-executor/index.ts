@@ -557,14 +557,23 @@ async function sendAutomationNotification(
     let notifyUserId: string | null = automation.created_by || null;
     let organizationName = "";
 
-    // Fetch organization name
-    const { data: org } = await supabase
-      .from("organizations")
-      .select("name")
-      .eq("id", execution.organization_id)
-      .single();
-    if (org) {
-      organizationName = org.name;
+    // Check if user has multiple organizations
+    if (notifyUserId) {
+      const { count } = await supabase
+        .from('organization_members')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', notifyUserId);
+      
+      if (count && count > 1) {
+        const { data: org } = await supabase
+          .from("organizations")
+          .select("name")
+          .eq("id", execution.organization_id)
+          .single();
+        if (org) {
+          organizationName = org.name;
+        }
+      }
     }
 
     if (execution.lead_id) {
@@ -577,13 +586,13 @@ async function sendAutomationNotification(
     }
     if (!notifyUserId) return;
     const isSuccess = status === "completed";
-    const title = isSuccess ? "✅ Automação Concluída" : "❌ Automação Falhou";
+    const title = isSuccess ? "⚡ Automação Concluída" : "❌ Automação Falhou";
     const translated = errorMessage ? translateError(errorMessage) : "";
     
     const orgSuffix = organizationName ? ` na *${organizationName}*` : "";
     const content = isSuccess
-      ? `"${automation.name}" finalizou para ${leadName}${orgSuffix}`
-      : `"${automation.name}" falhou para ${leadName}${orgSuffix}: ${translated}`;
+      ? `A automação "${automation.name}" para o lead ${leadName} foi concluída com sucesso${orgSuffix}.`
+      : `A automação "${automation.name}" para o lead ${leadName} falhou${orgSuffix}: ${translated}`;
 
     await supabase.from("notifications").insert({
       user_id: notifyUserId,
