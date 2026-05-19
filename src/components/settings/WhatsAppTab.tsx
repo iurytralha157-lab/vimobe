@@ -88,26 +88,36 @@ export function WhatsAppTab() {
   }, [selectedSession, qrDialogOpen]);
 
   // Função de check separada para usar no polling
-  const checkConnection = useCallback(async (instanceName: string, sessionId: string): Promise<boolean | null> => {
+  const checkConnection = useCallback(async (session: WhatsAppSession): Promise<boolean | null> => {
     try {
-      const { data, error } = await supabase.functions.invoke("evolution-proxy", {
-        body: { action: "getConnectionStatus", instanceName }
-      });
+      const isGo = session.provider === "evolution_go";
+      const { data, error } = await supabase.functions.invoke(
+        isGo ? "evolution-go-proxy" : "evolution-proxy",
+        {
+          body: isGo
+            ? { action: "instance.status", session_id: session.id, instance_id: session.instance_id ?? undefined }
+            : { action: "getConnectionStatus", instanceName: session.instance_name },
+        },
+      );
 
       if (error) throw error;
-      if (!data?.success) return null;
+      const ok = isGo ? data?.ok : data?.success;
+      if (!ok) return null;
 
-      const result = data.data;
+      const result = isGo ? (data?.data?.data ?? data?.data) : data.data;
 
-      const isConnected = 
-        result?.state === "open" || 
-        result?.connected === true;
+      const isConnected = isGo
+        ? (result?.Connected === true || result?.connected === true || result?.LoggedIn === true)
+        : (result?.state === "open" || result?.connected === true);
 
       if (isConnected) {
-        await supabase.
-        from("whatsapp_sessions").
-        update({ status: "connected", phone_number: result?.phone || result?.instance?.wuid?.split("@")[0] || null }).
-        eq("id", sessionId);
+        const phone = isGo
+          ? (result?.jid?.split("@")[0] || null)
+          : (result?.phone || result?.instance?.wuid?.split("@")[0] || null);
+        await supabase
+          .from("whatsapp_sessions")
+          .update({ status: "connected", phone_number: phone })
+          .eq("id", session.id);
 
         return true;
       }
@@ -117,6 +127,7 @@ export function WhatsAppTab() {
       return null;
     }
   }, []);
+
 
   // Verificar conexão manualmente
   const handleVerifyConnection = async (session: WhatsAppSession) => {
