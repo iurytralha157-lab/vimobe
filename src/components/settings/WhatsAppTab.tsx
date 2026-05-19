@@ -593,6 +593,20 @@ export function WhatsAppTab() {
           users={users || []} />
 
 
+        <LabelsManagerSheet
+          open={!!labelsSession}
+          onOpenChange={(o) => !o && setLabelsSession(null)}
+          sessionId={labelsSession?.id || null}
+          sessionName={labelsSession?.display_name || labelsSession?.instance_name}
+        />
+
+        <GroupsManagerSheet
+          open={!!groupsSession}
+          onOpenChange={(o) => !o && setGroupsSession(null)}
+          sessionId={groupsSession?.id || null}
+          sessionName={groupsSession?.display_name || groupsSession?.instance_name}
+        />
+
         {/* Delete Confirmation Dialog */}
         <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
           <DialogContent className="w-[95%] max-w-[400px] rounded-lg">
