@@ -306,11 +306,13 @@ export function useGrantSessionAccess() {
       userId,
       canView = true,
       canSend = true,
+      onlyLeadsAccess = false,
     }: {
       sessionId: string;
       userId: string;
       canView?: boolean;
       canSend?: boolean;
+      onlyLeadsAccess?: boolean;
     }) => {
       const { error } = await supabase.from("whatsapp_session_access").upsert(
         {
