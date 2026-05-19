@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS public.whatsapp_inbound_rules (
   target_team_id uuid REFERENCES public.teams(id) ON DELETE SET NULL,
   target_user_id uuid,
   target_pipeline_id uuid REFERENCES public.pipelines(id) ON DELETE SET NULL,
-  target_stage_id uuid REFERENCES public.pipeline_stages(id) ON DELETE SET NULL,
+  target_stage_id uuid REFERENCES public.stages(id) ON DELETE SET NULL,
   source_label text,
   campaign_label text,
   created_at timestamptz NOT NULL DEFAULT now(),
