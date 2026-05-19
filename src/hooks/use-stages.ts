@@ -86,11 +86,24 @@ export function useStagesWithLeads(
   const dateToISO = filters?.dateRange?.to?.toISOString();
   
   return useQuery({
-    queryKey: ['stages-with-leads', pipelineId, filterUserId, dateFromISO, dateToISO, filters?.filterTag, filters?.filterDealStatus, filters?.searchQuery, filters?.filterCampaign, filters?.filterAdSet, filters?.filterAd],
-    staleTime: 30000, // 30 seconds
-    gcTime: 1000 * 60 * 15, // 15 minutes
+    queryKey: [
+      'stages-with-leads', 
+      pipelineId, 
+      filterUserId, 
+      dateFromISO, 
+      dateToISO, 
+      filters?.filterTag, 
+      filters?.filterDealStatus, 
+      filters?.searchQuery, 
+      filters?.filterCampaign, 
+      filters?.filterAdSet, 
+      filters?.filterAd,
+      filters?.filterSource
+    ],
+    staleTime: 30000,
+    gcTime: 1000 * 60 * 15,
     queryFn: async () => {
-      // Get default pipeline if not provided
+      // ... keep existing code
       let targetPipelineId = pipelineId;
       if (!targetPipelineId) {
         const { data: pipeline } = await supabase
@@ -139,7 +152,6 @@ export function useStagesWithLeads(
 
       // Helper to apply shared filters to a query
       const applyFilters = (query: any) => {
-        // Se houver busca, ignoramos os outros filtros para encontrar o lead em qualquer lugar
         if (normalizedSearch) {
           query = query.or(`name.ilike.%${normalizedSearch}%,phone.ilike.%${normalizedSearch}%`);
           return query;
@@ -167,6 +179,9 @@ export function useStagesWithLeads(
         }
         if (filters?.filterAd && filters.filterAd !== 'all') {
           query = query.eq('lead_meta.ad_name', filters.filterAd);
+        }
+        if (filters?.filterSource && filters.filterSource !== 'all') {
+          query = query.eq('source', filters.filterSource);
         }
         return query;
       };
