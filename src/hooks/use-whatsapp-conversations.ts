@@ -275,13 +275,14 @@ export function useWhatsAppMessages(
       return (data?.messages || []) as WhatsAppMessage[];
     },
     enabled: !!conversationId || !!leadId,
-    refetchInterval: 20000, // Reduced polling frequency
+    // Realtime updates are pushed by WhatsAppRealtimeBus — no polling needed
     refetchIntervalInBackground: false,
-    staleTime: 5000, // Messages stay fresh longer
-    gcTime: 1000 * 60 * 2,
-    refetchOnMount: true,
-    refetchOnWindowFocus: true,
+    staleTime: 60_000,
+    gcTime: 1000 * 60 * 5,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
   });
+
 
   // Realtime updates are now handled centrally by WhatsAppRealtimeBus
   // (see src/contexts/WhatsAppRealtimeBus.tsx). No per-conversation channel here.
