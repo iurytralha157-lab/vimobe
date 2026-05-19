@@ -433,6 +433,53 @@ export function WhatsAppTab() {
                         </Tooltip>
                       </TooltipProvider>
                     )}
+                    {(session as any).provider === "evolution_go" && session.status === "connected" && (
+                      <>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button variant="outline" size="sm" className="h-8 w-8 p-0 shrink-0" onClick={() => setLabelsSession(session)}>
+                                <Tag className="w-3.5 h-3.5" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Etiquetas</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button variant="outline" size="sm" className="h-8 w-8 p-0 shrink-0" onClick={() => setGroupsSession(session)}>
+                                <UsersRound className="w-3.5 h-3.5" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Grupos</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-8 w-8 p-0 shrink-0"
+                                disabled={syncAvatars.isPending}
+                                onClick={() => {
+                                  syncAvatars.mutate({ sessionId: session.id }, {
+                                    onSuccess: (d: any) => toast({ title: "Avatares sincronizados", description: `${d?.updated || 0} contatos atualizados` }),
+                                    onError: (e: any) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
+                                  });
+                                }}
+                              >
+                                {syncAvatars.isPending && syncAvatars.variables?.sessionId === session.id
+                                  ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                  : <ImageIcon className="w-3.5 h-3.5" />}
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Sincronizar avatares</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </>
+                    )}
                     <Button variant="outline" size="sm" className="h-8 w-8 p-0 shrink-0 text-destructive hover:text-destructive" onClick={() => {setSelectedSession(session);setDeleteDialogOpen(true);}}>
                       <Trash2 className="w-3.5 h-3.5" />
                     </Button>
