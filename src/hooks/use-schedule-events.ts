@@ -38,6 +38,11 @@ export interface ScheduleEvent {
     name: string;
     phone: string | null;
   } | null;
+  property?: {
+    id: string;
+    title: string | null;
+    code: string | null;
+  } | null;
   completed_by_user?: {
     id: string;
     name: string;
