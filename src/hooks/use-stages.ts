@@ -18,6 +18,7 @@ interface FilteredStageCountsParams {
   filterCampaign?: string;
   filterAdSet?: string;
   filterAd?: string;
+  filterSource?: string;
 }
 
 // Limite de leads por estágio para paginação inicial (otimizado para performance)
