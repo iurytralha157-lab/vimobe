@@ -5522,6 +5522,50 @@ export type Database = {
           },
         ]
       }
+      platform_events: {
+        Row: {
+          actor_user_id: string | null
+          created_at: string
+          description: string | null
+          id: string
+          metadata: Json
+          organization_id: string | null
+          severity: string
+          title: string
+          type: string
+        }
+        Insert: {
+          actor_user_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          metadata?: Json
+          organization_id?: string | null
+          severity?: string
+          title: string
+          type: string
+        }
+        Update: {
+          actor_user_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          metadata?: Json
+          organization_id?: string | null
+          severity?: string
+          title?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       properties: {
         Row: {
           aceita_financiamento: boolean | null
@@ -8390,6 +8434,16 @@ export type Database = {
     }
     Functions: {
       accept_invite: { Args: { p_token: string }; Returns: undefined }
+      admin_dashboard_feed: { Args: { p_limit?: number }; Returns: Json }
+      admin_dashboard_overview: {
+        Args: { p_period_days?: number }
+        Returns: Json
+      }
+      admin_dashboard_pending_boards: { Args: never; Returns: Json }
+      admin_dashboard_timeseries: {
+        Args: { p_period_days?: number }
+        Returns: Json
+      }
       award_gamification_points: {
         Args: {
           p_action_type: string

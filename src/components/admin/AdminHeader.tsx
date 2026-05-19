@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bell, Moon, Sun, Loader2, LogOut, ChevronDown, UserPlus, CheckSquare, FileText, DollarSign, Info, Settings, HelpCircle, Shield, Building2, Check, Key, Home, LayoutDashboard } from 'lucide-react';
+import { Bell, Moon, Sun, Loader2, LogOut, ChevronDown, UserPlus, CheckSquare, FileText, DollarSign, Info, Settings, HelpCircle, Shield, Building2, Check, Key, Home, LayoutDashboard, ClipboardList } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from 'next-themes';
@@ -18,6 +18,7 @@ const notificationIcons: Record<string, typeof Bell> = {
   task: CheckSquare,
   contract: FileText,
   commission: DollarSign,
+  onboarding_request: ClipboardList,
   system: Bell,
   info: Info
 };
@@ -55,6 +56,10 @@ export const AdminHeader = React.memo(function AdminHeader({
     markRead.mutate(notification.id);
     if (notification.title?.includes('Atualize seu telefone')) {
       navigate('/settings');
+      return;
+    }
+    if (notification.type === 'onboarding_request') {
+      navigate('/admin/onboarding');
       return;
     }
     if (notification.lead_id) {

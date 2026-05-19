@@ -1,39 +1,26 @@
 import { useState } from 'react';
 import {
-  Building2,
   Plus,
   Search,
+  Filter,
   Eye,
   EyeOff,
-  MoreHorizontal,
-  Power,
-  PowerOff,
-  Trash2,
-  Trophy } from
-'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+  Building2,
+} from 'lucide-react';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { useSuperAdmin } from '@/hooks/use-super-admin';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { cn } from '@/lib/utils';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger } from
-'@/components/ui/dropdown-menu';
+import { 
+  useAdminOrganizationsList, 
+  useAdminOrganizationActions 
+} from '@/hooks/use-admin-organizations';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger } from
@@ -49,38 +36,39 @@ import {
   AlertDialogTitle } from
 '@/components/ui/alert-dialog';
 import { Label } from '@/components/ui/label';
-import { formatDistanceToNow } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { OrganizationCard } from '@/components/admin/organizations/OrganizationCard';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function AdminOrganizations() {
-  const { organizations, loadingOrgs, createOrganization, updateOrganization, deleteOrganization, updateModuleAccess } = useSuperAdmin();
-  
-  const { data: allOrgModules, refetch: refetchAllModules } = useQuery({
-    queryKey: ['all-organizations-modules'],
-    queryFn: async () => {
-      const { data } = await supabase.from('organization_modules').select('*');
-      return data || [];
-    }
-  });
-
-  const isModuleEnabled = (orgId: string, moduleName: string) => {
-    return allOrgModules?.some(m => m.organization_id === orgId && m.module_name === moduleName && m.is_enabled) || false;
-  };
-
-  const handleModuleToggle = async (orgId: string, moduleName: string, enabled: boolean) => {
-    await updateModuleAccess.mutateAsync({
-      organizationId: orgId,
-      moduleName,
-      isEnabled: enabled
-    });
-    refetchAllModules();
-  };
-  const { startImpersonate } = useAuth();
   const navigate = useNavigate();
+  const { startImpersonate } = useAuth();
+  
+  // Filters state
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [segmentFilter, setSegmentFilter] = useState('all');
+
+  // Queries & Mutations
+  const { data: organizations, isLoading } = useAdminOrganizationsList({
+    search,
+    status: statusFilter,
+    segment: segmentFilter
+  });
+  
+  const { toggleStatus } = useAdminOrganizationActions();
+  const { createOrganization, deleteOrganization } = useSuperAdmin();
+
+  // Modal states
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [orgToDelete, setOrgToDelete] = useState<{id: string;name: string;} | null>(null);
+  const [orgToDelete, setOrgToDelete] = useState<{id: string; name: string;} | null>(null);
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
   const [newOrg, setNewOrg] = useState({
     name: '',
@@ -91,30 +79,8 @@ export default function AdminOrganizations() {
   });
   const [showPassword, setShowPassword] = useState(false);
 
-  const filteredOrgs = organizations?.filter((org) =>
-  org.name.toLowerCase().includes(search.toLowerCase())
-  ) || [];
-
-  const getStatusBadge = (status: string, isActive: boolean) => {
-    if (!isActive) {
-      return <Badge variant="outline" className="text-gray-500">Inativo</Badge>;
-    }
-    switch (status) {
-      case 'active':
-        return <Badge className="bg-orange-500">Ativo</Badge>;
-      case 'trial':
-        return <Badge variant="secondary">Trial</Badge>;
-      case 'suspended':
-        return <Badge variant="destructive">Suspenso</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
-  };
-
   const handleCreateOrg = async () => {
-    if (!newOrg.adminPassword || newOrg.adminPassword.length < 6) {
-      return;
-    }
+    if (!newOrg.adminPassword || newOrg.adminPassword.length < 6) return;
     await createOrganization.mutateAsync(newOrg);
     setCreateDialogOpen(false);
     setNewOrg({ name: '', segment: 'imobiliario', adminEmail: '', adminName: '', adminPassword: '' });
@@ -127,7 +93,7 @@ export default function AdminOrganizations() {
   };
 
   const handleToggleActive = (orgId: string, currentActive: boolean) => {
-    updateOrganization.mutate({ id: orgId, is_active: !currentActive });
+    toggleStatus.mutate({ id: orgId, isActive: !currentActive });
   };
 
   const handleDeleteOrg = async () => {
@@ -139,291 +105,226 @@ export default function AdminOrganizations() {
     }
   };
 
-  const openDeleteDialog = (org: {id: string;name: string;}) => {
-    setOrgToDelete(org);
-    setDeleteConfirmation('');
-    setDeleteDialogOpen(true);
-  };
-
   return (
-    <AdminLayout title="Organizações">
+    <AdminLayout title="Gestão de Clientes">
       <div className="space-y-6">
-        {/* Header Actions */}
-        <div className="flex flex-col sm:flex-row gap-4 justify-between">
-          <div className="relative flex-1 max-w-sm">
+        {/* Advanced Header / Filters */}
+        <div className="flex flex-col lg:flex-row gap-4 justify-between bg-card/30 p-4 rounded-2xl border border-border/40 backdrop-blur-sm">
+          <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Buscar organizações..."
+              placeholder="Buscar por nome, email ou CNPJ..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-9" />
-
+              className="pl-9 bg-background/50 border-border/50 rounded-xl" />
           </div>
           
-          <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Nova Organização
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="w-[90%] sm:max-w-lg sm:w-full rounded-lg max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Criar Nova Organização</DialogTitle>
-                <DialogDescription>
-                  Crie uma nova organização e o usuário administrador.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="orgName">Nome da Organização</Label>
-                  <Input
-                    id="orgName"
-                    value={newOrg.name}
-                    onChange={(e) => setNewOrg({ ...newOrg, name: e.target.value })}
-                    placeholder="Ex: Imobiliária XYZ" />
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-[140px] bg-background/50 border-border/50 rounded-xl">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos Status</SelectItem>
+                  <SelectItem value="active">Ativos</SelectItem>
+                  <SelectItem value="trial">Trial</SelectItem>
+                  <SelectItem value="suspended">Suspensos</SelectItem>
+                  <SelectItem value="inactive">Inativos</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="segment">Tipo de Negócio</Label>
-                  <select
-                    id="segment"
-                    value={newOrg.segment}
-                    onChange={(e) => setNewOrg({ ...newOrg, segment: e.target.value as any })}
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+            <Select value={segmentFilter} onValueChange={setSegmentFilter}>
+              <SelectTrigger className="w-[160px] bg-background/50 border-border/50 rounded-xl">
+                <SelectValue placeholder="Segmento" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos Segmentos</SelectItem>
+                <SelectItem value="imobiliario">Imobiliária</SelectItem>
+                <SelectItem value="telecom">Telecom</SelectItem>
+                <SelectItem value="servicos">Serviços</SelectItem>
+                <SelectItem value="engenharia">Engenharia</SelectItem>
+              </SelectContent>
+            </Select>
 
-                    <option value="imobiliario">Imobiliária</option>
-                    <option value="telecom">Telecom / Internet</option>
-                    <option value="servicos">Serviços Gerais</option>
-                    <option value="engenharia">Engenharia / Obras</option>
-                  </select>
-                  <p className="text-xs text-muted-foreground">
-                    {newOrg.segment === 'imobiliario' && 'Módulos: Imóveis, Cadências, CRM Imobiliário'}
-                    {newOrg.segment === 'telecom' && 'Módulos: Planos, Localidades, Clientes Telecom'}
-                    {newOrg.segment === 'servicos' && 'Módulos: CRM Básico, Financeiro, Agenda'}
-                    {newOrg.segment === 'engenharia' && 'Módulos: Obras, Marcos, Pedidos de Compra'}
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="adminName">Nome do Administrador</Label>
-                  <Input
-                    id="adminName"
-                    value={newOrg.adminName}
-                    onChange={(e) => setNewOrg({ ...newOrg, adminName: e.target.value })}
-                    placeholder="Ex: João Silva" />
-
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="adminEmail">Email do Administrador</Label>
-                  <Input
-                    id="adminEmail"
-                    type="email"
-                    value={newOrg.adminEmail}
-                    onChange={(e) => setNewOrg({ ...newOrg, adminEmail: e.target.value })}
-                    placeholder="admin@empresa.com" />
-
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="adminPassword">Senha do Administrador</Label>
-                  <div className="relative">
-                    <Input
-                      id="adminPassword"
-                      type={showPassword ? 'text' : 'password'}
-                      value={newOrg.adminPassword}
-                      onChange={(e) => setNewOrg({ ...newOrg, adminPassword: e.target.value })}
-                      placeholder="Mínimo 6 caracteres"
-                      className="pr-10" />
-
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
+            <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="rounded-xl bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Novo Cliente
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-lg rounded-2xl">
+                <DialogHeader>
+                  <DialogTitle>Cadastrar Nova Organização</DialogTitle>
+                  <DialogDescription>
+                    Crie uma nova conta empresarial e o usuário administrador principal.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2 col-span-2">
+                      <Label htmlFor="orgName">Nome da Empresa</Label>
+                      <Input
+                        id="orgName"
+                        value={newOrg.name}
+                        onChange={(e) => setNewOrg({ ...newOrg, name: e.target.value })}
+                        placeholder="Ex: Prime Imóveis Ltda"
+                        className="rounded-xl" />
+                    </div>
+                    <div className="space-y-2 col-span-2">
+                      <Label htmlFor="segment">Segmento de Mercado</Label>
+                      <Select 
+                        value={newOrg.segment} 
+                        onValueChange={(val: any) => setNewOrg({ ...newOrg, segment: val })}
+                      >
+                        <SelectTrigger className="rounded-xl">
+                          <SelectValue placeholder="Selecione o segmento" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="imobiliario">Imobiliária</SelectItem>
+                          <SelectItem value="telecom">Telecom / Internet</SelectItem>
+                          <SelectItem value="servicos">Serviços Gerais</SelectItem>
+                          <SelectItem value="engenharia">Engenharia / Obras</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
-                  {newOrg.adminPassword && newOrg.adminPassword.length < 6 &&
-                  <p className="text-xs text-destructive">A senha deve ter no mínimo 6 caracteres</p>
-                  }
-                </div>
-              </div>
-              <div className="flex gap-2 pt-4">
-                <Button variant="outline" className="w-[40%] rounded-xl" onClick={() => {
-                  setCreateDialogOpen(false);
-                  setShowPassword(false);
-                }}>
-                  Cancelar
-                </Button>
-                <Button
-                  className="w-[60%] rounded-xl"
-                  onClick={handleCreateOrg}
-                  disabled={!newOrg.name || !newOrg.adminEmail || !newOrg.adminName || !newOrg.adminPassword || newOrg.adminPassword.length < 6 || createOrganization.isPending}>
 
-                  {createOrganization.isPending ? 'Criando...' : 'Criar Organização'}
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
-          {loadingOrgs ? (
-            <div className="col-span-full text-center py-8 text-muted-foreground">
-              Carregando...
-            </div>
-          ) : filteredOrgs.length === 0 ? (
-            <div className="col-span-full text-center py-8 text-muted-foreground">
-              Nenhuma organização encontrada
-            </div>
-          ) : (
-            filteredOrgs.map((org) => (
-              <Card 
-                key={org.id} 
-                className="cursor-pointer hover:border-primary/50 transition-all hover:shadow-md group relative"
-                onClick={() => navigate(`/admin/organizations/${org.id}`)}
-              >
-                <CardContent className="p-5">
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="flex items-center gap-4">
-                      <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors overflow-hidden">
-                        {org.logo_url ? (
-                          <img src={org.logo_url} alt={org.name} className="h-full w-full object-contain p-1" />
-                        ) : (
-                          <Building2 className="h-6 w-6 text-primary" />
-                        )}
+                  <div className="border-t border-border/50 my-4 pt-4">
+                    <h4 className="text-sm font-bold mb-4">Dados do Administrador</h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2 col-span-2">
+                        <Label htmlFor="adminName">Nome Completo</Label>
+                        <Input
+                          id="adminName"
+                          value={newOrg.adminName}
+                          onChange={(e) => setNewOrg({ ...newOrg, adminName: e.target.value })}
+                          placeholder="Ex: João da Silva"
+                          className="rounded-xl" />
                       </div>
-                      <div>
-                        <h3 className="font-bold text-lg leading-tight">{org.name}</h3>
-                        <div className="flex items-center gap-2 mt-1">
-                          {getStatusBadge(org.subscription_status, org.is_active)}
-                          <Badge variant="secondary" className="text-[10px] uppercase">
-                            {org.segment || 'Geral'}
-                          </Badge>
+                      <div className="space-y-2 col-span-2">
+                        <Label htmlFor="adminEmail">Email de Acesso</Label>
+                        <Input
+                          id="adminEmail"
+                          type="email"
+                          value={newOrg.adminEmail}
+                          onChange={(e) => setNewOrg({ ...newOrg, adminEmail: e.target.value })}
+                          placeholder="joao@empresa.com"
+                          className="rounded-xl" />
+                      </div>
+                      <div className="space-y-2 col-span-2">
+                        <Label htmlFor="adminPassword">Senha Inicial</Label>
+                        <div className="relative">
+                          <Input
+                            id="adminPassword"
+                            type={showPassword ? 'text' : 'password'}
+                            value={newOrg.adminPassword}
+                            onChange={(e) => setNewOrg({ ...newOrg, adminPassword: e.target.value })}
+                            placeholder="Mínimo 6 caracteres"
+                            className="pr-10 rounded-xl" />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </button>
                         </div>
                       </div>
                     </div>
-                    
-                    <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => navigate(`/admin/organizations/${org.id}`)}>
-                            <Building2 className="h-4 w-4 mr-2" />
-                            Ver Detalhes
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleImpersonate(org.id, org.name)}>
-                            <Eye className="h-4 w-4 mr-2" />
-                            Entrar como Admin
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => handleModuleToggle(org.id, 'gamification', !isModuleEnabled(org.id, 'gamification'))}>
-                            <Trophy className={cn("h-4 w-4 mr-2", isModuleEnabled(org.id, 'gamification') ? "text-orange-500" : "text-muted-foreground")} />
-                            {isModuleEnabled(org.id, 'gamification') ? 'Desativar Gamificação' : 'Ativar Gamificação'}
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            onClick={() => handleToggleActive(org.id, org.is_active)}
-                            className={org.is_active ? 'text-destructive' : 'text-orange-600'}
-                          >
-                            {org.is_active ? (
-                              <>
-                                <PowerOff className="h-4 w-4 mr-2" />
-                                Desativar
-                              </>
-                            ) : (
-                              <>
-                                <Power className="h-4 w-4 mr-2" />
-                                Ativar
-                              </>
-                            )}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => openDeleteDialog({ id: org.id, name: org.name })}
-                            className="text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Excluir Organização
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
                   </div>
+                </div>
+                <div className="flex gap-3 pt-2">
+                  <Button variant="outline" className="flex-1 rounded-xl" onClick={() => setCreateDialogOpen(false)}>
+                    Cancelar
+                  </Button>
+                  <Button
+                    className="flex-[2] rounded-xl"
+                    onClick={handleCreateOrg}
+                    disabled={!newOrg.name || !newOrg.adminEmail || !newOrg.adminName || !newOrg.adminPassword || newOrg.adminPassword.length < 6 || createOrganization.isPending}>
+                    {createOrganization.isPending ? 'Processando...' : 'Criar Organização'}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+        </div>
 
-                  <div className="grid grid-cols-2 gap-4 pt-4 border-t border-muted">
-                    <div>
-                      <p className="text-xs text-muted-foreground uppercase font-semibold">Usuários</p>
-                      <p className="text-sm font-medium">{org.user_count || 0}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground uppercase font-semibold">Leads</p>
-                      <p className="text-sm font-medium">{org.lead_count || 0}</p>
-                    </div>
-                    <div className="col-span-2">
-                      <p className="text-xs text-muted-foreground uppercase font-semibold">Criado em</p>
-                      <p className="text-sm font-medium">
-                        {formatDistanceToNow(new Date(org.created_at), {
-                          addSuffix: true,
-                          locale: ptBR
-                        })}
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+        {/* Organizations Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          {isLoading ? (
+            Array.from({ length: 6 }).map((_, i) => (
+              <Skeleton key={i} className="h-[300px] w-full rounded-2xl" />
+            ))
+          ) : organizations?.length === 0 ? (
+            <div className="col-span-full flex flex-col items-center justify-center py-20 text-muted-foreground space-y-4 bg-card/20 rounded-3xl border border-dashed border-border">
+              <Building2 className="h-12 w-12 opacity-20" />
+              <p className="text-lg font-medium">Nenhuma organização encontrada com os filtros atuais.</p>
+              <Button variant="link" onClick={() => { setSearch(''); setStatusFilter('all'); setSegmentFilter('all'); }}>
+                Limpar filtros
+              </Button>
+            </div>
+          ) : (
+            organizations?.map((org) => (
+              <OrganizationCard
+                key={org.id}
+                org={org}
+                onImpersonate={handleImpersonate}
+                onViewDetails={(id) => navigate(`/admin/organizations/${id}`)}
+                onToggleStatus={handleToggleActive}
+                onDelete={(id, name) => {
+                  setOrgToDelete({ id, name });
+                  setDeleteConfirmation('');
+                  setDeleteDialogOpen(true);
+                }}
+              />
             ))
           )}
         </div>
 
-        {/* Delete Confirmation Dialog */}
+        {/* Delete Confirmation */}
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-          <AlertDialogContent className="max-w-[95vw] sm:max-w-lg">
+          <AlertDialogContent className="max-w-md rounded-2xl">
             <AlertDialogHeader>
-              <AlertDialogTitle>Excluir Organização</AlertDialogTitle>
+              <AlertDialogTitle className="text-red-600">Excluir Organização permanentemente?</AlertDialogTitle>
               <AlertDialogDescription className="space-y-4">
                 <p>
-                  Esta ação é <strong>irreversível</strong>. Todos os dados da organização serão excluídos permanentemente, incluindo:
+                  Atenção! Esta ação <strong>excluirá TODOS os dados</strong> da empresa {orgToDelete?.name}, incluindo usuários, leads, e histórico financeiro.
                 </p>
-                <ul className="list-disc list-inside text-sm space-y-1">
-                  <li>Usuários e permissões</li>
-                  <li>Leads e histórico</li>
-                  <li>Contratos e comissões</li>
-                  <li>Imóveis</li>
-                  <li>Conversas do WhatsApp</li>
-                  <li>Todos os outros dados</li>
-                </ul>
-                <p className="font-medium mt-4">
-                  Digite o nome da organização para confirmar: <strong>{orgToDelete?.name}</strong>
-                </p>
-                <Input
-                  value={deleteConfirmation}
-                  onChange={(e) => setDeleteConfirmation(e.target.value)}
-                  placeholder="Digite o nome da organização"
-                  className="mt-2" />
-
+                <div className="p-3 bg-red-50 text-red-700 rounded-xl text-xs space-y-1">
+                  <p>• Usuários e permissões serão removidos</p>
+                  <p>• Leads e histórico de vendas perdidos</p>
+                  <p>• Documentos e arquivos apagados</p>
+                </div>
+                <div className="space-y-2 pt-2">
+                  <Label className="text-xs uppercase font-bold text-muted-foreground">Confirme digitando o nome da empresa:</Label>
+                  <Input
+                    value={deleteConfirmation}
+                    onChange={(e) => setDeleteConfirmation(e.target.value)}
+                    placeholder={orgToDelete?.name}
+                    className="border-red-200 focus-visible:ring-red-500 rounded-xl" />
+                </div>
               </AlertDialogDescription>
             </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel onClick={() => {
+            <AlertDialogFooter className="gap-2 sm:gap-0">
+              <AlertDialogCancel className="rounded-xl" onClick={() => {
                 setOrgToDelete(null);
                 setDeleteConfirmation('');
               }}>
-                Cancelar
+                Manter Organização
               </AlertDialogCancel>
               <AlertDialogAction
                 onClick={handleDeleteOrg}
                 disabled={deleteConfirmation !== orgToDelete?.name || deleteOrganization.isPending}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-
-                {deleteOrganization.isPending ? 'Excluindo...' : 'Excluir Permanentemente'}
+                className="bg-red-600 hover:bg-red-700 text-white rounded-xl">
+                {deleteOrganization.isPending ? 'Excluindo...' : 'Sim, Excluir Tudo'}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
       </div>
-    </AdminLayout>);
-
+    </AdminLayout>
+  );
 }
