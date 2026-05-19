@@ -401,6 +401,31 @@ export function WhatsAppTab() {
                     <Button variant="outline" size="sm" className="h-8 w-8 p-0 shrink-0" onClick={() => handleOpenAccessDialog(session)}>
                       <Users className="w-3.5 h-3.5" />
                     </Button>
+                    {(session as any).provider === "evolution_go" && session.status === "connected" && (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 w-8 p-0 shrink-0"
+                              disabled={historySync.isPending}
+                              onClick={() => {
+                                historySync.mutate({ sessionId: session.id }, {
+                                  onSuccess: () => toast({ title: "Sincronização iniciada", description: "O histórico será carregado em background." }),
+                                  onError: (e: any) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
+                                });
+                              }}
+                            >
+                              {historySync.isPending && historySync.variables?.sessionId === session.id
+                                ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                : <History className="w-3.5 h-3.5" />}
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Sincronizar histórico de conversas</TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )}
                     <Button variant="outline" size="sm" className="h-8 w-8 p-0 shrink-0 text-destructive hover:text-destructive" onClick={() => {setSelectedSession(session);setDeleteDialogOpen(true);}}>
                       <Trash2 className="w-3.5 h-3.5" />
                     </Button>
