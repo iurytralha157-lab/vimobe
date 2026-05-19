@@ -13,9 +13,12 @@ import {
   Loader2,
   Building2,
   FileBarChart,
+  HelpCircle,
 } from 'lucide-react';
+import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { useDREExecutive } from '@/hooks/use-dre-executive';
 import { useProperties } from '@/hooks/use-properties';
+import { FinancialEmptyState } from '@/components/financial/FinancialEmptyState';
 import { startOfMonth, endOfMonth, subMonths, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -140,7 +143,7 @@ export default function ExecutiveDRE() {
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         ) : hasData ? (
-          <>
+          <TooltipProvider>
             {/* Cards de Resumo Executivo */}
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
               <SummaryCard
@@ -148,30 +151,49 @@ export default function ExecutiveDRE() {
                 value={dreData.totals.ebitda}
                 subValue="Resultado Operacional"
                 trend={dreData.totals.ebitda >= 0 ? 'up' : 'down'}
+                tooltip="Earnings Before Interest, Taxes, Depreciation, and Amortization. Representa quanto a empresa gera de caixa apenas com seus ativos operacionais."
               />
-              <SummaryCard title="Receita" value={dreData.totals.grossRevenue} subValue="Vendas e Recebimentos" />
+              <SummaryCard 
+                title="Receita" 
+                value={dreData.totals.grossRevenue} 
+                subValue="Vendas e Recebimentos" 
+                tooltip="Total de entradas brutas no período selecionado."
+              />
               <SummaryCard
                 title="Custo Variável"
                 value={dreData.totals.variableCosts}
                 subValue="Comissões e Custos Diretos"
                 variant="negative"
+                tooltip="Custos que variam proporcionalmente ao volume de vendas (ex: comissões, impostos sobre nota)."
               />
               <SummaryCard
                 title="Custo Fixo"
                 value={dreData.totals.fixedCosts}
                 subValue="Despesas Administrativas"
                 variant="negative"
+                tooltip="Custos recorrentes que não dependem do volume de vendas (ex: aluguel, salários fixos, softwares)."
               />
             </div>
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-              <SummaryCard title="Receita Líquida" value={dreData.totals.netRevenue} subValue="Após Deduções/Impostos" />
-              <SummaryCard title="Lucro Bruto" value={dreData.totals.grossProfit} subValue="Margem de Contribuição" />
+              <SummaryCard 
+                title="Receita Líquida" 
+                value={dreData.totals.netRevenue} 
+                subValue="Após Deduções/Impostos" 
+                tooltip="Receita bruta menos as deduções diretas e impostos sobre venda."
+              />
+              <SummaryCard 
+                title="Lucro Bruto" 
+                value={dreData.totals.grossProfit} 
+                subValue="Margem de Contribuição" 
+                tooltip="Receita Líquida menos os Custos Variáveis."
+              />
               <SummaryCard
                 title="Resultado"
                 value={dreData.totals.netResult}
                 subValue="Lucro/Prejuízo Líquido"
                 variant={dreData.totals.netResult >= 0 ? 'positive' : 'negative'}
+                tooltip="Resultado final após todos os custos e despesas."
               />
               <SummaryCard
                 title="ROI Geral"
@@ -179,8 +201,10 @@ export default function ExecutiveDRE() {
                 isPercent
                 subValue="Retorno sobre Investimento"
                 variant="info"
+                tooltip="Retorno sobre o capital investido na operação."
               />
             </div>
+          </TooltipProvider>
 
             {/* Gráfico de Composição */}
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -334,20 +358,13 @@ export default function ExecutiveDRE() {
             </Card>
           </>
         ) : (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center gap-3 py-20 text-center">
-              <FileBarChart className="h-10 w-10 text-muted-foreground" />
-              <div>
-                <p className="text-base font-medium text-foreground">Sem dados no período</p>
-                <p className="text-sm text-muted-foreground">
-                  Cadastre lançamentos ou ajuste o período para visualizar o DRE.
-                </p>
-              </div>
-              <Button onClick={() => navigate('/financeiro/lancamentos')} className="mt-2">
-                Ir para Lançamentos
-              </Button>
-            </CardContent>
-          </Card>
+          <FinancialEmptyState
+            title="Sem dados no período"
+            description="Não encontramos lançamentos para este filtro. Tente ajustar o período ou o imóvel selecionado."
+            actionLabel="Ir para Lançamentos"
+            onAction={() => navigate('/financeiro/lancamentos')}
+            icon={FileBarChart}
+          />
         )}
       </div>
     </AppLayout>
@@ -361,6 +378,7 @@ function SummaryCard({
   trend,
   isPercent = false,
   variant = 'default',
+  tooltip,
 }: {
   title: string;
   value: number;
@@ -368,6 +386,7 @@ function SummaryCard({
   trend?: 'up' | 'down';
   isPercent?: boolean;
   variant?: 'default' | 'positive' | 'negative' | 'info';
+  tooltip?: string;
 }) {
   const formatCurrency = (val: number) =>
     new Intl.NumberFormat('pt-BR', {
@@ -393,7 +412,19 @@ function SummaryCard({
     <Card className="transition-all hover:border-primary/40">
       <CardContent className="p-5">
         <div className="mb-2 flex items-center justify-between">
-          <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{title}</p>
+          <div className="flex items-center gap-1">
+            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{title}</p>
+            {tooltip && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent className="max-w-[200px]">
+                  {tooltip}
+                </TooltipContent>
+              </Tooltip>
+            )}
+          </div>
           {trend === 'up' && <TrendingUp className="h-4 w-4 text-emerald-400" />}
           {trend === 'down' && <ArrowDownRight className="h-4 w-4 text-red-400" />}
         </div>

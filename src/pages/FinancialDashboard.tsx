@@ -3,7 +3,9 @@ import { PremiumFinancialCard } from '@/components/financial/PremiumFinancialCar
 import { useFinancialDashboard } from '@/hooks/use-financial';
 import { useTelecomFinancialDashboard } from '@/hooks/use-telecom-financial-dashboard';
 import { useAuth } from '@/contexts/AuthContext';
-import { formatCurrency } from '@/lib/export-financial';
+import { formatCurrency, exportToExcel } from '@/lib/export-financial';
+import { toast } from 'sonner';
+import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { 
   TrendingUp, 
@@ -19,7 +21,8 @@ import {
   RefreshCw,
   Target,
   FileText,
-  Award
+  Award,
+  Download
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -371,6 +374,25 @@ function RealEstateFinancialDashboard({ data }: { data: ReturnType<typeof useFin
     { name: 'Pagas', value: data?.paidCommissions || 0, fill: 'hsl(var(--success))' },
   ].filter(d => d.value > 0);
 
+  const handleExport = () => {
+    if (!data) return;
+    const exportData = [
+      { Métrica: 'VGV Bruto', Valor: formatCurrency(data.vgvBruto) },
+      { Métrica: 'VGV Líquido', Valor: formatCurrency(data.vgvLiquido) },
+      { Métrica: 'Ticket Médio', Valor: formatCurrency(data.avgTicket) },
+      { Métrica: 'Receita Confirmada (30d)', Valor: formatCurrency(data.confirmedRevenue30) },
+      { Métrica: 'A Receber (30d)', Valor: formatCurrency(data.receivable30) },
+      { Métrica: 'A Pagar', Valor: formatCurrency(data.totalPayable) },
+      { Métrica: 'Vencidos', Valor: formatCurrency(totalOverdue) },
+      { Métrica: 'Comissões Previstas', Valor: formatCurrency(data.forecastCommissions) },
+      { Métrica: 'Comissões Liberadas', Valor: formatCurrency(data.pendingCommissions) },
+      { Métrica: 'Comissões Pagas', Valor: formatCurrency(data.paidCommissions) },
+      { Métrica: 'Projeção Anual', Valor: formatCurrency(data.annualProjection) },
+    ];
+    exportToExcel(exportData, `Dashboard_Financeiro_${format(new Date(), 'yyyy-MM-dd')}`);
+    toast.success('Resumo financeiro exportado com sucesso!');
+  };
+
   return (
     <AppLayout title="Dashboard Financeiro">
       <div className="space-y-6">
@@ -380,6 +402,15 @@ function RealEstateFinancialDashboard({ data }: { data: ReturnType<typeof useFin
             <p className="text-sm text-muted-foreground text-balance">Métricas consolidadas de vendas e recebimentos.</p>
           </div>
           <div className="flex items-center gap-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="hidden md:flex gap-2"
+              onClick={handleExport}
+            >
+              <Download className="h-4 w-4" />
+              Exportar
+            </Button>
             <Button 
               variant="outline" 
               size="sm" 
