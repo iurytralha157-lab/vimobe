@@ -132,6 +132,7 @@ export function useScheduleEvents(options: UseScheduleEventsOptions = {}) {
           completed_by, completed_at,
           user:users!schedule_events_user_id_fkey(id, name, avatar_url),
           lead:leads(id, name, phone),
+          property:properties(id, title, code),
           completed_by_user:users!schedule_events_completed_by_fkey(id, name)
         `)
         .order('start_time', { ascending: true });
