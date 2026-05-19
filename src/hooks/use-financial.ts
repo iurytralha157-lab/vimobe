@@ -16,6 +16,7 @@ export interface FinancialEntry {
   organization_id: string;
   type: 'payable' | 'receivable';
   category?: string;
+  category_group?: string;
   contract_id?: string;
   lead_id?: string;
   broker_id?: string;
