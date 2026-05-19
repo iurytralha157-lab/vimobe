@@ -34,12 +34,23 @@ export function WhatsAppRealtimeBus() {
       }, 800);
     };
 
-    const playSound = () => {
-      try {
-        const audio = new Audio("/sounds/notification.mp3");
-        audio.volume = 0.4;
-        audio.play().catch(() => {});
-      } catch {}
+    // Sound is handled by use-notifications via the notifications table.
+    // Bus must NOT play sound — it would duplicate / fire on every echoed
+    // outgoing message coming back from the webhook.
+
+    const updateLegacyCache = (
+      conversationId: string,
+      mutator: (msgs: any[]) => any[],
+    ) => {
+      queryClient.setQueriesData(
+        {
+          predicate: (q) =>
+            Array.isArray(q.queryKey) &&
+            q.queryKey[0] === "whatsapp-messages" &&
+            q.queryKey[1] === conversationId,
+        },
+        (old: any) => (Array.isArray(old) ? mutator(old) : old),
+      );
     };
 
     const upsertInPaginated = (conversationId: string, msg: any) => {
