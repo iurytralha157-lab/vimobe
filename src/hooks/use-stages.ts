@@ -411,6 +411,10 @@ export function useFilteredStageCounts({
             if (filterAd && filterAd !== 'all') {
               query = query.eq('lead_meta.ad_name', filterAd);
             }
+
+            if (filterSource && filterSource !== 'all') {
+              query = query.eq('source', filterSource);
+            }
           }
 
           const { count, error } = await query;
