@@ -34,12 +34,23 @@ export function WhatsAppRealtimeBus() {
       }, 800);
     };
 
-    const playSound = () => {
-      try {
-        const audio = new Audio("/sounds/notification.mp3");
-        audio.volume = 0.4;
-        audio.play().catch(() => {});
-      } catch {}
+    // Sound is handled by use-notifications via the notifications table.
+    // Bus must NOT play sound — it would duplicate / fire on every echoed
+    // outgoing message coming back from the webhook.
+
+    const updateLegacyCache = (
+      conversationId: string,
+      mutator: (msgs: any[]) => any[],
+    ) => {
+      queryClient.setQueriesData(
+        {
+          predicate: (q) =>
+            Array.isArray(q.queryKey) &&
+            q.queryKey[0] === "whatsapp-messages" &&
+            q.queryKey[1] === conversationId,
+        },
+        (old: any) => (Array.isArray(old) ? mutator(old) : old),
+      );
     };
 
     const upsertInPaginated = (conversationId: string, msg: any) => {
@@ -109,11 +120,29 @@ export function WhatsAppRealtimeBus() {
           // Fan-out: paginated cache for the active conversation
           upsertInPaginated(msg.conversation_id, msg);
 
+          // Legacy ["whatsapp-messages", convId, ...] cache used by FloatingChat
+          updateLegacyCache(msg.conversation_id, (msgs) => {
+            const cid = msg.client_message_id;
+            const exists = msgs.some(
+              (m) =>
+                m.id === msg.id ||
+                (m.client_message_id && cid && m.client_message_id === cid),
+            );
+            if (exists) {
+              return msgs.map((m) =>
+                m.id === msg.id ||
+                (m.client_message_id && cid && m.client_message_id === cid)
+                  ? { ...m, ...msg }
+                  : m,
+              );
+            }
+            return [...msgs, msg];
+          });
+
           // Conversations list updates (last_message, unread_count via DB trigger)
           debouncedInvalidateConversations();
 
           // Lead messages cache — invalidate by conversation->lead lookup
-          // (lookup is cheap because the conversation row is cached after first load)
           const conv = queryClient
             .getQueriesData({ queryKey: ["whatsapp-conversations"] })
             .flatMap(([, data]) => (Array.isArray(data) ? data : []))
@@ -123,9 +152,6 @@ export function WhatsAppRealtimeBus() {
               queryKey: ["lead-messages", conv.lead_id],
             });
           }
-
-          // Play notification sound only for incoming messages
-          if (!msg.from_me) playSound();
         },
       )
       .on(
@@ -135,6 +161,15 @@ export function WhatsAppRealtimeBus() {
           const msg = payload.new as any;
           if (!msg?.conversation_id) return;
           updateInPaginated(msg.conversation_id, msg);
+          updateLegacyCache(msg.conversation_id, (msgs) => {
+            const cid = msg.client_message_id;
+            return msgs.map((m) =>
+              m.id === msg.id ||
+              (m.client_message_id && cid && m.client_message_id === cid)
+                ? { ...m, ...msg }
+                : m,
+            );
+          });
         },
       )
       .on(
