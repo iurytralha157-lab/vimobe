@@ -474,8 +474,9 @@ export default function Contacts() {
                   setSelectedSource={handleFilterChange(setSelectedSource)}
                   selectedDealStatus={selectedDealStatus}
                   setSelectedDealStatus={handleFilterChange(setSelectedDealStatus)}
-                  activeCount={activeAdvancedCount}
-                />
+                    activeCount={activeAdvancedCount}
+                    availableSources={uniqueSources}
+                  />
 
                 <DateFilterPopover
                   datePreset={datePreset}
