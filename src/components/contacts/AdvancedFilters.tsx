@@ -27,6 +27,7 @@ interface AdvancedFiltersProps {
   selectedDealStatus: string;
   setSelectedDealStatus: (value: string) => void;
   activeCount: number;
+  availableSources?: string[];
 }
 
 export function AdvancedFilters({
