@@ -1,110 +1,50 @@
-# Refatoração SuperAdmin + Onboarding + Aprovação
+## Diagnóstico
 
-Execução **fase por fase**. Cada fase entrega UI + backend + SQLs prontos (quando houver) e só avançamos após sua validação.
+O campo `won_at` **já é gravado corretamente** quando um lead vira "ganho" (em `src/hooks/use-deal-status-change.ts` linha 49). O problema está **apenas na leitura da dashboard**: ela filtra os leads pela **data de criação** (`created_at`) e só depois conta quantos desse subconjunto têm `deal_status='won'`.
 
-Identidade visual: SF Pro Display, primário `#ff482a`, fundo `#1f1f1f`, `rounded-2xl`, grids fluidos `repeat(auto-fit, minmax(320px, 1fr))`, skeletons, micro-animações. Zero tokens custom novos — reaproveita o design system existente.
+Resultado prático: uma venda fechada hoje, de um lead criado mês passado, **não aparece** na dashboard de "este mês" — ela aparece no mês em que o lead entrou. É exatamente o comportamento que você descreveu.
 
----
+A correção é tratar leads ganhos como um conjunto separado, filtrado por `won_at` dentro do período da dashboard, somando-se aos leads novos (que continuam filtrados por `created_at`).
 
-## Fase 1 — Dashboard SuperAdmin (centro de inteligência)
+## Arquivos afetados
 
-**Arquivo principal:** `src/pages/admin/AdminDashboard.tsx` (reescrito).
+Tudo em `src/hooks/use-dashboard-stats.ts`:
 
-**Novos componentes** em `src/components/admin/dashboard/`:
-- `PlatformHeader` — título, subtítulo dinâmico (pendências/inadimplência/crescimento), seletor de período (7/30/90d/YTD), botão atualizar, last-sync.
-- `KpiCard` — ícone, valor, delta %, sparkline, descrição.
-- `KpiGrid` — grupos Financeiro / Plataforma / Operacional.
-- `RevenueChart`, `OrgsGrowthChart`, `HealthDonutChart`, `UsageChart` — Recharts com tema da plataforma.
-- `PendingBoard` — 4 boards: inadimplentes, sem uso, problemas técnicos, trials vencendo.
-- `OperationalFeed` — timeline realtime com filtros (tipo/severidade).
+1. **KPIs principais (linhas ~135–175)** — "Vendas Ganhas" e "VGV / Valor de vendas"
+   - Hoje: filtra `leads` por `created_at` no período, conta `deal_status='won'` dentro disso.
+   - Novo: fazer uma **segunda query** buscando `leads` com `deal_status='won'` e `won_at` dentro do período. Os KPIs `closedLeads` e `totalSalesValue` passam a vir dessa query.
+   - "Total de Leads" e "Taxa de conversão" continuam baseados em `created_at` (são métricas de captação / período de origem).
+   - A taxa de conversão passa a ser exibida como "vendas do período ÷ leads do período" (mantém leitura operacional).
 
-**Backend (SQL — Fase 1):** views materializadas + RPCs agregando dados que hoje não estão prontos:
-- `mv_platform_mrr_daily` (entradas pagas por dia × org).
-- `mv_platform_org_health` (status, último login, dias sem uso, leads/30d).
-- `mv_platform_usage_daily` (leads, logins, automações executadas, erros).
-- `v_platform_overdue_orgs` (inadimplência via `financial_entries`/Asaas).
-- `v_platform_trials_expiring` (dias restantes).
-- RPC `admin_dashboard_overview(period)` retornando KPIs em JSON único.
-- RPC `admin_dashboard_pending_boards()`.
-- pg_cron para refresh das MVs a cada 15 min.
-- Tabela `platform_events` (append-only) alimentando o feed operacional + trigger genérico em pontos chave (org criada, pagamento aprovado, trial expirado, automação falhou).
+2. **Ranking de corretores (linhas ~430–480)**
+   - Já filtra por `deal_status='won'`. Ajustar o `dateRange` para filtrar por `won_at` em vez de `created_at`.
 
-**Performance:** React Query com `staleTime` 60s, skeletons, lazy charts.
+3. **Evolução de Negócios — gráfico (linhas ~770–815)**
+   - Hoje: agrupa todos os leads por `created_at` e classifica por status no balde da data de criação.
+   - Novo: separar em dois conjuntos por intervalo do gráfico:
+     - **Abertos** continuam contados por `created_at` (volume de entrada);
+     - **Ganhos** contados por `won_at` dentro do intervalo;
+     - **Perdas** contadas por `lost_at` dentro do intervalo.
+   - Buscar os leads com um `select` que traga `created_at, won_at, lost_at, deal_status` e fazer a classificação em memória usando a data correta.
 
----
+4. **Outras telas que já estão certas** (não precisam mudar):
+   - `src/hooks/use-team-ranking.ts` — já usa `won_at`.
+   - `src/pages/gamification/GamificationRanking.tsx` — já usa `won_at`.
+   - `src/hooks/use-vgv.ts` — já seleciona `won_at`; checar se o filtro por período também usa `won_at`.
+   - `src/hooks/use-financial.ts` (linha 327) — já busca leads `deal_status='won'`; confirmar se agrega por `won_at`.
 
-## Fase 2 — Página de Organizações (cards premium)
+## Comportamento esperado após o fix
 
-**Arquivo principal:** `src/pages/admin/AdminOrganizations.tsx` (reescrito), inspirado na tela "Selecionar Organização".
+- Lead criado em **agosto** e fechado em **outubro** aparece como venda ganha **em outubro** na dashboard, ranking e gráfico de evolução.
+- KPI "Total de Leads" continua refletindo os leads que **entraram** no período (data de criação).
+- KPI "Vendas Ganhas", "VGV" e "Ranking" passam a refletir o que foi **fechado** no período (data de ganho).
+- Gráfico de Evolução mostra, em cada barra/intervalo, leads novos (entrada), ganhos (data da venda) e perdas (data da perda).
 
-- `OrganizationCard` novo: avatar/logo, nome imobiliária, nome interno, badge (Trial/Ativa/Suspensa/Cancelada), criado em, plano, qtd usuários, qtd leads, último pagamento.
-- Ações rápidas (dropdown): acessar (personificação), editar, financeiro, suspender/reativar, métricas.
-- Grid fluido `auto-fit minmax(340px, 1fr)`.
-- Filtros no topo: busca, status, plano, ordenação.
-- Hook novo `useAdminOrganizationsList()` agregando usuários/leads/último pagamento numa única RPC `admin_list_organizations(filters)` para evitar N+1.
+## Riscos / pontos de atenção
 
-**Backend (SQL — Fase 2):** RPC `admin_list_organizations` + índices auxiliares.
+- Leads antigos sem `won_at` preenchido (caso existam) não vão aparecer nos novos KPIs. Se houver registros legados, podemos rodar um backfill simples: `UPDATE leads SET won_at = updated_at WHERE deal_status='won' AND won_at IS NULL`. **Confirmar com você** antes de aplicar o backfill.
+- A taxa de conversão muda de semântica (passa a ser "fechado no período ÷ entrou no período"). Avisamos no tooltip do card.
 
----
+## Próximo passo
 
-## Fase 3 — Tela de revisão do Onboarding (SuperAdmin)
-
-Refactor visual **apenas** de `src/pages/admin/AdminOnboarding.tsx` (a página pública `/onboarding` fica como está, conforme combinado).
-
-- Substituir a tabela atual por **lista de cards/linhas premium**: avatar, organização, responsável, plano escolhido, telefone, e-mail, data, status badge.
-- **Painel lateral (Sheet ~720px)** ao clicar: dados completos do pedido (branding, módulos, integrações desejadas), ações Aprovar / Rejeitar / Solicitar ajustes.
-- Filtros segmentados (Pendentes / Aprovadas / Rejeitadas) com contadores.
-- Skeleton, empty state ilustrado, animações suaves.
-
----
-
-## Fase 4 — Notificações internas do Onboarding
-
-Hoje só dispara WhatsApp. Adicionar notificação interna sem mexer no WhatsApp.
-
-- Novo trigger em `onboarding_requests` (AFTER INSERT) chamando função que insere em `notifications` para **todos os super_admins** com `type='onboarding_request'`, payload com nome, responsável, telefone, e-mail, plano, data e link `/admin/onboarding?id=...`.
-- Atualizar sino de notificações (componente existente) para reconhecer o type e mostrar CTA "Revisar pedido".
-- Adicionar entrada no novo `OperationalFeed` (Fase 1) via `platform_events`.
-
-**Backend (SQL — Fase 4):** function + trigger + (opcional) realtime channel.
-
----
-
-## Fase 5 — Fluxo de aprovação automática
-
-Substituir o approve atual por uma edge function `approve-onboarding-request`:
-
-1. Valida role `super_admin`.
-2. Gera senha aleatória forte (16 chars, base64url, sem ambíguos).
-3. Cria usuário em `auth.users` via Admin API (service role) com `email_confirm=true`.
-4. Cria `organization`, `users` (role=admin), pipelines default, equipe default — reaproveita lógica do `useSuperAdmin.createOrganization`.
-5. Marca `onboarding_requests.status='approved'`, salva `approved_by`, `approved_at`, IP do approver.
-6. Insere log em `platform_events` ("Organização X aprovada").
-7. Insere notificação interna ("Aprovação concluída").
-8. Dispara WhatsApp (reaproveita `whatsapp-notifier`) + e-mail (Lovable Emails) com: boas-vindas, URL, login, senha temporária, recomendação de troca, contato suporte.
-9. Retorna `{ email, password, login_url }` para a UI exibir em modal "Acesso gerado" com botões Copiar.
-
-**Senha em texto plano** conforme escolhido. Sem `must_change_password` forçado nesta fase.
-
-**Backend (SQL — Fase 5):** colunas `approved_by`, `approved_at`, `approver_ip` em `onboarding_requests` (se faltarem); índice em `status`.
-
----
-
-## Padronização final
-Todas as telas SuperAdmin passam a usar os mesmos tokens, mesmas badges (`StatusBadge` compartilhado), mesma tipografia, mesmos espaçamentos, mesma linguagem visual de filtros e sheets.
-
----
-
-## Entregáveis SQL
-Ao final de cada fase, envio **todos os SQLs** numerados e prontos para colar no SQL Editor do Supabase, na ordem correta (extensões → tabelas → índices → functions → triggers → RPCs → MVs → cron). Se algum migration não puder ser aplicado automaticamente, ele virá explicitamente listado no bloco final da resposta da fase.
-
----
-
-## Ordem de execução
-1. **Fase 1** — Dashboard (UI + SQLs MVs/RPCs/feed)
-2. **Fase 2** — Organizações (UI + RPC)
-3. **Fase 3** — Onboarding review (UI)
-4. **Fase 4** — Notificações internas (trigger + sino)
-5. **Fase 5** — Aprovação automática (edge function + SQLs auxiliares)
-
-Aprove o plano e eu começo imediatamente pela **Fase 1**.
+Ao aprovar o plano, implemento as alterações em `use-dashboard-stats.ts` e valido visualmente na dashboard.
