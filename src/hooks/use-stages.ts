@@ -79,6 +79,7 @@ export function useStagesWithLeads(
     filterCampaign?: string;
     filterAdSet?: string;
     filterAd?: string;
+    filterSource?: string;
   }
 ) {
   const dateFromISO = filters?.dateRange?.from?.toISOString();
