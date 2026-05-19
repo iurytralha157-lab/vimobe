@@ -1162,7 +1162,7 @@ async function replaceVariables(
   }
   if (execution.lead_id) {
     const { data: lead } = await supabase
-      .from("leads").select("*, organization:organizations(name)")
+      .from("leads").select("*")
       .eq("id", execution.lead_id).single();
     if (lead) {
       result = result.replace(/\{\{lead\.name\}\}/g, lead.name || "");
@@ -1172,7 +1172,6 @@ async function replaceVariables(
       result = result.replace(/\{\{lead\.message\}\}/g, lead.message || "");
       result = result.replace(/\{\{lead\.valor_interesse\}\}/g,
         lead.valor_interesse ? `R$ ${Number(lead.valor_interesse).toLocaleString("pt-BR")}` : "");
-      result = result.replace(/\{\{organization\.name\}\}/g, lead.organization?.name || "");
     }
     const { data: customer } = await supabase
       .from("telecom_customers").select("*").eq("lead_id", execution.lead_id).maybeSingle();
