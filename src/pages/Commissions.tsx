@@ -38,6 +38,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { CommissionStatusBadge } from '@/components/financial/CommissionStatusBadge';
 import { FinancialDrawer } from '@/components/financial/FinancialDrawer';
+import { FinancialEmptyState } from '@/components/financial/FinancialEmptyState';
 
 import { useIsMobile } from '@/hooks/use-mobile';
 import { 
@@ -352,8 +353,13 @@ export default function Commissions() {
       <TableBody>
         {filteredCommissions.length === 0 ? (
           <TableRow>
-            <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
-              Nenhuma comissão encontrada
+            <TableCell colSpan={9} className="py-12">
+              <FinancialEmptyState
+                title="Nenhuma comissão encontrada"
+                description={activeTab === 'rules' ? "Nenhuma regra de comissão cadastrada." : "Não encontramos comissões para o filtro selecionado."}
+                actionLabel={activeTab === 'rules' ? "Criar Regra" : undefined}
+                onAction={activeTab === 'rules' ? () => openRuleDialog() : undefined}
+              />
             </TableCell>
           </TableRow>
         ) : (

@@ -13,9 +13,12 @@ import {
   Loader2,
   Building2,
   FileBarChart,
+  HelpCircle,
 } from 'lucide-react';
+import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { useDREExecutive } from '@/hooks/use-dre-executive';
 import { useProperties } from '@/hooks/use-properties';
+import { FinancialEmptyState } from '@/components/financial/FinancialEmptyState';
 import { startOfMonth, endOfMonth, subMonths, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -27,7 +30,7 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
+  Tooltip as RechartsTooltip,
   ResponsiveContainer,
   Cell,
 } from 'recharts';
@@ -140,214 +143,229 @@ export default function ExecutiveDRE() {
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         ) : hasData ? (
-          <>
-            {/* Cards de Resumo Executivo */}
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-              <SummaryCard
-                title="EBITDA"
-                value={dreData.totals.ebitda}
-                subValue="Resultado Operacional"
-                trend={dreData.totals.ebitda >= 0 ? 'up' : 'down'}
-              />
-              <SummaryCard title="Receita" value={dreData.totals.grossRevenue} subValue="Vendas e Recebimentos" />
-              <SummaryCard
-                title="Custo Variável"
-                value={dreData.totals.variableCosts}
-                subValue="Comissões e Custos Diretos"
-                variant="negative"
-              />
-              <SummaryCard
-                title="Custo Fixo"
-                value={dreData.totals.fixedCosts}
-                subValue="Despesas Administrativas"
-                variant="negative"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-              <SummaryCard title="Receita Líquida" value={dreData.totals.netRevenue} subValue="Após Deduções/Impostos" />
-              <SummaryCard title="Lucro Bruto" value={dreData.totals.grossProfit} subValue="Margem de Contribuição" />
-              <SummaryCard
-                title="Resultado"
-                value={dreData.totals.netResult}
-                subValue="Lucro/Prejuízo Líquido"
-                variant={dreData.totals.netResult >= 0 ? 'positive' : 'negative'}
-              />
-              <SummaryCard
-                title="ROI Geral"
-                value={dreData.totals.roi * 100}
-                isPercent
-                subValue="Retorno sobre Investimento"
-                variant="info"
-              />
-            </div>
-
-            {/* Gráfico de Composição */}
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-              <Card className="lg:col-span-2">
-                <CardHeader>
-                  <CardTitle className="text-lg">Fluxo de Resultados</CardTitle>
-                  <CardDescription>Composição de Receita vs Custos no período</CardDescription>
-                </CardHeader>
-                <CardContent className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={dreData.lines}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                      <XAxis
-                        dataKey="name"
-                        axisLine={false}
-                        tickLine={false}
-                        tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
-                      />
-                      <YAxis hide />
-                      <Tooltip
-                        formatter={(val: number) => formatCurrency(val)}
-                        contentStyle={{
-                          backgroundColor: 'hsl(var(--popover))',
-                          border: '1px solid hsl(var(--border))',
-                          borderRadius: 12,
-                          color: 'hsl(var(--popover-foreground))',
-                        }}
-                      />
-                      <Bar dataKey="value" radius={[8, 8, 0, 0]} barSize={50}>
-                        {dreData.lines.map((entry, index) => (
-                          <Cell
-                            key={`cell-${index}`}
-                            fill={
-                              entry.type === 'revenue'
-                                ? 'hsl(142 76% 45%)'
-                                : entry.type === 'expense'
-                                  ? 'hsl(0 84% 60%)'
-                                  : 'hsl(var(--primary))'
-                            }
-                          />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Margem Líquida</CardTitle>
-                  <CardDescription>Performance relativa</CardDescription>
-                </CardHeader>
-                <CardContent className="flex h-[300px] flex-col items-center justify-center space-y-6">
-                  <div className="relative flex h-40 w-40 items-center justify-center rounded-full border-8 border-border">
-                    <div className="text-center">
-                      <p className="text-3xl font-black text-primary">
-                        {((dreData.totals.netResult / (dreData.totals.grossRevenue || 1)) * 100).toFixed(1)}%
-                      </p>
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                        Margem Líquida
-                      </p>
-                    </div>
-                  </div>
-                  <div className="w-full space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Ponto de Equilíbrio</span>
-                      <span className="font-bold text-foreground">
-                        {dreData.totals.netResult >= 0 ? 'Atingido' : 'Não Atingido'}
-                      </span>
-                    </div>
-                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                      <div
-                        className={`h-full ${dreData.totals.netResult >= 0 ? 'bg-emerald-500' : 'bg-red-500'}`}
-                        style={{
-                          width: `${Math.min(100, Math.abs((dreData.totals.netResult / (dreData.totals.grossRevenue || 1)) * 100))}%`,
-                        }}
-                      />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Tabela Detalhada */}
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle>Demonstrativo Detalhado</CardTitle>
-                  <CardDescription>Valores comparativos com o mês anterior</CardDescription>
-                </div>
-                <Badge variant="secondary">Regime de Caixa</Badge>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-border text-left text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                        <th className="px-2 pb-3">Descrição</th>
-                        <th className="px-2 pb-3 text-right">Valor Atual</th>
-                        <th className="px-2 pb-3 text-right">Valor Anterior</th>
-                        <th className="px-2 pb-3 text-right">Variação</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border">
-                      {dreData.lines.map((line) => (
-                        <tr
-                          key={line.id}
-                          className={`transition-colors hover:bg-muted/40 ${line.isTotal ? 'bg-muted/30 font-bold' : ''}`}
-                        >
-                          <td className="px-2 py-3 text-sm text-foreground">{line.name}</td>
-                          <td
-                            className={`px-2 py-3 text-right text-sm tabular-nums ${
-                              line.type === 'expense'
-                                ? 'text-red-400'
-                                : line.type === 'revenue'
-                                  ? 'text-emerald-400'
-                                  : 'text-foreground'
-                            }`}
-                          >
-                            {formatCurrency(line.value)}
-                          </td>
-                          <td className="px-2 py-3 text-right text-sm tabular-nums text-muted-foreground">
-                            {line.previousValue ? formatCurrency(line.previousValue) : '-'}
-                          </td>
-                          <td className="px-2 py-3 text-right text-sm">
-                            <div className="flex items-center justify-end gap-1">
-                              {line.variation && line.variation > 0 ? (
-                                <ArrowUpRight className="h-3 w-3 text-emerald-400" />
-                              ) : line.variation && line.variation < 0 ? (
-                                <ArrowDownRight className="h-3 w-3 text-red-400" />
-                              ) : null}
-                              <span
-                                className={
-                                  line.variation && line.variation > 0
-                                    ? 'text-emerald-400'
-                                    : line.variation && line.variation < 0
-                                      ? 'text-red-400'
-                                      : 'text-muted-foreground'
-                                }
-                              >
-                                {line.variation ? `${line.variation.toFixed(1)}%` : '-'}
-                              </span>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
-          </>
-        ) : (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center gap-3 py-20 text-center">
-              <FileBarChart className="h-10 w-10 text-muted-foreground" />
-              <div>
-                <p className="text-base font-medium text-foreground">Sem dados no período</p>
-                <p className="text-sm text-muted-foreground">
-                  Cadastre lançamentos ou ajuste o período para visualizar o DRE.
-                </p>
+          <TooltipProvider>
+            <div className="space-y-6">
+              {/* Cards de Resumo Executivo */}
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <SummaryCard
+                  title="EBITDA"
+                  value={dreData.totals.ebitda}
+                  subValue="Resultado Operacional"
+                  trend={dreData.totals.ebitda >= 0 ? 'up' : 'down'}
+                  tooltip="Earnings Before Interest, Taxes, Depreciation, and Amortization. Representa quanto a empresa gera de caixa apenas com seus ativos operacionais."
+                />
+                <SummaryCard 
+                  title="Receita" 
+                  value={dreData.totals.grossRevenue} 
+                  subValue="Vendas e Recebimentos" 
+                  tooltip="Total de entradas brutas no período selecionado."
+                />
+                <SummaryCard
+                  title="Custo Variável"
+                  value={dreData.totals.variableCosts}
+                  subValue="Comissões e Custos Diretos"
+                  variant="negative"
+                  tooltip="Custos que variam proporcionalmente ao volume de vendas (ex: comissões, impostos sobre nota)."
+                />
+                <SummaryCard
+                  title="Custo Fixo"
+                  value={dreData.totals.fixedCosts}
+                  subValue="Despesas Administrativas"
+                  variant="negative"
+                  tooltip="Custos recorrentes que não dependem do volume de vendas (ex: aluguel, salários fixos, softwares)."
+                />
               </div>
-              <Button onClick={() => navigate('/financeiro/lancamentos')} className="mt-2">
-                Ir para Lançamentos
-              </Button>
-            </CardContent>
-          </Card>
+
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <SummaryCard 
+                  title="Receita Líquida" 
+                  value={dreData.totals.netRevenue} 
+                  subValue="Após Deduções/Impostos" 
+                  tooltip="Receita bruta menos as deduções diretas e impostos sobre venda."
+                />
+                <SummaryCard 
+                  title="Lucro Bruto" 
+                  value={dreData.totals.grossProfit} 
+                  subValue="Margem de Contribuição" 
+                  tooltip="Receita Líquida menos os Custos Variáveis."
+                />
+                <SummaryCard
+                  title="Resultado"
+                  value={dreData.totals.netResult}
+                  subValue="Lucro/Prejuízo Líquido"
+                  variant={dreData.totals.netResult >= 0 ? 'positive' : 'negative'}
+                  tooltip="Resultado final após todos os custos e despesas."
+                />
+                <SummaryCard
+                  title="ROI Geral"
+                  value={dreData.totals.roi * 100}
+                  isPercent
+                  subValue="Retorno sobre Investimento"
+                  variant="info"
+                  tooltip="Retorno sobre o capital investido na operação."
+                />
+              </div>
+
+              {/* Gráfico de Composição */}
+              <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+                <Card className="lg:col-span-2">
+                  <CardHeader>
+                    <CardTitle className="text-lg">Fluxo de Resultados</CardTitle>
+                    <CardDescription>Composição de Receita vs Custos no período</CardDescription>
+                  </CardHeader>
+                  <CardContent className="h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={dreData.lines}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                        <XAxis
+                          dataKey="name"
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+                        />
+                        <YAxis hide />
+                        <RechartsTooltip
+                          formatter={(val: number) => formatCurrency(val)}
+                          contentStyle={{
+                            backgroundColor: 'hsl(var(--popover))',
+                            border: '1px solid hsl(var(--border))',
+                            borderRadius: 12,
+                            color: 'hsl(var(--popover-foreground))',
+                          }}
+                        />
+                        <Bar dataKey="value" radius={[8, 8, 0, 0]} barSize={50}>
+                          {dreData.lines.map((entry, index) => (
+                            <Cell
+                              key={`cell-${index}`}
+                              fill={
+                                entry.type === 'revenue'
+                                  ? 'hsl(142 76% 45%)'
+                                  : entry.type === 'expense'
+                                    ? 'hsl(0 84% 60%)'
+                                    : 'hsl(var(--primary))'
+                              }
+                            />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Margem Líquida</CardTitle>
+                    <CardDescription>Performance relativa</CardDescription>
+                  </CardHeader>
+                  <CardContent className="flex h-[300px] flex-col items-center justify-center space-y-6">
+                    <div className="relative flex h-40 w-40 items-center justify-center rounded-full border-8 border-border">
+                      <div className="text-center">
+                        <p className="text-3xl font-black text-primary">
+                          {((dreData.totals.netResult / (dreData.totals.grossRevenue || 1)) * 100).toFixed(1)}%
+                        </p>
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                          Margem Líquida
+                        </p>
+                      </div>
+                    </div>
+                    <div className="w-full space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Ponto de Equilíbrio</span>
+                        <span className="font-bold text-foreground">
+                          {dreData.totals.netResult >= 0 ? 'Atingido' : 'Não Atingido'}
+                        </span>
+                      </div>
+                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                        <div
+                          className={`h-full ${dreData.totals.netResult >= 0 ? 'bg-emerald-500' : 'bg-red-500'}`}
+                          style={{
+                            width: `${Math.min(100, Math.abs((dreData.totals.netResult / (dreData.totals.grossRevenue || 1)) * 100))}%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Tabela Detalhada */}
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <div>
+                    <CardTitle>Demonstrativo Detalhado</CardTitle>
+                    <CardDescription>Valores comparativos com o mês anterior</CardDescription>
+                  </div>
+                  <Badge variant="secondary">Regime de Caixa</Badge>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-border text-left text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                          <th className="px-2 pb-3">Descrição</th>
+                          <th className="px-2 pb-3 text-right">Valor Atual</th>
+                          <th className="px-2 pb-3 text-right">Valor Anterior</th>
+                          <th className="px-2 pb-3 text-right">Variação</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border">
+                        {dreData.lines.map((line) => (
+                          <tr
+                            key={line.id}
+                            className={`transition-colors hover:bg-muted/40 ${line.isTotal ? 'bg-muted/30 font-bold' : ''}`}
+                          >
+                            <td className="px-2 py-3 text-sm text-foreground">{line.name}</td>
+                            <td
+                              className={`px-2 py-3 text-right text-sm tabular-nums ${
+                                line.type === 'expense'
+                                  ? 'text-red-400'
+                                  : line.type === 'revenue'
+                                    ? 'text-emerald-400'
+                                    : 'text-foreground'
+                              }`}
+                            >
+                              {formatCurrency(line.value)}
+                            </td>
+                            <td className="px-2 py-3 text-right text-sm tabular-nums text-muted-foreground">
+                              {line.previousValue ? formatCurrency(line.previousValue) : '-'}
+                            </td>
+                            <td className="px-2 py-3 text-right text-sm">
+                              <div className="flex items-center justify-end gap-1">
+                                {line.variation && line.variation > 0 ? (
+                                  <ArrowUpRight className="h-3 w-3 text-emerald-400" />
+                                ) : line.variation && line.variation < 0 ? (
+                                  <ArrowDownRight className="h-3 w-3 text-red-400" />
+                                ) : null}
+                                <span
+                                  className={
+                                    line.variation && line.variation > 0
+                                      ? 'text-emerald-400'
+                                      : line.variation && line.variation < 0
+                                        ? 'text-red-400'
+                                        : 'text-muted-foreground'
+                                  }
+                                >
+                                  {line.variation ? `${line.variation.toFixed(1)}%` : '-'}
+                                </span>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TooltipProvider>
+        ) : (
+          <FinancialEmptyState
+            title="Sem dados no período"
+            description="Não encontramos lançamentos para este filtro. Tente ajustar o período ou o imóvel selecionado."
+            actionLabel="Ir para Lançamentos"
+            onAction={() => navigate('/financeiro/lancamentos')}
+            icon={FileBarChart}
+          />
         )}
       </div>
     </AppLayout>
@@ -361,6 +379,7 @@ function SummaryCard({
   trend,
   isPercent = false,
   variant = 'default',
+  tooltip,
 }: {
   title: string;
   value: number;
@@ -368,6 +387,7 @@ function SummaryCard({
   trend?: 'up' | 'down';
   isPercent?: boolean;
   variant?: 'default' | 'positive' | 'negative' | 'info';
+  tooltip?: string;
 }) {
   const formatCurrency = (val: number) =>
     new Intl.NumberFormat('pt-BR', {
@@ -393,7 +413,19 @@ function SummaryCard({
     <Card className="transition-all hover:border-primary/40">
       <CardContent className="p-5">
         <div className="mb-2 flex items-center justify-between">
-          <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{title}</p>
+          <div className="flex items-center gap-1">
+            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{title}</p>
+            {tooltip && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent className="max-w-[200px]">
+                  {tooltip}
+                </TooltipContent>
+              </Tooltip>
+            )}
+          </div>
           {trend === 'up' && <TrendingUp className="h-4 w-4 text-emerald-400" />}
           {trend === 'down' && <ArrowDownRight className="h-4 w-4 text-red-400" />}
         </div>
