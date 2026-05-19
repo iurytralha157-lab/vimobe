@@ -737,8 +737,8 @@ export function useDealsEvolutionData(filters?: DashboardFilters) {
       const dateTo = filters?.dateRange?.to || now;
       const daysDiff = differenceInDays(dateTo, dateFrom);
       
-      // Build base query
-      let selectString = 'id, created_at, deal_status, assigned_user_id, source';
+      // Build base query — buscar leads que entraram OU foram ganhos OU foram perdidos no período
+      let selectString = 'id, created_at, won_at, lost_at, deal_status, assigned_user_id, source';
       if (filters?.campaignId || filters?.adSetId || filters?.adId) {
         selectString += ', lead_meta!inner(campaign_id, adset_id, ad_id)';
       }
@@ -747,8 +747,11 @@ export function useDealsEvolutionData(filters?: DashboardFilters) {
         .from('leads')
         .select(selectString)
         .eq('organization_id', organizationId!)
-        .gte('created_at', dateFrom.toISOString())
-        .lte('created_at', dateTo.toISOString());
+        .or(
+          `and(created_at.gte.${dateFrom.toISOString()},created_at.lte.${dateTo.toISOString()}),` +
+          `and(won_at.gte.${dateFrom.toISOString()},won_at.lte.${dateTo.toISOString()}),` +
+          `and(lost_at.gte.${dateFrom.toISOString()},lost_at.lte.${dateTo.toISOString()})`
+        );
 
       // Apply Meta filters
       if (filters?.campaignId) {
