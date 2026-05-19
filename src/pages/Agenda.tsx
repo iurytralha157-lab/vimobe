@@ -160,8 +160,8 @@ function EventDetailPanel({
   onClose: () => void;
   onMarkDone: (id: string) => void;
 }) {
-  const [comment, setComment] = useState("");
-  const [localComments, setLocalComments] = useState<{ text: string; time: string }[]>([]);
+  const [commentText, setCommentText] = useState("");
+  const { comments, addComment, isAdding } = useScheduleComments(event?.id);
   const [subtasks, setSubtasks] = useState<{ label: string; done: boolean }[]>([
     { label: "Confirmar com o cliente", done: false },
     { label: "Preparar documentação", done: false },
@@ -169,8 +169,7 @@ function EventDetailPanel({
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    setLocalComments([]);
-    setComment("");
+    setCommentText("");
   }, [event?.id]);
 
   if (!event) return null;
@@ -180,10 +179,10 @@ function EventDetailPanel({
   const statusConf = STATUS_CONFIG[event.status ?? "pending"] ?? STATUS_CONFIG.pending;
   const TypeIcon = typeConf.icon;
 
-  const sendComment = () => {
-    if (!comment.trim()) return;
-    setLocalComments((c) => [...c, { text: comment.trim(), time: "Agora" }]);
-    setComment("");
+  const handleSendComment = () => {
+    if (!commentText.trim() || isAdding) return;
+    addComment(commentText.trim());
+    setCommentText("");
   };
 
   const toggleSubtask = (i: number) => {
@@ -295,7 +294,6 @@ function EventDetailPanel({
           </div>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
             {event.user && <Avatar name={event.user.name} />}
-            {/* Aqui você pode mapear múltiplos users quando o hook suportar */}
             <button
               style={{
                 width: 28,
@@ -440,9 +438,9 @@ function EventDetailPanel({
             <MessageSquare size={11} /> Comentários
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 10 }}>
-            {localComments.map((c, i) => (
-              <div key={i} style={{ display: "flex", gap: 8 }}>
-                <Avatar name="Eu" size={24} />
+            {comments.map((c) => (
+              <div key={c.id} style={{ display: "flex", gap: 8 }}>
+                <Avatar name={c.user?.name || "Usuário"} size={24} />
                 <div>
                   <div
                     style={{
@@ -452,15 +450,19 @@ function EventDetailPanel({
                       padding: "6px 10px",
                       fontSize: 12,
                       color: "var(--color-text-secondary)",
+                      maxWidth: "240px",
+                      wordBreak: "break-word",
                     }}
                   >
-                    {c.text}
+                    {c.content}
                   </div>
-                  <div style={{ fontSize: 10, color: "var(--color-text-tertiary)", marginTop: 3 }}>{c.time}</div>
+                  <div style={{ fontSize: 10, color: "var(--color-text-tertiary)", marginTop: 3 }}>
+                    {format(new Date(c.created_at), "HH:mm", { locale: ptBR })}
+                  </div>
                 </div>
               </div>
             ))}
-            {localComments.length === 0 && (
+            {comments.length === 0 && (
               <div style={{ fontSize: 11, color: "var(--color-text-tertiary)", textAlign: "center", padding: "8px 0" }}>
                 Nenhum comentário ainda
               </div>
@@ -469,10 +471,11 @@ function EventDetailPanel({
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             <input
               ref={inputRef}
-              value={comment}
-              onChange={(e) => setComment(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && sendComment()}
+              value={commentText}
+              onChange={(e) => setCommentText(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSendComment()}
               placeholder="Adicionar comentário..."
+              disabled={isAdding}
               style={{
                 flex: 1,
                 background: "rgba(255,255,255,0.05)",
@@ -482,10 +485,12 @@ function EventDetailPanel({
                 fontSize: 12,
                 color: "var(--color-text-primary)",
                 outline: "none",
+                opacity: isAdding ? 0.5 : 1,
               }}
             />
             <button
-              onClick={sendComment}
+              onClick={handleSendComment}
+              disabled={isAdding || !commentText.trim()}
               style={{
                 background: "#ff4e1a",
                 border: "none",
@@ -498,6 +503,7 @@ function EventDetailPanel({
                 cursor: "pointer",
                 color: "#fff",
                 flexShrink: 0,
+                opacity: (isAdding || !commentText.trim()) ? 0.5 : 1,
               }}
             >
               <Send size={13} />
