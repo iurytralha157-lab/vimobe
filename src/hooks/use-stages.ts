@@ -329,6 +329,7 @@ export function useFilteredStageCounts({
   filterCampaign,
   filterAdSet,
   filterAd,
+  filterSource,
 }: FilteredStageCountsParams) {
   return useQuery({
     queryKey: [
@@ -344,6 +345,7 @@ export function useFilteredStageCounts({
       filterCampaign,
       filterAdSet,
       filterAd,
+      filterSource,
     ],
     enabled: !!pipelineId && stageIds.length > 0,
     staleTime: 30_000,
