@@ -137,6 +137,7 @@ export function useCreateFinancialEntry() {
         .insert({
           type: data.type,
           category: data.category,
+          category_group: data.category_group,
           description: data.description,
           amount: data.amount,
           due_date: data.due_date,
