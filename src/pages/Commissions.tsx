@@ -656,85 +656,83 @@ export default function Commissions() {
           </DialogContent>
         </Dialog>
 
-        {/* Rule Dialog */}
-        <Dialog open={ruleDialog.open} onOpenChange={(open) => {
-          setRuleDialog({ open, rule: null });
-          if (!open) resetRuleForm();
-        }}>
-          <DialogContent className="w-[90%] sm:max-w-md sm:w-full rounded-lg">
-            <DialogHeader>
-              <DialogTitle>{ruleDialog.rule ? 'Editar Regra' : 'Nova Regra'}</DialogTitle>
-              <DialogDescription>
-                Configure a regra de comissão
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
+        {/* Rule Drawer */}
+        <FinancialDrawer
+          open={ruleDialog.open}
+          onOpenChange={(open) => {
+            setRuleDialog({ open, rule: null });
+            if (!open) resetRuleForm();
+          }}
+          title={ruleDialog.rule ? 'Editar Regra' : 'Nova Regra'}
+          description="Configure a regra de comissão"
+        >
+          <div className="space-y-4">
+            <div>
+              <Label>Nome da Regra</Label>
+              <Input
+                placeholder="Ex: Comissão padrão vendas"
+                value={ruleName}
+                onChange={(e) => setRuleName(e.target.value)}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>Nome da Regra</Label>
-                <Input 
-                  placeholder="Ex: Comissão padrão vendas"
-                  value={ruleName}
-                  onChange={(e) => setRuleName(e.target.value)}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label>Tipo de Negócio</Label>
-                  <Select value={ruleBusinessType} onValueChange={setRuleBusinessType}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos</SelectItem>
-                      <SelectItem value="sale">Venda</SelectItem>
-                      <SelectItem value="rental">Locação</SelectItem>
-                      <SelectItem value="service">Serviço</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Tipo de Comissão</Label>
-                  <Select value={ruleCommissionType} onValueChange={setRuleCommissionType}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="percentage">Percentual</SelectItem>
-                      <SelectItem value="fixed">Valor Fixo</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                <Label>Tipo de Negócio</Label>
+                <Select value={ruleBusinessType} onValueChange={setRuleBusinessType}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="sale">Venda</SelectItem>
+                    <SelectItem value="rental">Locação</SelectItem>
+                    <SelectItem value="service">Serviço</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div>
-                <Label>{ruleCommissionType === 'percentage' ? 'Percentual (%)' : 'Valor (R$)'}</Label>
-                <Input 
-                  type="number"
-                  step={ruleCommissionType === 'percentage' ? '0.1' : '0.01'}
-                  value={ruleValue}
-                  onChange={(e) => setRuleValue(parseFloat(e.target.value) || 0)}
-                />
-              </div>
-              <div className="flex items-center gap-3">
-                <Switch 
-                  checked={ruleActive} 
-                  onCheckedChange={setRuleActive} 
-                />
-                <Label>Regra ativa</Label>
+                <Label>Tipo de Comissão</Label>
+                <Select value={ruleCommissionType} onValueChange={setRuleCommissionType}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="percentage">Percentual</SelectItem>
+                    <SelectItem value="fixed">Valor Fixo</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
-            <div className="flex gap-2 pt-2">
-              <Button variant="outline" className="w-[40%] rounded-xl" onClick={() => {
-                setRuleDialog({ open: false, rule: null });
-                resetRuleForm();
-              }}>
-                Cancelar
-              </Button>
-              <Button className="w-[60%] rounded-xl" onClick={handleSaveRule} disabled={createRule.isPending || updateRule.isPending}>
-                {ruleDialog.rule ? 'Salvar' : 'Criar Regra'}
-              </Button>
+            <div>
+              <Label>{ruleCommissionType === 'percentage' ? 'Percentual (%)' : 'Valor (R$)'}</Label>
+              <Input
+                type="number"
+                step={ruleCommissionType === 'percentage' ? '0.1' : '0.01'}
+                value={ruleValue}
+                onChange={(e) => setRuleValue(parseFloat(e.target.value) || 0)}
+              />
             </div>
-          </DialogContent>
-        </Dialog>
+            <div className="flex items-center gap-3">
+              <Switch
+                checked={ruleActive}
+                onCheckedChange={setRuleActive}
+              />
+              <Label>Regra ativa</Label>
+            </div>
+          </div>
+          <div className="flex gap-2 pt-6">
+            <Button variant="outline" className="w-[40%] rounded-xl" onClick={() => {
+              setRuleDialog({ open: false, rule: null });
+              resetRuleForm();
+            }}>
+              Cancelar
+            </Button>
+            <Button className="w-[60%] rounded-xl" onClick={handleSaveRule} disabled={createRule.isPending || updateRule.isPending}>
+              {ruleDialog.rule ? 'Salvar' : 'Criar Regra'}
+            </Button>
+          </div>
+        </FinancialDrawer>
+
       </div>
     </AppLayout>
   );
