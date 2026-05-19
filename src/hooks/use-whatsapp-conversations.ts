@@ -571,10 +571,15 @@ export function useSendWhatsAppMessage() {
         media_error: null,
       };
 
-      // Optimistically update to the new value
-      queryClient.setQueryData<WhatsAppMessage[]>(
-        ["whatsapp-messages", conversationId],
-        (old) => old ? [...old, optimisticMessage] : [optimisticMessage]
+      // Optimistically update legacy cache (any variant of ["whatsapp-messages", convId, ...])
+      queryClient.setQueriesData<WhatsAppMessage[]>(
+        {
+          predicate: (q) =>
+            Array.isArray(q.queryKey) &&
+            q.queryKey[0] === "whatsapp-messages" &&
+            q.queryKey[1] === conversationId,
+        },
+        (old) => (old ? [...old, optimisticMessage] : [optimisticMessage]),
       );
 
       // Also update paginated query
