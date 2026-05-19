@@ -497,8 +497,8 @@ export function useTopBrokers(filters?: DashboardFilters) {
 
       if (filters?.dateRange) {
         query = query
-          .gte('created_at', filters.dateRange.from.toISOString())
-          .lte('created_at', filters.dateRange.to.toISOString());
+          .gte('won_at', filters.dateRange.from.toISOString())
+          .lte('won_at', filters.dateRange.to.toISOString());
       }
 
       if (filters?.userId) {
