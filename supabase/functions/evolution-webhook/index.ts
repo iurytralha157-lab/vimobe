@@ -2109,7 +2109,19 @@ async function handleStopFollowUpOnReply(
             }
           }
           
+          // ===== Per-node stop_on_reply override =====
+          // If the delay node explicitly has stop_on_reply === false, keep waiting and
+          // skip this execution entirely (no branch, no cancel).
           if (delayNodeId) {
+            const delayNode = fullAutomation.nodes.find((n: any) => n.id === delayNodeId);
+            const delayCfg = (delayNode?.node_config || delayNode?.config || {}) as Record<string, unknown>;
+            if (delayCfg.stop_on_reply === false) {
+              console.log(`Delay node ${delayNodeId} has stop_on_reply=false — keeping execution running`);
+              continuedViaReplyBranch = true; // prevents the fallback cancel below
+            }
+          }
+
+          if (delayNodeId && !continuedViaReplyBranch) {
             // Now find the "replied" branch connection from this delay node
             const repliedConn = fullAutomation.connections.find(
               (c: any) => c.source_node_id === delayNodeId && c.source_handle === "replied"
