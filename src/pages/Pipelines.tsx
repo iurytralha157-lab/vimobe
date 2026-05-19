@@ -1089,6 +1089,7 @@ export default function Pipelines() {
                         setFilterCampaign('all');
                         setFilterAdSet('all');
                         setFilterAd('all');
+                        setFilterSource('all');
                         setSearchInput('');
                         setSearchQuery('');
                       }}
