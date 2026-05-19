@@ -836,6 +836,9 @@ export default function Conversations() {
                 pipelineName={selectedConversation.lead?.pipeline?.name}
                 stageName={selectedConversation.lead?.stage?.name}
                 stageColor={selectedConversation.lead?.stage?.color}
+                conversationId={selectedConversation.id}
+                sessionId={selectedConversation.session_id}
+                remoteJid={selectedConversation.remote_jid}
                 onArchive={() => handleArchive(selectedConversation)}
                 onDelete={() => handleDelete(selectedConversation)}
                 onCreateLead={() => {
