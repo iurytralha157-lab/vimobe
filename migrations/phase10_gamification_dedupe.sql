@@ -39,7 +39,7 @@ END; $$;
 -- Limpeza retroativa: remove logs duplicados de visita/reunião originados de "activity"
 -- nos últimos 7 dias, quando existe equivalente vindo de "schedule" para o mesmo usuário.
 WITH dupes AS (
-  SELECT a.id, a.user_id, a.points
+  SELECT a.id
   FROM public.gamification_activity_logs a
   WHERE a.created_at > now() - interval '7 days'
     AND a.action_type IN ('visit_scheduled','visit_confirmed','meeting_scheduled','meeting_held')
@@ -55,10 +55,10 @@ WITH dupes AS (
 deleted AS (
   DELETE FROM public.gamification_activity_logs
   WHERE id IN (SELECT id FROM dupes)
-  RETURNING user_id, points
+  RETURNING user_id, COALESCE(points_earned, xp_awarded, 0) AS pts
 ),
 agg AS (
-  SELECT user_id, SUM(points)::int AS pts FROM deleted GROUP BY user_id
+  SELECT user_id, SUM(pts)::int AS pts FROM deleted GROUP BY user_id
 )
 UPDATE public.user_gamification_stats s
 SET xp = GREATEST(COALESCE(s.xp,0) - agg.pts, 0),
