@@ -84,11 +84,11 @@ export function useDREExecutive({ startDate, endDate, regime, compareWithPreviou
           categories[cat] = (categories[cat] || 0) + (Number(e.amount) || 0);
         });
 
-        const grossRevenue = data.filter(e => e.type === 'revenue').reduce((s, e) => s + (Number(e.amount) || 0), 0);
+        const grossRevenue = data.filter(e => e.type === 'receivable' || e.category_group === 'gross_revenue').reduce((s, e) => s + (Number(e.amount) || 0), 0);
         
         const taxes = data.filter(e => e.category_group === 'tax_deduction').reduce((s, e) => s + (Number(e.amount) || 0), 0);
-        const variableCosts = data.filter(e => e.category_group === 'variable_cost' || (e.type === 'expense' && e.project_id)).reduce((s, e) => s + (Number(e.amount) || 0), 0);
-        const fixedCosts = data.filter(e => e.category_group === 'fixed_cost' || (e.type === 'expense' && !e.project_id && e.category_group !== 'tax_deduction')).reduce((s, e) => s + (Number(e.amount) || 0), 0);
+        const variableCosts = data.filter(e => e.category_group === 'variable_cost').reduce((s, e) => s + (Number(e.amount) || 0), 0);
+        const fixedCosts = data.filter(e => e.category_group === 'fixed_cost' || (e.type === 'payable' && !e.category_group)).reduce((s, e) => s + (Number(e.amount) || 0), 0);
 
 
         return { grossRevenue, taxes, variableCosts, fixedCosts };

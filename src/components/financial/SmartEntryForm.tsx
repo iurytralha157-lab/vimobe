@@ -113,10 +113,13 @@ export function SmartEntryForm({ onSuccess, onCancel, initialData }: SmartEntryF
   }, [description, handleDetection]);
 
   const onSubmit = async (values: FormValues) => {
+    const selectedCategoryObj = categories?.find(c => c.name === values.category);
+    
     try {
       await createEntry.mutateAsync({
         type: values.type,
         category: values.category,
+        category_group: selectedCategoryObj?.category_group || null,
         description: values.description,
         amount: values.amount,
         due_date: values.due_date,

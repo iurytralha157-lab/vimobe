@@ -9,6 +9,7 @@ export interface FinancialCategory {
   name: string;
   type: 'income' | 'expense';
   created_at: string;
+  category_group?: string;
 }
 
 export interface FinancialEntry {
@@ -16,6 +17,7 @@ export interface FinancialEntry {
   organization_id: string;
   type: 'payable' | 'receivable';
   category?: string;
+  category_group?: string;
   contract_id?: string;
   lead_id?: string;
   broker_id?: string;
@@ -137,6 +139,7 @@ export function useCreateFinancialEntry() {
         .insert({
           type: data.type,
           category: data.category,
+          category_group: data.category_group,
           description: data.description,
           amount: data.amount,
           due_date: data.due_date,
