@@ -1824,8 +1824,22 @@ async function createLeadFromConversation(
       }
     }
 
+    // ===== HUB OVERRIDES (rules) =====
+    const rule = hubCtx?.rule || null;
+    const adCtx = hubCtx?.adContext || {};
+    const utm = hubCtx?.utm || {};
+
+    if (rule?.source_label) leadSource = rule.source_label;
+    if (rule?.target_pipeline_id) pipelineId = rule.target_pipeline_id;
+    if (rule?.target_stage_id) stage = { id: rule.target_stage_id } as any;
+    if (rule?.target_user_id) assignedUserId = rule.target_user_id;
+    // round_robin/team-based assignment: deixar trigger handle_lead_intake decidir (não setamos assigned_user_id)
+    if (rule?.target_round_robin_id && !rule?.target_user_id) {
+      assignedUserId = null;
+    }
+
     // Create new lead
-    console.log(`Creating lead: name=${contactName}, phone=${contactPhone}, pipeline=${pipelineId}, stage=${stage.id}, user=${assignedUserId}, source=${leadSource}`);
+    console.log(`Creating lead: name=${contactName}, phone=${contactPhone}, pipeline=${pipelineId}, stage=${stage.id}, user=${assignedUserId}, source=${leadSource}, rule=${rule?.id || 'none'}`);
     
     const { data: newLead, error: leadError } = await supabase
       .from("leads")
@@ -1834,11 +1848,23 @@ async function createLeadFromConversation(
         name: contactName,
         phone: contactPhone,
         message: firstMessage,
+        initial_message: firstMessage,
         source: leadSource,
         pipeline_id: pipelineId,
         stage_id: stage.id,
         assigned_user_id: assignedUserId,
-        source_session_id: session.id, // Track which WhatsApp session created this lead
+        source_session_id: session.id,
+        // Meta CTWA
+        meta_campaign_id: adCtx.meta_campaign_id || null,
+        meta_ad_id: adCtx.meta_ad_id || null,
+        meta_click_id: adCtx.meta_click_id || null,
+        meta_adset_id: adCtx.meta_adset_id || null,
+        // UTM
+        utm_source: utm.utm_source || null,
+        utm_medium: utm.utm_medium || null,
+        utm_campaign: utm.utm_campaign || rule?.campaign_label || null,
+        utm_content: utm.utm_content || null,
+        utm_term: utm.utm_term || null,
       })
       .select()
       .single();
@@ -1863,10 +1889,35 @@ async function createLeadFromConversation(
       await applyFacebookAdsTag(supabase, session.organization_id, newLead.id, adSource);
     }
 
+    // Audit log
+    try {
+      await supabase.from("whatsapp_inbound_logs").insert({
+        organization_id: session.organization_id,
+        session_id: session.id,
+        conversation_id: conversation.id,
+        lead_id: newLead.id,
+        matched_rule_id: rule?.id || null,
+        assigned_user_id: assignedUserId,
+        match_details: {
+          is_from_ads: isFromAds,
+          ad_source: adSource,
+          rule_name: rule?.name || null,
+          match_type: rule?.match_type || null,
+          match_value: rule?.match_value || null,
+          meta: adCtx,
+          utm,
+        },
+      });
+    } catch (logErr) {
+      console.error("Error writing inbound log:", logErr);
+    }
+
     // Create activity
-    const activityContent = isFromAds 
-      ? `Lead criado automaticamente via WhatsApp (Facebook Ads - ${adSource || 'unknown'})`
-      : `Lead criado automaticamente via WhatsApp`;
+    const activityContent = rule
+      ? `Lead criado via regra "${rule.name}" (WhatsApp)`
+      : isFromAds 
+        ? `Lead criado automaticamente via WhatsApp (Facebook Ads - ${adSource || 'unknown'})`
+        : `Lead criado automaticamente via WhatsApp`;
     
     const { error: activityError } = await supabase
       .from("activities")
@@ -1881,7 +1932,7 @@ async function createLeadFromConversation(
       console.error("Error creating activity:", activityError);
     }
 
-    console.log(`Created new lead from WhatsApp: ${newLead.id}, isFromAds: ${isFromAds}`);
+    console.log(`Created new lead from WhatsApp: ${newLead.id}, isFromAds: ${isFromAds}, rule: ${rule?.id || 'none'}`);
 
   } catch (error) {
     console.error("Error creating lead from conversation:", error);
