@@ -24,8 +24,13 @@ import {
   XCircle,
   Loader2,
   Bell,
-  History } from
+  History,
+  Tag,
+  UsersRound,
+  ImageIcon } from
 "lucide-react";
+import { LabelsManagerSheet } from "@/components/whatsapp/LabelsManagerSheet";
+import { GroupsManagerSheet } from "@/components/whatsapp/GroupsManagerSheet";
 import { useHistorySync, useSyncContactsAvatars } from "@/hooks/use-whatsapp-contacts";
 import {
   useWhatsAppSessions,
