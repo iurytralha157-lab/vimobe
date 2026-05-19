@@ -301,139 +301,90 @@ export function useFinancialDashboard() {
     queryKey: ['financial-dashboard', profile?.organization_id],
     queryFn: async () => {
       const today = new Date();
-      // Set today to start of day for consistent comparison
       today.setHours(0, 0, 0, 0);
-      const days30 = new Date(today);
-      days30.setDate(days30.getDate() + 30);
-      const days60 = new Date(today);
-      days60.setDate(days60.getDate() + 60);
-      const days90 = new Date(today);
-      days90.setDate(days90.getDate() + 90);
+      const days30 = new Date(today); days30.setDate(days30.getDate() + 30);
+      const days60 = new Date(today); days60.setDate(days60.getDate() + 60);
+      const days90 = new Date(today); days90.setDate(days90.getDate() + 90);
+      const last30 = new Date(today); last30.setDate(last30.getDate() - 30);
+      const sixMonthsAgo = new Date(today); sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+      const yearStart = new Date(today.getFullYear(), 0, 1);
 
-      // Calculate 6 months ago for historical data
-      const sixMonthsAgo = new Date(today);
-      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+      const [
+        { data: receivablesData },
+        { data: payables },
+        { data: paidEntries },
+        { data: commissions },
+        { data: wonLeadsData },
+        { data: contractsData },
+      ] = await Promise.all([
+        supabase.from('financial_entries').select('amount, due_date').eq('type', 'receivable').eq('status', 'pending'),
+        supabase.from('financial_entries').select('amount, due_date').eq('type', 'payable').eq('status', 'pending'),
+        supabase.from('financial_entries').select('amount, type, paid_date').eq('status', 'paid').gte('paid_date', sixMonthsAgo.toISOString().split('T')[0]),
+        supabase.from('commissions').select('amount, status'),
+        supabase.from('leads').select('id, valor_interesse, won_at').eq('deal_status', 'won').gt('valor_interesse', 0),
+        supabase.from('contracts').select('id, value, commission_value, status, signing_date').in('status', ['active', 'signed', 'completed']),
+      ]);
 
-      // Fetch all pending receivables
-      const { data: receivablesData } = await supabase
-        .from('financial_entries')
-        .select('amount, due_date')
-        .eq('type', 'receivable')
-        .eq('status', 'pending');
+      const receivables = (receivablesData as any[]) || [];
+      const payablesTyped = (payables as any[]) || [];
+      const commissionsTyped = (commissions as any[]) || [];
+      const paidEntriesTyped = (paidEntries as any[]) || [];
+      const wonLeads = (wonLeadsData as any[]) || [];
+      const contracts = (contractsData as any[]) || [];
 
-      // Fetch all pending payables
-      const { data: payables } = await supabase
-        .from('financial_entries')
-        .select('amount, due_date')
-        .eq('type', 'payable')
-        .eq('status', 'pending');
+      const inRange = (d: string, a: Date, b: Date) => { const x = new Date(d); return x >= a && x <= b; };
+      const sum = (arr: any[], k = 'amount') => arr.reduce((s, r) => s + Number(r[k] || 0), 0);
 
-      // Fetch all paid entries for the last 6 months (for cash flow chart)
-      const { data: paidEntries } = await supabase
-        .from('financial_entries')
-        .select('amount, type, paid_date')
-        .eq('status', 'paid')
-        .gte('paid_date', sixMonthsAgo.toISOString().split('T')[0]);
+      const receivable30 = sum(receivables.filter(r => inRange(r.due_date, today, days30)));
+      const receivable60 = sum(receivables.filter(r => { const x = new Date(r.due_date); return x > days30 && x <= days60; }));
+      const receivable90 = sum(receivables.filter(r => { const x = new Date(r.due_date); return x > days60 && x <= days90; }));
 
-      // Fetch commissions
-      const { data: commissions } = await supabase
-        .from('commissions')
-        .select('amount, status');
+      // Receita Confirmada (últimos 30d) — entradas com paid_date no período
+      const confirmedRevenue30 = paidEntriesTyped
+        .filter(e => e.type === 'receivable' && new Date(e.paid_date) >= last30 && new Date(e.paid_date) <= today)
+        .reduce((s, e) => s + Number(e.amount || 0), 0);
 
-      // Fetch won leads with values that don't have linked financial entries
-      const { data: wonLeadsData } = await supabase
-        .from('leads')
-        .select('id, valor_interesse, won_at')
-        .eq('deal_status', 'won')
-        .gt('valor_interesse', 0);
+      // Receita Confirmada YTD
+      const confirmedRevenueYTD = paidEntriesTyped
+        .filter(e => e.type === 'receivable' && new Date(e.paid_date) >= yearStart)
+        .reduce((s, e) => s + Number(e.amount || 0), 0);
 
-      // Fetch active contracts with values
-      const { data: contractsData } = await supabase
-        .from('contracts')
-        .select('id, value, status, signing_date')
-        .eq('status', 'active');
+      const totalPayable = sum(payablesTyped);
 
-      // Calculate totals
-      const receivables = receivablesData as { amount: number; due_date: string }[] || [];
-      const payablesTyped = payables as { amount: number; due_date: string }[] || [];
-      const commissionsTyped = commissions as { amount: number; status: string }[] || [];
-      const paidEntriesTyped = paidEntries as { amount: number; type: string; paid_date: string }[] || [];
-      const wonLeads = wonLeadsData as { id: string; valor_interesse: number; won_at: string }[] || [];
-      const contracts = contractsData as { id: string; value: number; status: string; signing_date: string }[] || [];
+      const forecastCommissions = sum(commissionsTyped.filter(c => c.status === 'forecast' || c.status === 'prevista'));
+      const pendingCommissions = sum(commissionsTyped.filter(c => c.status === 'pending' || c.status === 'pendente' || c.status === 'approved' || c.status === 'aprovada'));
+      const paidCommissions = sum(commissionsTyped.filter(c => c.status === 'paid' || c.status === 'paga'));
 
-      // Financial entries receivables
-      // Changed to discrete ranges instead of cumulative
-      const entriesReceivable30 = receivables.filter(r => {
-        const dueDate = new Date(r.due_date);
-        return dueDate >= today && dueDate <= days30;
-      }).reduce((sum, r) => sum + Number(r.amount || 0), 0);
-      
-      const entriesReceivable60 = receivables.filter(r => {
-        const dueDate = new Date(r.due_date);
-        return dueDate > days30 && dueDate <= days60;
-      }).reduce((sum, r) => sum + Number(r.amount || 0), 0);
-      
-      const entriesReceivable90 = receivables.filter(r => {
-        const dueDate = new Date(r.due_date);
-        return dueDate > days60 && dueDate <= days90;
-      }).reduce((sum, r) => sum + Number(r.amount || 0), 0);
+      const overdueReceivables = sum(receivables.filter(r => new Date(r.due_date) < today));
+      const overduePayables = sum(payablesTyped.filter(p => new Date(p.due_date) < today));
 
-      // Won leads value (simplified projection)
-      const leadsValue = wonLeads.reduce((sum, l) => sum + Number(l.valor_interesse || 0), 0);
+      // VGV Bruto = soma valor contratos ativos. VGV Líquido = bruto - comissões
+      const vgvBruto = contracts.reduce((s, c) => s + Number(c.value || 0), 0);
+      const vgvCommissions = contracts.reduce((s, c) => s + Number(c.commission_value || 0), 0);
+      const vgvLiquido = vgvBruto - vgvCommissions;
+      const leadsValue = wonLeads.reduce((s, l) => s + Number(l.valor_interesse || 0), 0);
 
-      // Active contracts value 
-      const contractsValue = contracts.reduce((sum, c) => sum + Number(c.value || 0), 0);
-
-      // Combined receivables (financial entries take priority, add unlinked values)
-      const receivable30 = entriesReceivable30;
-      const receivable60 = entriesReceivable60;
-      const receivable90 = entriesReceivable90;
-
-      const totalPayable = payablesTyped.reduce((sum, p) => sum + Number(p.amount || 0), 0);
-
-      const forecastCommissions = commissionsTyped.filter(c => c.status === 'forecast' || c.status === 'pending').reduce((sum, c) => sum + Number(c.amount || 0), 0);
-      const paidCommissions = commissionsTyped.filter(c => c.status === 'paid').reduce((sum, c) => sum + Number(c.amount || 0), 0);
-      const pendingCommissions = commissionsTyped.filter(c => c.status === 'pending').reduce((sum, c) => sum + Number(c.amount || 0), 0);
-
-      // Overdue entries (sum values, not count)
-      const overdueReceivables = receivables.filter(r => new Date(r.due_date) < today).reduce((sum, r) => sum + Number(r.amount || 0), 0);
-      const overduePayables = payablesTyped.filter(p => new Date(p.due_date) < today).reduce((sum, p) => sum + Number(p.amount || 0), 0);
-
-      // Build monthly cash flow data for the last 6 months
+      // Monthly cash flow
       const monthlyData: { month: string; receitas: number; despesas: number }[] = [];
       const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-      
       for (let i = 5; i >= 0; i--) {
-        const date = new Date(today);
-        date.setMonth(date.getMonth() - i);
-        const year = date.getFullYear();
-        const month = date.getMonth();
-        
-        const monthReceitas = paidEntriesTyped
-          .filter(e => {
-            const paidDate = new Date(e.paid_date);
-            return e.type === 'receivable' && paidDate.getMonth() === month && paidDate.getFullYear() === year;
-          })
-          .reduce((sum, e) => sum + Number(e.amount || 0), 0);
-
-        const monthDespesas = paidEntriesTyped
-          .filter(e => {
-            const paidDate = new Date(e.paid_date);
-            return e.type === 'payable' && paidDate.getMonth() === month && paidDate.getFullYear() === year;
-          })
-          .reduce((sum, e) => sum + Number(e.amount || 0), 0);
-
-        monthlyData.push({
-          month: `${monthNames[month]}/${String(year).slice(2)}`,
-          receitas: monthReceitas,
-          despesas: monthDespesas,
-        });
+        const date = new Date(today); date.setMonth(date.getMonth() - i);
+        const y = date.getFullYear(), m = date.getMonth();
+        const r = paidEntriesTyped.filter(e => e.type === 'receivable' && new Date(e.paid_date).getMonth() === m && new Date(e.paid_date).getFullYear() === y).reduce((s, e) => s + Number(e.amount || 0), 0);
+        const d = paidEntriesTyped.filter(e => e.type === 'payable' && new Date(e.paid_date).getMonth() === m && new Date(e.paid_date).getFullYear() === y).reduce((s, e) => s + Number(e.amount || 0), 0);
+        monthlyData.push({ month: `${monthNames[m]}/${String(y).slice(2)}`, receitas: r, despesas: d });
       }
+
+      // Projeção anual: receita confirmada YTD extrapolada + previstas 90d
+      const monthsElapsed = Math.max(1, today.getMonth() + 1);
+      const annualProjection = (confirmedRevenueYTD / monthsElapsed) * 12;
 
       return {
         receivable30,
         receivable60,
         receivable90,
+        confirmedRevenue30,
+        confirmedRevenueYTD,
         totalPayable,
         forecastCommissions,
         paidCommissions,
@@ -441,17 +392,16 @@ export function useFinancialDashboard() {
         overdueReceivables,
         overduePayables,
         monthlyData,
-        // Additional metrics
         totalLeadsValue: leadsValue,
-        totalContractsValue: contractsValue,
+        vgvBruto,
+        vgvLiquido,
+        totalContractsValue: vgvLiquido,
         activeContracts: contracts.length,
         wonLeadsCount: wonLeads.length,
-        // Premium Metrics (Simulated for now, would come from views)
-        avgTicket: contracts.length > 0 ? contractsValue / contracts.length : 0,
+        avgTicket: contracts.length > 0 ? vgvBruto / contracts.length : 0,
         conversionRate: wonLeads.length > 0 ? (contracts.length / wonLeads.length) * 100 : 0,
-        annualProjection: receivable30 * 12, // Simple projection
-        growthRate: 15.5, // Trend simulation
-        defaultRate: receivable30 > 0 ? (overdueReceivables / receivable30) * 100 : 0,
+        annualProjection,
+        defaultRate: receivable30 > 0 ? (overdueReceivables / (receivable30 + overdueReceivables)) * 100 : 0,
       };
     },
     enabled: !!profile?.organization_id,
