@@ -716,7 +716,7 @@ export function CalendarView({
 
   return (
     <div className="h-full flex flex-col bg-card overflow-hidden">
-      {renderHeader()}
+
       
       <div className="flex-1 overflow-hidden">
         {viewMode === 'month' && renderMonthView()}
