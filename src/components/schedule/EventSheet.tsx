@@ -89,7 +89,15 @@ export function EventSheet({
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
   const [selectedLeadName, setSelectedLeadName] = useState<string | null>(null);
   const [showLeadSelector, setShowLeadSelector] = useState(false);
-  const { data: searchedLeads = [] } = useLeads({ search: leadSearch, limit: 5 });
+  const { data: searchedLeads = [] } = useLeads({ search: leadSearch, limit: 20 });
+
+  // Property selector (only for "visit" type)
+  const [propertySearch, setPropertySearch] = useState("");
+  const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
+  const [selectedPropertyLabel, setSelectedPropertyLabel] = useState<string | null>(null);
+  const [showPropertySelector, setShowPropertySelector] = useState(false);
+  const { data: searchedProperties = [] } = useProperties(propertySearch);
+
 
   // Assignee picker
   const [showAssigneePicker, setShowAssigneePicker] = useState(false);
