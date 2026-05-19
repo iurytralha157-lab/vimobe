@@ -118,6 +118,12 @@ export function EventSheet({
       setTime(event.start_time ? format(new Date(event.start_time), "HH:mm") : getCurrentTimeForInput());
       setSelectedLeadId(event.lead_id || null);
       setSelectedLeadName(event.lead?.name || null);
+      setSelectedPropertyId((event as any).property_id || null);
+      setSelectedPropertyLabel(
+        (event as any).property
+          ? `${(event as any).property.code ? (event as any).property.code + ' · ' : ''}${(event as any).property.title || 'Imóvel'}`
+          : null
+      );
       if (event.start_time && event.end_time) {
         const d = differenceInMinutes(new Date(event.end_time), new Date(event.start_time));
         setDuration(d > 0 ? d : 30);
@@ -131,6 +137,8 @@ export function EventSheet({
       setTime(defaultDate ? format(defaultDate, "HH:mm") : getCurrentTimeForInput());
       setSelectedLeadId(leadId || null);
       setSelectedLeadName(leadName || null);
+      setSelectedPropertyId(null);
+      setSelectedPropertyLabel(null);
       setDuration(30);
       durationTouched.current = false;
     }
