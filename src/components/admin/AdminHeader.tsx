@@ -58,6 +58,10 @@ export const AdminHeader = React.memo(function AdminHeader({
       navigate('/settings');
       return;
     }
+    if (notification.type === 'onboarding_request') {
+      navigate('/admin/onboarding');
+      return;
+    }
     if (notification.lead_id) {
       navigate(`/crm/pipelines?lead_id=${notification.lead_id}`);
     }
