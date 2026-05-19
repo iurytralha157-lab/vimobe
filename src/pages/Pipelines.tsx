@@ -1415,7 +1415,7 @@ export default function Pipelines() {
                   </div>
                   </div>
 
-                  {((filterUser && filterUser !== 'all') || (filterTag && filterTag !== 'all') || (filterDealStatus && filterDealStatus !== 'all') || (filterCampaign !== 'all' || filterAdSet !== 'all' || filterAd !== 'all') || searchQuery) && (
+                  {((filterUser && filterUser !== 'all') || (filterTag && filterTag !== 'all') || (filterDealStatus && filterDealStatus !== 'all') || (filterCampaign !== 'all' || filterAdSet !== 'all' || filterAd !== 'all') || (filterSource && filterSource !== 'all') || searchQuery) && (
                     <Button
                       variant="ghost"
                       size="sm"
