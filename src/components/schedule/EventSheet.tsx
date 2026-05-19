@@ -385,47 +385,45 @@ export function EventSheet({
             )}
           </Field>
 
-          {/* Imóvel (apenas para visitas) */}
-          {selectedType === "visit" && (
-            <Field label="Imóvel da visita" icon={Building2}>
-              {selectedPropertyId ? (
-                <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-white/5 border border-white/10">
-                  <Link
-                    to={`/imoveis/${selectedPropertyId}`}
-                    className="text-sm font-medium hover:text-primary transition-colors truncate"
+          {/* Imóvel */}
+          <Field label={selectedType === "visit" ? "Imóvel da visita" : "Imóvel vinculado"} icon={Building2}>
+            {selectedPropertyId ? (
+              <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-white/5 border border-white/10">
+                <Link
+                  to={`/imoveis/${selectedPropertyId}`}
+                  className="text-sm font-medium hover:text-primary transition-colors truncate"
+                >
+                  {selectedPropertyLabel || "Imóvel selecionado"}
+                </Link>
+                {!locked && (
+                  <Button
+                    variant="ghost" size="icon" className="h-6 w-6 shrink-0"
+                    onClick={() => { setSelectedPropertyId(null); setSelectedPropertyLabel(null); }}
                   >
-                    {selectedPropertyLabel || "Imóvel selecionado"}
-                  </Link>
-                  {!locked && (
-                    <Button
-                      variant="ghost" size="icon" className="h-6 w-6 shrink-0"
-                      onClick={() => { setSelectedPropertyId(null); setSelectedPropertyLabel(null); }}
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
-                  )}
-                </div>
-              ) : !locked ? (
-                <PropertyPickerDialog
-                  properties={allProperties as any}
-                  selectedPropertyId={selectedPropertyId}
-                  onSelect={(p) => {
-                    setSelectedPropertyId(p.id);
-                    setSelectedPropertyLabel(
-                      `${p.code ? p.code + ' · ' : ''}${p.title || 'Imóvel'}`
-                    );
-                  }}
-                  trigger={
-                    <Button variant="outline" size="sm" className="w-full justify-start text-muted-foreground border-dashed">
-                      <Search className="mr-2 h-3 w-3" /> Vincular um imóvel...
-                    </Button>
-                  }
-                />
-              ) : (
-                <span className="text-sm text-muted-foreground">Sem imóvel</span>
-              )}
-            </Field>
-          )}
+                    <X className="h-3 w-3" />
+                  </Button>
+                )}
+              </div>
+            ) : !locked ? (
+              <PropertyPickerDialog
+                properties={allProperties as any}
+                selectedPropertyId={selectedPropertyId}
+                onSelect={(p) => {
+                  setSelectedPropertyId(p.id);
+                  setSelectedPropertyLabel(
+                    `${p.code ? p.code + ' · ' : ''}${p.title || 'Imóvel'}`
+                  );
+                }}
+                trigger={
+                  <Button variant="outline" size="sm" className="w-full justify-start text-muted-foreground border-dashed">
+                    <Search className="mr-2 h-3 w-3" /> Vincular um imóvel...
+                  </Button>
+                }
+              />
+            ) : (
+              <span className="text-sm text-muted-foreground">Sem imóvel</span>
+            )}
+          </Field>
 
 
 

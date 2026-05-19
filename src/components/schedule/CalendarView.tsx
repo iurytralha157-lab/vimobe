@@ -32,6 +32,7 @@ import { ptBR } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight, Phone, Mail, Calendar as CalendarIcon, CheckSquare, MessageSquare, MapPin, Clock, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScheduleEvent, EventType } from '@/hooks/use-schedule-events';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
@@ -393,7 +394,6 @@ export function CalendarView({
 
   const renderMonthView = () => {
     const monthStart = startOfMonth(pivotDate);
-
     const monthEnd = endOfMonth(pivotDate);
     const calendarStart = startOfWeek(monthStart, { weekStartsOn: 0 });
     const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 0 });
@@ -417,6 +417,10 @@ export function CalendarView({
             const isSelected = isSameDay(day, selectedDate);
             const isDayToday = isToday(day);
 
+            const maxVisibleEvents = 3;
+            const visibleEvents = dayEvents.slice(0, maxVisibleEvents);
+            const moreCount = dayEvents.length - maxVisibleEvents;
+
             return (
               <div 
                 key={dateKey} 
@@ -427,21 +431,22 @@ export function CalendarView({
                   }
                 }}
                 className={cn(
-                  "bg-card min-h-[120px] p-3 transition-all cursor-pointer hover:bg-muted/5 group relative",
+                  "bg-card min-h-[120px] p-2 transition-all cursor-pointer hover:bg-muted/5 group relative flex flex-col",
                   !isCurrentMonth && "bg-muted/5 opacity-30",
                   isSelected && "bg-primary/[0.03] ring-1 ring-primary/10 ring-inset z-10"
                 )}
               >
-                <div className="flex justify-between items-center mb-3">
+                <div className="flex justify-between items-center mb-1">
                   <span className={cn(
-                    "text-xs font-black h-8 w-8 flex items-center justify-center rounded-xl transition-all",
-                    isDayToday ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20 scale-110" : "text-muted-foreground group-hover:text-foreground"
+                    "text-[11px] font-black h-6 w-6 flex items-center justify-center rounded-lg transition-all",
+                    isDayToday ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" : "text-muted-foreground group-hover:text-foreground"
                   )}>
                     {format(day, 'd')}
                   </span>
                 </div>
-                <div className="space-y-1.5 overflow-y-auto max-h-[85px] scrollbar-none pr-1">
-                  {dayEvents.map(event => {
+                
+                <div className="space-y-1 flex-1">
+                  {visibleEvents.map(event => {
                     const Icon = eventTypeIcons[event.event_type as EventType] || CalendarIcon;
                     return (
                       <div 
@@ -451,15 +456,59 @@ export function CalendarView({
                           onEditEvent?.(event);
                         }}
                         className={cn(
-                          "px-2 py-1.5 rounded-xl text-[10px] font-black border truncate flex items-center gap-2 shadow-sm transition-all hover:scale-[1.03] active:scale-95",
+                          "px-2 py-1 rounded-lg text-[9px] font-bold border truncate flex items-center gap-1.5 shadow-sm transition-all hover:scale-[1.02] active:scale-95",
                           eventTypeColors[event.event_type as EventType] || "bg-muted border-muted"
                         )}
                       >
-                        <Icon className="h-3 w-3 flex-shrink-0 opacity-80" />
+                        <Icon className="h-2.5 w-2.5 flex-shrink-0 opacity-80" />
                         <span className="truncate tracking-tight">{event.title}</span>
                       </div>
                     );
                   })}
+                  
+                  {moreCount > 0 && (
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button 
+                          onClick={(e) => e.stopPropagation()}
+                          className="w-full text-center py-0.5 text-[9px] font-black text-primary hover:underline bg-primary/5 rounded-md"
+                        >
+                          +{moreCount} mais
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-64 p-2 bg-popover border-border shadow-2xl z-[100]" align="start">
+                        <div className="text-[10px] font-black uppercase text-muted-foreground mb-2 px-1 border-b pb-1">
+                          {format(day, "dd 'de' MMMM", { locale: ptBR })}
+                        </div>
+                        <div className="space-y-1 max-h-[300px] overflow-y-auto pr-1">
+                          {dayEvents.map(event => {
+                            const Icon = eventTypeIcons[event.event_type as EventType] || CalendarIcon;
+                            return (
+                              <div 
+                                key={event.id} 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onEditEvent?.(event);
+                                }}
+                                className={cn(
+                                  "px-2 py-1.5 rounded-xl text-[10px] font-bold border truncate flex items-center gap-2 shadow-sm cursor-pointer transition-all hover:translate-x-1",
+                                  eventTypeColors[event.event_type as EventType] || "bg-muted border-muted"
+                                )}
+                              >
+                                <Icon className="h-3 w-3 flex-shrink-0 opacity-80" />
+                                <div className="flex flex-col truncate">
+                                  <span className="truncate tracking-tight leading-tight">{event.title}</span>
+                                  <span className="text-[8px] opacity-70">
+                                    {format(new Date(event.start_time), 'HH:mm')}
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  )}
                 </div>
               </div>
             );
