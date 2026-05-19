@@ -7,6 +7,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { FloatingChatProvider } from '@/contexts/FloatingChatContext';
 import { FloatingChat } from '@/components/chat/FloatingChat';
 import { FloatingChatButton } from '@/components/chat/FloatingChatButton';
+import { WhatsAppRealtimeBus } from '@/contexts/WhatsAppRealtimeBus';
 import { SidebarProvider } from '@/contexts/SidebarContext';
 // PWA components disabled
 // import { InstallPrompt } from '@/components/pwa/InstallPrompt';
