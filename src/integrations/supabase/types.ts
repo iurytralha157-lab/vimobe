@@ -6432,6 +6432,91 @@ export type Database = {
           },
         ]
       }
+      schedule_event_assignees: {
+        Row: {
+          created_at: string
+          event_id: string
+          organization_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          organization_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          organization_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "schedule_event_assignees_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "schedule_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "schedule_event_assignees_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "schedule_event_assignees_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      schedule_event_comments: {
+        Row: {
+          content: string
+          created_at: string
+          event_id: string
+          id: string
+          organization_id: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          event_id: string
+          id?: string
+          organization_id: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          event_id?: string
+          id?: string
+          organization_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "schedule_event_comments_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "schedule_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "schedule_event_comments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       schedule_events: {
         Row: {
           completed_at: string | null
