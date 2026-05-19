@@ -286,17 +286,35 @@ export function useDeleteWhatsAppSession() {
 
 export function useGetQRCode() {
   return useMutation({
-    mutationFn: async (instanceName: string) => {
-      const { data, error } = await supabase.functions.invoke("evolution-proxy", {
-        body: {
-          action: "getQRCode",
-          instanceName,
-        },
-      });
+    mutationFn: async (
+      arg: string | { provider: WhatsAppProvider; instanceName: string; sessionId?: string; instanceId?: string | null },
+    ) => {
+      // Legacy: string => evolution-proxy
+      if (typeof arg === "string") {
+        const { data, error } = await supabase.functions.invoke("evolution-proxy", {
+          body: { action: "getQRCode", instanceName: arg },
+        });
+        if (error) throw error;
+        if (!data.success) throw new Error(data.error || "Failed to get QR code");
+        return data.data;
+      }
 
+      if (arg.provider === "evolution_go") {
+        const { data, error } = await supabase.functions.invoke("evolution-go-proxy", {
+          body: { action: "instance.qr", session_id: arg.sessionId, instance_id: arg.instanceId ?? undefined },
+        });
+        if (error) throw error;
+        if (!data?.ok) throw new Error(data?.error || "Failed to get QR code");
+        // Normalize shape to { base64 } expected by UI
+        const qr = data?.data?.data?.qrcode ?? data?.data?.qrcode ?? null;
+        return { base64: qr, qrcode: qr };
+      }
+
+      const { data, error } = await supabase.functions.invoke("evolution-proxy", {
+        body: { action: "getQRCode", instanceName: arg.instanceName },
+      });
       if (error) throw error;
       if (!data.success) throw new Error(data.error || "Failed to get QR code");
-
       return data.data;
     },
   });
@@ -304,21 +322,45 @@ export function useGetQRCode() {
 
 export function useGetConnectionStatus() {
   return useMutation({
-    mutationFn: async (instanceName: string) => {
-      const { data, error } = await supabase.functions.invoke("evolution-proxy", {
-        body: {
-          action: "getConnectionStatus",
-          instanceName,
-        },
-      });
+    mutationFn: async (
+      arg: string | { provider: WhatsAppProvider; instanceName: string; sessionId?: string; instanceId?: string | null },
+    ) => {
+      if (typeof arg === "string") {
+        const { data, error } = await supabase.functions.invoke("evolution-proxy", {
+          body: { action: "getConnectionStatus", instanceName: arg },
+        });
+        if (error) throw error;
+        if (!data.success) throw new Error(data.error || "Failed to get status");
+        return data.data;
+      }
 
+      if (arg.provider === "evolution_go") {
+        const { data, error } = await supabase.functions.invoke("evolution-go-proxy", {
+          body: { action: "instance.status", session_id: arg.sessionId, instance_id: arg.instanceId ?? undefined },
+        });
+        if (error) throw error;
+        if (!data?.ok) {
+          if (data?.status === 404) return { instanceNotFound: true };
+          throw new Error(data?.error || "Failed to get status");
+        }
+        const s = data?.data?.data ?? data?.data ?? {};
+        return {
+          connected: s.Connected === true || s.connected === true,
+          state: s.LoggedIn || s.Connected ? "open" : "close",
+          instance: { wuid: s.jid || s.Name || null },
+        };
+      }
+
+      const { data, error } = await supabase.functions.invoke("evolution-proxy", {
+        body: { action: "getConnectionStatus", instanceName: arg.instanceName },
+      });
       if (error) throw error;
       if (!data.success) throw new Error(data.error || "Failed to get status");
-
       return data.data;
     },
   });
 }
+
 
 export function useSetWebhook() {
   return useMutation({
