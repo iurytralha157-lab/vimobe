@@ -781,36 +781,9 @@ export function MessageBubble({
 
         {/* Text content */}
         {content && messageType === "text" && (
-          <p className="text-[14.2px] leading-[19px] whitespace-pre-wrap break-words">
-            {(() => {
-              const mentionRegex = /(@\d{7,}|@[\w\u00C0-\u017F]+(?:\s[\w\u00C0-\u017F]+){0,2})/g;
-              const parts = content.split(mentionRegex);
-              
-              if (parts.length === 1) return content;
-
-              return parts.map((part, index) => {
-                if (part.match(mentionRegex)) {
-                  return (
-                    <span 
-                      key={index} 
-                      className={cn(
-                        "font-semibold px-1 py-0.5 rounded transition-all duration-200 inline-block",
-                        fromMe 
-                          ? "bg-white/20 text-white" 
-                          : "bg-primary/15 text-primary dark:bg-primary/25"
-                      )}
-                    >
-                      {part}
-                    </span>
-                  );
-                }
-                return part;
-              });
-            })()}
-            {/* Invisible spacer for timestamp */}
-            <span className="inline-block w-[65px]"></span>
-          </p>
+          <MessageText content={content} fromMe={fromMe} />
         )}
+
 
         {/* Inline timestamp for text messages and non-overlay media (except audio which has its own) */}
         {(!isMediaWithOverlayTimestamp && !isAudioMessage) && (
