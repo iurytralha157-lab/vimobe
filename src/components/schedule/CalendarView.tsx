@@ -364,7 +364,9 @@ export function CalendarView({
     return map;
   }, [events]);
 
+  const renderMonthView = () => {
     const monthStart = startOfMonth(pivotDate);
+
     const monthEnd = endOfMonth(pivotDate);
     const calendarStart = startOfWeek(monthStart, { weekStartsOn: 0 });
     const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 0 });
