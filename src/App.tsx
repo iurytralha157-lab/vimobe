@@ -273,6 +273,7 @@ function AppRoutes() {
             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             <Route path="/settings/site" element={<ProtectedRoute><AdminRoute><SiteSettings /></AdminRoute></ProtectedRoute>} />
             <Route path="/settings/integrations/meta" element={<ProtectedRoute><MetaSettings /></ProtectedRoute>} />
+            <Route path="/settings/whatsapp/inbound-rules" element={<ProtectedRoute><AdminRoute><WhatsAppInboundRules /></AdminRoute></ProtectedRoute>} />
             <Route path="/crm/conversas" element={<ProtectedRoute><Conversations /></ProtectedRoute>} />
             <Route path="/help" element={<ProtectedRoute><Help /></ProtectedRoute>} />
             
