@@ -1,31 +1,50 @@
-## Problema
+## Problema confirmado
 
-O widget de Nível/XP demora a refletir os pontos porque as tabelas de gamificação **não estão na publicação `supabase_realtime`**. A consulta confirmou que nenhuma das tabelas (`user_gamification_stats`, `gamification_activity_logs`, `gamification_user_missions`) está publicada — por isso a UI só atualiza quando a query é refeita manualmente (troca de aba, navegação, etc.), enquanto missões/atividades atualizam em outro momento e parecem mais rápidas.
+Inspecionando a tabela `notifications` (últimas 24h), o usuário responsável pelo lead está recebendo **3 notificações** a cada entrada de lead:
+
+1. `🆕 Novo lead no CRM!` (broadcast geral)
+2. `Lead atribuído a você` (duplicada — chega 2x)
+3. `🆕 Novo lead recebido!` (primeira atribuição)
+
+## Causa raiz
+
+Existem múltiplos triggers sobrepostos na tabela `public.leads`:
+
+| Trigger | Função | Resultado |
+|---|---|---|
+| `trigger_notify_new_lead` (AFTER INSERT) | `notify_new_lead()` | "Novo lead no CRM!" — manda inclusive para o responsável |
+| `trg_notify_lead_assigned` (AFTER UPDATE OF assigned_user_id) | `notify_lead_assigned()` | "Lead atribuído a você" |
+| `trigger_notify_lead_assigned` (AFTER UPDATE) | `notify_lead_assigned()` | **DUPLICATA** do anterior — mesma função, dispara 2x |
+| `trigger_notify_lead_first_assignment` (AFTER UPDATE) | `notify_lead_first_assignment()` | "Novo lead recebido!" — sobrepõe com "Lead atribuído a você" |
+
+Resultado: o responsável recebe 1 broadcast + 2 atribuições + 1 "novo recebido" = 3 a 4 notificações.
 
 ## Correção
 
-### 1. Migração SQL — habilitar realtime nas tabelas da Arena
+Migration SQL única que:
+
+1. **Remove o trigger duplicado** `trg_notify_lead_assigned` (mantém apenas `trigger_notify_lead_assigned`).
+2. **Remove `trigger_notify_lead_first_assignment`** — seu papel já é coberto por `notify_lead_assigned` (que cria "Lead atribuído a você" + dispara WhatsApp). Eliminamos a sobreposição "Novo lead recebido!" duplicada.
+3. **Ajusta `notify_new_lead()`** para excluir o `assigned_user_id` do broadcast — assim o broadcast "🆕 Novo lead no CRM!" vai apenas para admins/gestores que **não** são o próprio responsável.
+
+## Resultado esperado por lead novo
+
+- **Responsável (assignee):** 1 notificação — "Lead atribuído a você" (+ WhatsApp se configurado)
+- **Demais admins/gestores:** 1 notificação — "🆕 Novo lead no CRM!"
+
+## Detalhes técnicos
+
 ```sql
-ALTER TABLE public.user_gamification_stats REPLICA IDENTITY FULL;
-ALTER TABLE public.gamification_activity_logs REPLICA IDENTITY FULL;
-ALTER TABLE public.gamification_user_missions REPLICA IDENTITY FULL;
-ALTER TABLE public.gamification_rankings REPLICA IDENTITY FULL;
+-- 1. Remover trigger duplicado
+DROP TRIGGER IF EXISTS trg_notify_lead_assigned ON public.leads;
 
-ALTER PUBLICATION supabase_realtime ADD TABLE public.user_gamification_stats;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.gamification_activity_logs;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.gamification_user_missions;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.gamification_rankings;
+-- 2. Remover trigger redundante de "first assignment"
+DROP TRIGGER IF EXISTS trigger_notify_lead_first_assignment ON public.leads;
+-- (a função notify_lead_first_assignment pode ficar, sem trigger ela é inerte)
+
+-- 3. Ajustar notify_new_lead para pular o assignee
+-- (adicionar WHERE u.id <> COALESCE(NEW.assigned_user_id, '00000000-...'::uuid)
+-- no SELECT que monta a lista de destinatários do broadcast)
 ```
-(Com guard `IF NOT EXISTS` equivalente via `DO $$ ... EXCEPTION WHEN duplicate_object` para ser idempotente.)
 
-### 2. Frontend — `GamificationStatsWidget.tsx`
-- Adicionar `refetchOnWindowFocus: true` e `staleTime: 0` na query de stats.
-- Adicionar fallback de `refetchInterval: 15000` (15s) caso o canal realtime caia.
-- Animar transição do XP (contador animado de 300ms) para feedback visual instantâneo.
-- Garantir que o canal de realtime invalide também `['gamification-ranking']` para subir no ranking junto.
-
-### 3. Verificação
-- Executar uma ação no CRM (ligação/atividade) e confirmar que o card de Nível atualiza em <2s sem reload.
-- Conferir que o toast `+X XP` continua aparecendo.
-
-Nada na lógica de pontuação/temporada/missões é alterado — apenas a propagação realtime e a UX do contador.
+Sem alterações no frontend — toda a correção é em triggers/funções do banco.
