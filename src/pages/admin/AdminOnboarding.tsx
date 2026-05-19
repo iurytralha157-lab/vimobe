@@ -87,72 +87,33 @@ export default function AdminOnboarding() {
       toast.error('Selecione um plano e confirme o valor antes de aprovar.');
       return;
     }
+    
     setApproving(true);
-    const generatedPassword = Math.random().toString(36).slice(-10) + 'A1!';
-    const plan = plans.find((p) => p.id === selectedPlanId);
     try {
-      const orgResult: any = await createOrganization.mutateAsync({
-        name: selectedRequest.company_name,
-        segment: (selectedRequest.segment as any) || 'imobiliario',
-        adminEmail: selectedRequest.responsible_email,
-        adminName: selectedRequest.responsible_name,
-        adminPassword: generatedPassword,
-        whatsapp: selectedRequest.company_whatsapp,
-        phone: selectedRequest.responsible_phone,
-        cnpj: selectedRequest.cnpj,
-        address: selectedRequest.company_address,
-        city: selectedRequest.company_city,
-        neighborhood: selectedRequest.company_neighborhood,
-        number: selectedRequest.company_number,
-        complement: selectedRequest.company_complement,
-        cpf: selectedRequest.responsible_cpf,
+      const { data, error } = await supabase.functions.invoke('approve-onboarding-request', {
+        body: {
+          requestId: selectedRequest.id,
+          planId: selectedPlanId,
+          confirmedValue: Number(confirmedValue),
+          billingCycle: billingCycle,
+          adminNotes: adminNotes,
+          // The IP is handled on the server side
+        },
       });
 
-      const newOrgId = orgResult?.organization?.id;
-
-      await updateMutation.mutateAsync({
-        id: selectedRequest.id,
-        status: 'approved',
-        admin_notes: adminNotes,
-        selected_plan_id: selectedPlanId,
-        confirmed_value: Number(confirmedValue),
-        billing_cycle: billingCycle,
-      });
-
-      let paymentUrl: string | undefined;
-      if (newOrgId) {
-        const { data: linkData, error: linkErr } = await supabase.functions.invoke(
-          'asaas-create-payment-link',
-          {
-            body: {
-              organization_id: newOrgId,
-              onboarding_id: selectedRequest.id,
-              plan_name: plan?.name || 'Vimob',
-              value: Number(confirmedValue),
-              billing_cycle: billingCycle,
-              customer_name: selectedRequest.responsible_name,
-              customer_email: selectedRequest.responsible_email,
-              customer_phone: selectedRequest.responsible_phone || selectedRequest.company_whatsapp,
-              customer_cpf_cnpj: selectedRequest.responsible_cpf || selectedRequest.cnpj,
-              temp_password: generatedPassword,
-            },
-          }
-        );
-        if (linkErr) {
-          console.error('asaas link error:', linkErr);
-          toast.warning('Org criada, mas falha ao gerar link Asaas: ' + linkErr.message);
-        } else {
-          paymentUrl = linkData?.payment_link_url;
-        }
-      }
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
 
       toast.success('Organização aprovada e link de pagamento enviado!');
       setSelectedRequest(null);
       setCreatedCredentials({
-        email: selectedRequest.responsible_email,
-        password: generatedPassword,
-        paymentUrl,
+        email: data.email,
+        password: data.password,
+        paymentUrl: data.paymentUrl,
       });
+      
+      // We should also refresh the list
+      window.location.reload(); // Simplest way to refresh everything
     } catch (err: any) {
       toast.error('Erro ao aprovar: ' + err.message);
     } finally {
