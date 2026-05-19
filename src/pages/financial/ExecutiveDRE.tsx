@@ -144,6 +144,7 @@ export default function ExecutiveDRE() {
           </div>
         ) : hasData ? (
           <TooltipProvider>
+            <>
             {/* Cards de Resumo Executivo */}
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
               <SummaryCard
@@ -204,6 +205,7 @@ export default function ExecutiveDRE() {
                 tooltip="Retorno sobre o capital investido na operação."
               />
             </div>
+            </>
           </TooltipProvider>
 
             {/* Gráfico de Composição */}
@@ -356,7 +358,6 @@ export default function ExecutiveDRE() {
                 </div>
               </CardContent>
             </Card>
-          </>
         ) : (
           <FinancialEmptyState
             title="Sem dados no período"
