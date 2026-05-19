@@ -32,8 +32,8 @@ function buildCall(action: string, payload: any): ProxyCall {
       const b = payload?.body ?? {};
       const body: Record<string, unknown> = {
         name: b.name ?? b.instanceName,
+        token: b.token || "default_token",
       };
-      if (b.token) body.token = b.token;
       if (b.proxy) body.proxy = b.proxy;
       return { method: "POST", path: "/instance/create", body };
     }
