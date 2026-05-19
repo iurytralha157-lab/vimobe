@@ -70,6 +70,7 @@ export function MobileFilters({
   hasActiveFilters,
   clearFilters,
   activeFilterCount,
+  availableSources = [],
 }: MobileFiltersProps) {
   const [open, setOpen] = useState(false);
 
