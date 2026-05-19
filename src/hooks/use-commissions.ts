@@ -211,7 +211,7 @@ export function useApproveCommission() {
         'approve',
         'commission',
         id,
-        { status: 'forecast' },
+        { status: 'pending' },
         { status: 'approved', approved_by: user?.id }
       ).catch(console.error);
 
