@@ -62,7 +62,7 @@ export function UserFilter({ users, selectedUserId, onUserSelect, showAllOption 
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[200px] p-0">
+      <PopoverContent className="w-[200px] p-0 bg-popover border border-border shadow-xl z-50">
         <Command>
           <CommandInput placeholder="Buscar usuário..." />
           <CommandList>
