@@ -3546,6 +3546,9 @@ export type Database = {
           utm_term: string | null
           valor_interesse: number | null
           visitor_session_id: string | null
+          whatsapp_avatar_synced_at: string | null
+          whatsapp_avatar_url: string | null
+          whatsapp_verified: boolean | null
           won_at: string | null
         }
         Insert: {
@@ -3616,6 +3619,9 @@ export type Database = {
           utm_term?: string | null
           valor_interesse?: number | null
           visitor_session_id?: string | null
+          whatsapp_avatar_synced_at?: string | null
+          whatsapp_avatar_url?: string | null
+          whatsapp_verified?: boolean | null
           won_at?: string | null
         }
         Update: {
@@ -3686,6 +3692,9 @@ export type Database = {
           utm_term?: string | null
           valor_interesse?: number | null
           visitor_session_id?: string | null
+          whatsapp_avatar_synced_at?: string | null
+          whatsapp_avatar_url?: string | null
+          whatsapp_verified?: boolean | null
           won_at?: string | null
         }
         Relationships: [
