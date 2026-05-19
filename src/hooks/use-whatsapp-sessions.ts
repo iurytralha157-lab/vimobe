@@ -145,6 +145,9 @@ export function useCreateWhatsAppSession() {
       const sanitizedName = displayName.replace(/[^a-zA-Z0-9]/g, '').toLowerCase().substring(0, 20);
       const uniqueInstanceName = `${sanitizedName}_${orgPrefix}_${randomSuffix}`;
 
+      // Generate a unique token for evolution_go to identify the instance
+      const token = provider === "evolution_go" ? Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15) : null;
+
       // Create session row first
       const { data: session, error: dbError } = await supabase
         .from("whatsapp_sessions")
@@ -155,6 +158,7 @@ export function useCreateWhatsAppSession() {
           display_name: displayName,
           status: "disconnected",
           provider,
+          advanced_settings: { token },
         } as any)
         .select()
         .single();
@@ -170,7 +174,7 @@ export function useCreateWhatsAppSession() {
       const body = provider === "evolution_go"
         ? {
             action: "instance.create",
-            body: { name: uniqueInstanceName },
+            body: { name: uniqueInstanceName, token },
           }
         : { action: "createInstance", instanceName: uniqueInstanceName };
 
@@ -210,6 +214,7 @@ export function useCreateWhatsAppSession() {
           body: {
             action: "instance.connect",
             instance_id: evoId,
+            token,
             body: { webhookUrl, subscribe: ["ALL"], immediate: true },
           },
         });
