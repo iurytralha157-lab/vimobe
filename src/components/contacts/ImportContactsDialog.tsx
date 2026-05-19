@@ -48,20 +48,16 @@ interface ParsedContact {
   nome: string;
   telefone?: string;
   email?: string;
+  status?: string;
+  pipeline?: string;
+  estagio?: string;
+  responsavel?: string;
+  tags?: string;
+  fonte?: string;
+  motivo_perda?: string;
   mensagem?: string;
   [key: string]: string | undefined;
 }
-
-const sourceOptions = [
-  { value: 'import', label: 'Importação' },
-  { value: 'facebook', label: 'Facebook' },
-  { value: 'instagram', label: 'Instagram' },
-  { value: 'google', label: 'Google Ads' },
-  { value: 'whatsapp', label: 'WhatsApp' },
-  { value: 'indicacao', label: 'Indicação' },
-  { value: 'manual', label: 'Manual' },
-  { value: 'outros', label: 'Outros' },
-];
 
 export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialogProps) {
   const [file, setFile] = useState<File | null>(null);
@@ -69,9 +65,14 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
   const [selectedPipeline, setSelectedPipeline] = useState<string>('');
   const [selectedAssignee, setSelectedAssignee] = useState<string>('none');
   const [selectedSource, setSelectedSource] = useState<string>('import');
+  const [customSource, setCustomSource] = useState<string>('');
+  const [showCustomSourceInput, setShowCustomSourceInput] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [importResult, setImportResult] = useState<{ success: number; failed: number } | null>(null);
+  const [isAutoDistribute, setIsAutoDistribute] = useState(false);
+  const [selectedTeam, setSelectedTeam] = useState<string>('none');
+  const [dynamicSources, setDynamicSources] = useState<string[]>([]);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
