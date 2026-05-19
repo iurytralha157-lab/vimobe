@@ -1299,13 +1299,14 @@ export default function Pipelines() {
                   >
                     <Filter className="h-3.5 w-3.5" />
                     Filtros
-                    {((filterUser && filterUser !== 'all') || (filterTag && filterTag !== 'all') || (filterDealStatus && filterDealStatus !== 'all') || (filterCampaign !== 'all' || filterAdSet !== 'all' || filterAd !== 'all') || searchQuery) && (
+                    {((filterUser && filterUser !== 'all') || (filterTag && filterTag !== 'all') || (filterDealStatus && filterDealStatus !== 'all') || (filterCampaign !== 'all' || filterAdSet !== 'all' || filterAd !== 'all') || (filterSource && filterSource !== 'all') || searchQuery) && (
                       <Badge variant="default" className="h-4 w-4 p-0 flex items-center justify-center text-[10px] bg-primary">
                         {[
                           filterUser && filterUser !== 'all',
                           filterTag && filterTag !== 'all',
                           filterDealStatus && filterDealStatus !== 'all',
                           filterCampaign !== 'all' || filterAdSet !== 'all' || filterAd !== 'all',
+                          filterSource && filterSource !== 'all',
                           searchQuery
                         ].filter(Boolean).length}
                       </Badge>
