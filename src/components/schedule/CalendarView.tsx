@@ -264,6 +264,7 @@ interface CalendarViewProps {
   onEditEvent?: (event: ScheduleEvent) => void;
   onEventUpdate?: (id: string, updates: Partial<ScheduleEvent>) => void;
   onQuickCreate?: (date: Date) => void;
+  showThirtyMinLines?: boolean;
 }
 
 export function CalendarView({
@@ -275,7 +276,8 @@ export function CalendarView({
   viewMode,
   onEditEvent,
   onEventUpdate,
-  onQuickCreate
+  onQuickCreate,
+  showThirtyMinLines = false
 }: CalendarViewProps) {
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -498,7 +500,10 @@ export function CalendarView({
                   <div key={hour.toString()} className="h-14 border-b border-border/40 w-full relative">
                     <DroppableSlot 
                       id={`${format(pivotDate, 'yyyy-MM-dd')}|${hourStr}:00`}
-                      className="h-7 w-full cursor-pointer hover:bg-primary/[0.02] transition-colors" 
+                      className={cn(
+                        "h-7 w-full cursor-pointer hover:bg-primary/[0.02] transition-colors",
+                        showThirtyMinLines && "border-b border-border/10"
+                      )} 
                       onQuickCreate={() => {
                         const clickDate = new Date(pivotDate);
                         clickDate.setHours(hour.getHours(), 0, 0, 0);
@@ -613,7 +618,10 @@ export function CalendarView({
                       <div key={hour.toString()} className="h-14 border-b border-border/40 w-full relative">
                         <DroppableSlot 
                           id={`${format(day, 'yyyy-MM-dd')}|${hourStr}:00`}
-                          className="h-7 w-full cursor-pointer hover:bg-primary/[0.01] transition-colors" 
+                          className={cn(
+                            "h-7 w-full cursor-pointer hover:bg-primary/[0.01] transition-colors",
+                            showThirtyMinLines && "border-b border-border/10"
+                          )} 
                           onQuickCreate={() => {
                             const clickDate = new Date(day);
                             clickDate.setHours(hour.getHours(), 0, 0, 0);
