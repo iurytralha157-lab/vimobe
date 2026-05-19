@@ -1062,6 +1062,21 @@ export default function Pipelines() {
                     </div>
                   </div>
 
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-bold uppercase text-muted-foreground/70 tracking-wider">Origem</Label>
+                    <Select value={filterSource} onValueChange={setFilterSource}>
+                      <SelectTrigger className={cn("h-9 w-full text-xs", filterSource && filterSource !== 'all' && "border-primary text-primary")}>
+                        <SelectValue placeholder="Origem" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todas Origens</SelectItem>
+                        {allSources.map(s => (
+                          <SelectItem key={s} value={s}>{s}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
                   {((filterUser && filterUser !== 'all') || (filterTag && filterTag !== 'all') || (filterDealStatus && filterDealStatus !== 'all') || (filterCampaign && filterCampaign !== 'all') || (filterAdSet && filterAdSet !== 'all') || (filterAd && filterAd !== 'all') || searchQuery) && (
                     <Button
                       variant="ghost"
