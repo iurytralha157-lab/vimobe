@@ -26,11 +26,16 @@ const COLORS = [
 
 function ChartSkeleton() {
   return (
-    <div className="flex flex-col items-center justify-center h-full space-y-4">
-      <Skeleton className="h-32 w-32 rounded-full" />
-      <div className="grid grid-cols-2 gap-4 w-full px-4">
-        <Skeleton className="h-10 rounded" />
-        <Skeleton className="h-10 rounded" />
+    <div className="flex flex-col items-center justify-center h-full space-y-6 py-4">
+      <div className="relative h-48 w-48 flex items-center justify-center">
+        <Skeleton className="h-full w-full rounded-full" />
+        <div className="absolute inset-0 flex items-center justify-center">
+          <Skeleton className="h-16 w-16 rounded-full bg-background/50" />
+        </div>
+      </div>
+      <div className="space-y-2 flex flex-col items-center">
+        <Skeleton className="h-3 w-20 rounded" />
+        <Skeleton className="h-8 w-12 rounded" />
       </div>
     </div>
   );
@@ -50,19 +55,30 @@ function CustomTooltip({ active, payload }: CustomTooltipProps) {
   if (!active || !payload || payload.length === 0) return null;
   const data = payload[0];
   return (
-    <div className="bg-popover/95 backdrop-blur-sm border border-border rounded-lg shadow-xl px-4 py-3 min-w-[150px]">
-      <div className="flex items-center gap-2 mb-2">
-        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: data.fill }} />
-        <p className="font-bold text-foreground text-sm">{data.name}</p>
+    <div className="bg-background/95 backdrop-blur-md border border-border shadow-[0_8px_30px_rgb(0,0,0,0.12)] rounded-xl px-4 py-3 min-w-[180px] z-[100] animate-in fade-in zoom-in duration-200">
+      <div className="flex items-center gap-2.5 mb-2.5">
+        <div 
+          className="w-3 h-3 rounded-full ring-2 ring-background shadow-sm" 
+          style={{ backgroundColor: data.fill }} 
+        />
+        <p className="font-bold text-foreground text-sm tracking-tight">{data.name}</p>
       </div>
-      <div className="space-y-1.5 border-t border-border/50 pt-2">
+      <div className="space-y-2 border-t border-border/50 pt-2.5">
         <div className="flex justify-between items-center gap-4 text-xs">
-          <span className="text-muted-foreground">Total de Leads:</span>
-          <span className="text-foreground font-semibold">{data.value}</span>
+          <span className="text-muted-foreground font-medium">Total de Leads:</span>
+          <span className="text-foreground font-bold">{data.value}</span>
         </div>
         <div className="flex justify-between items-center gap-4 text-xs">
-          <span className="text-muted-foreground">Participação:</span>
-          <span className="text-primary font-bold">{data.payload.percentage}%</span>
+          <span className="text-muted-foreground font-medium">Participação:</span>
+          <div className="flex items-center gap-1.5">
+            <div className="w-12 h-1.5 bg-muted rounded-full overflow-hidden hidden sm:block">
+              <div 
+                className="h-full rounded-full transition-all duration-500" 
+                style={{ backgroundColor: data.fill, width: `${data.payload.percentage}%` }}
+              />
+            </div>
+            <span className="text-foreground font-black">{data.payload.percentage}%</span>
+          </div>
         </div>
       </div>
     </div>
@@ -128,59 +144,53 @@ export function LeadSourcesChart({ data, isLoading }: LeadSourcesChartProps) {
         </div>
       </CardHeader>
       
-      <CardContent className="flex-1 p-4 pt-2 flex flex-col">
-        {/* Donut Chart */}
-        <div className="flex-1 min-h-[250px] relative mt-2">
+      <CardContent className="flex-1 p-4 pt-2 flex flex-col items-center justify-center">
+        {/* Donut Chart Container */}
+        <div className="w-full aspect-square max-w-[280px] relative mt-2">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
                 data={chartData}
                 cx="50%"
                 cy="50%"
-                innerRadius="65%"
-                outerRadius="90%"
-                paddingAngle={2}
+                innerRadius="60%"
+                outerRadius="95%"
+                paddingAngle={3}
                 dataKey="value"
                 animationBegin={0}
-                animationDuration={1000}
+                animationDuration={1200}
                 stroke="transparent"
+                strokeWidth={0}
+                className="outline-none"
               >
                 {chartData.map((_, index) => (
                   <Cell
                     key={`cell-${index}`}
                     fill={COLORS[index % COLORS.length]}
-                    className="transition-all duration-300 hover:opacity-80 outline-none"
+                    className="transition-all duration-500 hover:opacity-90 hover:scale-[1.02] origin-center outline-none cursor-pointer"
                   />
                 ))}
               </Pie>
-              <Tooltip content={<CustomTooltip />} />
+              <Tooltip 
+                content={<CustomTooltip />} 
+                cursor={false}
+                wrapperStyle={{ zIndex: 1001 }}
+              />
             </PieChart>
           </ResponsiveContainer>
           
-          {/* Central text for Donut */}
-          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-            <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Leads</span>
-            <span className="text-2xl font-black text-foreground">{total}</span>
-          </div>
-        </div>
-
-        {/* Legend */}
-        <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1.5">
-          {chartData.slice(0, 4).map((item, index) => (
-            <div key={item.name} className="flex items-center gap-2 overflow-hidden">
-              <div 
-                className="w-2 h-2 rounded-full flex-shrink-0" 
-                style={{ backgroundColor: COLORS[index % COLORS.length] }} 
-              />
-              <span className="text-[10px] font-medium text-muted-foreground truncate flex-1">{item.name}</span>
-              <span className="text-[10px] font-bold text-foreground">{item.percentage}%</span>
+          {/* Central text for Donut - Improved Hierarchy */}
+          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none z-0">
+            <span className="text-[10px] sm:text-[11px] uppercase font-bold text-muted-foreground/70 tracking-[0.2em] mb-0.5">
+              Leads
+            </span>
+            <div className="relative">
+              <span className="text-4xl sm:text-5xl font-black text-foreground tracking-tighter tabular-nums drop-shadow-sm">
+                {total}
+              </span>
+              <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-8 h-1 bg-primary/20 rounded-full blur-[2px]" />
             </div>
-          ))}
-          {chartData.length > 4 && (
-             <div className="flex items-center gap-2 col-span-2 justify-center pt-1 border-t border-border/50 mt-1">
-                <span className="text-[9px] text-muted-foreground italic">+ {chartData.length - 4} outras fontes</span>
-             </div>
-          )}
+          </div>
         </div>
       </CardContent>
     </Card>
