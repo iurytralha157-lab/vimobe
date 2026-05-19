@@ -1,54 +1,44 @@
 ## Problema
 
-Quando o usuário entra pelo Google em `www.nexoimoveisgo.com.br`, o site começa a abrir (header aparece), mas em seguida vira "site não encontrado". Mesmo problema afeta `aspeimoveis.com.br` e demais clientes white-label.
+O erro `column "owner_user_id" does not exist` ocorre porque `owner_user_id` pertence à tabela `whatsapp_sessions`, e não a `whatsapp_conversations`. A policy estava referenciando a coluna na tabela errada.
 
-## Causa raiz
+## SQL corrigido
 
-No banco, o `custom_domain` está salvo **sem** o `www` (ex.: `nexoimoveisgo.com.br`). Quando o navegador chega via `www.nexoimoveisgo.com.br`, o frontend chama a edge function `resolve-site-domain` passando `www.nexoimoveisgo.com.br` como hostname.
+```sql
+-- 1) Adiciona coluna "Apenas Leads" no acesso compartilhado
+ALTER TABLE public.whatsapp_session_access
+  ADD COLUMN IF NOT EXISTS only_leads_access boolean NOT NULL DEFAULT false;
 
-Dois bugs impedem a resolução:
+-- 2) Remove policy antiga (se existir) antes de recriar
+DROP POLICY IF EXISTS conversations_privacy_policy ON public.whatsapp_conversations;
 
-1. **Edge function `resolve-site-domain`** monta a query como:
-   ```
-   custom_domain.eq.www.nexoimoveisgo.com.br
-   custom_domain.eq.www.nexoimoveisgo.com.br   ← duplicado (faz strip do www e recoloca)
-   ```
-   Nunca tenta `custom_domain = nexoimoveisgo.com.br`, então não encontra o registro.
+-- 3) Nova policy de SELECT em whatsapp_conversations
+CREATE POLICY conversations_privacy_policy
+ON public.whatsapp_conversations
+FOR SELECT
+USING (
+  -- Super admin vê tudo
+  public.is_super_admin()
+  OR
+  -- Dono da sessão vê tudo da própria sessão
+  EXISTS (
+    SELECT 1 FROM public.whatsapp_sessions s
+    WHERE s.id = whatsapp_conversations.session_id
+      AND s.owner_user_id = auth.uid()
+  )
+  OR
+  -- Usuário com acesso compartilhado:
+  --   - se only_leads_access = false → vê todas as conversas da sessão
+  --   - se only_leads_access = true  → vê apenas conversas com lead_id preenchido
+  EXISTS (
+    SELECT 1 FROM public.whatsapp_session_access wsa
+    WHERE wsa.session_id = whatsapp_conversations.session_id
+      AND wsa.user_id = auth.uid()
+      AND (wsa.only_leads_access = false OR whatsapp_conversations.lead_id IS NOT NULL)
+  )
+);
+```
 
-2. **Função SQL `resolve_site_domain`** (fallback) compara `custom_domain = p_domain` literalmente e, se falhar, usa `split_part(p_domain, '.', 1)` — que devolve `'www'` em vez de `'nexo'`. Falha do mesmo jeito.
+## Próximos passos
 
-Resultado: `PublicSiteContext` recebe `found: false`, define `error = 'Site não encontrado'`, e o layout (que já tinha pintado o header com fallbacks) troca para a tela de erro.
-
-A mesma causa também explica a tela branca demorada em outros sites quando entram via `www` — o erro só aparece depois do round-trip à edge function falhar.
-
-A função `get-worker-config` (Cloudflare) já trata os dois formatos corretamente, então o worker entrega o app normalmente — o problema é só na resolução client-side.
-
-## Correções
-
-### 1. `supabase/functions/resolve-site-domain/index.ts`
-Normalizar o domínio para tentar três variantes em uma única query `.or(...)`:
-- valor exato recebido
-- versão sem `www.` no início
-- versão com `www.` forçado
-
-Também passar o domínio normalizado (sem www) para o RPC de fallback, em vez do valor cru.
-
-### 2. Função SQL `resolve_site_domain` (migration)
-Antes de buscar, normalizar `p_domain` retirando o prefixo `www.` opcional, e na query comparar `custom_domain IN (p_domain_clean, 'www.' || p_domain_clean)`. Ajustar também o `split_part` para usar o domínio limpo (pega o primeiro label sem ser `www`).
-
-### 3. (Opcional, mesma migration) `PublicSiteContext`
-Limpar o `sessionStorage` quando a resolução retornar erro, para não cachear o estado quebrado entre navegações. Hoje só cacheia em sucesso, mas garantir que requisições paralelas não disparem múltiplas chamadas que poderiam confundir o usuário.
-
-## Validação
-
-Depois do deploy:
-1. Acessar `https://www.nexoimoveisgo.com.br` em aba anônima → deve carregar o site completo (não só header).
-2. Acessar `https://nexoimoveisgo.com.br` (sem www) → continua funcionando.
-3. Repetir com `aspeimoveis.com.br` e `www.aspeimoveis.com.br`.
-4. Conferir logs de `resolve-site-domain` para garantir `found: true` nas duas variantes.
-
-## Fora de escopo
-
-- DNS / Cloudflare / Lovable Domains (já configurados — o worker está respondendo).
-- Mudanças visuais no layout público.
-- SEO/SSR de bots (a função `public-site-ssr` já trata `www.` corretamente).
+Aplicar esse SQL via migration (ao aprovar o plano) e em seguida espelhar a mesma regra na policy de SELECT de `whatsapp_messages` (filtrando pelo `conversation_id` correspondente) para garantir que o "Apenas Leads" também esconda o histórico de mensagens das conversas não-lead.
