@@ -35,6 +35,8 @@ import {
   Video,
   ClipboardList,
   Eye,
+  SlidersHorizontal,
+  Trash2,
 } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -49,6 +51,9 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Badge } from "@/components/ui/badge";
+import { useScheduleComments } from "@/hooks/use-schedule-comments";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
