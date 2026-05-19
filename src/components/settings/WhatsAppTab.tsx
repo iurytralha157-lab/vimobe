@@ -524,18 +524,29 @@ function AccessControlDialog({
   const grantAccess = useGrantSessionAccess();
   const revokeAccess = useRevokeSessionAccess();
 
-  const handleToggleAccess = async (userId: string, hasAccess: boolean, onlyLeadsAccess = false) => {
+  const handleToggleAccess = async (userId: string, hasAccess: boolean) => {
     if (!session) return;
-
-    if (hasAccess && !onlyLeadsAccess) {
+    if (hasAccess) {
       await revokeAccess.mutateAsync({ sessionId: session.id, userId });
     } else {
-      await grantAccess.mutateAsync({ sessionId: session.id, userId, onlyLeadsAccess });
+      await grantAccess.mutateAsync({ sessionId: session.id, userId, accessMode: "assigned_leads_only" });
     }
+  };
+
+  const handleChangeMode = async (userId: string, mode: any) => {
+    if (!session) return;
+    await grantAccess.mutateAsync({ sessionId: session.id, userId, accessMode: mode });
   };
 
   const getAccess = (userId: string) => {
     return accessList?.find((access) => access.user_id === userId);
+  };
+
+  const MODE_LABELS: Record<string, string> = {
+    assigned_leads_only: "Apenas leads atribuídos a este usuário",
+    team_leads: "Leads da equipe do usuário",
+    all_leads: "Todas as conversas vinculadas a leads",
+    full_inbox: "Inbox completo (todas as conversas)",
   };
 
   return (
@@ -544,59 +555,63 @@ function AccessControlDialog({
         <SheetHeader>
           <SheetTitle>Gerenciar Acessos</SheetTitle>
           <SheetDescription>
-            Selecione os usuários que podem ver e enviar mensagens por esta conexão
+            Defina quais usuários podem operar esta conexão e o nível de visibilidade das conversas
           </SheetDescription>
         </SheetHeader>
-        <ScrollArea className="max-h-[400px]">
+        <ScrollArea className="max-h-[500px]">
           <div className="space-y-4 py-4">
             {users.map((user) => {
-              const access = getAccess(user.id);
+              const access: any = getAccess(user.id);
               const hasAccess = !!access;
-              const onlyLeads = access?.only_leads_access || false;
+              const mode = access?.access_mode || "assigned_leads_only";
               const isOwner = user.id === session?.owner_user_id;
 
               return (
-                <div key={user.id} className="flex items-center justify-between py-2 border-b last:border-0 border-border/40">
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={user.avatar_url} />
-                      <AvatarFallback>{user.name?.[0] || "U"}</AvatarFallback>
-                    </Avatar>
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium truncate">{user.name}</p>
-                      <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                <div key={user.id} className="flex flex-col gap-3 py-3 border-b last:border-0 border-border/40">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={user.avatar_url} />
+                        <AvatarFallback>{user.name?.[0] || "U"}</AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">{user.name}</p>
+                        <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    {isOwner && <Badge variant="secondary">Proprietário</Badge>}
-                    
-                    {hasAccess && (
+                    <div className="flex items-center gap-3">
+                      {isOwner && <Badge variant="secondary">Proprietário</Badge>}
                       <div className="flex items-center gap-2">
-                        <Label htmlFor={`only-leads-${user.id}`} className="text-[10px] uppercase font-bold text-muted-foreground cursor-pointer">
-                          Apenas Leads
+                        <Label htmlFor={`access-${user.id}`} className="text-[10px] uppercase font-bold text-muted-foreground cursor-pointer">
+                          Acesso
                         </Label>
-                        <Switch 
-                          id={`only-leads-${user.id}`}
-                          checked={onlyLeads}
-                          onCheckedChange={(checked) => handleToggleAccess(user.id, true, checked)}
-                          disabled={grantAccess.isPending}
+                        <Checkbox
+                          id={`access-${user.id}`}
+                          checked={hasAccess}
+                          onCheckedChange={() => handleToggleAccess(user.id, hasAccess)}
+                          disabled={grantAccess.isPending || revokeAccess.isPending}
                         />
                       </div>
-                    )}
-
-                    <div className="flex items-center gap-2">
-                      <Label htmlFor={`access-${user.id}`} className="text-[10px] uppercase font-bold text-muted-foreground cursor-pointer">
-                        Acesso
-                      </Label>
-                      <Checkbox
-                        id={`access-${user.id}`}
-                        checked={hasAccess}
-                        onCheckedChange={() => handleToggleAccess(user.id, hasAccess)}
-                        disabled={grantAccess.isPending || revokeAccess.isPending} 
-                        title={isOwner ? "Forçar permissão explícita (útil se o acesso falhar)" : ""}
-                      />
                     </div>
                   </div>
+
+                  {hasAccess && !isOwner && (
+                    <div className="pl-11">
+                      <Label className="text-[10px] uppercase font-bold text-muted-foreground mb-1.5 block">
+                        Visibilidade
+                      </Label>
+                      <Select value={mode} onValueChange={(v) => handleChangeMode(user.id, v)}>
+                        <SelectTrigger className="h-9 text-sm">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Object.entries(MODE_LABELS).map(([k, v]) => (
+                            <SelectItem key={k} value={k}>{v}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                 </div>);
             })}
           </div>
