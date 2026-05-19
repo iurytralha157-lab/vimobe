@@ -217,7 +217,10 @@ Deno.serve(async (req) => {
         .maybeSingle();
       if (sess) {
         if (!payload.instance_id) payload.instance_id = sess.instance_id || sess.instance_name;
-        if (!payload.token) payload.token = sess.token;
+        // Check token column or advanced_settings JSONB
+        if (!payload.token) {
+          payload.token = sess.token || (sess.advanced_settings as any)?.token || "default_token";
+        }
       }
     }
 
