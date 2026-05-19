@@ -197,23 +197,27 @@ export function useCreateWhatsAppSession() {
         throw new Error(msg);
       }
 
-      // For evolution_go: persist UUID and trigger connect with webhook
-      if (provider === "evolution_go") {
-        const evoId: string | undefined =
-          result?.data?.data?.id || result?.data?.instance?.id || result?.data?.id;
-        if (evoId) {
-          await supabase
-            .from("whatsapp_sessions")
-            .update({ 
-              instance_id: evoId,
-              advanced_settings: { token }
-            })
-            .eq("id", session.id);
-          (session as any).instance_id = evoId;
-          (session as any).advanced_settings = { token };
-        }
+      // Persist instance_id (UUID) if returned by either provider
+      const evoId: string | undefined =
+        result?.data?.data?.id || 
+        result?.data?.instance?.id || 
+        result?.data?.id ||
+        (result?.data as any)?.instance?.uuid;
 
-        // Connect (registers webhook and starts QR generation)
+      if (evoId) {
+        await supabase
+          .from("whatsapp_sessions")
+          .update({ 
+            instance_id: evoId,
+            advanced_settings: { token }
+          })
+          .eq("id", session.id);
+        (session as any).instance_id = evoId;
+        (session as any).advanced_settings = { token };
+      }
+
+      // For evolution_go: trigger connect with webhook
+      if (provider === "evolution_go") {
         await supabase.functions.invoke("evolution-go-proxy", {
           body: {
             action: "instance.connect",
@@ -261,12 +265,17 @@ export function useDeleteWhatsAppSession() {
 
   return useMutation({
     mutationFn: async (session: WhatsAppSession) => {
-      // Try to delete from Evolution API first (don't block on failure)
+      // Try to delete from Evolution API first
       try {
-        await supabase.functions.invoke("evolution-proxy", {
+        const isGo = session.provider === "evolution_go";
+        const proxyFn = isGo ? "evolution-go-proxy" : "evolution-proxy";
+        const action = isGo ? "instance.delete" : "deleteInstance";
+        
+        await supabase.functions.invoke(proxyFn, {
           body: {
-            action: "deleteInstance",
+            action,
             instanceName: session.instance_name,
+            instance_id: session.instance_id,
           },
         });
       } catch (e) {
@@ -310,7 +319,8 @@ export function useGetQRCode() {
         });
         if (error) throw error;
         if (!data.success) throw new Error(data.error || "Failed to get QR code");
-        return data.data;
+        const qr = data.data?.qrcode || data.data?.base64 || data.data?.code;
+        return { base64: qr, qrcode: qr };
       }
 
       if (arg.provider === "evolution_go") {
@@ -319,8 +329,7 @@ export function useGetQRCode() {
         });
         if (error) throw error;
         if (!data?.ok) throw new Error(data?.error || "Failed to get QR code");
-        // Normalize shape to { base64 } expected by UI
-        const qr = data?.data?.data?.qrcode ?? data?.data?.qrcode ?? null;
+        const qr = data?.data?.data?.qrcode ?? data?.data?.qrcode ?? data?.data?.Qrcode ?? null;
         return { base64: qr, qrcode: qr };
       }
 
@@ -329,7 +338,8 @@ export function useGetQRCode() {
       });
       if (error) throw error;
       if (!data.success) throw new Error(data.error || "Failed to get QR code");
-      return data.data;
+      const qr = data.data?.qrcode || data.data?.base64 || data.data?.code;
+      return { base64: qr, qrcode: qr };
     },
   });
 }

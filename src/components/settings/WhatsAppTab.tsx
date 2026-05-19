@@ -274,11 +274,13 @@ export function WhatsAppTab() {
             },
           });
         } else {
+          // Recreate or Ensure instance exists for standard provider
           await supabase.functions.invoke("evolution-proxy", {
             body: { action: "createInstance", instanceName: session.instance_name },
           });
         }
-        await new Promise(r => setTimeout(r, 2000));
+        // Small delay to allow instance to boot
+        await new Promise(r => setTimeout(r, 3000));
         await refreshQRCode(session);
       } catch (e) {
         console.error("Failed to recreate instance:", e);

@@ -182,22 +182,35 @@ async function createInstance(apiUrl: string, apiKey: string, supabaseUrl: strin
 
 async function getQRCode(apiUrl: string, apiKey: string, instanceName: string): Promise<EvolutionResponse> {
   try {
-    const response = await fetch(`${apiUrl}/instance/connect/${instanceName}`, {
+    // Try primary endpoint (v2 standard)
+    let response = await fetch(`${apiUrl}/instance/connect/${instanceName}`, {
       method: "GET",
-      headers: {
-        "apikey": apiKey,
-      },
+      headers: { "apikey": apiKey },
     });
 
-    const data = await response.json();
-    console.log("QR Code response:", data);
+    let data = await response.json();
+    console.log("QR Code response (v2):", data);
+
+    // Fallback if 404 or specific error for /instance/qr (whatsmeow style)
+    if (!response.ok) {
+      console.log("v2 connect failed, trying /instance/qr...");
+      const fallbackRes = await fetch(`${apiUrl}/instance/qr?instanceName=${instanceName}`, {
+        method: "GET",
+        headers: { "apikey": apiKey },
+      });
+      if (fallbackRes.ok) {
+        response = fallbackRes;
+        data = await response.json();
+        console.log("QR Code response (fallback):", data);
+      }
+    }
 
     if (!response.ok) {
       return { success: false, error: data.message || "Failed to get QR code" };
     }
 
-    // Evolution API v2 returns base64 directly or in a code/base64 field
-    const qrcode = data.base64 || data.code || data.qrcode?.base64 || data.qrcode;
+    // Normalize qrcode string from various possible fields
+    const qrcode = data.base64 || data.code || data.qrcode?.base64 || data.qrcode || (data.data?.qrcode) || (data.data?.Qrcode);
     
     return { success: true, data: { qrcode, base64: qrcode, ...data } };
   } catch (error: unknown) {
@@ -208,17 +221,27 @@ async function getQRCode(apiUrl: string, apiKey: string, instanceName: string): 
 
 async function getConnectionStatus(apiUrl: string, apiKey: string, instanceName: string): Promise<EvolutionResponse> {
   try {
-    const response = await fetch(`${apiUrl}/instance/connectionState/${instanceName}`, {
+    let response = await fetch(`${apiUrl}/instance/connectionState/${instanceName}`, {
       method: "GET",
-      headers: {
-        "apikey": apiKey,
-      },
+      headers: { "apikey": apiKey },
     });
 
-    const data = await response.json();
-    console.log("Connection status response:", { status: response.status, error: response.ok ? null : response.statusText, response: data });
+    let data = await response.json();
+    
+    // Fallback to /instance/status?instanceName=...
+    if (!response.ok) {
+      const fallbackRes = await fetch(`${apiUrl}/instance/status?instanceName=${instanceName}`, {
+        method: "GET",
+        headers: { "apikey": apiKey },
+      });
+      if (fallbackRes.ok) {
+        response = fallbackRes;
+        data = await response.json();
+      }
+    }
 
-    // Handle 404 - instance doesn't exist
+    console.log("Connection status response:", { status: response.status, data });
+
     if (response.status === 404) {
       return { 
         success: true, 
@@ -227,13 +250,12 @@ async function getConnectionStatus(apiUrl: string, apiKey: string, instanceName:
           status: false,
           connected: false,
           instanceNotFound: true,
-          message: "A instância não existe. Por favor, reconecte sua sessão WhatsApp."
+          message: "A instância não existe."
         } 
       };
     }
 
     if (!response.ok) {
-      // Return disconnected state instead of error for better UX
       return { 
         success: true, 
         data: { 
@@ -245,30 +267,24 @@ async function getConnectionStatus(apiUrl: string, apiKey: string, instanceName:
       };
     }
 
-    // Map Evolution v2 status to our format - Strictly only "open" is connected
-    const state = data.instance?.state || data.state || "close";
-    const isConnected = state === "open";
+    // Map various provider status formats
+    const state = data.instance?.state || data.state || (data.Connected || data.connected ? "open" : "close");
+    const isConnected = state === "open" || data.Connected === true || data.connected === true;
     
     return { 
       success: true, 
       data: { 
         ...data, 
-        state: isConnected ? "open" : state,
+        state: isConnected ? "open" : "close",
         status: isConnected,
         connected: isConnected
       } 
     };
   } catch (error: unknown) {
     console.error("Get connection status error:", error);
-    // Return disconnected state instead of error
     return { 
       success: true, 
-      data: { 
-        state: "close",
-        status: false,
-        connected: false,
-        error: error instanceof Error ? error.message : "Erro desconhecido"
-      } 
+      data: { state: "close", status: false, connected: false } 
     };
   }
 }
@@ -549,20 +565,23 @@ async function fetchMessages(apiUrl: string, apiKey: string, params: any): Promi
 
 async function deleteInstance(apiUrl: string, apiKey: string, instanceName: string): Promise<EvolutionResponse> {
   try {
-    const response = await fetch(`${apiUrl}/instance/delete/${instanceName}`, {
+    // Try /instance/delete/name (v2)
+    let response = await fetch(`${apiUrl}/instance/delete/${instanceName}`, {
       method: "DELETE",
-      headers: {
-        "apikey": apiKey,
-      },
+      headers: { "apikey": apiKey },
     });
 
-    // Evolution might return empty response on successful delete
-    let data = {};
-    try {
-      data = await response.json();
-    } catch {
-      // Empty response is OK for delete
+    // Fallback to /instance/delete?instanceName=... if needed
+    if (!response.ok && response.status !== 404) {
+      const fallbackRes = await fetch(`${apiUrl}/instance/delete?instanceName=${instanceName}`, {
+        method: "DELETE",
+        headers: { "apikey": apiKey },
+      });
+      if (fallbackRes.ok || fallbackRes.status === 404) response = fallbackRes;
     }
+
+    let data = {};
+    try { data = await response.json(); } catch { }
     console.log("Delete instance response:", data);
 
     if (!response.ok && response.status !== 404) {
