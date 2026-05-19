@@ -70,7 +70,7 @@ Deno.serve(async (req) => {
 
     // Fallback to RPC
     const { data, error } = await supabase.rpc('resolve_site_domain', {
-      p_domain: cleanDomain
+      p_domain: bareDomain
     });
 
     if (error) {
