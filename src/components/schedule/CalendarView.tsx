@@ -86,8 +86,10 @@ function ActivityCard({ event, onEditEvent, onEventUpdate, isDragging, style, cl
   const duration = differenceInMinutes(end, start);
   const Icon = eventTypeIcons[event.event_type as EventType] || CalendarIcon;
   
-  // Compact mode for short activities (less than 45 mins)
-  const isCompact = duration < 45;
+  // Granular density modes
+  const isTiny = duration <= 20;          // 15-20 min slot
+  const isCompact = duration < 45;        // 30 min
+  const isNarrow = !!style && typeof (style as any).width === 'string' && (style as any).width.includes('calc(') && parseFloat((style as any).width.match(/calc\((\d+(?:\.\d+)?)/)?.[1] || '100') < 50;
 
   const dragStyle = transform ? {
     transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
@@ -131,6 +133,33 @@ function ActivityCard({ event, onEditEvent, onEventUpdate, isDragging, style, cl
 
   const currentHeight = tempHeight !== null ? tempHeight : (duration * (56 / 60));
 
+  // Tiny mode: single line with just title + time on hover
+  if (isTiny) {
+    return (
+      <div
+        ref={setNodeRef}
+        {...listeners}
+        {...attributes}
+        onClick={(e) => { e.stopPropagation(); onEditEvent?.(event); }}
+        title={`${format(start, 'HH:mm')} - ${format(end, 'HH:mm')} · ${event.title}`}
+        className={cn(
+          "absolute left-0.5 right-0.5 rounded-[4px] border overflow-hidden shadow-sm hover:shadow-md z-10 cursor-grab active:cursor-grabbing group flex items-center px-1.5 gap-1",
+          eventTypeColors[event.event_type as EventType],
+          isDragging && "opacity-50 grayscale",
+          className
+        )}
+        style={{ ...style, ...dragStyle, height: `${currentHeight}px` }}
+      >
+        <span className="text-[9px] font-bold tabular-nums opacity-80 shrink-0">
+          {format(start, 'HH:mm')}
+        </span>
+        <span className="text-[10px] font-black truncate tracking-tight leading-none">
+          {event.title}
+        </span>
+      </div>
+    );
+  }
+
   return (
     <div 
       ref={setNodeRef}
@@ -140,8 +169,9 @@ function ActivityCard({ event, onEditEvent, onEventUpdate, isDragging, style, cl
         e.stopPropagation();
         onEditEvent?.(event);
       }}
+      title={`${format(start, 'HH:mm')} - ${format(end, 'HH:mm')} · ${event.title}`}
       className={cn(
-        "absolute left-1 right-1 rounded-[4px] border-2 overflow-hidden shadow-sm transition-shadow hover:shadow-md z-10 cursor-grab active:cursor-grabbing group",
+        "absolute left-0.5 right-0.5 rounded-[4px] border overflow-hidden shadow-sm transition-shadow hover:shadow-md z-10 cursor-grab active:cursor-grabbing group",
         eventTypeColors[event.event_type as EventType],
         isDragging && "opacity-50 grayscale",
         resizing && "z-50 ring-2 ring-primary ring-offset-1",
@@ -154,35 +184,30 @@ function ActivityCard({ event, onEditEvent, onEventUpdate, isDragging, style, cl
       }}
     >
       <div className={cn(
-        "flex h-full relative",
-        isCompact ? "flex-row items-center gap-2 px-2 py-1" : "flex-col p-2"
+        "flex h-full relative min-h-0",
+        isCompact ? "flex-col gap-0 px-1.5 py-1" : "flex-col p-2"
       )}>
-        <div className={cn(
-          "flex items-center gap-2",
-          !isCompact && "mb-1.5"
+        <span className={cn(
+          "font-black truncate tracking-tight leading-tight",
+          isCompact ? "text-[10px]" : "text-[11px]"
         )}>
-          <span className={cn(
-            "font-black truncate tracking-tight",
-            isCompact ? "text-[10px]" : "text-[11px] leading-tight"
-          )}>
-            {event.title}
-          </span>
-        </div>
+          {event.title}
+        </span>
 
         <div className={cn(
-          "flex items-center gap-2 text-[9px] font-bold opacity-80 tabular-nums shrink-0",
-          isCompact ? "ml-auto" : "mt-auto"
+          "flex items-center gap-2 text-[9px] font-bold opacity-80 tabular-nums shrink-0 min-w-0",
+          isCompact ? "" : "mt-auto"
         )}>
-          <div className="flex items-center gap-1">
-            <Clock className="h-2.5 w-2.5" />
-            <span>
+          <div className="flex items-center gap-1 min-w-0">
+            {!isNarrow && !isCompact && <Clock className="h-2.5 w-2.5 shrink-0" />}
+            <span className="truncate">
               {format(start, 'HH:mm')}
-              {(!isCompact || tempHeight !== null) && ` - ${format(tempHeight !== null ? addMinutes(start, Math.round(tempHeight / (56/60))) : end, 'HH:mm')}`}
+              {!isCompact && ` - ${format(tempHeight !== null ? addMinutes(start, Math.round(tempHeight / (56/60))) : end, 'HH:mm')}`}
             </span>
           </div>
-          {!isCompact && event.lead && (
-            <div className="flex items-center gap-1 max-w-[80px]">
-              <User className="h-2.5 w-2.5" />
+          {!isCompact && !isNarrow && event.lead && (
+            <div className="flex items-center gap-1 max-w-[80px] min-w-0">
+              <User className="h-2.5 w-2.5 shrink-0" />
               <span className="truncate">{event.lead.name}</span>
             </div>
           )}
@@ -473,7 +498,7 @@ export function CalendarView({
                   <div key={hour.toString()} className="h-14 border-b border-border/40 w-full relative">
                     <DroppableSlot 
                       id={`${format(pivotDate, 'yyyy-MM-dd')}|${hourStr}:00`}
-                      className="h-7 border-b border-border/10 w-full cursor-pointer hover:bg-primary/[0.02] transition-colors" 
+                      className="h-7 w-full cursor-pointer hover:bg-primary/[0.02] transition-colors" 
                       onQuickCreate={() => {
                         const clickDate = new Date(pivotDate);
                         clickDate.setHours(hour.getHours(), 0, 0, 0);
@@ -588,7 +613,7 @@ export function CalendarView({
                       <div key={hour.toString()} className="h-14 border-b border-border/40 w-full relative">
                         <DroppableSlot 
                           id={`${format(day, 'yyyy-MM-dd')}|${hourStr}:00`}
-                          className="h-7 border-b border-border/10 w-full cursor-pointer hover:bg-primary/[0.01] transition-colors" 
+                          className="h-7 w-full cursor-pointer hover:bg-primary/[0.01] transition-colors" 
                           onQuickCreate={() => {
                             const clickDate = new Date(day);
                             clickDate.setHours(hour.getHours(), 0, 0, 0);

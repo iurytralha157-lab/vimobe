@@ -38,6 +38,11 @@ export interface ScheduleEvent {
     name: string;
     phone: string | null;
   } | null;
+  property?: {
+    id: string;
+    title: string | null;
+    code: string | null;
+  } | null;
   completed_by_user?: {
     id: string;
     name: string;
@@ -127,6 +132,7 @@ export function useScheduleEvents(options: UseScheduleEventsOptions = {}) {
           completed_by, completed_at,
           user:users!schedule_events_user_id_fkey(id, name, avatar_url),
           lead:leads(id, name, phone),
+          property:properties(id, title, code),
           completed_by_user:users!schedule_events_completed_by_fkey(id, name)
         `)
         .order('start_time', { ascending: true });
@@ -171,6 +177,7 @@ export function useCreateScheduleEvent() {
       is_all_day?: boolean;
       user_id?: string;
       lead_id?: string;
+      property_id?: string | null;
       location?: string;
     }) => {
       if (!profile?.organization_id) throw new Error('Organização não encontrada');
@@ -181,6 +188,7 @@ export function useCreateScheduleEvent() {
           organization_id: profile.organization_id,
           user_id: event.user_id || profile.id,
           lead_id: event.lead_id || null,
+          property_id: event.property_id || null,
           title: event.title,
           description: event.description || null,
           event_type: event.event_type || 'task',

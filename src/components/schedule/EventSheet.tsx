@@ -29,6 +29,7 @@ import {
 } from "@/hooks/use-schedule-events";
 import { useUsers } from "@/hooks/use-users";
 import { useLeads } from "@/hooks/use-leads";
+import { useProperties } from "@/hooks/use-properties";
 import { useScheduleComments } from "@/hooks/use-schedule-comments";
 import { useScheduleEventAssignees } from "@/hooks/use-schedule-event-assignees";
 import { Link } from "react-router-dom";
@@ -88,7 +89,15 @@ export function EventSheet({
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
   const [selectedLeadName, setSelectedLeadName] = useState<string | null>(null);
   const [showLeadSelector, setShowLeadSelector] = useState(false);
-  const { data: searchedLeads = [] } = useLeads({ search: leadSearch, limit: 5 });
+  const { data: searchedLeads = [] } = useLeads({ search: leadSearch, limit: 20 });
+
+  // Property selector (only for "visit" type)
+  const [propertySearch, setPropertySearch] = useState("");
+  const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
+  const [selectedPropertyLabel, setSelectedPropertyLabel] = useState<string | null>(null);
+  const [showPropertySelector, setShowPropertySelector] = useState(false);
+  const { data: searchedProperties = [] } = useProperties(propertySearch);
+
 
   // Assignee picker
   const [showAssigneePicker, setShowAssigneePicker] = useState(false);
@@ -109,6 +118,12 @@ export function EventSheet({
       setTime(event.start_time ? format(new Date(event.start_time), "HH:mm") : getCurrentTimeForInput());
       setSelectedLeadId(event.lead_id || null);
       setSelectedLeadName(event.lead?.name || null);
+      setSelectedPropertyId((event as any).property_id || null);
+      setSelectedPropertyLabel(
+        (event as any).property
+          ? `${(event as any).property.code ? (event as any).property.code + ' · ' : ''}${(event as any).property.title || 'Imóvel'}`
+          : null
+      );
       if (event.start_time && event.end_time) {
         const d = differenceInMinutes(new Date(event.end_time), new Date(event.start_time));
         setDuration(d > 0 ? d : 30);
@@ -122,6 +137,8 @@ export function EventSheet({
       setTime(defaultDate ? format(defaultDate, "HH:mm") : getCurrentTimeForInput());
       setSelectedLeadId(leadId || null);
       setSelectedLeadName(leadName || null);
+      setSelectedPropertyId(null);
+      setSelectedPropertyLabel(null);
       setDuration(30);
       durationTouched.current = false;
     }
@@ -184,10 +201,11 @@ export function EventSheet({
       is_all_day: false,
       user_id: primaryUserId,
       lead_id: selectedLeadId,
+      property_id: selectedType === "visit" ? selectedPropertyId : null,
     };
 
     if (event) {
-      await updateEvent.mutateAsync({ id: event.id, ...payload });
+      await updateEvent.mutateAsync({ id: event.id, ...payload } as any);
     } else {
       const created = await createEvent.mutateAsync(payload);
       // Se houver responsáveis pendentes, adiciona-os agora
@@ -260,7 +278,7 @@ export function EventSheet({
               <Input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="Assunto da atividade"
+                placeholder="Título da atividade"
                 className="text-xl font-bold h-auto border-0 bg-transparent px-0 py-0 focus-visible:ring-0 placeholder:text-muted-foreground/40"
               />
             </div>
@@ -333,24 +351,28 @@ export function EventSheet({
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="p-0 w-[360px]" align="start">
-                  <Command>
-                    <CommandInput placeholder="Buscar lead..." value={leadSearch} onValueChange={setLeadSearch} />
+                  <Command shouldFilter={false}>
+                    <CommandInput placeholder="Buscar por nome, telefone ou e-mail..." value={leadSearch} onValueChange={setLeadSearch} />
                     <CommandList>
                       <CommandEmpty>Nenhum lead encontrado.</CommandEmpty>
                       <CommandGroup>
                         {searchedLeads.map((l) => (
                           <CommandItem
                             key={l.id}
+                            value={l.id}
                             onSelect={() => {
                               setSelectedLeadId(l.id);
                               setSelectedLeadName(l.name);
                               setShowLeadSelector(false);
+                              setLeadSearch("");
                             }}
                           >
-                            <User className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
-                            <div className="flex flex-col">
-                              <span className="text-sm font-medium">{l.name}</span>
-                              <span className="text-[10px] text-muted-foreground">{l.phone || l.email}</span>
+                            <User className="h-3.5 w-3.5 mr-2 text-muted-foreground shrink-0" />
+                            <div className="flex flex-col min-w-0">
+                              <span className="text-sm font-medium truncate">{l.name}</span>
+                              <span className="text-[10px] text-muted-foreground truncate">
+                                {[l.phone, l.email].filter(Boolean).join(" · ") || "Sem contato"}
+                              </span>
                             </div>
                           </CommandItem>
                         ))}
@@ -363,6 +385,79 @@ export function EventSheet({
               <span className="text-sm text-muted-foreground">Sem lead</span>
             )}
           </Field>
+
+          {/* Imóvel (apenas para visitas) */}
+          {selectedType === "visit" && (
+            <Field label="Imóvel da visita" icon={Building2}>
+              {selectedPropertyId ? (
+                <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-white/5 border border-white/10">
+                  <Link
+                    to={`/imoveis/${selectedPropertyId}`}
+                    className="text-sm font-medium hover:text-primary transition-colors truncate"
+                  >
+                    {selectedPropertyLabel || "Imóvel selecionado"}
+                  </Link>
+                  {!locked && (
+                    <Button
+                      variant="ghost" size="icon" className="h-6 w-6 shrink-0"
+                      onClick={() => { setSelectedPropertyId(null); setSelectedPropertyLabel(null); }}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  )}
+                </div>
+              ) : !locked ? (
+                <Popover open={showPropertySelector} onOpenChange={setShowPropertySelector}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm" className="w-full justify-start text-muted-foreground border-dashed">
+                      <Search className="mr-2 h-3 w-3" /> Vincular um imóvel...
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="p-0 w-[380px]" align="start">
+                    <Command shouldFilter={false}>
+                      <CommandInput
+                        placeholder="Buscar por código, título ou bairro..."
+                        value={propertySearch}
+                        onValueChange={setPropertySearch}
+                      />
+                      <CommandList>
+                        <CommandEmpty>Nenhum imóvel encontrado.</CommandEmpty>
+                        <CommandGroup>
+                          {searchedProperties.slice(0, 20).map((p: any) => {
+                            const label = `${p.code ? p.code + ' · ' : ''}${p.title || 'Imóvel'}`;
+                            return (
+                              <CommandItem
+                                key={p.id}
+                                value={p.id}
+                                onSelect={() => {
+                                  setSelectedPropertyId(p.id);
+                                  setSelectedPropertyLabel(label);
+                                  setShowPropertySelector(false);
+                                  setPropertySearch("");
+                                }}
+                              >
+                                <Building2 className="h-3.5 w-3.5 mr-2 text-muted-foreground shrink-0" />
+                                <div className="flex flex-col min-w-0">
+                                  <span className="text-sm font-medium truncate">{label}</span>
+                                  <span className="text-[10px] text-muted-foreground truncate">
+                                    {[p.bairro, p.cidade, p.uf].filter(Boolean).join(", ") || "Sem localização"}
+                                  </span>
+                                </div>
+                              </CommandItem>
+                            );
+                          })}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              ) : (
+                <span className="text-sm text-muted-foreground">Sem imóvel</span>
+              )}
+            </Field>
+          )}
+
+
 
           {/* Responsáveis */}
           <Field label="Responsáveis" icon={Users}>
