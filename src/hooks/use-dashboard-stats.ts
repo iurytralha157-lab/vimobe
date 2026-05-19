@@ -233,8 +233,8 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
           if (filters.adId) prevQuery = prevQuery.eq('lead_meta.ad_id', filters.adId);
         }
         
-        if (filters?.userId) prevQuery = prevQuery.eq('assigned_user_id', filters.userId);
         if (filters?.source) prevQuery = prevQuery.eq('source', filters.source);
+        prevQuery = applyVisibilityFilter(prevQuery, visibility, 'assigned_user_id', filters?.userId);
         
         const { count: prevTotal } = await prevQuery;
 
