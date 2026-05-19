@@ -8331,6 +8331,7 @@ export type Database = {
         Returns: boolean
       }
       cleanup_orphan_members: { Args: never; Returns: Json }
+      cleanup_whatsapp_retention: { Args: never; Returns: undefined }
       create_default_stages_for_pipeline: {
         Args: { p_org_id: string; p_pipeline_id: string }
         Returns: undefined
