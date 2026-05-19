@@ -389,37 +389,60 @@ function RealEstateFinancialDashboard({ data }: { data: ReturnType<typeof useFin
         {/* KPIs Grid */}
         <div className="grid grid-cols-2 gap-3 md:gap-6 lg:grid-cols-4">
           <PremiumFinancialCard
-            title="VGV Líquido"
-            value={formatCurrency(data?.totalContractsValue || 0)}
+            title="VGV Bruto"
+            value={formatCurrency(data?.vgvBruto || 0)}
             description={`${data?.activeContracts || 0} contratos ativos`}
             icon={Award}
             variant="primary"
-            trend={{ value: 12.5, isPositive: true }}
             chartData={data?.monthlyData?.map(m => ({ value: m.receitas }))}
+          />
+          <PremiumFinancialCard
+            title="VGV Líquido"
+            value={formatCurrency(data?.vgvLiquido || 0)}
+            description="Líquido de comissões"
+            icon={Target}
+            variant="success"
           />
           <PremiumFinancialCard
             title="Ticket Médio"
             value={formatCurrency(data?.avgTicket || 0)}
             description="Média por contrato"
-            icon={Target}
+            icon={FileText}
+          />
+          <PremiumFinancialCard
+            title="Receita Confirmada (30d)"
+            value={formatCurrency(data?.confirmedRevenue30 || 0)}
+            description="Entradas pagas nos últimos 30 dias"
+            icon={TrendingUp}
+            variant="success"
             chartData={data?.monthlyData?.map(m => ({ value: m.receitas }))}
           />
           <PremiumFinancialCard
-            title="Faturamento (30d)"
+            title="A Receber (30d)"
             value={formatCurrency(data?.receivable30 || 0)}
             description="Entradas previstas"
-            icon={TrendingUp}
-            variant="success"
-            trend={{ value: 8.2, isPositive: true }}
-            chartData={data?.monthlyData?.map(m => ({ value: m.receitas }))}
+            icon={Calendar}
+          />
+          <PremiumFinancialCard
+            title="A Pagar"
+            value={formatCurrency(data?.totalPayable || 0)}
+            description="Despesas em aberto"
+            icon={TrendingDown}
+            variant="warning"
+          />
+          <PremiumFinancialCard
+            title="Vencidos"
+            value={formatCurrency((data?.overdueReceivables || 0) + (data?.overduePayables || 0))}
+            description="Atrasados"
+            icon={AlertTriangle}
+            variant="destructive"
           />
           <PremiumFinancialCard
             title="Taxa de Inadimplência"
-            value={`${data?.defaultRate?.toFixed(1)}%`}
-            description="Sobre o previsto"
+            value={`${(data?.defaultRate || 0).toFixed(1)}%`}
+            description="Vencidos / total previsto"
             icon={AlertTriangle}
             variant="destructive"
-            trend={{ value: 1.4, isPositive: false }}
           />
         </div>
 
