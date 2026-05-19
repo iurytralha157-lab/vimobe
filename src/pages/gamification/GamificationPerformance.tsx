@@ -217,17 +217,17 @@ export default function GamificationPerformance() {
                 <AreaChart data={chartData}>
                   <defs>
                     <linearGradient id="colorPoints" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#6366f1" stopOpacity={0.1}/>
-                      <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
+                      <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 12}} />
-                  <YAxis axisLine={false} tickLine={false} tick={{fontSize: 12}} />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 12, fill: 'hsl(var(--muted-foreground))'}} />
+                  <YAxis axisLine={false} tickLine={false} tick={{fontSize: 12, fill: 'hsl(var(--muted-foreground))'}} />
                   <Tooltip 
-                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                    contentStyle={{ borderRadius: '8px', border: '1px solid hsl(var(--border))', background: 'hsl(var(--popover))', color: 'hsl(var(--popover-foreground))' }}
                   />
-                  <Area type="monotone" dataKey="pontos" stroke="#6366f1" fillOpacity={1} fill="url(#colorPoints)" strokeWidth={2} />
+                  <Area type="monotone" dataKey="pontos" stroke="hsl(var(--primary))" fillOpacity={1} fill="url(#colorPoints)" strokeWidth={2} />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -245,14 +245,14 @@ export default function GamificationPerformance() {
             <div className="h-[300px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 12}} />
-                  <YAxis axisLine={false} tickLine={false} tick={{fontSize: 12}} />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 12, fill: 'hsl(var(--muted-foreground))'}} />
+                  <YAxis axisLine={false} tickLine={false} tick={{fontSize: 12, fill: 'hsl(var(--muted-foreground))'}} />
                   <Tooltip 
-                    cursor={{fill: '#f8fafc'}}
-                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                    cursor={{fill: 'hsl(var(--muted) / 0.4)'}}
+                    contentStyle={{ borderRadius: '8px', border: '1px solid hsl(var(--border))', background: 'hsl(var(--popover))', color: 'hsl(var(--popover-foreground))' }}
                   />
-                  <Bar dataKey="acoes" fill="#10b981" radius={[4, 4, 0, 0]} barSize={40} />
+                  <Bar dataKey="acoes" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} barSize={40} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
