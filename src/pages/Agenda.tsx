@@ -686,6 +686,8 @@ export default function Agenda() {
     { key: "visit", label: "Visita" },
   ];
 
+  const activeFiltersCount = (selectedUserId ? 1 : 0);
+
   return (
     <AppLayout title="Agenda" disableMainScroll={true}>
       <div
@@ -768,25 +770,107 @@ export default function Agenda() {
                 ? `${format(startOfWeek(pivotDate, { weekStartsOn: 0 }), "d", { locale: ptBR })} – ${format(endOfWeek(pivotDate, { weekStartsOn: 0 }), "d 'de' MMMM, yyyy", { locale: ptBR })}`
                 : format(pivotDate, "MMMM yyyy", { locale: ptBR })}
             </span>
-            <button
-              onClick={() => setEventFormOpen(true)}
-              style={{
-                background: "#ff4e1a",
-                color: "#fff",
-                border: "none",
-                borderRadius: 10,
-                padding: "7px 16px",
-                fontSize: 12,
-                fontWeight: 700,
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                letterSpacing: "0.04em",
-              }}
-            >
-              <Plus size={15} /> Novo agendamento
-            </button>
+            
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              {/* Novo Botão de Filtros */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={cn(
+                      "h-9 gap-2 border border-[rgba(255,255,255,0.1)] hover:bg-[rgba(255,255,255,0.05)] text-[var(--color-text-secondary)]",
+                      activeFiltersCount > 0 && "text-[#ff4e1a] border-[#ff4e1a]/30 bg-[#ff4e1a]/10"
+                    )}
+                  >
+                    <SlidersHorizontal size={14} />
+                    <span>Filtros</span>
+                    {activeFiltersCount > 0 && (
+                      <Badge variant="secondary" className="h-5 px-1.5 min-w-[20px] bg-[#ff4e1a] text-white hover:bg-[#ff4e1a]">
+                        {activeFiltersCount}
+                      </Badge>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80 p-0 bg-[var(--color-background-secondary)] border-[0.5px solid rgba(255,255,255,0.1)] shadow-xl" align="end">
+                  <div className="p-4 flex flex-col gap-6">
+                    {/* Visualização */}
+                    <div className="flex flex-col gap-3">
+                      <SideLabel>Visualização</SideLabel>
+                      <div className="grid grid-cols-2 gap-2">
+                        {VIEW_MODES.map((m) => {
+                          const active = viewMode === m.value;
+                          const Icon = m.icon;
+                          return (
+                            <button
+                              key={m.value}
+                              onClick={() => setViewMode(m.value as any)}
+                              className={cn(
+                                "flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all border",
+                                active 
+                                  ? "border-[#ff4e1a] bg-[#ff4e1a]/15 text-[#ff4e1a]" 
+                                  : "border-[rgba(255,255,255,0.1)] bg-transparent text-[var(--color-text-secondary)] hover:bg-[rgba(255,255,255,0.05)]"
+                              )}
+                            >
+                              <Icon size={14} />
+                              {m.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Filtro de Equipe */}
+                    {canFilterUsers && (
+                      <div className="flex flex-col gap-3">
+                        <SideLabel>Filtro por Equipe</SideLabel>
+                        <UserFilter 
+                          users={users} 
+                          selectedUserId={selectedUserId} 
+                          onUserSelect={setSelectedUserId} 
+                        />
+                      </div>
+                    )}
+
+                    {(activeFiltersCount > 0) && (
+                      <div className="pt-4 border-t border-[rgba(255,255,255,0.07)]">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="w-full text-xs gap-2 text-red-400 hover:text-red-300 hover:bg-red-400/10"
+                          onClick={() => {
+                            setSelectedUserId(null);
+                          }}
+                        >
+                          <Trash2 size={13} />
+                          Limpar filtros
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </PopoverContent>
+              </Popover>
+
+              <button
+                onClick={() => setEventFormOpen(true)}
+                style={{
+                  background: "#ff4e1a",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 10,
+                  padding: "7px 16px",
+                  fontSize: 12,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  letterSpacing: "0.04em",
+                }}
+              >
+                <Plus size={15} /> Novo
+              </button>
+            </div>
           </div>
 
           {/* Calendário / lista */}
@@ -844,234 +928,16 @@ export default function Agenda() {
           </div>
         </div>
 
-        {/* ── Sidebar direita ── */}
-        <div
-          style={{
-            width: detailEvent ? 320 : 280,
-            flexShrink: 0,
-            display: "flex",
-            flexDirection: "column",
-            borderLeft: "0.5px solid rgba(255,255,255,0.07)",
-            background: "var(--color-background-secondary)",
-            transition: "width 0.2s ease",
-            overflow: "hidden",
-          }}
-        >
-          {detailEvent ? (
-            // Painel de detalhes do evento selecionado
-            <EventDetailPanel event={detailEvent} onClose={() => setDetailEvent(null)} onMarkDone={handleMarkDone} />
-          ) : (
-            // Sidebar padrão
-            <ScrollArea style={{ flex: 1 }}>
-              <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 24 }}>
-                {/* Filtro por equipe */}
-                {canFilterUsers && (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    <SideLabel>Filtro por Equipe</SideLabel>
-                    <UserFilter users={users} selectedUserId={selectedUserId} onUserSelect={setSelectedUserId} />
-                  </div>
-                )}
-
-                {/* Visualização */}
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  <SideLabel>Visualização</SideLabel>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
-                    {VIEW_MODES.map((m) => {
-                      const active = viewMode === m.value;
-                      const Icon = m.icon;
-                      return (
-                        <button
-                          key={m.value}
-                          onClick={() => setViewMode(m.value as any)}
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 6,
-                            padding: "7px 10px",
-                            borderRadius: 10,
-                            fontSize: 12,
-                            fontWeight: 500,
-                            cursor: "pointer",
-                            border: "0.5px solid",
-                            borderColor: active ? "#ff4e1a" : "rgba(255,255,255,0.1)",
-                            background: active ? "rgba(255,78,26,0.12)" : "transparent",
-                            color: active ? "#ff4e1a" : "var(--color-text-secondary)",
-                            transition: "all 0.15s",
-                          }}
-                        >
-                          <Icon size={13} /> {m.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <Divider />
-
-                {/* Resumo da semana */}
-                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                  <SideLabel>Resumo da Semana</SideLabel>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                    <StatCard value={weekStats.pending} label="Pendentes" color="#f59e0b" />
-                    <StatCard value={weekStats.completed} label="Concluídos" color="#22c55e" />
-                  </div>
-                  <div
-                    style={{
-                      background: "rgba(255,255,255,0.03)",
-                      border: "0.5px solid rgba(255,255,255,0.07)",
-                      borderRadius: 12,
-                      padding: "10px 12px",
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: 8,
-                    }}
-                  >
-                    {[
-                      { label: "Reuniões", value: weekStats.meetings, color: "#8b5cf6" },
-                      { label: "Visitas", value: weekStats.visits, color: "#ec4899" },
-                      { label: "Tarefas", value: weekStats.tasks, color: "#6366f1" },
-                    ].map((s) => (
-                      <div
-                        key={s.label}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "space-between",
-                          fontSize: 12,
-                          fontWeight: 500,
-                        }}
-                      >
-                        <span
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 6,
-                            color: "var(--color-text-secondary)",
-                          }}
-                        >
-                          <div style={{ width: 6, height: 6, borderRadius: "50%", background: s.color }} />
-                          {s.label}
-                        </span>
-                        <span style={{ color: "var(--color-text-primary)" }}>{s.value}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <Divider />
-
-                {/* Atividades do dia selecionado */}
-                <div style={{ display: "flex", flexDirection: "column", gap: 10, paddingBottom: 16 }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <SideLabel>
-                      {startOfDay(selectedDate).getTime() === startOfDay(new Date()).getTime()
-                        ? "Hoje"
-                        : format(selectedDate, "dd/MM")}
-                    </SideLabel>
-                    <span
-                      style={{
-                        fontSize: 10,
-                        fontWeight: 700,
-                        color: "#ff4e1a",
-                        background: "rgba(255,78,26,0.1)",
-                        padding: "2px 8px",
-                        borderRadius: 20,
-                      }}
-                    >
-                      {selectedDayEvents.length} atividades
-                    </span>
-                  </div>
-
-                  {selectedDayEvents.length > 0 ? (
-                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                      {selectedDayEvents.map((ev) => {
-                        const conf = EVENT_TYPE_CONFIG[ev.event_type] ?? EVENT_TYPE_CONFIG.task;
-                        return (
-                          <div
-                            key={ev.id}
-                            onClick={() => setDetailEvent(ev)}
-                            style={{
-                              background: "rgba(255,255,255,0.03)",
-                              border: "0.5px solid rgba(255,255,255,0.07)",
-                              borderLeft: `3px solid ${conf.color}`,
-                              borderRadius: 10,
-                              padding: "10px 12px",
-                              cursor: "pointer",
-                              transition: "all 0.15s",
-                            }}
-                            onMouseEnter={(e) =>
-                              ((e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.06)")
-                            }
-                            onMouseLeave={(e) =>
-                              ((e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.03)")
-                            }
-                          >
-                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                              <div
-                                style={{
-                                  fontSize: 12,
-                                  fontWeight: 600,
-                                  color: "var(--color-text-primary)",
-                                  flex: 1,
-                                  minWidth: 0,
-                                  overflow: "hidden",
-                                  textOverflow: "ellipsis",
-                                  whiteSpace: "nowrap",
-                                }}
-                              >
-                                {ev.title}
-                              </div>
-                              {ev.status === "completed" && (
-                                <CheckCircle2 size={13} style={{ color: "#22c55e", flexShrink: 0 }} />
-                              )}
-                            </div>
-                            <div
-                              style={{
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "space-between",
-                                marginTop: 4,
-                              }}
-                            >
-                              <span style={{ fontSize: 10, color: "var(--color-text-tertiary)" }}>
-                                {format(new Date(ev.start_time), "HH:mm")}
-                              </span>
-                              {ev.user && <Avatar name={ev.user.name} size={20} />}
-                            </div>
-                            {ev.lead && (
-                              <div style={{ fontSize: 10, color: "var(--color-text-tertiary)", marginTop: 3 }}>
-                                {ev.lead.name}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div
-                      style={{
-                        border: "1px dashed rgba(255,255,255,0.08)",
-                        borderRadius: 12,
-                        padding: "24px 0",
-                        textAlign: "center",
-                        fontSize: 11,
-                        color: "var(--color-text-tertiary)",
-                        fontWeight: 600,
-                        textTransform: "uppercase",
-                        letterSpacing: "0.05em",
-                      }}
-                    >
-                      Nenhuma atividade
-                    </div>
-                  )}
-                </div>
-              </div>
-            </ScrollArea>
-          )}
-        </div>
+        {/* ── Painel de Detalhes (Overlay lateral) ── */}
+        {detailEvent && (
+          <EventDetailPanel 
+            event={detailEvent} 
+            onClose={() => setDetailEvent(null)} 
+            onMarkDone={handleMarkDone} 
+          />
+        )}
       </div>
 
-      {/* EventForm permanece igual */}
       <EventForm
         open={eventFormOpen}
         onOpenChange={handleCloseEventForm}
