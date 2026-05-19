@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import {
   Sheet,
   SheetContent,
@@ -16,16 +16,25 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
 import { 
   Upload, 
   Download, 
   FileSpreadsheet, 
   Loader2,
   CheckCircle2,
+  Users,
+  User as UserIcon,
+  Tag as TagIcon,
+  Plus,
 } from 'lucide-react';
 import { usePipelines, useStages } from '@/hooks/use-stages';
 import { useOrganizationUsers } from '@/hooks/use-users';
-import { useCreateLead } from '@/hooks/use-leads';
+import { useCreateLead, useLeads } from '@/hooks/use-leads';
+import { useTeams } from '@/hooks/use-teams';
+import { useTags, useCreateTag } from '@/hooks/use-tags';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import ExcelJS from 'exceljs';
 import { cn } from '@/lib/utils';
