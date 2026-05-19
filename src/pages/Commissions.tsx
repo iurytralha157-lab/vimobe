@@ -425,15 +425,18 @@ export default function Commissions() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="w-full grid grid-cols-4">
-            <TabsTrigger value="pending" className="text-xs sm:text-sm">
-              Pendentes
-            </TabsTrigger>
-            <TabsTrigger value="history" className="text-xs sm:text-sm">
-              Histórico
-            </TabsTrigger>
+          <TabsList className="w-full grid grid-cols-5">
             <TabsTrigger value="forecast" className="text-xs sm:text-sm">
-              Previsão
+              Previstas
+            </TabsTrigger>
+            <TabsTrigger value="pending" className="text-xs sm:text-sm">
+              Liberadas
+            </TabsTrigger>
+            <TabsTrigger value="approved" className="text-xs sm:text-sm">
+              Aprovadas
+            </TabsTrigger>
+            <TabsTrigger value="paid" className="text-xs sm:text-sm">
+              Pagas
             </TabsTrigger>
             <TabsTrigger value="rules" className="text-xs sm:text-sm">
               Regras
@@ -441,7 +444,7 @@ export default function Commissions() {
           </TabsList>
 
           {/* Commissions Tabs */}
-          {['pending', 'history', 'forecast'].map((tab) => (
+          {['forecast', 'pending', 'approved', 'paid'].map((tab) => (
             <TabsContent key={tab} value={tab}>
               <Card>
                 <CardHeader className="p-3 sm:p-4 md:p-6 pb-2 sm:pb-3 md:pb-4">
