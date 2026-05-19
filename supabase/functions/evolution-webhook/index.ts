@@ -623,15 +623,28 @@ async function handleMessagesUpsert(
           await fetchAndSaveProfilePicture(supabase, session, conversation.id, contactPhone);
         }
 
-        // Auto-create lead ONLY for Facebook Ads leads (ctwa_ad)
-        // Normal WhatsApp conversations stay as just conversations without creating leads
-        if (!isGroup && !fromMe && isFromFacebookAds) {
-          await createLeadFromConversation(
-            supabase, session, conversation, contactName, contactPhone, content,
-            isFromFacebookAds, adSource
-          );
-        } else if (!isGroup && !fromMe) {
-          console.log(`Conversation without Facebook Ads - not creating lead for: ${contactPhone}`);
+        // ===== HUB: identificação & distribuição inbound =====
+        // Cria lead se vier do Meta Ads OU se casar com alguma regra de inbound configurada.
+        if (!isGroup && !fromMe) {
+          const adContext = extractAdContext(contextInfo);
+          const utm = extractUtmFromText(content || "");
+          const matchedRule = await applyInboundRules(supabase, session, {
+            content: content || "",
+            pushName: messageData.pushName || "",
+            phone: contactPhone,
+            adContext,
+            utm,
+          });
+
+          if (isFromFacebookAds || matchedRule) {
+            await createLeadFromConversation(
+              supabase, session, conversation, contactName, contactPhone, content,
+              isFromFacebookAds, adSource,
+              { rule: matchedRule, adContext, utm }
+            );
+          } else {
+            console.log(`Conversation sem match de regra/ads - sem criação de lead: ${contactPhone}`);
+          }
         }
 
         // ===== AUTO-LINK: Link new conversation to existing lead by phone =====
