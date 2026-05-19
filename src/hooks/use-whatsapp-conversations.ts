@@ -200,13 +200,13 @@ export function useWhatsAppConversations(
       return conversations;
     },
     enabled: !!profile?.organization_id,
-    // Fallback polling: refetch every 15s if realtime fails
-    // Refetch less often automatically, rely more on realtime
-    refetchInterval: 30000, 
+    // Realtime push via WhatsAppRealtimeBus + 2min safety refetch
+    refetchInterval: 120_000,
     refetchIntervalInBackground: false,
-    staleTime: 10000,
-    gcTime: 1000 * 60 * 5,
+    staleTime: 60_000,
+    gcTime: 1000 * 60 * 10,
   });
+
 }
 
 export function useWhatsAppConversation(conversationId: string | null) {
