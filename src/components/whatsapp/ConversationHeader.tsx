@@ -272,6 +272,13 @@ export function ConversationHeader({
       </div>
 
       <div className="flex items-center gap-1 shrink-0">
+        {sessionId && conversationId && remoteJid && !isGroup && (
+          <LabelsPopover
+            sessionId={sessionId}
+            conversationId={conversationId}
+            remoteJid={remoteJid}
+          />
+        )}
         {leadId ? (
           <Button variant="ghost" size="sm" className="h-8 text-xs" asChild>
             <Link to={`/crm/pipelines?lead=${leadId}`}>
