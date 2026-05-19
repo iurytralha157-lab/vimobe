@@ -148,7 +148,7 @@ function buildCall(action: string, payload: any): ProxyCall {
 }
 
 
-async function callEvolutionGo(c: ProxyCall) {
+async function callEvolutionGo(c: ProxyCall, action?: string) {
   const url = new URL(`${API_URL}${c.path}`);
   if (c.query) {
     for (const [k, v] of Object.entries(c.query)) {
@@ -156,20 +156,26 @@ async function callEvolutionGo(c: ProxyCall) {
     }
   }
 
-  // For Evolution Go, the global API_KEY is often required for all calls.
-  // We use the global API_KEY by default as it usually has management permissions.
   const headers: Record<string, string> = {
     "apikey": API_KEY,
     "Content-Type": "application/json",
   };
   
-  // If a specific token is provided, we can include it in a separate header if the API supports it
-  // or use it as apikey if it's explicitly required. For instance management, API_KEY is usually preferred.
   if (c.token && c.token !== "default_token" && c.path.includes("/send")) {
     headers["apikey"] = c.token;
   }
   
   if (c.instanceId) headers["instanceId"] = c.instanceId;
+
+  if (action === "instance.qr") {
+    console.log(`[DEBUG] instance.qr Pre-fetch:`, {
+      action,
+      instanceId: c.instanceId,
+      url: url.toString(),
+      method: c.method,
+      headers: { ...headers, apikey: headers.apikey ? `${headers.apikey.substring(0, 5)}***` : undefined }
+    });
+  }
 
   const init: RequestInit = { method: c.method, headers };
   if (c.body !== undefined && c.method !== "GET") {
@@ -177,15 +183,31 @@ async function callEvolutionGo(c: ProxyCall) {
   }
 
   const res = await fetch(url.toString(), init);
-  const text = await res.text();
+  const rawText = await res.text();
+  
+  if (action === "instance.qr") {
+    console.log(`[DEBUG] instance.qr Post-fetch:`, {
+      status: res.status,
+      contentType: res.headers.get("content-type"),
+      rawText: rawText
+    });
+  }
+
   let data: any;
-  try { data = text ? JSON.parse(text) : null; } catch { data = { raw: text }; }
+  try { 
+    data = rawText ? JSON.parse(rawText) : null; 
+  } catch (err) { 
+    if (action === "instance.qr") {
+      console.log(`[DEBUG] instance.qr JSON parse error:`, err.message);
+    }
+    data = { raw: rawText }; 
+  }
   
   if (!res.ok) {
     console.error(`[evolution-go-proxy] ${c.method} ${c.path} -> ${res.status}`, JSON.stringify(data));
   }
   
-  return { status: res.status, ok: res.ok, data };
+  return { status: res.status, ok: res.ok, data, rawText };
 }
 
 
