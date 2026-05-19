@@ -75,6 +75,8 @@ export function WhatsAppTab() {
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [isRefreshingQr, setIsRefreshingQr] = useState(false);
   const [verifyingSessionId, setVerifyingSessionId] = useState<string | null>(null);
+  const [labelsSession, setLabelsSession] = useState<WhatsAppSession | null>(null);
+  const [groupsSession, setGroupsSession] = useState<WhatsAppSession | null>(null);
 
   // Refs para evitar stale closures no polling
   const selectedSessionRef = useRef(selectedSession);
