@@ -320,7 +320,7 @@ export default function Agenda() {
               </Popover>
 
               <button
-                onClick={() => setEventFormOpen(true)}
+                onClick={openCreateSheet}
                 style={{
                   background: "#ff4e1a",
                   color: "#fff",
