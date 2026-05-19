@@ -1,235 +1,281 @@
-## Refatoração WhatsApp como HUB de Leads
 
-Objetivo: transformar `whatsapp_session_access` de "espelhamento total" em "permissão operacional", criar identificação/distribuição automática de leads e blindar visibilidade por RLS.
+# Integração Evolution Go — Plano em Fases
 
-### Diagnóstico crítico (já investigado)
+## Visão Geral
 
-1. **Furo de RLS atual:** existem DUAS policies de SELECT em `whatsapp_conversations` (`conversations_privacy_policy` + `conversations_select` antiga). PostgreSQL faz OR entre policies, então a antiga (`can_access_whatsapp_session`) **anula** a nova "apenas leads". Mesma situação em `whatsapp_messages`. Precisamos consolidar.
-2. **Reaproveitar infra existente:** `round_robins` + `round_robin_rules` (já fazem match por `campaign`/`source`/palavra-chave via `match_type/match_value`), `lead_assignment_history`, `leads.assigned_user_id`, `team_members.is_leader`. Não recriar.
-3. **Leads já têm:** `source`, `source_session_id`, `meta_lead_id`, `meta_form_id`, `assigned_user_id`. Falta `meta_campaign_id`, `meta_adset_id`, `meta_ad_id`, `meta_click_id`, `utm_source/medium/campaign/content/term`.
-4. **Fluxo inbound:** `evolution-webhook/index.ts` já cria conversas e tem hook `automation-trigger`. É o ponto natural para inserir identificação+distribuição automática.
+O Evolution Go é uma reescrita em Golang do Evolution API tradicional. A documentação Swagger está em `https://evogo.vettercompany.com.br/swagger/index.html`. As rotas são similares mas com diferenças importantes:
+
+- **Endpoints novos / diferentes**: `/instance/create`, `/instance/connect`, `/instance/qr`, `/instance/status`, `/instance/forcereconnect/{id}`, `/instance/pair`, `/send/text`, `/send/media`, `/send/audio` (via `/send/media`), `/message/downloadimage`, `/message/edit`, `/message/delete`, `/message/markread`, `/message/react`, `/chat/history-sync-request`, `/chat/archive|mute|pin`, `/label`, `/label/chat`, `/label/message`, `/group/*`, `/user/avatar`, `/user/contacts`, `/user/check`.
+- **Autenticação**: header `apikey` global + `instanceId` por instância (mesmo modelo do Evolution clássico).
+- **Webhook**: configurado por instância (eventos `messages.upsert`, `connection.update`, `qrcode.updated`, etc., compatíveis com o webhook atual com pequenas diferenças de payload).
+
+Objetivo: **reutilizar** toda a UI/infra de Conversas, manter histórico antigo e ligar uma nova instância pelo provider “Evolution Go” em paralelo, com QR code, download de mídia, áudio PTT, labels, grupos e som novo de notificação.
 
 ---
 
-### Fase 1 — Schema (SQLs numerados pra rodar no Supabase)
+## Pré-requisitos (Secrets)
 
-**SQL 1 — Tracking Meta/UTM nos leads**
-```sql
-ALTER TABLE public.leads
-  ADD COLUMN IF NOT EXISTS meta_campaign_id text,
-  ADD COLUMN IF NOT EXISTS meta_adset_id text,
-  ADD COLUMN IF NOT EXISTS meta_ad_id text,
-  ADD COLUMN IF NOT EXISTS meta_click_id text,
-  ADD COLUMN IF NOT EXISTS utm_source text,
-  ADD COLUMN IF NOT EXISTS utm_medium text,
-  ADD COLUMN IF NOT EXISTS utm_campaign text,
-  ADD COLUMN IF NOT EXISTS utm_content text,
-  ADD COLUMN IF NOT EXISTS utm_term text,
-  ADD COLUMN IF NOT EXISTS initial_message text;
-CREATE INDEX IF NOT EXISTS idx_leads_meta_campaign ON public.leads(meta_campaign_id);
-CREATE INDEX IF NOT EXISTS idx_leads_meta_click ON public.leads(meta_click_id);
-```
+Precisamos das seguintes chaves (vou pedir via tool após aprovação do plano):
 
-**SQL 2 — Regras de identificação inbound de WhatsApp**
+1. `EVOLUTION_GO_API_URL` — ex.: `https://evogo.vettercompany.com.br`
+2. `EVOLUTION_GO_API_KEY` — chave global (apikey) do Evolution Go
+
+Mantemos as secrets antigas `EVOLUTION_API_URL` / `EVOLUTION_API_KEY` para o legado continuar funcionando.
+
+---
+
+## Fase 1 — Esquema de banco (provider + audit)
+
+Adiciona uma coluna `provider` em `whatsapp_sessions` para diferenciar `evolution` (legado) de `evolution_go`. Mantém todo o histórico intacto. Inclui colunas para suporte a labels, grupos e configurações avançadas.
+
 ```sql
-CREATE TABLE IF NOT EXISTS public.whatsapp_inbound_rules (
+-- Phase 1: Evolution Go provider support
+ALTER TABLE public.whatsapp_sessions
+  ADD COLUMN IF NOT EXISTS provider text NOT NULL DEFAULT 'evolution'
+    CHECK (provider IN ('evolution','evolution_go'));
+
+ALTER TABLE public.whatsapp_sessions
+  ADD COLUMN IF NOT EXISTS advanced_settings jsonb DEFAULT '{}'::jsonb;
+
+-- Labels (tags do WhatsApp)
+CREATE TABLE IF NOT EXISTS public.whatsapp_labels (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  organization_id uuid NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
-  session_id uuid REFERENCES public.whatsapp_sessions(id) ON DELETE CASCADE, -- null = todas as sessões da org
-  name text NOT NULL,
-  priority integer NOT NULL DEFAULT 100,
-  is_active boolean NOT NULL DEFAULT true,
-  -- matching
-  match_type text NOT NULL CHECK (match_type IN ('contains','equals','regex','utm','meta_ctwa','any')),
-  match_value text,                -- palavra/regex/utm-campaign etc
-  match_field text DEFAULT 'message', -- message|push_name|phone|meta_source_id
-  -- routing
-  target_round_robin_id uuid REFERENCES public.round_robins(id) ON DELETE SET NULL,
-  target_team_id uuid REFERENCES public.teams(id) ON DELETE SET NULL,
-  target_user_id uuid,             -- assigned_user_id direto, opcional
-  target_pipeline_id uuid REFERENCES public.pipelines(id) ON DELETE SET NULL,
-  target_stage_id uuid REFERENCES public.pipeline_stages(id) ON DELETE SET NULL,
-  -- enrichment
-  source_label text,               -- preenche leads.source
-  campaign_label text,             -- preenche leads.utm_campaign
-  created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now()
-);
-CREATE INDEX IF NOT EXISTS idx_inbound_rules_org_active
-  ON public.whatsapp_inbound_rules(organization_id, is_active, priority);
-ALTER TABLE public.whatsapp_inbound_rules ENABLE ROW LEVEL SECURITY;
-CREATE POLICY inbound_rules_select ON public.whatsapp_inbound_rules
-  FOR SELECT USING (organization_id = get_user_organization_id() OR is_super_admin());
-CREATE POLICY inbound_rules_manage ON public.whatsapp_inbound_rules
-  FOR ALL USING ((organization_id = get_user_organization_id() AND is_admin()) OR is_super_admin())
-  WITH CHECK ((organization_id = get_user_organization_id() AND is_admin()) OR is_super_admin());
-```
-
-**SQL 3 — Log de identificação/distribuição**
-```sql
-CREATE TABLE IF NOT EXISTS public.whatsapp_inbound_logs (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  session_id uuid NOT NULL REFERENCES public.whatsapp_sessions(id) ON DELETE CASCADE,
   organization_id uuid NOT NULL,
-  session_id uuid,
-  conversation_id uuid,
-  lead_id uuid,
-  matched_rule_id uuid,
-  match_details jsonb,
-  assigned_user_id uuid,
-  created_at timestamptz NOT NULL DEFAULT now()
+  remote_label_id text NOT NULL,
+  name text NOT NULL,
+  color int,
+  predefined boolean DEFAULT false,
+  created_at timestamptz DEFAULT now(),
+  UNIQUE (session_id, remote_label_id)
 );
-ALTER TABLE public.whatsapp_inbound_logs ENABLE ROW LEVEL SECURITY;
-CREATE POLICY inbound_logs_select ON public.whatsapp_inbound_logs
-  FOR SELECT USING (organization_id = get_user_organization_id() OR is_super_admin());
+
+CREATE TABLE IF NOT EXISTS public.whatsapp_chat_labels (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  conversation_id uuid NOT NULL REFERENCES public.whatsapp_conversations(id) ON DELETE CASCADE,
+  label_id uuid NOT NULL REFERENCES public.whatsapp_labels(id) ON DELETE CASCADE,
+  created_at timestamptz DEFAULT now(),
+  UNIQUE (conversation_id, label_id)
+);
+
+-- Grupos do WhatsApp
+CREATE TABLE IF NOT EXISTS public.whatsapp_groups (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  session_id uuid NOT NULL REFERENCES public.whatsapp_sessions(id) ON DELETE CASCADE,
+  organization_id uuid NOT NULL,
+  group_jid text NOT NULL,
+  subject text,
+  description text,
+  picture_url text,
+  invite_link text,
+  participants jsonb DEFAULT '[]'::jsonb,
+  is_announce boolean DEFAULT false,
+  owner_jid text,
+  updated_at timestamptz DEFAULT now(),
+  UNIQUE (session_id, group_jid)
+);
+
+ALTER TABLE public.whatsapp_labels      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.whatsapp_chat_labels ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.whatsapp_groups      ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "labels_org_read" ON public.whatsapp_labels
+  FOR SELECT TO authenticated
+  USING (organization_id = public.get_user_organization_id());
+CREATE POLICY "labels_org_manage" ON public.whatsapp_labels
+  FOR ALL TO authenticated
+  USING (organization_id = public.get_user_organization_id());
+
+CREATE POLICY "chat_labels_org_read" ON public.whatsapp_chat_labels
+  FOR SELECT TO authenticated
+  USING (EXISTS (SELECT 1 FROM public.whatsapp_conversations c
+                 WHERE c.id = whatsapp_chat_labels.conversation_id
+                   AND c.organization_id = public.get_user_organization_id()));
+CREATE POLICY "chat_labels_org_manage" ON public.whatsapp_chat_labels
+  FOR ALL TO authenticated
+  USING (EXISTS (SELECT 1 FROM public.whatsapp_conversations c
+                 WHERE c.id = whatsapp_chat_labels.conversation_id
+                   AND c.organization_id = public.get_user_organization_id()));
+
+CREATE POLICY "groups_org_read" ON public.whatsapp_groups
+  FOR SELECT TO authenticated
+  USING (organization_id = public.get_user_organization_id());
+CREATE POLICY "groups_org_manage" ON public.whatsapp_groups
+  FOR ALL TO authenticated
+  USING (organization_id = public.get_user_organization_id());
+
+CREATE INDEX IF NOT EXISTS idx_labels_session ON public.whatsapp_labels(session_id);
+CREATE INDEX IF NOT EXISTS idx_groups_session ON public.whatsapp_groups(session_id);
+CREATE INDEX IF NOT EXISTS idx_chat_labels_conv ON public.whatsapp_chat_labels(conversation_id);
 ```
 
-**SQL 4 — Acesso operacional (modos de visibilidade)**
-```sql
--- Substitui o atual booleano "only_leads_access" por um enum mais explícito
-ALTER TABLE public.whatsapp_session_access
-  ADD COLUMN IF NOT EXISTS access_mode text NOT NULL DEFAULT 'assigned_leads_only'
-    CHECK (access_mode IN ('assigned_leads_only','team_leads','all_leads','full_inbox'));
--- Migra dados existentes: only_leads_access=true → assigned_leads_only, false → full_inbox
-UPDATE public.whatsapp_session_access
-   SET access_mode = CASE WHEN only_leads_access THEN 'assigned_leads_only' ELSE 'full_inbox' END;
-```
+**Sem apagar mensagens.** Histórico de leads permanece. Conversas de grupos antigos (sem `lead_id`) podem ser limpas opcionalmente em uma fase futura — fora do escopo desta.
 
-**SQL 5 — Função helper de visibilidade**
-```sql
-CREATE OR REPLACE FUNCTION public.can_view_whatsapp_conversation(_conv_id uuid)
-RETURNS boolean
-LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
-  SELECT EXISTS (
-    SELECT 1
-    FROM whatsapp_conversations c
-    JOIN whatsapp_sessions s ON s.id = c.session_id
-    LEFT JOIN whatsapp_session_access wsa
-      ON wsa.session_id = c.session_id AND wsa.user_id = auth.uid()
-    WHERE c.id = _conv_id
-      AND (
-        is_super_admin()
-        OR s.owner_user_id = auth.uid()
-        OR (
-          wsa.user_id IS NOT NULL AND COALESCE(wsa.can_view, true) AND (
-            wsa.access_mode = 'full_inbox'
-            OR (wsa.access_mode = 'all_leads' AND c.lead_id IS NOT NULL)
-            OR (wsa.access_mode = 'team_leads' AND c.lead_id IS NOT NULL AND EXISTS (
-                  SELECT 1 FROM leads l
-                  JOIN team_members tm_self ON tm_self.user_id = auth.uid()
-                  JOIN team_members tm_lead ON tm_lead.team_id = tm_self.team_id AND tm_lead.user_id = l.assigned_user_id
-                  WHERE l.id = c.lead_id
-                ))
-            OR (wsa.access_mode = 'assigned_leads_only' AND c.lead_id IS NOT NULL AND EXISTS (
-                  SELECT 1 FROM leads l WHERE l.id = c.lead_id AND l.assigned_user_id = auth.uid()
-                ))
-          )
-        )
-      )
-  );
-$$;
-```
+---
 
-**SQL 6 — Consolidar policies de SELECT (REMOVE as policies antigas pra não fazer OR)**
-```sql
--- conversations
-DROP POLICY IF EXISTS conversations_select ON public.whatsapp_conversations;
-DROP POLICY IF EXISTS conversations_privacy_policy ON public.whatsapp_conversations;
-CREATE POLICY conversations_select ON public.whatsapp_conversations
-  FOR SELECT USING (public.can_view_whatsapp_conversation(id));
+## Fase 2 — Edge Function `evolution-go-proxy`
 
--- messages: usa o conversation_id
-DROP POLICY IF EXISTS messages_select ON public.whatsapp_messages;
-CREATE POLICY messages_select ON public.whatsapp_messages
-  FOR SELECT USING (public.can_view_whatsapp_conversation(conversation_id));
+Nova função (espelho do `evolution-proxy` atual) que sabe roteamento Evolution Go.
 
--- update/delete: continuam pelo can_access_whatsapp_session (admin/owner),
--- mas adicionamos verificação por lead atribuído
-DROP POLICY IF EXISTS conversations_update ON public.whatsapp_conversations;
-CREATE POLICY conversations_update ON public.whatsapp_conversations
-  FOR UPDATE USING (public.can_view_whatsapp_conversation(id));
-DROP POLICY IF EXISTS messages_update ON public.whatsapp_messages;
-CREATE POLICY messages_update ON public.whatsapp_messages
-  FOR UPDATE USING (public.can_view_whatsapp_conversation(conversation_id));
-```
+Endpoints/ações expostas (POST `/functions/v1/evolution-go-proxy` com `action` no body):
 
-**SQL 7 — Limpeza do booleano legado (opcional, após validação)**
-```sql
-ALTER TABLE public.whatsapp_session_access DROP COLUMN IF EXISTS only_leads_access;
+| action | rota Evolution Go |
+|---|---|
+| `instance.create` | `POST /instance/create` |
+| `instance.connect` | `POST /instance/connect` (com webhook URL) |
+| `instance.qr` | `GET /instance/qr?instanceId=...` |
+| `instance.status` | `GET /instance/status?instanceId=...` |
+| `instance.disconnect` | `POST /instance/disconnect` |
+| `instance.logout` | `DELETE /instance/logout` |
+| `instance.delete` | `DELETE /instance/delete/{id}` |
+| `instance.forceReconnect` | `POST /instance/forcereconnect/{id}` |
+| `send.text` | `POST /send/text` |
+| `send.media` | `POST /send/media` (imagem/vídeo/áudio/documento) |
+| `send.audio` | `POST /send/media` com `mediatype=audio` PTT |
+| `send.sticker` | `POST /send/sticker` |
+| `send.location` | `POST /send/location` |
+| `send.contact` | `POST /send/contact` |
+| `message.delete/edit/react/markread` | `/message/*` |
+| `message.downloadMedia` | `POST /message/downloadimage` |
+| `chat.archive/mute/pin/unmute/unpin` | `/chat/*` |
+| `chat.historySync` | `POST /chat/history-sync-request` |
+| `label.list/edit/addChat/addMsg` | `/label*` |
+| `group.list/info/create/participants/photo/...` | `/group/*` |
+| `user.avatar/info/contacts/check` | `/user/*` |
+
+Comportamento:
+- Lê `EVOLUTION_GO_API_URL` / `EVOLUTION_GO_API_KEY`.
+- Cabeçalho `apikey: ${EVOLUTION_GO_API_KEY}` em todas chamadas.
+- Quando a ação envolver sessão (`session_id`), busca `instance_id` na tabela e injeta.
+- Padroniza erros e retorna sempre `{ ok: boolean, data?, error? }`.
+
+---
+
+## Fase 3 — Edge Function `evolution-go-webhook`
+
+Endpoint público (sem JWT) que o Evolution Go vai chamar para eventos:
+
+- `qrcode.updated` → atualiza `whatsapp_sessions.status='qr'` + cache do QR em memória/realtime.
+- `connection.update` → `connecting`/`connected`/`disconnected` (mantendo a lógica anti-flapping já existente).
+- `messages.upsert` (inbound + outbound from_me) → mesmo pipeline de hoje:
+  - normalizar telefone (já temos util com `55` opcional),
+  - encontrar/criar `whatsapp_conversations`,
+  - inserir em `whatsapp_messages` com `client_message_id` para dedupe,
+  - vincular `lead_id` por telefone (reaproveitando `phone-normalization-matching`),
+  - **não cria lead novo** se já existir conversa com aquele telefone/lead,
+  - dispara `automation-trigger` apenas para eventos inbound novos.
+- `messages.update` → atualiza status (`sent`/`delivered`/`read`).
+- `chats.upsert` / `labels.upsert` / `groups.upsert` → sincroniza tabelas de labels e grupos.
+- `media` em base64 → reaproveita `media-worker` (mesma fila atual).
+
+Garantia de não duplicar leads: lookup do telefone normalizado em `leads` antes de criar; se conversa já existe (`whatsapp_conversations.remote_jid`), apenas anexa.
+
+---
+
+## Fase 4 — Sincronização de histórico (history-sync)
+
+- Botão “Sincronizar histórico” na sessão Evolution Go → chama `chat.historySync`.
+- Recebe eventos `messages.upsert` em lote pelo webhook.
+- Dedupe por `client_message_id` + `(remote_jid, timestamp)`.
+
+---
+
+## Fase 5 — Frontend: provider toggle e nova sessão Evolution Go
+
+Mudanças em `src/pages/WhatsAppSettings.tsx` e `src/components/settings/WhatsAppTab.tsx`:
+
+1. No diálogo de “Nova sessão”, adicionar select **Provider**: `Evolution (Legado)` vs `Evolution Go (Novo)`.
+2. Hook `use-whatsapp-sessions.ts` grava `provider` ao criar.
+3. Criar `src/hooks/use-evolution-go.ts` com mutations: `createInstance`, `getQr`, `connect`, `disconnect`, `forceReconnect`, `sendText`, `sendMedia`, `sendAudio`, `historySync`, `listGroups`, `listLabels`, `addChatLabel`, `archiveChat`, `muteChat`, `pinChat`.
+4. `use-whatsapp-conversations.ts` e componentes de chat passam a chamar `evolution-go-proxy` quando `session.provider === 'evolution_go'`; caso contrário, mantém o caminho legado. Encapsular num helper `whatsapp-provider-router.ts`.
+5. UI 100% reaproveitada (`FloatingChat`, `MessageBubble`, `ConversationList`, `LeadMessagesTab`).
+
+---
+
+## Fase 6 — Labels (tags do WhatsApp)
+
+- Página/sessão exibe labels sincronizadas (`whatsapp_labels`).
+- Em cada conversa, dropdown “Adicionar tag”. Sincroniza com `POST /label/chat`.
+- Webhook `labels.association` reflete mudanças externas.
+
+---
+
+## Fase 7 — Grupos
+
+- Aba “Grupos” na sessão Evolution Go.
+- Lista grupos (`/group/myall`), permite ver info, foto, participantes, link de convite, alterar nome/descrição/foto, sair, criar grupo, adicionar/remover/promover participantes.
+- Grupos aparecem como conversa normal no chat (com nome do grupo + foto).
+- Menções (`@5511...`) implementadas no `send.text` via campo `mentions` array.
+
+---
+
+## Fase 8 — Mídia, áudio PTT e download
+
+- Envio de imagem/vídeo/documento: já temos UI; rotear para `send.media`.
+- Áudio PTT: gravador atual gera OGG/Opus → `send.media` com `mediatype=audio` e `ptt=true`.
+- Download de mídia recebida em base64: salvar no bucket `whatsapp-media` via `media-worker` (já existe). Compressão de imagens via canvas antes do upload (já implementado para automações — reaproveitar util).
+
+---
+
+## Fase 9 — Som de notificação novo
+
+- Adicionar `public/sounds/whatsapp-pop.mp3` (som curto tipo “plop”).
+- Criar `src/hooks/use-whatsapp-sound.ts`:
+  - Escuta o `WhatsAppRealtimeBus` (já existe) para eventos `INSERT` em `whatsapp_messages` com `from_me=false`.
+  - Toca `whatsapp-pop.mp3` (volume baixo, 0.4), throttle de 1.5s para não estourar.
+  - Respeita preferência do usuário (toggle em Configurações → Notificações).
+- Diferente do som de novo lead (que continua o atual em `use-notifications`).
+
+---
+
+## Fase 10 — Avatar, contatos e check de número
+
+- `user.avatar` → cache em `whatsapp_conversations.avatar_url`.
+- `user.contacts` → sincroniza nomes salvos na agenda do WhatsApp para o nome de exibição do lead/contato (sem sobrescrever nome customizado).
+- `user.check` → validar número antes de iniciar conversa (ícone verde/vermelho no “Iniciar conversa”).
+
+---
+
+## Detalhes Técnicos
+
+- **Roteamento por provider**: helper `getWhatsAppClient(session)` em `src/lib/whatsapp-provider.ts` retorna funções com a mesma assinatura (envia/recebe/etc) mas chamando o proxy certo. Garante que componentes não saibam diferença.
+- **Dedupe**: chave `(session_id, remote_jid, evolution_message_id)` única em `whatsapp_messages`.
+- **Preservação de leads**: webhook NUNCA apaga; lookup por `lead_id`→`conversation`→fallback telefone normalizado.
+- **Velocidade**: chamadas diretas do front via `supabase.functions.invoke` com retry exponencial leve (já existe em `evolution-proxy`). Webhook usa `EdgeRuntime.waitUntil` para não bloquear resposta.
+- **Realtime**: já temos `WhatsAppRealtimeBus` unificado — funciona para qualquer provider porque depende só de inserts em `whatsapp_messages`.
+- **Segurança**: `evolution-go-webhook` valida header `apikey` igual ao secret antes de processar.
+
+---
+
+## Diagrama de Fluxo
+
+```text
+[Front-end React]
+        |
+        |  supabase.functions.invoke('evolution-go-proxy', {action, ...})
+        v
+[evolution-go-proxy] --HTTP(apikey)--> [Evolution Go server]
+                                              |
+                                              | webhook (POST)
+                                              v
+                                  [evolution-go-webhook]
+                                              |
+                                              | upserts em whatsapp_*
+                                              v
+                              [Postgres Realtime → Bus → UI]
 ```
 
 ---
 
-### Fase 2 — Edge function: identificação + criação + distribuição
+## Entregáveis por Fase
 
-Refatorar `supabase/functions/evolution-webhook/index.ts` no handler de `messages.upsert` para inbound (`fromMe=false`) **sem lead associado**:
+1. Migration Fase 1 (envio em seguida).
+2. `supabase/functions/evolution-go-proxy/index.ts`.
+3. `supabase/functions/evolution-go-webhook/index.ts` + `verify_jwt=false` no `config.toml`.
+4. `src/lib/whatsapp-provider.ts` + `src/hooks/use-evolution-go.ts`.
+5. Update de `WhatsAppSettings.tsx` / `WhatsAppTab.tsx` com seleção de provider.
+6. Telas de Labels e Grupos.
+7. Som novo + hook.
+8. QA: criar instância Evolution Go, ler QR, enviar/receber texto/imagem/áudio, sync histórico, vincular a lead existente sem duplicar.
 
-1. Extrair contexto:
-   - `contextInfo.externalAdReply` → `meta_campaign_id`, `meta_ad_id`, `meta_click_id`, `source_label = 'meta_ctwa'`.
-   - `message.text` → casar com `whatsapp_inbound_rules` (priority asc), suportando `contains/equals/regex/utm/meta_ctwa/any`.
-   - `pushName`, `phone` → fallback.
-2. Aplicar primeira regra que casar:
-   - Criar `lead` (org, pipeline/stage do round_robin ou da regra, `source`, `utm_*`, `meta_*`, `initial_message`, `source_session_id`).
-   - Vincular `whatsapp_conversations.lead_id`.
-   - Atribuir via prioridade: `target_user_id` > `target_round_robin_id` (invocar `assign-from-round-robin` que já existe) > `target_team_id` (round robin do time) > fila não distribuída.
-   - Inserir `lead_assignment_history` e `whatsapp_inbound_logs`.
-3. Disparar `automation-trigger` com evento `lead_created`/`conversation_assigned` (já existe).
-4. Se nenhuma regra casar e `default_pool_round_robin_id` da org estiver setado, usar; senão, deixar conversa "não distribuída".
-
-Criar nova edge function leve `whatsapp-inbound-classify` chamável standalone (útil para "reprocessar" conversa via UI).
-
----
-
-### Fase 3 — Frontend
-
-**Configurações > WhatsApp > Acessos**
-- Trocar checkbox "Apenas Leads" por select com 4 modos (`assigned_leads_only`/`team_leads`/`all_leads`/`full_inbox`) + descrição.
-
-**Configurações > WhatsApp > Regras de Entrada (nova tela)**
-- CRUD de `whatsapp_inbound_rules` (drag-and-drop pra ordenar `priority`).
-- Campos: nome, sessão (ou todas), match_type, match_value, match_field, alvo (RR/equipe/usuário), pipeline/estágio, source/campaign labels. Toggle ativo.
-
-**Conversas (módulo Chat)**
-- Atualizar `useAccessibleSessions` e `use-whatsapp-conversations`: a RLS já filtra, mas adicionar abas de filtro:
-  - "Meus leads" (`leads.assigned_user_id = me`)
-  - "Minha equipe" (via `team_members`)
-  - "Não distribuídos" (admin/leader: `lead_id IS NULL`)
-  - "Todas" (apenas admin/owner)
-- Cards: badge de campanha (`utm_campaign`/`meta_campaign_id`), avatar do `assigned_user`, status (`Aguardando`/`Distribuído`/`Sem dono`), tempo sem resposta. Componente novo `<ConversationCardMeta>`.
-- Esconder ações de "iniciar conversa nova" pra quem não é dono/admin (não bate com modelo de "só responde leads atribuídos").
-
-**Auditoria**
-- Tela admin lendo `whatsapp_inbound_logs` + filtro por regra/lead/usuário.
-
----
-
-### Fase 4 — Compatibilidade & migração de dados
-
-- Após SQL 4: usuários já compartilhados ficam em `assigned_leads_only` (mais restritivo). Avisar admin antes de aplicar.
-- Conversas já existentes sem `lead_id` permanecem visíveis somente em `full_inbox` (admin/owner). Adicionar botão "Vincular a lead existente / criar lead" na UI pra resolver caso a caso.
-- `evolution-webhook` continua criando conversas mesmo sem casamento; só não auto-cria lead — fica "não distribuída".
-
----
-
-### Detalhes técnicos importantes
-
-- **Performance:** `can_view_whatsapp_conversation` é `STABLE SECURITY DEFINER`. Postgres consegue inlinar bem. Adicionar `CREATE INDEX IF NOT EXISTS idx_conv_lead ON whatsapp_conversations(lead_id);` e `idx_wsa_user ON whatsapp_session_access(user_id);`.
-- **Service role:** edge functions continuam bypassando RLS via service role para escrever leads/mensagens/automação.
-- **Realtime:** o canal `whatsapp-realtime-bus` filtra por organização; a RLS aplicada no `subscribe` cuida do resto sem mudança de código.
-- **Não quebrar:** `can_access_whatsapp_session` continua usado em INSERT/DELETE (admin/owner ainda mandam mensagens em qualquer conversa). Só SELECT/UPDATE muda.
-- **Meta oficial (Fase 9 do briefing):** o schema do SQL 1 + regras `meta_ctwa` já preparam o terreno. Quando o webhook Meta vier, basta um novo handler que cria lead chamando o mesmo serviço de distribuição.
-
----
-
-### Ordem de execução
-
-1. Rodar SQL 1 → 6 no Supabase (SQL 7 só depois de validação).
-2. Deploy `evolution-webhook` refatorado.
-3. UI: tela de Regras + select de modo de acesso + filtros de conversa.
-4. Auditoria + reprocessamento.
-5. SQL 7 (drop coluna legada) após 1 semana de uso estável.
-
-### Pontos que pedem confirmação antes de codar
-
-- Confirma que o modo padrão para acessos compartilhados existentes deve ser **`assigned_leads_only`** (mais restritivo) e não `team_leads`?
-- Quer que "líder de equipe" tenha visibilidade automática de toda a equipe mesmo com `assigned_leads_only`, ou só quem estiver em `team_leads`?
-- A tela de Regras deve ficar dentro de **Configurações > WhatsApp** ou em **Gestão > Distribuição** (junto dos round robins)?
+Aprovando, na sequência peço os secrets `EVOLUTION_GO_API_URL` e `EVOLUTION_GO_API_KEY` e já começo pela Fase 1.
