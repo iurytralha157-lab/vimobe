@@ -1,282 +1,194 @@
-import { 
-  Building2, 
-  Users, 
-  AlertTriangle,
-  Clock,
+import { useMemo } from 'react';
+import {
+  Building2,
+  Users,
   DollarSign,
-  Gift,
-  CreditCard
+  TrendingUp,
+  Wallet,
+  AlertOctagon,
+  Clock,
+  XCircle,
+  Activity,
+  Zap,
+  AlertTriangle,
+  LogIn,
+  Users2,
+  Briefcase,
+  Phone,
 } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { AdminLayout } from '@/components/admin/AdminLayout';
-import { useSuperAdmin } from '@/hooks/use-super-admin';
-import { useAdminPlans } from '@/hooks/use-admin-plans';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { useNavigate } from 'react-router-dom';
-import { formatDistanceToNow, differenceInDays } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
-import { AdminGrowthChart } from '@/components/admin/AdminGrowthChart';
-import { AdminStatusChart } from '@/components/admin/AdminStatusChart';
-import { AdminAlerts } from '@/components/admin/AdminAlerts';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { useLocalStorage } from '@/hooks/use-local-storage';
+import {
+  useDashboardOverview,
+  useDashboardTimeseries,
+  useDashboardPendingBoards,
+  useDashboardFeed,
+  type DashboardPeriod,
+} from '@/hooks/use-admin-dashboard';
+import { PlatformHeader } from '@/components/admin/dashboard/PlatformHeader';
+import { KpiCard } from '@/components/admin/dashboard/KpiCard';
+import { RevenueChart } from '@/components/admin/dashboard/RevenueChart';
+import { OrgsGrowthChart } from '@/components/admin/dashboard/OrgsGrowthChart';
+import { HealthDonutChart } from '@/components/admin/dashboard/HealthDonutChart';
+import { UsageChart } from '@/components/admin/dashboard/UsageChart';
+import { PendingBoard, PendingRow } from '@/components/admin/dashboard/PendingBoard';
+import { OperationalFeed } from '@/components/admin/dashboard/OperationalFeed';
+import { useQueryClient } from '@tanstack/react-query';
+
+const fmtBRL = (n: number) =>
+  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(n || 0);
+const fmtNum = (n: number) => new Intl.NumberFormat('pt-BR').format(n || 0);
 
 export default function AdminDashboard() {
-  const { organizations, stats, loadingOrgs } = useSuperAdmin();
-  const { plans } = useAdminPlans();
-  const navigate = useNavigate();
+  const [period, setPeriod] = useLocalStorage<DashboardPeriod>('admin-dash-period', 30);
+  const qc = useQueryClient();
 
-  // Fetch organizations with plan data
-  const { data: orgsWithPlans } = useQuery({
-    queryKey: ['orgs-with-plans'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('organizations')
-        .select(`
-          id,
-          name,
-          subscription_type,
-          trial_ends_at,
-          plan_id,
-          is_active
-        `)
-        .eq('is_active', true);
-      
-      if (error) throw error;
-      return data;
-    },
-  });
+  const overview = useDashboardOverview(period);
+  const ts = useDashboardTimeseries(period);
+  const pending = useDashboardPendingBoards();
+  const feed = useDashboardFeed(40);
 
-  const recentOrgs = organizations?.slice(0, 5) || [];
+  const isFetching = overview.isFetching || ts.isFetching || pending.isFetching || feed.isFetching;
 
-  // Calculate stats by subscription type
-  const subscriptionStats = {
-    trial: orgsWithPlans?.filter(o => o.subscription_type === 'trial').length || 0,
-    paid: orgsWithPlans?.filter(o => o.subscription_type === 'paid').length || 0,
-    free: orgsWithPlans?.filter(o => o.subscription_type === 'free').length || 0,
+  const refreshAll = () => {
+    qc.invalidateQueries({ queryKey: ['admin-dashboard-overview'] });
+    qc.invalidateQueries({ queryKey: ['admin-dashboard-timeseries'] });
+    qc.invalidateQueries({ queryKey: ['admin-dashboard-pending'] });
+    qc.invalidateQueries({ queryKey: ['admin-dashboard-feed'] });
   };
 
-  // Calculate MRR based on actual plans
-  const calculateMRR = () => {
-    if (!orgsWithPlans || !plans) return 0;
-    
-    return orgsWithPlans.reduce((total, org) => {
-      if (org.subscription_type === 'paid' && org.plan_id) {
-        const plan = plans.find(p => p.id === org.plan_id);
-        if (plan) {
-          return total + plan.price;
-        }
-      }
-      return total;
-    }, 0);
-  };
-
-  // Find trials expiring soon (next 7 days)
-  const trialsExpiringSoon = orgsWithPlans?.filter(org => {
-    if (org.subscription_type !== 'trial' || !org.trial_ends_at) return false;
-    const daysLeft = differenceInDays(new Date(org.trial_ends_at), new Date());
-    return daysLeft >= 0 && daysLeft <= 7;
-  }).length || 0;
-
-  const mrr = calculateMRR();
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'active':
-        return <Badge className="bg-primary">Ativo</Badge>;
-      case 'trial':
-        return <Badge variant="secondary">Trial</Badge>;
-      case 'suspended':
-        return <Badge variant="destructive">Suspenso</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
+  const highlights = useMemo(() => {
+    const o = overview.data;
+    const p = pending.data;
+    const list: string[] = [];
+    if (p?.overdue?.length) list.push(`${p.overdue.length} ${p.overdue.length === 1 ? 'cliente inadimplente' : 'clientes inadimplentes'}`);
+    if (p?.trials?.length) list.push(`${p.trials.length} ${p.trials.length === 1 ? 'trial vencendo' : 'trials vencendo'}`);
+    if (o?.financial.revenue_growth_pct) {
+      const g = o.financial.revenue_growth_pct;
+      list.push(`Receita ${g >= 0 ? '+' : ''}${g.toFixed(1)}% no período`);
     }
-  };
+    if (o?.operational.errors_recent) list.push(`${o.operational.errors_recent} erros recentes`);
+    return list;
+  }, [overview.data, pending.data]);
 
-  const getSubscriptionBadge = (type: string | null) => {
-    switch (type) {
-      case 'paid':
-        return <Badge className="bg-primary"><CreditCard className="h-3 w-3 mr-1" />Pago</Badge>;
-      case 'trial':
-        return <Badge variant="secondary"><Clock className="h-3 w-3 mr-1" />Trial</Badge>;
-      case 'free':
-        return <Badge variant="outline"><Gift className="h-3 w-3 mr-1" />Gratuito</Badge>;
-      default:
-        return <Badge variant="outline">-</Badge>;
-    }
-  };
+  const fin = overview.data?.financial;
+  const plat = overview.data?.platform;
+  const op = overview.data?.operational;
 
   return (
     <AdminLayout title="Dashboard">
-      <div className="space-y-6">
-        {/* Stats Cards - Updated */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Total de Organizações
-              </CardTitle>
-              <Building2 className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent className="px-4 md:px-6 pb-4">
-              <div className="text-2xl font-bold">{stats.totalOrganizations}</div>
-              <p className="text-xs text-muted-foreground">
-                {stats.activeOrganizations} ativas
-              </p>
-            </CardContent>
-          </Card>
+      <div className="space-y-6 max-w-[1600px]">
+        <PlatformHeader
+          period={period}
+          onPeriodChange={setPeriod}
+          onRefresh={refreshAll}
+          isFetching={isFetching}
+          lastUpdated={overview.dataUpdatedAt ? new Date(overview.dataUpdatedAt) : undefined}
+          highlights={highlights}
+        />
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Pagantes
-              </CardTitle>
-              <CreditCard className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent className="px-4 md:px-6 pb-4">
-              <div className="text-2xl font-bold">{subscriptionStats.paid}</div>
-              <p className="text-xs text-muted-foreground">
-                assinaturas ativas
-              </p>
-            </CardContent>
-          </Card>
+        {/* KPIs Financeiro */}
+        <section>
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Financeiro</h2>
+          <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
+            <KpiCard label="MRR" value={fmtBRL(fin?.mrr ?? 0)} icon={DollarSign} accent="primary" hint="receita mensal recorrente" loading={overview.isLoading} />
+            <KpiCard label="Receita no período" value={fmtBRL(fin?.revenue_period ?? 0)} icon={TrendingUp} deltaPct={fin?.revenue_growth_pct} accent="success" loading={overview.isLoading} />
+            <KpiCard label="Receita prevista" value={fmtBRL(fin?.revenue_forecast ?? 0)} icon={Wallet} hint="a vencer no período" loading={overview.isLoading} />
+            <KpiCard label="Ticket médio" value={fmtBRL(fin?.avg_ticket ?? 0)} icon={Briefcase} hint="últimos 90 dias" loading={overview.isLoading} />
+            <KpiCard label="Inadimplência" value={fmtBRL(fin?.overdue_total ?? 0)} icon={AlertOctagon} accent="danger" hint="total em atraso" loading={overview.isLoading} />
+          </div>
+        </section>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Em Trial
-              </CardTitle>
-              <Clock className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent className="px-4 md:px-6 pb-4">
-              <div className="text-2xl font-bold">{subscriptionStats.trial}</div>
-              <p className="text-xs text-muted-foreground">
-                {trialsExpiringSoon > 0 && (
-                  <span className="text-orange-600">{trialsExpiringSoon} expirando</span>
-                )}
-                {trialsExpiringSoon === 0 && 'período de avaliação'}
-              </p>
-            </CardContent>
-          </Card>
+        {/* KPIs Plataforma */}
+        <section>
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Plataforma</h2>
+          <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
+            <KpiCard label="Organizações" value={fmtNum(plat?.total_orgs ?? 0)} icon={Building2} deltaPct={plat?.orgs_growth_pct} loading={overview.isLoading} />
+            <KpiCard label="Ativas" value={fmtNum(plat?.active_orgs ?? 0)} icon={Activity} accent="success" loading={overview.isLoading} />
+            <KpiCard label="Trials ativos" value={fmtNum(plat?.trial_orgs ?? 0)} icon={Clock} accent="warning" loading={overview.isLoading} />
+            <KpiCard label="Canceladas" value={fmtNum(plat?.cancelled_orgs ?? 0)} icon={XCircle} accent="danger" loading={overview.isLoading} />
+            <KpiCard label="Usuários ativos hoje" value={fmtNum(plat?.active_users_today ?? 0)} icon={Users} loading={overview.isLoading} />
+          </div>
+        </section>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Gratuitos
-              </CardTitle>
-              <Gift className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent className="px-4 md:px-6 pb-4">
-              <div className="text-2xl font-bold">{subscriptionStats.free}</div>
-              <p className="text-xs text-muted-foreground">
-                parcerias
-              </p>
-            </CardContent>
-          </Card>
+        {/* KPIs Operacional */}
+        <section>
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Operacional</h2>
+          <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
+            <KpiCard label="Leads hoje" value={fmtNum(op?.leads_today ?? 0)} icon={Users2} loading={overview.isLoading} />
+            <KpiCard label="Automações executadas" value={fmtNum(op?.automations_today ?? 0)} icon={Zap} loading={overview.isLoading} />
+            <KpiCard label="Atividades hoje" value={fmtNum(op?.activities_today ?? 0)} icon={Activity} loading={overview.isLoading} />
+            <KpiCard label="Erros recentes" value={fmtNum(op?.errors_recent ?? 0)} icon={AlertTriangle} accent={op?.errors_recent ? 'danger' : 'default'} hint="últimas 24h" loading={overview.isLoading} />
+            <KpiCard label="Acessos hoje" value={fmtNum(op?.accesses_today ?? 0)} icon={LogIn} loading={overview.isLoading} />
+          </div>
+        </section>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Total de Usuários
-              </CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent className="px-4 md:px-6 pb-4">
-              <div className="text-2xl font-bold">{stats.totalUsers}</div>
-              <p className="text-xs text-muted-foreground">
-                em todas as organizações
-              </p>
-            </CardContent>
-          </Card>
+        {/* Gráficos */}
+        <section className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))' }}>
+          <RevenueChart data={ts.data?.revenue} loading={ts.isLoading} />
+          <OrgsGrowthChart data={ts.data?.orgs} loading={ts.isLoading} />
+          <HealthDonutChart data={ts.data?.health} loading={ts.isLoading} />
+          <UsageChart data={ts.data?.usage} loading={ts.isLoading} />
+        </section>
 
-          <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                MRR
-              </CardTitle>
-              <DollarSign className="h-4 w-4 text-primary" />
-            </CardHeader>
-            <CardContent className="px-4 md:px-6 pb-4">
-              <div className="text-2xl font-bold text-primary">
-                R$ {mrr.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                receita mensal
-              </p>
-            </CardContent>
-          </Card>
-        </div>
+        {/* Central de pendências */}
+        <section>
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Central de pendências</h2>
+          <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))' }}>
+            <PendingBoard title="Clientes inadimplentes" icon={AlertOctagon} tone="danger" count={pending.data?.overdue?.length ?? 0} loading={pending.isLoading} empty="Nenhum cliente em atraso.">
+              {pending.data?.overdue?.map((o) => (
+                <PendingRow
+                  key={o.id}
+                  title={o.name}
+                  subtitle={`${o.days_overdue} dia${o.days_overdue === 1 ? '' : 's'} em atraso`}
+                  value={fmtBRL(Number(o.amount_due))}
+                  valueTone="danger"
+                />
+              ))}
+            </PendingBoard>
 
-        {/* Alerts */}
-        {organizations && organizations.length > 0 && (
-          <AdminAlerts organizations={organizations} />
-        )}
+            <PendingBoard title="Organizações sem uso" icon={Activity} tone="warning" count={pending.data?.idle?.length ?? 0} loading={pending.isLoading} empty="Todas as organizações ativas.">
+              {pending.data?.idle?.map((o) => (
+                <PendingRow
+                  key={o.id}
+                  title={o.name}
+                  subtitle={o.days_idle == null ? 'Nunca acessou' : `Sem acesso há ${o.days_idle} dias`}
+                  value="risco de churn"
+                  valueTone="warning"
+                />
+              ))}
+            </PendingBoard>
 
-        {/* Charts Row */}
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          {organizations && organizations.length > 0 && (
-            <AdminGrowthChart organizations={organizations} />
-          )}
-          <AdminStatusChart stats={stats} />
-        </div>
+            <PendingBoard title="Problemas técnicos" icon={AlertTriangle} tone="danger" count={pending.data?.issues?.length ?? 0} loading={pending.isLoading} empty="Tudo funcionando.">
+              {pending.data?.issues?.map((i) => (
+                <PendingRow
+                  key={i.id}
+                  title={i.title}
+                  subtitle={`${i.organization_name ?? 'Sistema'} · ${i.type}`}
+                  value={i.severity}
+                  valueTone="danger"
+                />
+              ))}
+            </PendingBoard>
 
-        {/* Recent Organizations */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle>Organizações Recentes</CardTitle>
-              <CardDescription>
-                Últimas organizações cadastradas no sistema
-              </CardDescription>
-            </div>
-            <Button variant="outline" onClick={() => navigate('/admin/organizations')}>
-              Ver todas
-            </Button>
-          </CardHeader>
-          <CardContent className="px-4 md:px-6 pb-4">
-            {loadingOrgs ? (
-              <div className="text-center py-8 text-muted-foreground">
-                Carregando...
-              </div>
-            ) : recentOrgs.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                Nenhuma organização cadastrada
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {recentOrgs.map((org) => (
-                  <div 
-                    key={org.id} 
-                    className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors gap-3"
-                    onClick={() => navigate(`/admin/organizations/${org.id}`)}
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                        <Building2 className="h-5 w-5 text-primary" />
-                      </div>
-                      <div>
-                        <p className="font-medium">{org.name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {org.user_count} usuários • {org.lead_count} leads
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
-                      {getStatusBadge(org.subscription_status)}
-                      <span className="text-xs sm:text-sm text-muted-foreground">
-                        {formatDistanceToNow(new Date(org.created_at), { 
-                          addSuffix: true,
-                          locale: ptBR 
-                        })}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+            <PendingBoard title="Trials vencendo" icon={Clock} tone="warning" count={pending.data?.trials?.length ?? 0} loading={pending.isLoading} empty="Sem trials próximos do vencimento.">
+              {pending.data?.trials?.map((t) => (
+                <PendingRow
+                  key={t.id}
+                  title={t.name}
+                  subtitle={t.whatsapp ?? t.telefone ?? t.email ?? '—'}
+                  value={`${t.days_left}d restantes`}
+                  valueTone={t.days_left <= 3 ? 'danger' : 'warning'}
+                />
+              ))}
+            </PendingBoard>
+          </div>
+        </section>
+
+        {/* Feed operacional */}
+        <section>
+          <OperationalFeed events={feed.data} loading={feed.isLoading} />
+        </section>
       </div>
     </AdminLayout>
   );
