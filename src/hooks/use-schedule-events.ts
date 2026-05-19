@@ -123,7 +123,7 @@ export function useScheduleEvents(options: UseScheduleEventsOptions = {}) {
         .from('schedule_events')
         .select(`
           id, organization_id, user_id, lead_id, property_id, title, 
-          event_type, start_time, end_time, is_all_day, status,
+          description, event_type, start_time, end_time, is_all_day, status,
           completed_by, completed_at,
           user:users!schedule_events_user_id_fkey(id, name, avatar_url),
           lead:leads(id, name, phone),
@@ -194,65 +194,60 @@ export function useCreateScheduleEvent() {
 
       if (error) throw error;
       
-      // Log to timeline if lead is present - wrapped in try/catch to prevent blocking
+      // Log to timeline if lead is present - non-blocking fire-and-forget
       if (data.lead_id && profile) {
-        try {
-          await logScheduleEventToTimeline({
-            lead_id: data.lead_id,
-            organization_id: data.organization_id,
-            actor_id: profile.id,
-            assigned_user_id: data.user_id,
-            event_title: data.title,
-            event_type: data.event_type || 'task',
-            start_time: data.start_time,
-            action_type: 'created'
-          });
-        } catch (timelineError) {
-          console.error('Error logging to timeline (non-critical):', timelineError);
-        }
+        logScheduleEventToTimeline({
+          lead_id: data.lead_id,
+          organization_id: data.organization_id,
+          actor_id: profile.id,
+          assigned_user_id: data.user_id,
+          event_title: data.title,
+          event_type: data.event_type || 'task',
+          start_time: data.start_time,
+          action_type: 'created'
+        }).catch(err => console.error('Timeline log error:', err));
       }
 
-      // Record activity log if needed
+      // Record activity log if needed - fire-and-forget
       if (data.lead_id && (data.event_type === 'visit' || data.event_type === 'meeting')) {
-        const { error: activityError } = await supabase.from('activities').insert({
+        supabase.from('activities').insert({
           lead_id: data.lead_id,
           user_id: data.user_id,
           type: data.event_type === 'visit' ? 'visit_scheduled' : 'meeting_scheduled',
           content: `${data.event_type === 'visit' ? 'Visita' : 'Reunião'} agendada: ${data.title}`,
           metadata: { schedule_event_id: data.id }
+        }).then(({ error: activityError }) => {
+          if (activityError) console.error('Error creating activity log:', activityError);
         });
-        
-        if (activityError) {
-          console.error('Error creating activity log (non-critical):', activityError);
-        }
       }
 
+      // Send WhatsApp notification - fire-and-forget
+      (async () => {
+        try {
+          const { notificationService } = await import('@/services/NotificationService');
+          const { data: userData } = await supabase
+            .from('users')
+            .select('name, organization_id')
+            .eq('id', data.user_id)
+            .single();
 
-      // Send WhatsApp notification for new appointment
-      try {
-        const { notificationService } = await import('@/services/NotificationService');
-        const { data: userData } = await supabase
-          .from('users')
-          .select('name, organization_id')
-          .eq('id', data.user_id)
-          .single();
-
-        if (userData) {
-          await notificationService.send({
-            eventKey: 'new_appointment',
-            organizationId: userData.organization_id || '',
-            userId: data.user_id,
-            variables: {
-              user_name: userData.name || 'Corretor',
-              title: data.title,
-              date: format(new Date(data.start_time), 'dd/MM/yyyy'),
-              time: format(new Date(data.start_time), 'HH:mm')
-            }
-          });
+          if (userData) {
+            await notificationService.send({
+              eventKey: 'new_appointment',
+              organizationId: userData.organization_id || '',
+              userId: data.user_id,
+              variables: {
+                user_name: userData.name || 'Corretor',
+                title: data.title,
+                date: format(new Date(data.start_time), 'dd/MM/yyyy'),
+                time: format(new Date(data.start_time), 'HH:mm')
+              }
+            });
+          }
+        } catch (err) {
+          console.error('Failed to send appointment notification:', err);
         }
-      } catch (err) {
-        console.error('Failed to send appointment notification:', err);
-      }
+      })();
 
       return data;
     },
