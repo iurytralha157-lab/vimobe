@@ -8512,6 +8512,10 @@ export type Database = {
         Args: { p_session_id: string; p_user_id: string }
         Returns: boolean
       }
+      initialize_organization_financial_categories: {
+        Args: { p_org_id: string }
+        Returns: undefined
+      }
       is_admin: { Args: never; Returns: boolean }
       is_member_available: { Args: { p_user_id: string }; Returns: boolean }
       is_super_admin: { Args: never; Returns: boolean }
