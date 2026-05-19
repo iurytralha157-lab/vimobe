@@ -13,6 +13,102 @@ const MAGIC_BYTES: Record<string, string[]> = {
   'application/pdf': ['25504446'],
 };
 
+// ============================================================
+// INBOUND RULES — identify & route incoming WhatsApp messages
+// ============================================================
+type InboundRule = {
+  id: string;
+  organization_id: string;
+  session_id: string | null;
+  priority: number;
+  is_active: boolean;
+  match_type: "contains" | "equals" | "regex" | "utm" | "meta_ctwa" | "any";
+  match_value: string | null;
+  match_field: string | null;
+  target_round_robin_id: string | null;
+  target_team_id: string | null;
+  target_user_id: string | null;
+  target_pipeline_id: string | null;
+  target_stage_id: string | null;
+  source_label: string | null;
+  campaign_label: string | null;
+};
+
+function extractAdContext(contextInfo: any) {
+  const ext = contextInfo?.externalAdReply || {};
+  return {
+    meta_campaign_id: ext.sourceId || ext.ctwaClid || null,
+    meta_ad_id: ext.sourceId || null,
+    meta_click_id: ext.ctwaClid || null,
+    meta_adset_id: null,
+    headline: ext.title || null,
+    body: ext.body || null,
+    source_url: ext.sourceUrl || null,
+  };
+}
+
+function extractUtmFromText(text: string) {
+  const utm: Record<string, string> = {};
+  if (!text) return utm;
+  const params = ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"];
+  for (const p of params) {
+    const m = text.match(new RegExp(`${p}=([^\\s&]+)`, "i"));
+    if (m) utm[p] = decodeURIComponent(m[1]);
+  }
+  return utm;
+}
+
+async function applyInboundRules(
+  supabase: any,
+  session: any,
+  ctx: { content: string; pushName: string; phone: string; adContext: any; utm: Record<string, string> }
+): Promise<InboundRule | null> {
+  const { data: rules } = await supabase
+    .from("whatsapp_inbound_rules")
+    .select("*")
+    .eq("organization_id", session.organization_id)
+    .eq("is_active", true)
+    .order("priority", { ascending: true });
+  if (!rules || rules.length === 0) return null;
+
+  for (const rule of rules as InboundRule[]) {
+    if (rule.session_id && rule.session_id !== session.id) continue;
+    const field = (rule.match_field || "message").toLowerCase();
+    let haystack = "";
+    if (field === "message") haystack = ctx.content || "";
+    else if (field === "push_name") haystack = ctx.pushName || "";
+    else if (field === "phone") haystack = ctx.phone || "";
+    else if (field === "meta_source_id") haystack = ctx.adContext?.meta_campaign_id || "";
+
+    const value = (rule.match_value || "").toString();
+    try {
+      switch (rule.match_type) {
+        case "any":
+          return rule;
+        case "meta_ctwa":
+          if (ctx.adContext?.meta_campaign_id || ctx.adContext?.meta_click_id) return rule;
+          break;
+        case "utm":
+          if (value && (ctx.utm["utm_campaign"] === value || ctx.utm["utm_source"] === value)) return rule;
+          break;
+        case "contains":
+          if (value && haystack.toLowerCase().includes(value.toLowerCase())) return rule;
+          break;
+        case "equals":
+          if (value && haystack.trim().toLowerCase() === value.trim().toLowerCase()) return rule;
+          break;
+        case "regex":
+          if (value && new RegExp(value, "i").test(haystack)) return rule;
+          break;
+      }
+    } catch (e) {
+      console.error("[applyInboundRules] rule error", rule.id, e);
+    }
+  }
+  return null;
+}
+
+
 function validateMagicBytes(content: Uint8Array, expectedMime: string): boolean {
   if (content.length < 4) return false;
   const hex = Array.from(content.slice(0, 8))
