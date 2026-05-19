@@ -32,12 +32,14 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const cleanDomain = domain.toLowerCase().trim();
+    const bareDomain = cleanDomain.replace(/^www\./, '');
+    const wwwDomain = `www.${bareDomain}`;
 
-    // Direct lookup by custom_domain with all needed fields
+    // Direct lookup by custom_domain — try all variants (with/without www)
     const { data: directMatch, error: directError } = await supabase
       .from('organization_sites')
       .select('*, organizations(name)')
-      .or(`custom_domain.eq.${cleanDomain},custom_domain.eq.www.${cleanDomain.replace(/^www\./, '')}`)
+      .or(`custom_domain.eq.${cleanDomain},custom_domain.eq.${bareDomain},custom_domain.eq.${wwwDomain}`)
       .eq('is_active', true)
       .limit(1)
       .maybeSingle();
