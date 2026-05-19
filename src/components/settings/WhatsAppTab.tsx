@@ -534,8 +534,8 @@ function AccessControlDialog({
     }
   };
 
-  const userHasAccess = (userId: string) => {
-    return accessList?.some((access) => access.user_id === userId);
+  const getAccess = (userId: string) => {
+    return accessList?.find((access) => access.user_id === userId);
   };
 
   return (
