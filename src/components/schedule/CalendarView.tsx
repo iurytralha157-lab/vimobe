@@ -332,29 +332,6 @@ export function CalendarView({
     return layouts;
   }, []);
 
-  const handleNavigate = (direction: 'prev' | 'next') => {
-    switch (viewMode) {
-      case 'day':
-        onPivotChange(direction === 'prev' ? subDays(pivotDate, 1) : addDays(pivotDate, 1));
-        break;
-      case 'week':
-        onPivotChange(direction === 'prev' ? subWeeks(pivotDate, 1) : addWeeks(pivotDate, 1));
-        break;
-      case 'month':
-        onPivotChange(direction === 'prev' ? subMonths(pivotDate, 1) : addMonths(pivotDate, 1));
-        break;
-      case 'year':
-        onPivotChange(direction === 'prev' ? startOfYear(subDays(startOfYear(pivotDate), 1)) : startOfYear(addDays(endOfYear(pivotDate), 1)));
-        break;
-    }
-  };
-
-  const handleToday = () => {
-    const today = new Date();
-    onPivotChange(today);
-    onDateSelect(today);
-  };
-
   const handleDragEnd = (event: DragEndEvent) => {
     setActiveEvent(null);
     const { active, over } = event;
@@ -387,49 +364,9 @@ export function CalendarView({
     return map;
   }, [events]);
 
-  const renderHeader = () => {
-    let label = '';
-    switch (viewMode) {
-      case 'day':
-        label = format(pivotDate, "dd 'de' MMMM, yyyy", { locale: ptBR });
-        break;
-      case 'week':
-        const weekStart = startOfWeek(pivotDate, { weekStartsOn: 0 });
-        const weekEnd = endOfWeek(pivotDate, { weekStartsOn: 0 });
-        label = `${format(weekStart, 'dd')} - ${format(weekEnd, 'dd')} de ${format(weekEnd, 'MMMM, yyyy', { locale: ptBR })}`;
-        break;
-      case 'month':
-        label = format(pivotDate, 'MMMM yyyy', { locale: ptBR });
-        break;
-      case 'year':
-        label = format(pivotDate, 'yyyy');
-        break;
-    }
-
-    return (
-      <div className="flex items-center justify-between px-6 py-4 border-b bg-card">
-        <div className="flex items-center gap-4">
-          <Button variant="outline" size="sm" onClick={handleToday} className="font-black rounded-2xl h-10 px-6 border-border/60 hover:bg-accent transition-all text-xs uppercase tracking-widest">
-            Hoje
-          </Button>
-          <div className="flex items-center bg-muted/30 border border-border/40 rounded-2xl p-1">
-            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl hover:bg-card hover:shadow-sm" onClick={() => handleNavigate('prev')}>
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl hover:bg-card hover:shadow-sm" onClick={() => handleNavigate('next')}>
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-          <h2 className="text-xl font-black capitalize ml-4 tracking-tight text-foreground/90">
-            {label}
-          </h2>
-        </div>
-      </div>
-    );
-  };
-
   const renderMonthView = () => {
     const monthStart = startOfMonth(pivotDate);
+
     const monthEnd = endOfMonth(pivotDate);
     const calendarStart = startOfWeek(monthStart, { weekStartsOn: 0 });
     const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 0 });
@@ -781,7 +718,7 @@ export function CalendarView({
 
   return (
     <div className="h-full flex flex-col bg-card overflow-hidden">
-      {renderHeader()}
+
       
       <div className="flex-1 overflow-hidden">
         {viewMode === 'month' && renderMonthView()}

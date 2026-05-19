@@ -171,7 +171,7 @@ function EventDetailPanel({
   if (!event) return null;
 
   const typeConf = EVENT_TYPE_CONFIG[event.event_type] ?? EVENT_TYPE_CONFIG.task;
-  const prioConf = (PRIORITY_CONFIG as any)[event.priority ?? "medium"] ?? PRIORITY_CONFIG.medium;
+  const prioConf = (PRIORITY_CONFIG as any)[(event as any).priority ?? "medium"] ?? PRIORITY_CONFIG.medium;
   const statusConf = STATUS_CONFIG[event.status ?? "pending"] ?? STATUS_CONFIG.pending;
   const TypeIcon = typeConf.icon;
 
