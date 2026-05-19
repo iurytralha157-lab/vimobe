@@ -80,6 +80,8 @@ export function ConversationHeader({
   stageName,
   stageColor,
   conversationId,
+  sessionId,
+  remoteJid,
   onArchive,
   onDelete,
   onCreateLead,
@@ -88,6 +90,7 @@ export function ConversationHeader({
   className
 }: ConversationHeaderProps) {
   const [showAutomationDialog, setShowAutomationDialog] = useState(false);
+  const { data: chatLabels = [] } = useChatLabels(conversationId || undefined);
   const displayName = contactName && contactName !== contactPhone 
     ? contactName 
     : formatPhoneForDisplay(contactPhone || "");
