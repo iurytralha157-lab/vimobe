@@ -667,6 +667,9 @@ export function useLoadMoreLeads() {
         if (filters?.filterAd && filters.filterAd !== 'all') {
           query = query.eq('lead_meta.ad_name', filters.filterAd);
         }
+        if (filters?.filterSource && filters.filterSource !== 'all') {
+          query = query.eq('source', filters.filterSource);
+        }
       }
       
       const { data, error } = await query;
