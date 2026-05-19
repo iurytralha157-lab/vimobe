@@ -29,6 +29,7 @@ import {
 } from "@/hooks/use-schedule-events";
 import { useUsers } from "@/hooks/use-users";
 import { useLeads } from "@/hooks/use-leads";
+import { useProperties } from "@/hooks/use-properties";
 import { useScheduleComments } from "@/hooks/use-schedule-comments";
 import { useScheduleEventAssignees } from "@/hooks/use-schedule-event-assignees";
 import { Link } from "react-router-dom";
