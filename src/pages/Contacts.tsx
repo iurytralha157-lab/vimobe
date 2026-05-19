@@ -350,6 +350,7 @@ export default function Contacts() {
               hasActiveFilters={!!hasActiveFilters}
               clearFilters={clearFilters}
               activeFilterCount={activeFilterCount}
+              availableSources={uniqueSources}
             />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
