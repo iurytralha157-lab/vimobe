@@ -33,6 +33,7 @@ export interface WhatsAppSessionAccess {
   user_id: string;
   can_view: boolean;
   can_send: boolean;
+  only_leads_access: boolean;
   granted_by: string | null;
   created_at: string;
   user?: {
@@ -305,11 +306,13 @@ export function useGrantSessionAccess() {
       userId,
       canView = true,
       canSend = true,
+      onlyLeadsAccess = false,
     }: {
       sessionId: string;
       userId: string;
       canView?: boolean;
       canSend?: boolean;
+      onlyLeadsAccess?: boolean;
     }) => {
       const { error } = await supabase.from("whatsapp_session_access").upsert(
         {
@@ -317,6 +320,7 @@ export function useGrantSessionAccess() {
           user_id: userId,
           can_view: canView,
           can_send: canSend,
+          only_leads_access: onlyLeadsAccess,
           granted_by: profile?.id,
         },
         { onConflict: "session_id,user_id" }
