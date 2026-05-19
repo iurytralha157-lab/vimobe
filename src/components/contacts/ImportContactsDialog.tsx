@@ -261,22 +261,111 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
     let success = 0;
     let failed = 0;
 
-    const firstStage = stages.length > 0 ? stages.sort((a, b) => a.position - b.position)[0] : null;
+    // Cache common lookups
+    const pipelineMap = new Map(pipelines.map(p => [p.name.toLowerCase(), p.id]));
+    const usersMap = new Map([
+      ...users.map(u => [u.name.toLowerCase(), u.id]),
+      ...users.map(u => [u.email?.toLowerCase() || '', u.id])
+    ]);
+    const tagsMap = new Map(allTags.map(t => [t.name.toLowerCase(), t.id]));
+    
+    // Default values from modal
+    const defaultPipelineId = selectedPipeline;
+    const defaultStageId = stagesData.length > 0 ? stagesData.sort((a, b) => a.position - b.position)[0].id : undefined;
+    const defaultAssigneeId = selectedAssignee !== 'none' ? selectedAssignee : undefined;
+    const finalSource = selectedSource === 'custom' ? customSource : selectedSource;
 
     for (const contact of parsedData) {
       try {
+        // 1. Resolve Pipeline
+        let contactPipelineId = defaultPipelineId;
+        if (contact.pipeline) {
+          const found = pipelineMap.get(contact.pipeline.toLowerCase());
+          if (found) contactPipelineId = found;
+        }
+
+        // 2. Resolve Stage
+        let contactStageId = defaultStageId;
+        if (contact.estagio) {
+          // Fetch stages for the resolved pipeline
+          const { data: contactStages } = await supabase
+            .from('stages')
+            .select('id, name')
+            .eq('pipeline_id', contactPipelineId);
+          
+          if (contactStages) {
+            const found = contactStages.find(s => s.name.toLowerCase() === contact.estagio?.toLowerCase());
+            if (found) {
+              contactStageId = found.id;
+            } else {
+              // Default to first stage of this pipeline
+              const first = contactStages.sort((a: any, b: any) => (a.position || 0) - (b.position || 0))[0];
+              if (first) contactStageId = first.id;
+            }
+          }
+        }
+
+        // 3. Resolve Assignee
+        let contactAssigneeId = defaultAssigneeId;
+        if (contact.responsavel) {
+          const found = usersMap.get(contact.responsavel.toLowerCase());
+          if (found) contactAssigneeId = found;
+        }
+
+        // 4. Resolve Tags
+        const tagIds: string[] = [];
+        if (contact.tags) {
+          const tagNames = contact.tags.split(',').map(t => t.trim()).filter(Boolean);
+          for (const tagName of tagNames) {
+            let tagId = tagsMap.get(tagName.toLowerCase());
+            if (!tagId) {
+              // Create new tag
+              try {
+                const newTag = await createTag.mutateAsync({ name: tagName, color: '#6b7280' });
+                tagId = newTag.id;
+                tagsMap.set(tagName.toLowerCase(), tagId);
+              } catch (e) {
+                console.error('Error creating tag:', e);
+              }
+            }
+            if (tagId) tagIds.push(tagId);
+          }
+        }
+
+        // 5. Status mapping
+        let dealStatus = 'open';
+        if (contact.status?.toLowerCase().includes('ganho')) dealStatus = 'won';
+        else if (contact.status?.toLowerCase().includes('perdido')) dealStatus = 'lost';
+
+        // 6. Distribution logic (if applicable)
+        let finalAssigneeId = contactAssigneeId;
+        if (isAutoDistribute && !contactAssigneeId) {
+          if (selectedTeam !== 'none') {
+            const team = teams.find(t => t.id === selectedTeam);
+            if (team && team.members && team.members.length > 0) {
+              // Simple balanced distribution for import
+              const memberIndex = success % team.members.length;
+              finalAssigneeId = team.members[memberIndex].user_id;
+            }
+          }
+        }
+
         await createLead.mutateAsync({
           name: contact.nome,
           phone: contact.telefone,
           email: contact.email,
           message: contact.mensagem,
-          source: selectedSource,
-          pipeline_id: selectedPipeline,
-          stage_id: firstStage?.id,
-          assigned_user_id: selectedAssignee !== 'none' ? selectedAssignee : undefined,
+          source: contact.fonte || finalSource,
+          pipeline_id: contactPipelineId,
+          stage_id: contactStageId,
+          assigned_user_id: finalAssigneeId,
+          tag_ids: tagIds,
+          deal_status: dealStatus,
+          lost_reason: contact.motivo_perda,
         });
         success++;
       } catch (error) {
+        console.error('Failed to import row:', contact, error);
         failed++;
       }
     }
@@ -297,22 +386,45 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
     const worksheet = workbook.addWorksheet('Contatos');
     
     worksheet.columns = [
-      { header: 'nome', key: 'nome', width: 25 },
-      { header: 'telefone', key: 'telefone', width: 18 },
-      { header: 'email', key: 'email', width: 30 },
-      { header: 'mensagem', key: 'mensagem', width: 40 },
+      { header: 'Nome', key: 'Nome', width: 25 },
+      { header: 'Telefone', key: 'Telefone', width: 18 },
+      { header: 'Email', key: 'Email', width: 30 },
+      { header: 'Status', key: 'Status', width: 12 },
+      { header: 'Pipeline', key: 'Pipeline', width: 15 },
+      { header: 'Estagio', key: 'Estagio', width: 15 },
+      { header: 'Responsavel', key: 'Responsavel', width: 20 },
+      { header: 'Tags', key: 'Tags', width: 30 },
+      { header: 'Fonte', key: 'Fonte', width: 15 },
+      { header: 'Motivo de perda', key: 'Motivo de perda', width: 25 },
+      { header: 'Mensagem', key: 'Mensagem', width: 40 },
     ];
 
-    worksheet.addRow({ nome: 'João Silva', telefone: '5511999998888', email: 'joao@exemplo.com', mensagem: 'Interessado no imóvel' });
-    worksheet.addRow({ nome: 'Maria Santos', telefone: '5511988887777', email: 'maria@exemplo.com', mensagem: 'Quer agendar visita' });
+    worksheet.addRow({ 
+      Nome: 'João Silva', 
+      Telefone: '5511999998888', 
+      Email: 'joao@email.com', 
+      Status: 'Aberto', 
+      Pipeline: 'Vendas', 
+      Estagio: 'Base', 
+      Responsavel: 'Carlos', 
+      Tags: 'quente, investidor', 
+      Fonte: 'Facebook Ads',
+      'Motivo de perda': '',
+      Mensagem: 'Interessado no imóvel' 
+    });
 
     worksheet.getRow(1).font = { bold: true };
+    worksheet.getRow(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFE0E0E0' }
+    };
 
     const buffer = await workbook.xlsx.writeBuffer();
     const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = 'exemplo_importacao_contatos.xlsx';
+    link.download = 'modelo_importacao_crm.xlsx';
     link.click();
     URL.revokeObjectURL(link.href);
   };
@@ -323,6 +435,10 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
     setSelectedPipeline('');
     setSelectedAssignee('none');
     setSelectedSource('import');
+    setCustomSource('');
+    setShowCustomSourceInput(false);
+    setIsAutoDistribute(false);
+    setSelectedTeam('none');
     setImportResult(null);
   };
 
@@ -335,39 +451,47 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
 
   return (
     <Sheet open={open} onOpenChange={handleClose}>
-      <SheetContent side="right" className="w-[90%] sm:w-[650px] sm:max-w-[650px] p-6 flex flex-col overflow-y-auto">
-        <SheetHeader>
-          <SheetTitle className="flex items-center gap-2">
-            <Upload className="h-5 w-5 text-primary" />
-            Importar contatos
-          </SheetTitle>
-          <SheetDescription>
-            Importe contatos de um arquivo Excel ou CSV
-          </SheetDescription>
-        </SheetHeader>
+      <SheetContent side="right" className="w-[95%] sm:w-[650px] sm:max-w-[650px] p-0 flex flex-col h-full bg-background border-l border-border">
+        <div className="p-6 border-b border-border bg-muted/30">
+          <SheetHeader>
+            <SheetTitle className="flex items-center gap-2 text-xl font-bold">
+              <Upload className="h-6 w-6 text-primary" />
+              Importar contatos/leads
+            </SheetTitle>
+            <SheetDescription className="text-sm">
+              Migre sua base completa mantendo pipelines, estágios, responsáveis e tags.
+            </SheetDescription>
+          </SheetHeader>
+        </div>
 
         {importResult ? (
-          <div className="py-8 text-center space-y-4">
-            <CheckCircle2 className="h-16 w-16 text-primary mx-auto" />
-            <div>
-              <p className="text-lg font-medium">Importação concluída!</p>
-              <p className="text-muted-foreground mt-1">
-                {importResult.success} contatos importados
-                {importResult.failed > 0 && `, ${importResult.failed} falharam`}
+          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-6">
+            <div className="h-20 w-20 bg-primary/10 rounded-full flex items-center justify-center">
+              <CheckCircle2 className="h-12 w-12 text-primary" />
+            </div>
+            <div className="space-y-2">
+              <p className="text-2xl font-bold">Importação concluída!</p>
+              <p className="text-muted-foreground">
+                <span className="font-semibold text-foreground">{importResult.success}</span> contatos importados com sucesso
+                {importResult.failed > 0 && (
+                  <span className="block mt-1 text-red-500">
+                    <span className="font-semibold">{importResult.failed}</span> falharam durante o processo
+                  </span>
+                )}
               </p>
             </div>
-            <Button onClick={() => handleClose(false)} className="rounded-xl">
-              Fechar
+            <Button onClick={() => handleClose(false)} className="rounded-xl px-8 h-12 text-lg shadow-lg shadow-primary/20">
+              Concluir e ver leads
             </Button>
           </div>
         ) : (
-          <>
-            <div className="flex-1 min-h-0 overflow-y-auto space-y-4 pr-1">
+          <div className="flex-1 overflow-y-auto">
+            <div className="p-6 space-y-6">
               {/* Drop Zone */}
               <div
                 className={cn(
-                  "border-2 border-dashed rounded-xl p-6 text-center transition-colors cursor-pointer",
-                  isDragging ? "border-primary bg-primary/5" : "border-border hover:border-primary/50",
+                  "border-2 border-dashed rounded-2xl p-8 text-center transition-all duration-200 cursor-pointer group",
+                  isDragging ? "border-primary bg-primary/5 ring-4 ring-primary/5" : "border-border hover:border-primary/50 hover:bg-muted/50",
                   file && "border-primary bg-primary/5"
                 )}
                 onDragOver={handleDragOver}
@@ -384,112 +508,217 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
                 />
                 
                 {file ? (
-                  <div className="space-y-1.5">
-                    <FileSpreadsheet className="h-8 w-8 text-primary mx-auto" />
-                    <p className="font-medium text-sm truncate">{file.name}</p>
-                    <p className="text-xs text-muted-foreground">{parsedData.length} contatos encontrados</p>
+                  <div className="space-y-3">
+                    <div className="h-12 w-12 bg-primary/20 rounded-xl flex items-center justify-center mx-auto">
+                      <FileSpreadsheet className="h-7 w-7 text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-base truncate max-w-[300px] mx-auto">{file.name}</p>
+                      <p className="text-sm text-primary font-medium mt-1">{parsedData.length} contatos encontrados para importar</p>
+                    </div>
+                    <Button variant="outline" size="sm" className="h-8 text-xs rounded-lg mt-2">Alterar arquivo</Button>
                   </div>
                 ) : (
-                  <div className="space-y-1.5">
-                    <Upload className="h-8 w-8 text-primary mx-auto" />
-                    <p className="font-medium text-sm">Arraste um arquivo ou clique para selecionar</p>
-                    <p className="text-xs text-muted-foreground">.xlsx, .xls, .csv</p>
+                  <div className="space-y-3">
+                    <div className="h-12 w-12 bg-muted rounded-xl flex items-center justify-center mx-auto group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                      <Upload className="h-7 w-7 text-muted-foreground group-hover:text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-base">Arraste sua planilha aqui</p>
+                      <p className="text-sm text-muted-foreground mt-1">Compatível com Excel (.xlsx) e CSV</p>
+                    </div>
                   </div>
                 )}
               </div>
 
-              {/* Pipeline Selection */}
-              <div className="space-y-1.5">
-                <Label className="text-xs">Pipeline *</Label>
-                <Select value={selectedPipeline} onValueChange={setSelectedPipeline}>
-                  <SelectTrigger className="h-9">
-                    <SelectValue placeholder="Escolha a pipeline" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {pipelines.map(p => (
-                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-[11px] text-muted-foreground">
-                  Importados para o primeiro estágio desta pipeline
-                </p>
-              </div>
-
-              {/* Source + Assignee in grid */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Origem *</Label>
-                  <Select value={selectedSource} onValueChange={setSelectedSource}>
-                    <SelectTrigger className="h-9">
-                      <SelectValue placeholder="Origem" />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Pipeline Selection */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-semibold flex items-center gap-2">
+                    <FileSpreadsheet className="h-4 w-4 text-primary" />
+                    Pipeline Padrão
+                  </Label>
+                  <Select value={selectedPipeline} onValueChange={setSelectedPipeline}>
+                    <SelectTrigger className="h-11 rounded-xl bg-muted/30 border-muted">
+                      <SelectValue placeholder="Selecione o funil de destino" />
                     </SelectTrigger>
                     <SelectContent>
-                      {sourceOptions.map(s => (
-                        <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                      {pipelines.map(p => (
+                        <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
+                  <p className="text-[11px] text-muted-foreground leading-tight italic">
+                    * Se não houver pipeline na planilha, usaremos esta.
+                  </p>
                 </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Responsável</Label>
-                  <Select value={selectedAssignee} onValueChange={setSelectedAssignee}>
-                    <SelectTrigger className="h-9">
-                      <SelectValue placeholder="Nenhum" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Sem responsável</SelectItem>
-                      {users.map(u => (
-                        <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+
+                {/* Source Selection */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-semibold flex items-center gap-2">
+                    <Upload className="h-4 w-4 text-primary" />
+                    Origem Padrão
+                  </Label>
+                  {showCustomSourceInput ? (
+                    <div className="flex gap-2">
+                      <Input 
+                        placeholder="Nome da origem..." 
+                        className="h-11 rounded-xl bg-muted/30 border-muted"
+                        value={customSource}
+                        onChange={(e) => setCustomSource(e.target.value)}
+                        autoFocus
+                      />
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-11 px-3"
+                        onClick={() => {
+                          setShowCustomSourceInput(false);
+                          setSelectedSource('import');
+                        }}
+                      >
+                        Cancelar
+                      </Button>
+                    </div>
+                  ) : (
+                    <Select value={selectedSource} onValueChange={(val) => {
+                      if (val === 'custom') {
+                        setShowCustomSourceInput(true);
+                      } else {
+                        setSelectedSource(val);
+                      }
+                    }}>
+                      <SelectTrigger className="h-11 rounded-xl bg-muted/30 border-muted">
+                        <SelectValue placeholder="Origem dos contatos" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {sourceOptions.map(s => (
+                          <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                 </div>
               </div>
 
-              {/* Instructions */}
-              <div className="bg-muted/50 rounded-xl p-3 text-xs space-y-2">
-                <p className="text-muted-foreground">
-                  Colunas: <strong>'nome'</strong> (obrigatório), 'telefone', 'email', 'mensagem' (opcionais).
-                </p>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="w-full h-8 text-xs rounded-xl"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    downloadSample();
-                  }}
-                >
-                  <Download className="h-3.5 w-3.5 mr-1.5" />
-                  Baixar planilha exemplo
-                </Button>
-              </div>
-            </div>
+              {/* Attribution Selection */}
+              <div className="space-y-4 pt-2">
+                <div className="flex items-center justify-between bg-muted/30 p-4 rounded-2xl border border-muted">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 bg-primary/10 rounded-full flex items-center justify-center">
+                      <Users className="h-5 w-5 text-primary" />
+                    </div>
+                    <div className="space-y-0.5">
+                      <p className="text-sm font-bold">Distribuição automática</p>
+                      <p className="text-[11px] text-muted-foreground">Dividir leads entre equipe ou usuário</p>
+                    </div>
+                  </div>
+                  <Switch checked={isAutoDistribute} onCheckedChange={setIsAutoDistribute} />
+                </div>
 
-            <div className="flex gap-2 pt-4 border-t">
-              <Button variant="outline" className="w-[40%] rounded-xl" onClick={() => handleClose(false)}>
-                Cancelar
-              </Button>
-              <Button 
-                className="w-[60%] rounded-xl"
-                onClick={handleImport}
-                disabled={!file || !selectedPipeline || parsedData.length === 0 || isImporting}
-              >
-                {isImporting ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Importando...
-                  </>
+                {isAutoDistribute ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                    <div className="space-y-2">
+                      <Label className="text-xs font-semibold">Distribuir para Equipe</Label>
+                      <Select value={selectedTeam} onValueChange={setSelectedTeam}>
+                        <SelectTrigger className="h-10 rounded-xl">
+                          <SelectValue placeholder="Selecione a equipe" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Nenhuma equipe</SelectItem>
+                          {teams.map(t => (
+                            <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-semibold">Ou Usuário Específico</Label>
+                      <Select value={selectedAssignee} onValueChange={setSelectedAssignee}>
+                        <SelectTrigger className="h-10 rounded-xl">
+                          <SelectValue placeholder="Nenhum" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Sem responsável</SelectItem>
+                          {users.map(u => (
+                            <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
                 ) : (
-                  <>
-                    <Upload className="h-4 w-4 mr-2" />
-                    Importar {parsedData.length > 0 ? `(${parsedData.length})` : ''}
-                  </>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-semibold flex items-center gap-2">
+                      <UserIcon className="h-4 w-4 text-primary" />
+                      Responsável Único
+                    </Label>
+                    <Select value={selectedAssignee} onValueChange={setSelectedAssignee}>
+                      <SelectTrigger className="h-11 rounded-xl bg-muted/30 border-muted">
+                        <SelectValue placeholder="Nenhum responsável definido" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Sem responsável</SelectItem>
+                        {users.map(u => (
+                          <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 )}
-              </Button>
+              </div>
+
+              {/* Sample Download Card */}
+              <div className="relative group overflow-hidden bg-primary/5 rounded-2xl p-5 border border-primary/10">
+                <div className="flex items-start justify-between">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <TagIcon className="h-4 w-4 text-primary" />
+                      <p className="text-sm font-bold text-primary">Baixe nosso novo modelo</p>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground leading-relaxed pr-8">
+                      Agora compatível com Tags (separadas por vírgula), Status, Pipeline, Estágios, Origens e Responsáveis.
+                    </p>
+                  </div>
+                  <Button 
+                    variant="link" 
+                    className="p-0 h-auto text-primary group-hover:scale-110 transition-transform"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      downloadSample();
+                    }}
+                  >
+                    <Download className="h-6 w-6" />
+                  </Button>
+                </div>
+              </div>
             </div>
-          </>
+          </div>
+        )}
+
+        {!importResult && (
+          <div className="p-6 border-t border-border bg-background flex gap-3">
+            <Button variant="ghost" className="flex-1 rounded-xl h-12" onClick={() => handleClose(false)}>
+              Cancelar
+            </Button>
+            <Button 
+              className="flex-[2] rounded-xl h-12 font-bold shadow-lg shadow-primary/20"
+              onClick={handleImport}
+              disabled={!file || !selectedPipeline || parsedData.length === 0 || isImporting}
+            >
+              {isImporting ? (
+                <>
+                  <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                  Processando {parsedData.length} leads...
+                </>
+              ) : (
+                <>
+                  <Upload className="h-5 w-5 mr-2" />
+                  Iniciar Importação {parsedData.length > 0 ? `(${parsedData.length})` : ''}
+                </>
+              )}
+            </Button>
+          </div>
         )}
       </SheetContent>
     </Sheet>
