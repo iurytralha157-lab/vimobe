@@ -8202,6 +8202,112 @@ export type Database = {
           },
         ]
       }
+      whatsapp_inbound_rules: {
+        Row: {
+          campaign_label: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          match_field: string | null
+          match_type: string
+          match_value: string | null
+          name: string
+          organization_id: string
+          priority: number
+          session_id: string | null
+          source_label: string | null
+          target_pipeline_id: string | null
+          target_round_robin_id: string | null
+          target_stage_id: string | null
+          target_team_id: string | null
+          target_user_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          campaign_label?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          match_field?: string | null
+          match_type: string
+          match_value?: string | null
+          name: string
+          organization_id: string
+          priority?: number
+          session_id?: string | null
+          source_label?: string | null
+          target_pipeline_id?: string | null
+          target_round_robin_id?: string | null
+          target_stage_id?: string | null
+          target_team_id?: string | null
+          target_user_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          campaign_label?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          match_field?: string | null
+          match_type?: string
+          match_value?: string | null
+          name?: string
+          organization_id?: string
+          priority?: number
+          session_id?: string | null
+          source_label?: string | null
+          target_pipeline_id?: string | null
+          target_round_robin_id?: string | null
+          target_stage_id?: string | null
+          target_team_id?: string | null
+          target_user_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_inbound_rules_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_inbound_rules_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_inbound_rules_target_pipeline_id_fkey"
+            columns: ["target_pipeline_id"]
+            isOneToOne: false
+            referencedRelation: "pipelines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_inbound_rules_target_round_robin_id_fkey"
+            columns: ["target_round_robin_id"]
+            isOneToOne: false
+            referencedRelation: "round_robins"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_inbound_rules_target_stage_id_fkey"
+            columns: ["target_stage_id"]
+            isOneToOne: false
+            referencedRelation: "stages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_inbound_rules_target_team_id_fkey"
+            columns: ["target_team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       whatsapp_message_templates: {
         Row: {
           category: string | null
