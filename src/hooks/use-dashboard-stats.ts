@@ -824,22 +824,39 @@ export function useDealsEvolutionData(filters?: DashboardFilters) {
         intervals = intervals.filter((_, i) => i % step === 0);
       }
 
-      // Group leads by interval
+      // Group leads by interval — usa a DATA CORRETA para cada categoria:
+      // - abertos: created_at (entrada do lead)
+      // - ganhos: won_at (data da venda)
+      // - perdas: lost_at (data da perda)
+      const inRange = (iso: string | null, start: Date, end: Date) => {
+        if (!iso) return false;
+        const d = new Date(iso);
+        return d >= start && d < end;
+      };
+
       const result: DealsEvolutionPoint[] = intervals.map((intervalStart, index) => {
-        const intervalEnd = index < intervals.length - 1 
-          ? intervals[index + 1] 
+        const intervalEnd = index < intervals.length - 1
+          ? intervals[index + 1]
           : dateTo;
-        
-        const intervalLeads = leads.filter((lead: any) => {
-          const leadDate = new Date(lead.created_at);
-          return leadDate >= intervalStart && leadDate < intervalEnd;
-        });
+
+        const ganhos = leads.filter((l: any) =>
+          l.deal_status === 'won' && inRange(l.won_at, intervalStart, intervalEnd)
+        ).length;
+
+        const perdas = leads.filter((l: any) =>
+          l.deal_status === 'lost' && inRange(l.lost_at, intervalStart, intervalEnd)
+        ).length;
+
+        const abertos = leads.filter((l: any) =>
+          (l.deal_status === 'open' || !l.deal_status) &&
+          inRange(l.created_at, intervalStart, intervalEnd)
+        ).length;
 
         return {
           date: formatLabel(intervalStart),
-          ganhos: intervalLeads.filter((l: any) => l.deal_status === 'won').length,
-          perdas: intervalLeads.filter((l: any) => l.deal_status === 'lost').length,
-          abertos: intervalLeads.filter((l: any) => l.deal_status === 'open' || !l.deal_status).length,
+          ganhos,
+          perdas,
+          abertos,
         };
       });
 
