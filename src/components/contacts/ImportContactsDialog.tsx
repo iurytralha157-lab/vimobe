@@ -77,9 +77,35 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: pipelines = [] } = usePipelines();
-  const { data: stages = [] } = useStages(selectedPipeline || undefined);
+  const { data: stagesData = [] } = useStages(selectedPipeline || undefined);
   const { data: users = [] } = useOrganizationUsers();
+  const { data: teams = [] } = useTeams();
+  const { data: allTags = [] } = useTags();
   const createLead = useCreateLead();
+  const createTag = useCreateTag();
+
+  const sourceOptions = [
+    { value: 'import', label: 'Importação' },
+    { value: 'facebook', label: 'Facebook' },
+    { value: 'instagram', label: 'Instagram' },
+    { value: 'google', label: 'Google Ads' },
+    { value: 'whatsapp', label: 'WhatsApp' },
+    { value: 'indicacao', label: 'Indicação' },
+    { value: 'manual', label: 'Manual' },
+    ...dynamicSources.filter(s => ![ 'import', 'facebook', 'instagram', 'google', 'whatsapp', 'indicacao', 'manual' ].includes(s.toLowerCase())).map(s => ({ value: s, label: s })),
+    { value: 'custom', label: '+ Nova Origem' },
+  ];
+
+  useEffect(() => {
+    const fetchSources = async () => {
+      const { data } = await supabase.from('leads').select('source').not('source', 'is', null);
+      if (data) {
+        const uniqueSources = Array.from(new Set(data.map(d => d.source))).filter(Boolean) as string[];
+        setDynamicSources(uniqueSources);
+      }
+    };
+    fetchSources();
+  }, []);
 
   const handleFileChange = useCallback((selectedFile: File) => {
     const validTypes = [
@@ -106,7 +132,6 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
       let jsonData: Record<string, string>[] = [];
 
       if (file.name.endsWith('.csv')) {
-        // Parse CSV manually for browser compatibility
         const text = await file.text();
         const lines = text.split(/\r?\n/).filter(line => line.trim());
         if (lines.length < 2) {
@@ -129,7 +154,6 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
           }
         }
       } else {
-        // Parse XLSX using ExcelJS
         const workbook = new ExcelJS.Workbook();
         const arrayBuffer = await file.arrayBuffer();
         await workbook.xlsx.load(arrayBuffer);
@@ -162,7 +186,6 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
         });
       }
 
-      // Normalize column names
       const normalizedData = jsonData.map(row => {
         const normalized: ParsedContact = { nome: '' };
         Object.entries(row).forEach(([key, value]) => {
@@ -173,6 +196,20 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
             normalized.telefone = String(value || '');
           } else if (lowerKey === 'email' || lowerKey === 'e-mail') {
             normalized.email = String(value || '');
+          } else if (lowerKey === 'status' || lowerKey === 'situacao' || lowerKey === 'situação') {
+            normalized.status = String(value || '');
+          } else if (lowerKey === 'pipeline' || lowerKey === 'funil') {
+            normalized.pipeline = String(value || '');
+          } else if (lowerKey === 'estagio' || lowerKey === 'estágio' || lowerKey === 'stage' || lowerKey === 'fase') {
+            normalized.estagio = String(value || '');
+          } else if (lowerKey === 'responsavel' || lowerKey === 'responsável' || lowerKey === 'corretor' || lowerKey === 'assignee') {
+            normalized.responsavel = String(value || '');
+          } else if (lowerKey === 'tags' || lowerKey === 'etiquetas') {
+            normalized.tags = String(value || '');
+          } else if (lowerKey === 'fonte' || lowerKey === 'origem' || lowerKey === 'source') {
+            normalized.fonte = String(value || '');
+          } else if (lowerKey === 'motivo de perda' || lowerKey === 'motivo_perda' || lowerKey === 'loss_reason') {
+            normalized.motivo_perda = String(value || '');
           } else if (lowerKey === 'mensagem' || lowerKey === 'message' || lowerKey === 'observacao' || lowerKey === 'observação' || lowerKey === 'note') {
             normalized.mensagem = String(value || '');
           } else {
