@@ -846,3 +846,44 @@ export function MessageBubble({
     </div>
   );
 }
+
+// Renders message text with WhatsApp-style mentions.
+// Digit mentions (@5511999998888) are resolved to contact / lead names
+// via useMentionNames. Word mentions (@Joao) keep highlight styling.
+function MessageText({ content, fromMe }: { content: string; fromMe: boolean }) {
+  const mentionRegex = /(@\d{7,}|@[\w\u00C0-\u017F]+(?:\s[\w\u00C0-\u017F]+){0,2})/g;
+  const parts = content.split(mentionRegex);
+
+  const digitMentions = parts
+    .filter((p) => /^@\d{7,}$/.test(p))
+    .map((p) => p.slice(1));
+  const names = useMentionNames(digitMentions);
+
+  return (
+    <p className="text-[14.2px] leading-[19px] whitespace-pre-wrap break-words">
+      {parts.length === 1
+        ? content
+        : parts.map((part, index) => {
+            if (!part.match(mentionRegex)) return part;
+            const isDigit = /^@\d{7,}$/.test(part);
+            const display = isDigit ? `@${names[part.slice(1)] ?? part.slice(1)}` : part;
+            return (
+              <span
+                key={index}
+                className={cn(
+                  "font-semibold px-1 py-0.5 rounded transition-all duration-200 inline-block",
+                  fromMe
+                    ? "bg-white/20 text-white"
+                    : "bg-primary/15 text-primary dark:bg-primary/25",
+                )}
+              >
+                {display}
+              </span>
+            );
+          })}
+      {/* Invisible spacer for timestamp */}
+      <span className="inline-block w-[65px]"></span>
+    </p>
+  );
+}
+
