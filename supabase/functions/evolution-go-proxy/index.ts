@@ -212,7 +212,7 @@ Deno.serve(async (req) => {
     if (payload.session_id && (!payload.instance_id || !payload.token)) {
       const { data: sess } = await supabase
         .from("whatsapp_sessions")
-        .select("instance_id, instance_name, token")
+        .select("instance_id, instance_name, token, advanced_settings")
         .eq("id", payload.session_id)
         .maybeSingle();
       if (sess) {
