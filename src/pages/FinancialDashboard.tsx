@@ -380,6 +380,15 @@ function RealEstateFinancialDashboard({ data }: { data: ReturnType<typeof useFin
             <p className="text-sm text-muted-foreground text-balance">Métricas consolidadas de vendas e recebimentos.</p>
           </div>
           <div className="flex items-center gap-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="hidden md:flex gap-2"
+              onClick={() => window.location.href = '/financeiro/dre'}
+            >
+              <FileText className="h-4 w-4" />
+              Ver DRE Executivo
+            </Button>
             <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 px-3 py-1 text-xs font-bold">
               ESTRATÉGICO
             </Badge>
