@@ -24,7 +24,7 @@ export interface Commission {
   base_value: number;
   percentage?: number;
   calculated_value: number;
-  status: 'forecast' | 'approved' | 'paid' | 'cancelled';
+  status: 'forecast' | 'pending' | 'approved' | 'paid' | 'cancelled';
   forecast_date?: string;
   approved_at?: string;
   approved_by?: string;
