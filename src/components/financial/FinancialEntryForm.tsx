@@ -22,7 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useCreateFinancialEntry, useUpdateFinancialEntry } from '@/hooks/use-financial';
+import { useCreateFinancialEntry, useUpdateFinancialEntry, useFinancialCategories } from '@/hooks/use-financial';
 import { useContracts } from '@/hooks/use-contracts';
 import { Loader2, Repeat, CreditCard } from 'lucide-react';
 
@@ -53,6 +53,7 @@ interface FinancialEntryFormProps {
 
 export function FinancialEntryForm({ entry, onSuccess, onCancel }: FinancialEntryFormProps) {
   const { data: contracts } = useContracts();
+  const { data: financialCategories } = useFinancialCategories();
   const createEntry = useCreateFinancialEntry();
   const updateEntry = useUpdateFinancialEntry();
 
@@ -78,9 +79,17 @@ export function FinancialEntryForm({ entry, onSuccess, onCancel }: FinancialEntr
   const watchHasInstallments = form.watch('has_installments');
   const watchIsRecurring = form.watch('is_recurring');
 
-  const categoryOptions = watchType === 'receivable' 
+  const fallbackOptions = watchType === 'receivable'
     ? ['Vendas', 'Comissões', 'Aluguéis', 'Outros Recebimentos']
     : ['Despesas Operacionais', 'Marketing', 'Folha de Pagamento', 'Impostos', 'Outros Pagamentos'];
+
+  const dbCategoryNames = (financialCategories || [])
+    .filter((c: any) => c.type === (watchType === 'receivable' ? 'income' : 'expense'))
+    .map((c: any) => c.name);
+
+  const categoryOptions = dbCategoryNames.length > 0
+    ? Array.from(new Set([...dbCategoryNames, ...fallbackOptions]))
+    : fallbackOptions;
 
   // Reset conflicting fields
   React.useEffect(() => {
