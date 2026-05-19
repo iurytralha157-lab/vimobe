@@ -94,7 +94,7 @@ export function MissionsWidget() {
                       {mission.is_completed && <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />}
                       {mission.title}
                     </h4>
-                    <Badge variant="secondary" className="text-[9px] px-1.5 h-4 uppercase font-bold text-orange-600 bg-orange-50 whitespace-nowrap">
+                    <Badge variant="secondary" className="text-[9px] px-1.5 h-4 uppercase font-bold text-primary bg-primary/10 whitespace-nowrap">
                       {actionLabel}
                     </Badge>
                   </div>
@@ -108,7 +108,7 @@ export function MissionsWidget() {
                   </p>
                 </div>
                 <div className="shrink-0 text-right">
-                  <span className="text-[10px] font-bold bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                  <span className="text-[10px] font-bold bg-primary/10 text-primary px-1.5 py-0.5 rounded-full whitespace-nowrap">
                     +{mission.bonus_points} pts
                   </span>
                 </div>
@@ -119,7 +119,7 @@ export function MissionsWidget() {
                   <span className="flex items-center gap-1">
                     <Clock className="h-2 w-2" />
                     {!mission.is_completed && remaining > 0 ? (
-                      <span className="text-orange-600">Faltam {remaining} {actionLabel.toLowerCase()}</span>
+                      <span className="text-primary">Faltam {remaining} {actionLabel.toLowerCase()}</span>
                     ) : (
                       <span>{mission.period === 'daily' ? 'Reseta hoje' : 'Reseta domingo'}</span>
                     )}
@@ -130,7 +130,7 @@ export function MissionsWidget() {
                   value={progressPercent} 
                   className={cn(
                     "h-1.5",
-                    mission.is_completed ? "bg-emerald-100" : "bg-orange-100"
+                    mission.is_completed ? "bg-emerald-100" : "bg-primary/15"
                   )}
                 />
               </div>
