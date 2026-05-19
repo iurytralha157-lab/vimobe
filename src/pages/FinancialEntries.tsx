@@ -42,6 +42,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { EntryStatusBadge } from '@/components/financial/EntryStatusBadge';
 import { FinancialEntryForm } from '@/components/financial/FinancialEntryForm';
+import { FinancialDrawer } from '@/components/financial/FinancialDrawer';
+
 import { useFinancialEntries, useMarkEntryAsPaid, useDeleteFinancialEntry } from '@/hooks/use-financial';
 import { formatCurrency, formatDate, exportToExcel, prepareFinancialEntriesExport } from '@/lib/export-financial';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -418,28 +420,26 @@ export default function FinancialEntries() {
           </Card>
         )}
 
-        {/* Form Dialog */}
-        <Dialog open={isFormOpen} onOpenChange={(open: boolean) => {
-          setIsFormOpen(open);
-          if (!open) setEditingEntry(null);
-        }}>
-          <DialogContent className="w-[90%] sm:max-w-2xl sm:w-full rounded-lg max-h-[85vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>{editingEntry ? 'Editar Lançamento' : 'Novo Lançamento'}</DialogTitle>
-              <DialogDescription>
-                {editingEntry ? 'Altere os dados do lançamento' : 'Preencha os dados do novo lançamento'}
-              </DialogDescription>
-            </DialogHeader>
-            <FinancialEntryForm
-              entry={editingEntry}
-              onSuccess={handleFormSuccess}
-              onCancel={() => {
-                setIsFormOpen(false);
-                setEditingEntry(null);
-              }}
-            />
-          </DialogContent>
-        </Dialog>
+        {/* Form Drawer */}
+        <FinancialDrawer
+          open={isFormOpen}
+          onOpenChange={(open) => {
+            setIsFormOpen(open);
+            if (!open) setEditingEntry(null);
+          }}
+          title={editingEntry ? 'Editar Lançamento' : 'Novo Lançamento'}
+          description={editingEntry ? 'Altere os dados do lançamento' : 'Preencha os dados do novo lançamento'}
+        >
+          <FinancialEntryForm
+            entry={editingEntry}
+            onSuccess={handleFormSuccess}
+            onCancel={() => {
+              setIsFormOpen(false);
+              setEditingEntry(null);
+            }}
+          />
+        </FinancialDrawer>
+
 
         {/* Pay Dialog */}
         <Dialog open={payDialog.open} onOpenChange={(open) => setPayDialog({ open, entry: null })}>

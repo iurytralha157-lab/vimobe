@@ -45,6 +45,8 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ContractStatusBadge } from '@/components/financial/ContractStatusBadge';
 import { ContractForm } from '@/components/financial/ContractForm';
+import { FinancialDrawer } from '@/components/financial/FinancialDrawer';
+
 import { useContracts, useActivateContract, useDeleteContract, useRegenerateCommissions, Contract } from '@/hooks/use-contracts';
 import {
   AlertDialog,
@@ -461,24 +463,23 @@ export default function Contracts() {
           </Card>
         )}
 
-        <Dialog open={isFormOpen} onOpenChange={(open: boolean) => {
-          setIsFormOpen(open);
-          if (!open) setEditingContract(null);
-        }}>
-          <DialogContent className="w-[90%] sm:max-w-2xl sm:w-full rounded-lg max-h-[85vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>{editingContract ? 'Editar Contrato' : 'Novo Contrato'}</DialogTitle>
-              <DialogDescription>
-                {editingContract ? 'Altere os dados do contrato' : 'Preencha os dados do novo contrato'}
-              </DialogDescription>
-            </DialogHeader>
-            <ContractForm
-              contract={editingContract || undefined}
-              onSuccess={handleFormSuccess}
-              onCancel={() => setIsFormOpen(false)}
-            />
-          </DialogContent>
-        </Dialog>
+        <FinancialDrawer
+          open={isFormOpen}
+          onOpenChange={(open) => {
+            setIsFormOpen(open);
+            if (!open) setEditingContract(null);
+          }}
+          title={editingContract ? 'Editar Contrato' : 'Novo Contrato'}
+          description={editingContract ? 'Altere os dados do contrato' : 'Preencha os dados do novo contrato'}
+          size="lg"
+        >
+          <ContractForm
+            contract={editingContract || undefined}
+            onSuccess={handleFormSuccess}
+            onCancel={() => setIsFormOpen(false)}
+          />
+        </FinancialDrawer>
+
       </div>
     </AppLayout>
   );
