@@ -718,6 +718,7 @@ export default function Pipelines() {
     filterDealStatus,
     searchQuery: deferredSearch,
     dateRange,
+    filterSource,
   });
   
   // Filters are now applied server-side; we merge server results AND apply a local filter for instant feedback
