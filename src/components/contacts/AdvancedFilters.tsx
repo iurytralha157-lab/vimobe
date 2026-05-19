@@ -123,6 +123,9 @@ export function AdvancedFilters({
                 <SelectItem value="manual">Manual</SelectItem>
                 <SelectItem value="meta">Meta Ads</SelectItem>
                 <SelectItem value="site">Site</SelectItem>
+                {availableSources.filter(s => !['manual', 'meta', 'site'].includes(s)).map(s => (
+                  <SelectItem key={s} value={s}>{s}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
