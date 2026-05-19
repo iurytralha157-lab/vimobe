@@ -232,12 +232,10 @@ export default function WhatsAppSettings() {
     try {
       const data = await getQRCode.mutateAsync(instanceName);
       // Handle different response formats from WPPConnect
-      if (data?.qrcode) {
-        setQrCode(data.qrcode);
-      } else if (data?.base64) {
-        setQrCode(data.base64);
-      } else if (data?.code) {
-        setQrCode(data.code);
+      if ((data as any)?.qrcode) {
+        setQrCode((data as any).qrcode);
+      } else if ((data as any)?.base64) {
+        setQrCode((data as any).base64);
       } else {
         console.log("QR Code response:", data);
       }
