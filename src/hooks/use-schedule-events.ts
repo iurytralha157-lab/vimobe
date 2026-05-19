@@ -177,6 +177,7 @@ export function useCreateScheduleEvent() {
       is_all_day?: boolean;
       user_id?: string;
       lead_id?: string;
+      property_id?: string | null;
       location?: string;
     }) => {
       if (!profile?.organization_id) throw new Error('Organização não encontrada');
@@ -187,6 +188,7 @@ export function useCreateScheduleEvent() {
           organization_id: profile.organization_id,
           user_id: event.user_id || profile.id,
           lead_id: event.lead_id || null,
+          property_id: event.property_id || null,
           title: event.title,
           description: event.description || null,
           event_type: event.event_type || 'task',
