@@ -8444,6 +8444,27 @@ export type Database = {
         Args: { p_period_days?: number }
         Returns: Json
       }
+      admin_list_organizations: {
+        Args: { p_search?: string; p_segment?: string; p_status?: string }
+        Returns: {
+          automation_count: number
+          created_at: string
+          days_trial_left: number
+          health_score: number
+          id: string
+          is_active: boolean
+          last_access_at: string
+          lead_count: number
+          logo_url: string
+          mrr: number
+          name: string
+          overdue_amount: number
+          segment: string
+          subscription_status: string
+          subscription_type: string
+          user_count: number
+        }[]
+      }
       award_gamification_points: {
         Args: {
           p_action_type: string
