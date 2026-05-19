@@ -423,7 +423,8 @@ export default function Pipelines() {
       effectiveSearchQuery,
       effectiveFilterCampaign,
       effectiveFilterAdSet,
-      effectiveFilterAd
+      effectiveFilterAd,
+      filterSource
     ];
     const previousData = queryClient.getQueryData(queryKey);
     
