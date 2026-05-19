@@ -8117,6 +8117,42 @@ export type Database = {
           },
         ]
       }
+      whatsapp_chat_labels: {
+        Row: {
+          conversation_id: string
+          created_at: string | null
+          id: string
+          label_id: string
+        }
+        Insert: {
+          conversation_id: string
+          created_at?: string | null
+          id?: string
+          label_id: string
+        }
+        Update: {
+          conversation_id?: string
+          created_at?: string | null
+          id?: string
+          label_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_chat_labels_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_chat_labels_label_id_fkey"
+            columns: ["label_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_labels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       whatsapp_conversations: {
         Row: {
           archived_at: string | null
@@ -8195,6 +8231,59 @@ export type Database = {
           },
           {
             foreignKeyName: "whatsapp_conversations_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_groups: {
+        Row: {
+          description: string | null
+          group_jid: string
+          id: string
+          invite_link: string | null
+          is_announce: boolean | null
+          organization_id: string
+          owner_jid: string | null
+          participants: Json | null
+          picture_url: string | null
+          session_id: string
+          subject: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          description?: string | null
+          group_jid: string
+          id?: string
+          invite_link?: string | null
+          is_announce?: boolean | null
+          organization_id: string
+          owner_jid?: string | null
+          participants?: Json | null
+          picture_url?: string | null
+          session_id: string
+          subject?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          description?: string | null
+          group_jid?: string
+          id?: string
+          invite_link?: string | null
+          is_announce?: boolean | null
+          organization_id?: string
+          owner_jid?: string | null
+          participants?: Json | null
+          picture_url?: string | null
+          session_id?: string
+          subject?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_groups_session_id_fkey"
             columns: ["session_id"]
             isOneToOne: false
             referencedRelation: "whatsapp_sessions"
@@ -8340,6 +8429,47 @@ export type Database = {
             columns: ["target_team_id"]
             isOneToOne: false
             referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_labels: {
+        Row: {
+          color: number | null
+          created_at: string | null
+          id: string
+          name: string
+          organization_id: string
+          predefined: boolean | null
+          remote_label_id: string
+          session_id: string
+        }
+        Insert: {
+          color?: number | null
+          created_at?: string | null
+          id?: string
+          name: string
+          organization_id: string
+          predefined?: boolean | null
+          remote_label_id: string
+          session_id: string
+        }
+        Update: {
+          color?: number | null
+          created_at?: string | null
+          id?: string
+          name?: string
+          organization_id?: string
+          predefined?: boolean | null
+          remote_label_id?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_labels_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_sessions"
             referencedColumns: ["id"]
           },
         ]
@@ -8539,6 +8669,7 @@ export type Database = {
       }
       whatsapp_sessions: {
         Row: {
+          advanced_settings: Json | null
           created_at: string
           display_name: string | null
           id: string
@@ -8552,10 +8683,12 @@ export type Database = {
           phone_number: string | null
           profile_name: string | null
           profile_picture: string | null
+          provider: string
           status: string
           updated_at: string
         }
         Insert: {
+          advanced_settings?: Json | null
           created_at?: string
           display_name?: string | null
           id?: string
@@ -8569,10 +8702,12 @@ export type Database = {
           phone_number?: string | null
           profile_name?: string | null
           profile_picture?: string | null
+          provider?: string
           status?: string
           updated_at?: string
         }
         Update: {
+          advanced_settings?: Json | null
           created_at?: string
           display_name?: string | null
           id?: string
@@ -8586,6 +8721,7 @@ export type Database = {
           phone_number?: string | null
           profile_name?: string | null
           profile_picture?: string | null
+          provider?: string
           status?: string
           updated_at?: string
         }
