@@ -564,9 +564,17 @@ export function useQRCodePolling(session: WhatsAppSession | null) {
     
     const pollQRCode = async () => {
       try {
+        const provider = (session.provider || "evolution") as WhatsAppProvider;
+        const arg = {
+          provider,
+          instanceName: session.instance_name,
+          sessionId: session.id,
+          instanceId: session.instance_id,
+        };
+
         // Check connection status first
-        const status = await getStatus.mutateAsync(session.instance_name);
-        
+        const status = await getStatus.mutateAsync(arg);
+
         // Check if instance doesn't exist in Evolution API
         if (status?.instanceNotFound) {
           console.log("Instance not found in Evolution API, needs recreation");
@@ -575,31 +583,31 @@ export function useQRCodePolling(session: WhatsAppSession | null) {
           setIsPolling(false);
           return true; // Stop polling
         }
-        
+
         const isConnected = status?.connected === true || status?.state === "open";
-        
+
         if (isConnected) {
           setConnectionStatus("connected");
           setQrCode(null);
           setIsPolling(false);
-          
+
           // Update database status
           await supabase
             .from("whatsapp_sessions")
-            .update({ 
+            .update({
               status: "connected",
               phone_number: status?.instance?.wuid?.split("@")[0] || null,
               last_connected_at: new Date().toISOString()
             })
             .eq("id", session.id);
-          
+
           queryClient.invalidateQueries({ queryKey: ["whatsapp-sessions"] });
           return true;
         }
-        
+
         // Get QR Code
-        const qrData = await getQRCode.mutateAsync(session.instance_name);
-        
+        const qrData = await getQRCode.mutateAsync(arg);
+
         if (qrData?.qrcode) {
           setQrCode(qrData.qrcode);
           setConnectionStatus("waiting_qr");
@@ -607,13 +615,14 @@ export function useQRCodePolling(session: WhatsAppSession | null) {
           setQrCode(qrData.base64);
           setConnectionStatus("waiting_qr");
         }
-        
+
         return false;
       } catch (error) {
         console.error("Polling error:", error);
         return false;
       }
     };
+
 
     // Initial poll
     const connected = await pollQRCode();
