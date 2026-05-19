@@ -32,6 +32,7 @@ import { ptBR } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight, Phone, Mail, Calendar as CalendarIcon, CheckSquare, MessageSquare, MapPin, Clock, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScheduleEvent, EventType } from '@/hooks/use-schedule-events';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
