@@ -124,7 +124,12 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
         const currentTo = filters?.dateRange?.to || new Date();
         const interval = currentTo.getTime() - currentFrom.getTime();
         const prevFrom = new Date(currentFrom.getTime() - interval);
-        
+
+        // Visibilidade obrigatória — usuário comum só vê próprios leads
+        const visibility = currentUserId
+          ? await checkLeadVisibility(currentUserId)
+          : { canViewAll: false, userId: undefined };
+
         // Base filters for current period
         let query = supabase
           .from('leads')
@@ -141,16 +146,15 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
             .eq('organization_id', organizationId)
             .gte('created_at', currentFrom.toISOString())
             .lte('created_at', currentTo.toISOString());
-            
+
           if (filters.campaignId) query = query.eq('lead_meta.campaign_id', filters.campaignId);
           if (filters.adSetId) query = query.eq('lead_meta.adset_id', filters.adSetId);
           if (filters.adId) query = query.eq('lead_meta.ad_id', filters.adId);
         }
 
-        if (filters?.userId) query = query.eq('assigned_user_id', filters.userId);
         if (filters?.source) query = query.eq('source', filters.source);
-        
-        if (filters?.teamId) {
+
+        if (filters?.teamId && (visibility.canViewAll || visibility.teamMemberIds)) {
           const { data: teamMembers } = await supabase
             .from('team_members')
             .select('user_id')
@@ -159,6 +163,9 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
             query = query.in('assigned_user_id', teamMembers.map(m => m.user_id));
           }
         }
+
+        // Aplica visibilidade (admin/líder/usuário próprio); filters.userId só funciona se a visibilidade permitir
+        query = applyVisibilityFilter(query, visibility, 'assigned_user_id', filters?.userId);
 
         const { data: leads, count, error } = await query;
 
@@ -181,9 +188,8 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
         if (filters?.campaignId) wonQuery = wonQuery.eq('lead_meta.campaign_id', filters.campaignId);
         if (filters?.adSetId) wonQuery = wonQuery.eq('lead_meta.adset_id', filters.adSetId);
         if (filters?.adId) wonQuery = wonQuery.eq('lead_meta.ad_id', filters.adId);
-        if (filters?.userId) wonQuery = wonQuery.eq('assigned_user_id', filters.userId);
         if (filters?.source) wonQuery = wonQuery.eq('source', filters.source);
-        if (filters?.teamId) {
+        if (filters?.teamId && (visibility.canViewAll || visibility.teamMemberIds)) {
           const { data: teamMembers } = await supabase
             .from('team_members')
             .select('user_id')
@@ -192,6 +198,7 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
             wonQuery = wonQuery.in('assigned_user_id', teamMembers.map(m => m.user_id));
           }
         }
+        wonQuery = applyVisibilityFilter(wonQuery, visibility, 'assigned_user_id', filters?.userId);
 
         const { data: wonLeads } = await wonQuery;
         const closedLeads = wonLeads?.length || 0;
@@ -226,8 +233,8 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
           if (filters.adId) prevQuery = prevQuery.eq('lead_meta.ad_id', filters.adId);
         }
         
-        if (filters?.userId) prevQuery = prevQuery.eq('assigned_user_id', filters.userId);
         if (filters?.source) prevQuery = prevQuery.eq('source', filters.source);
+        prevQuery = applyVisibilityFilter(prevQuery, visibility, 'assigned_user_id', filters?.userId);
         
         const { count: prevTotal } = await prevQuery;
 
