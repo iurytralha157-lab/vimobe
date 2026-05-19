@@ -159,7 +159,7 @@ export function useCreateWhatsAppSession() {
           status: "disconnected",
           provider,
           advanced_settings: { token },
-        } as any)
+        })
         .select()
         .single();
 
@@ -204,9 +204,13 @@ export function useCreateWhatsAppSession() {
         if (evoId) {
           await supabase
             .from("whatsapp_sessions")
-            .update({ instance_id: evoId } as any)
+            .update({ 
+              instance_id: evoId,
+              advanced_settings: { token }
+            })
             .eq("id", session.id);
           (session as any).instance_id = evoId;
+          (session as any).advanced_settings = { token };
         }
 
         // Connect (registers webhook and starts QR generation)
