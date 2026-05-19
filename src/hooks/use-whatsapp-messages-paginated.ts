@@ -1,6 +1,6 @@
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useEffect, useCallback } from "react";
+import { useCallback } from "react";
 import type { WhatsAppMessage } from "./use-whatsapp-conversations";
 
 interface PaginatedMessagesResult {
