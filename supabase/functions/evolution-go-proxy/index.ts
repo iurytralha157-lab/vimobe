@@ -28,26 +28,40 @@ function buildCall(action: string, payload: any): ProxyCall {
   const inst = payload?.instance_id || payload?.instanceId;
   switch (action) {
     // ---------- Instance ----------
-    case "instance.create":
-      return { method: "POST", path: "/instance/create", body: payload.body };
-    case "instance.connect":
-      return { method: "POST", path: "/instance/connect", body: payload.body, instanceId: inst };
+    case "instance.create": {
+      const b = payload?.body ?? {};
+      const body: Record<string, unknown> = {
+        name: b.name ?? b.instanceName,
+      };
+      if (b.token) body.token = b.token;
+      if (b.proxy) body.proxy = b.proxy;
+      return { method: "POST", path: "/instance/create", body };
+    }
+    case "instance.connect": {
+      const b = payload?.body ?? {};
+      return {
+        method: "POST",
+        path: "/instance/connect",
+        body: {
+          webhookUrl: b.webhookUrl,
+          subscribe: b.subscribe ?? ["ALL"],
+          immediate: b.immediate ?? true,
+        },
+        instanceId: inst,
+      };
+    }
     case "instance.qr":
-      return { method: "GET", path: "/instance/qr", query: { instanceId: inst } };
+      return { method: "GET", path: "/instance/qr", instanceId: inst };
     case "instance.status":
-      return { method: "GET", path: "/instance/status", query: { instanceId: inst } };
+      return { method: "GET", path: "/instance/status", instanceId: inst };
     case "instance.all":
       return { method: "GET", path: "/instance/all" };
-    case "instance.get":
-      return { method: "GET", path: `/instance/get/${inst}` };
     case "instance.disconnect":
       return { method: "POST", path: "/instance/disconnect", instanceId: inst };
     case "instance.logout":
       return { method: "DELETE", path: "/instance/logout", instanceId: inst };
     case "instance.delete":
       return { method: "DELETE", path: `/instance/delete/${inst}` };
-    case "instance.forceReconnect":
-      return { method: "POST", path: `/instance/forcereconnect/${inst}` };
     case "instance.pair":
       return { method: "POST", path: "/instance/pair", body: payload.body, instanceId: inst };
 
@@ -67,10 +81,6 @@ function buildCall(action: string, payload: any): ProxyCall {
       return { method: "POST", path: "/send/contact", body: payload.body, instanceId: inst };
     case "send.link":
       return { method: "POST", path: "/send/link", body: payload.body, instanceId: inst };
-    case "send.list":
-      return { method: "POST", path: "/send/list", body: payload.body, instanceId: inst };
-    case "send.button":
-      return { method: "POST", path: "/send/button", body: payload.body, instanceId: inst };
     case "send.poll":
       return { method: "POST", path: "/send/poll", body: payload.body, instanceId: inst };
 
@@ -92,13 +102,11 @@ function buildCall(action: string, payload: any): ProxyCall {
 
     // ---------- Chat ----------
     case "chat.archive":   return { method: "POST", path: "/chat/archive",   body: payload.body, instanceId: inst };
-    case "chat.unarchive": return { method: "POST", path: "/chat/unarchive", body: payload.body, instanceId: inst };
+    case "chat.unarchive": return { method: "POST", path: "/chat/archive",   body: { ...(payload.body ?? {}), archive: false }, instanceId: inst };
     case "chat.mute":      return { method: "POST", path: "/chat/mute",      body: payload.body, instanceId: inst };
-    case "chat.unmute":    return { method: "POST", path: "/chat/unmute",    body: payload.body, instanceId: inst };
+    case "chat.unmute":    return { method: "POST", path: "/chat/mute",      body: { ...(payload.body ?? {}), mute: false }, instanceId: inst };
     case "chat.pin":       return { method: "POST", path: "/chat/pin",       body: payload.body, instanceId: inst };
     case "chat.unpin":     return { method: "POST", path: "/chat/unpin",     body: payload.body, instanceId: inst };
-    case "chat.historySync":
-      return { method: "POST", path: "/chat/history-sync-request", body: payload.body, instanceId: inst };
 
     // ---------- Label ----------
     case "label.list":     return { method: "GET",  path: "/label", instanceId: inst };
@@ -114,7 +122,6 @@ function buildCall(action: string, payload: any): ProxyCall {
     case "group.info":         return { method: "POST", path: "/group/info",         body: payload.body, instanceId: inst };
     case "group.create":       return { method: "POST", path: "/group/create",       body: payload.body, instanceId: inst };
     case "group.setName":      return { method: "POST", path: "/group/name",         body: payload.body, instanceId: inst };
-    case "group.setDescription": return { method: "POST", path: "/group/description", body: payload.body, instanceId: inst };
     case "group.setPhoto":     return { method: "POST", path: "/group/photo",        body: payload.body, instanceId: inst };
     case "group.inviteLink":   return { method: "POST", path: "/group/invitelink",   body: payload.body, instanceId: inst };
     case "group.join":         return { method: "POST", path: "/group/join",         body: payload.body, instanceId: inst };
@@ -134,6 +141,7 @@ function buildCall(action: string, payload: any): ProxyCall {
       throw new Error(`Unknown action: ${action}`);
   }
 }
+
 
 async function callEvolutionGo(c: ProxyCall) {
   const url = new URL(`${API_URL}${c.path}`);
