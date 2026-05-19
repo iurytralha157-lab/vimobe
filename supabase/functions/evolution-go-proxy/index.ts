@@ -55,9 +55,9 @@ function buildCall(action: string, payload: any): ProxyCall {
       };
     }
     case "instance.qr":
-      return { method: "GET", path: "/instance/qr", instanceId: inst, token };
+      return { method: "GET", path: "/instance/qr", query: { instanceId: inst }, instanceId: inst, token };
     case "instance.status":
-      return { method: "GET", path: "/instance/status", instanceId: inst, token };
+      return { method: "GET", path: "/instance/status", query: { instanceId: inst }, instanceId: inst, token };
     case "instance.all":
       return { method: "GET", path: "/instance/all" };
     case "instance.disconnect":
@@ -228,8 +228,9 @@ Deno.serve(async (req) => {
 
     // Normalize QR code for Go provider (Go returns Qrcode: base64)
     if (action === "instance.qr" && result.ok) {
-      const qr = result.data?.data?.Qrcode || result.data?.Qrcode || result.data?.data?.qrcode || result.data?.qrcode;
+      const qr = result.data?.data?.Qrcode || result.data?.Qrcode || result.data?.data?.qrcode || result.data?.qrcode || (result.data as any)?.base64;
       if (qr) {
+        if (typeof result.data !== 'object' || result.data === null) result.data = {};
         if (!result.data.data) result.data.data = {};
         result.data.data.qrcode = qr;
       }
