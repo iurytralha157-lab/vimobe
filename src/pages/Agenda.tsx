@@ -351,16 +351,16 @@ export default function Agenda() {
                 pivotDate={pivotDate}
                 onPivotChange={setPivotDate}
                 viewMode={viewMode as any}
-                onEditEvent={handleEditEvent}
+                onEditEvent={openEventSheet}
                 onEventUpdate={(id, updates) => updateEventMutation.mutate({ id, ...updates })}
                 onQuickCreate={(date) => {
                   setSelectedDate(date);
-                  setEventFormOpen(true);
+                  openCreateSheet();
                 }}
               />
             ) : (
               <div style={{ height: "100%", padding: 24, overflowY: "auto" }}>
-                <EventsList events={upcomingEvents} onEditEvent={handleEditEvent} showUser={true} />
+                <EventsList events={upcomingEvents} onEditEvent={openEventSheet} showUser={true} />
               </div>
             )}
           </div>
@@ -395,21 +395,12 @@ export default function Agenda() {
             })}
           </div>
         </div>
-
-        {/* ── Painel de Detalhes (Overlay lateral) ── */}
-        {detailEvent && (
-          <EventDetailPanel 
-            event={detailEvent} 
-            onClose={() => setDetailEvent(null)} 
-            onMarkDone={handleMarkDone} 
-          />
-        )}
       </div>
 
-      <EventForm
-        open={eventFormOpen}
-        onOpenChange={handleCloseEventForm}
-        event={editingEvent}
+      <EventSheet
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
+        event={sheetEvent}
         defaultUserId={selectedUserId || profile?.id}
         defaultDate={selectedDate}
       />
