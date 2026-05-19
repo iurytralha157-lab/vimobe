@@ -24,8 +24,13 @@ import {
   XCircle,
   Loader2,
   Bell,
-  History } from
+  History,
+  Tag,
+  UsersRound,
+  ImageIcon } from
 "lucide-react";
+import { LabelsManagerSheet } from "@/components/whatsapp/LabelsManagerSheet";
+import { GroupsManagerSheet } from "@/components/whatsapp/GroupsManagerSheet";
 import { useHistorySync, useSyncContactsAvatars } from "@/hooks/use-whatsapp-contacts";
 import {
   useWhatsAppSessions,
@@ -70,6 +75,8 @@ export function WhatsAppTab() {
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [isRefreshingQr, setIsRefreshingQr] = useState(false);
   const [verifyingSessionId, setVerifyingSessionId] = useState<string | null>(null);
+  const [labelsSession, setLabelsSession] = useState<WhatsAppSession | null>(null);
+  const [groupsSession, setGroupsSession] = useState<WhatsAppSession | null>(null);
 
   // Refs para evitar stale closures no polling
   const selectedSessionRef = useRef(selectedSession);
@@ -426,6 +433,53 @@ export function WhatsAppTab() {
                         </Tooltip>
                       </TooltipProvider>
                     )}
+                    {(session as any).provider === "evolution_go" && session.status === "connected" && (
+                      <>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button variant="outline" size="sm" className="h-8 w-8 p-0 shrink-0" onClick={() => setLabelsSession(session)}>
+                                <Tag className="w-3.5 h-3.5" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Etiquetas</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button variant="outline" size="sm" className="h-8 w-8 p-0 shrink-0" onClick={() => setGroupsSession(session)}>
+                                <UsersRound className="w-3.5 h-3.5" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Grupos</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-8 w-8 p-0 shrink-0"
+                                disabled={syncAvatars.isPending}
+                                onClick={() => {
+                                  syncAvatars.mutate(session.id, {
+                                    onSuccess: (d: any) => toast({ title: "Avatares sincronizados", description: `${d?.updated || 0} contatos atualizados` }),
+                                    onError: (e: any) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
+                                  });
+                                }}
+                              >
+                                {syncAvatars.isPending && syncAvatars.variables === session.id
+                                  ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                  : <ImageIcon className="w-3.5 h-3.5" />}
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Sincronizar avatares</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </>
+                    )}
                     <Button variant="outline" size="sm" className="h-8 w-8 p-0 shrink-0 text-destructive hover:text-destructive" onClick={() => {setSelectedSession(session);setDeleteDialogOpen(true);}}>
                       <Trash2 className="w-3.5 h-3.5" />
                     </Button>
@@ -538,6 +592,20 @@ export function WhatsAppTab() {
           session={selectedSession}
           users={users || []} />
 
+
+        <LabelsManagerSheet
+          open={!!labelsSession}
+          onOpenChange={(o) => !o && setLabelsSession(null)}
+          sessionId={labelsSession?.id || null}
+          sessionName={labelsSession?.display_name || labelsSession?.instance_name}
+        />
+
+        <GroupsManagerSheet
+          open={!!groupsSession}
+          onOpenChange={(o) => !o && setGroupsSession(null)}
+          sessionId={groupsSession?.id || null}
+          sessionName={groupsSession?.display_name || groupsSession?.instance_name}
+        />
 
         {/* Delete Confirmation Dialog */}
         <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
