@@ -18,6 +18,7 @@ const notificationIcons: Record<string, typeof Bell> = {
   task: CheckSquare,
   contract: FileText,
   commission: DollarSign,
+  onboarding_request: ClipboardList,
   system: Bell,
   info: Info
 };
