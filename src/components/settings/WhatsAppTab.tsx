@@ -550,29 +550,52 @@ function AccessControlDialog({
         <ScrollArea className="max-h-[400px]">
           <div className="space-y-4 py-4">
             {users.map((user) => {
-              const hasAccess = userHasAccess(user.id);
+              const access = getAccess(user.id);
+              const hasAccess = !!access;
+              const onlyLeads = access?.only_leads_access || false;
               const isOwner = user.id === session?.owner_user_id;
 
               return (
-                <div key={user.id} className="flex items-center justify-between">
+                <div key={user.id} className="flex items-center justify-between py-2 border-b last:border-0 border-border/40">
                   <div className="flex items-center gap-3">
                     <Avatar className="h-8 w-8">
                       <AvatarImage src={user.avatar_url} />
                       <AvatarFallback>{user.name?.[0] || "U"}</AvatarFallback>
                     </Avatar>
-                    <div>
-                      <p className="text-sm font-medium">{user.name}</p>
-                      <p className="text-xs text-muted-foreground">{user.email}</p>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">{user.name}</p>
+                      <p className="text-xs text-muted-foreground truncate">{user.email}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    {isOwner && <Badge variant="secondary" className="mr-2">Proprietário</Badge>}
-                    <Checkbox
-                      checked={hasAccess}
-                      onCheckedChange={() => handleToggleAccess(user.id, hasAccess)}
-                      disabled={grantAccess.isPending || revokeAccess.isPending} 
-                      title={isOwner ? "Forçar permissão explícita (útil se o acesso falhar)" : ""}
-                    />
+                  <div className="flex items-center gap-4">
+                    {isOwner && <Badge variant="secondary">Proprietário</Badge>}
+                    
+                    {hasAccess && (
+                      <div className="flex items-center gap-2">
+                        <Label htmlFor={`only-leads-${user.id}`} className="text-[10px] uppercase font-bold text-muted-foreground cursor-pointer">
+                          Apenas Leads
+                        </Label>
+                        <Switch 
+                          id={`only-leads-${user.id}`}
+                          checked={onlyLeads}
+                          onCheckedChange={(checked) => handleToggleAccess(user.id, true, checked)}
+                          disabled={grantAccess.isPending}
+                        />
+                      </div>
+                    )}
+
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor={`access-${user.id}`} className="text-[10px] uppercase font-bold text-muted-foreground cursor-pointer">
+                        Acesso
+                      </Label>
+                      <Checkbox
+                        id={`access-${user.id}`}
+                        checked={hasAccess}
+                        onCheckedChange={() => handleToggleAccess(user.id, hasAccess)}
+                        disabled={grantAccess.isPending || revokeAccess.isPending} 
+                        title={isOwner ? "Forçar permissão explícita (útil se o acesso falhar)" : ""}
+                      />
+                    </div>
                   </div>
                 </div>);
             })}
