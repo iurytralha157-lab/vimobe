@@ -111,11 +111,10 @@ export function useScheduleComments(eventId: string | undefined) {
             title: "Novo comentário em tarefa",
             content: `Comentário em "${eventData.title}": ${content.slice(0, 120)}`,
           }));
-          try {
-            await (supabase as any).from("notifications").insert(rows);
-          } catch (e) {
-            console.warn("notifications insert failed", e);
-          }
+          // Fire-and-forget notifications
+          supabase.from("notifications").insert(rows).then(({ error: e }) => {
+            if (e) console.warn("notifications insert failed", e);
+          });
         }
       }
 
