@@ -1,136 +1,58 @@
-# Refatoração do painel lateral da Agenda
+# Ajustes na Agenda
 
-Vamos transformar o painel lateral em um componente unificado para **visualizar, criar e editar** tarefas (substituindo o popup atual), corrigir o bug dos comentários, suportar **múltiplos responsáveis com avatares reais** e ajustar diversos detalhes de UX.
+Vou refinar a experiência da agenda em quatro frentes: grade do calendário, cards de atividade, formulário e novo campo de imóvel para visitas. Boa notícia: **não precisa rodar nenhum SQL adicional** — a coluna `property_id` já existe na tabela `schedule_events`.
 
----
+## 1. Grade do calendário sem linha de meia hora
 
-## 1. Correção do bug de comentários (causa raiz)
+Hoje cada bloco de 1h é dividido visualmente por uma linha no meio (criando dois "quadradinhos"). Vou remover essa linha mantendo dois slots clicáveis invisíveis (00 e 30), para a pessoa ainda conseguir criar atividade em meia hora.
 
-**Diagnóstico:** A tabela `schedule_event_comments` **não existe** no banco. O hook `use-schedule-comments.ts` também referencia colunas inexistentes (`assigned_to` em `schedule_events`, `link` em `notifications`, e a tabela `lead_history` que na verdade chama-se `lead_timeline_events`).
+- `CalendarView.tsx` — visões Dia e Semana: remover `border-b border-border/10` do primeiro `DroppableSlot` (linha divisora interna).
 
-**Migração SQL:**
-- Criar tabela `schedule_event_comments` (id, event_id FK, user_id, organization_id, content, created_at).
-- RLS: usuários da mesma `organization_id` podem ler/inserir; apenas autor pode deletar.
-- Index em `event_id`.
+## 2. Cards de atividade mais legíveis
 
-**Correções no hook `use-schedule-comments.ts`:**
-- Trocar join `user:profiles` por `user:users` (o projeto usa tabela `users`).
-- Trocar `lead_history` por `lead_timeline_events` com campos corretos (`event_type='schedule_comment'`, `description=content`).
-- Notificação: remover `link`, usar apenas (user_id, organization_id, type, title, content).
-- Notificar **todos os responsáveis** da nova tabela `schedule_event_assignees` (exceto autor), não só um.
+Os cards ficam bugados quando:
+- A duração é curta (30 min ou menos) — horário e título se sobrepõem.
+- Há várias atividades no mesmo horário (cards finos, lado a lado).
 
----
+Mudanças no `ActivityCard`:
+- Layout mais robusto para alturas pequenas: quando altura ≤ 28px (15-30 min), mostrar apenas título numa linha só, com fonte ainda menor e horário escondido (ou em tooltip).
+- Quando altura entre 28-56px (até 1h), título numa linha + horário em outra, com `truncate` e tamanho responsivo.
+- Quando há colunas múltiplas (totalColumns > 1), reduzir ainda mais padding e fonte, ocultar ícone Clock, e mostrar só o nome em alturas curtas.
+- Garantir que o título não cubra o horário (estrutura com `min-h-0` e `flex-1 truncate`).
+- Cor de borda mais sutil (`border` em vez de `border-2`) para cards finos.
 
-## 2. Múltiplos responsáveis
+## 3. Formulário (EventSheet) — pequenas correções
 
-**Migração SQL:**
-- Criar tabela `schedule_event_assignees` (event_id FK CASCADE, user_id FK, primary_key composto).
-- RLS por organização.
-- Migrar dados: copiar `schedule_events.user_id` atual para a nova tabela como assignee padrão.
-- Manter `user_id` em `schedule_events` como "criador/owner" (não remover, evita quebrar código).
+- Renomear label **"Assunto"** → **"Título da atividade"**.
+- Corrigir bug visual do campo: input com `bg-background` explícito e padding correto (hoje o foco laranja sobrepõe o conteúdo).
+- **Busca de leads**: o `Command` do shadcn aplica filtro client-side por cima dos resultados do servidor, e como cada item tem ícone + spans aninhados, o cmdk falha em encontrar o texto. Vou adicionar `shouldFilter={false}` no `<Command>` para confiar 100% no resultado do servidor (`useLeads({ search })`).
+- Aumentar `limit` da busca de leads de 5 → 20 para mostrar mais resultados.
+- Mostrar telefone/email mesmo quando ambos existirem.
 
-**Hook `use-schedule-events.ts`:**
-- Adicionar select de `assignees:schedule_event_assignees(user:users(id,name,avatar_url))`.
-- No create/update: aceitar `assignee_ids: string[]` e sincronizar (delete + insert).
+## 4. Campo "Imóvel" (apenas quando tipo = Visita)
 
-**UI no painel:**
-- Componente `Avatar` passa a aceitar `avatarUrl` e renderizar `<img>` quando existir (hoje só mostra iniciais).
-- Botão `+` abre popover com lista de usuários da org (reusar `UserFilter`/`useUsers`) para adicionar responsável.
-- Cada avatar tem botão `×` no hover para remover.
+Adicionar selector de imóvel no `EventSheet`, que só aparece quando `selectedType === 'visit'`. Funciona igual ao selector de lead:
 
----
+- Hook `useProperties` (já existe em `src/hooks/use-properties.ts`) com busca por código/título.
+- Estado `selectedPropertyId` + `selectedPropertyTitle`.
+- Card exibindo o imóvel selecionado com botão de remover.
+- Ao salvar, incluir `property_id` no payload do `createEvent`/`updateEvent`.
+- No modo visualização, mostrar o imóvel vinculado com link para a página dele.
 
-## 3. Remoções e ajustes de UX no painel
+Verificar `use-schedule-events.ts` para garantir que o `select` traz `property:properties(id, title, codigo)` e que o `insert/update` aceita `property_id`.
 
-- **Remover bloco "Prioridade"** completamente (linhas 337-365 em `Agenda.tsx`) e a constante `PRIORITY_CONFIG`.
-- **Remover subtarefas mock** (não está conectado, gera confusão). Pode voltar no futuro como feature real.
-- **Aumentar fonte do título do evento** de 15px para 18px, peso 600.
-- **Bloco "Lead/Cliente"**: garantir que apareça sempre que `event.lead_id` existir (hoje depende de `event.lead` vir no join — confirmar que o select traz). Tornar clicável → link para `/crm/pipelines?lead={id}`.
-
----
-
-## 4. Edição inline + bloqueio após conclusão
-
-- **Horário editável** no painel: clicar no horário abre dois inputs `time` (início/fim) e salva onBlur. Bloqueado quando `status === 'completed'`.
-- **Título editável** inline (clique → input). Mesmo bloqueio.
-- **Responsáveis e descrição** também bloqueados após conclusão.
-- Indicador visual sutil ("🔒 Concluída — somente leitura") no header quando bloqueado.
-
----
-
-## 5. Formulário de cadastro vira Sheet lateral
-
-Hoje `EventForm` abre como Dialog/popup. Vamos:
-- Reaproveitar o **mesmo layout do `EventDetailPanel`** em um Sheet lateral (largura 360-400px, lado direito).
-- Estado: `mode = 'view' | 'create' | 'edit'`. O mesmo componente serve aos 3.
-- Campos no formato vertical do painel: Tipo de atividade, Assunto (título), Lead, Responsáveis (múltiplos), Data, Hora início, Hora fim, Duração (calculada), Descrição.
-- Botões fixos no rodapé: **Cancelar** (ghost) e **Salvar** (primary).
-- Comentários aparecem **só em modo view/edit** (precisa de evento criado).
-- Botão "Novo" no topo da agenda passa a abrir esse Sheet em `mode='create'` (em vez do popup).
-- `EventForm.tsx` antigo pode ser deletado depois ou mantido como fallback.
-
----
-
-## 6. Notificações in-app
-
-Hoje, ao criar/editar evento, `use-schedule-events.ts` já cria notificação em alguns casos (visit/meeting). Vamos:
-- **Sempre** notificar todos os responsáveis adicionados em create.
-- Em update, notificar **novos** responsáveis (diff).
-- Tipo `schedule_assigned` / `schedule_updated` / `schedule_comment`.
-- Confirmar que o `NotificationBell` no header escuta estes tipos (verificar `use-notifications.ts`).
-
----
-
-## Detalhes técnicos / arquivos afetados
+## Detalhes técnicos
 
 ```text
-supabase/migrations/
-  └── (nova) create_schedule_comments_and_assignees.sql
-
-src/hooks/
-  ├── use-schedule-comments.ts        (corrigir tabela/colunas)
-  └── use-schedule-events.ts          (suportar assignees[])
-
-src/components/schedule/
-  ├── EventDetailPanel.tsx            (NOVO arquivo, extraído de Agenda.tsx)
-  ├── EventSheet.tsx                  (NOVO — wrapper view/create/edit)
-  ├── AssigneePicker.tsx              (NOVO — popover de seleção)
-  └── EventForm.tsx                   (deprecar/remover ao final)
-
-src/pages/Agenda.tsx
-  ├── remover EventDetailPanel inline, PRIORITY_CONFIG, subtarefas mock
-  ├── botão "Novo" → abre EventSheet em mode='create'
-  └── clique em evento → abre EventSheet em mode='view'
-
-src/components/ui/avatar (helper local em Agenda)
-  └── Avatar passa a aceitar avatarUrl e renderiza <img>
+Arquivos editados:
+├── src/components/schedule/CalendarView.tsx   (grid + ActivityCard)
+├── src/components/schedule/EventSheet.tsx     (label, busca lead, campo imóvel)
+└── src/hooks/use-schedule-events.ts           (incluir property no select se faltar)
 ```
 
-**Schema SQL resumido:**
-```sql
-CREATE TABLE schedule_event_comments (
-  id uuid PK default gen_random_uuid(),
-  event_id uuid REFERENCES schedule_events ON DELETE CASCADE,
-  user_id uuid REFERENCES users,
-  organization_id uuid REFERENCES organizations,
-  content text NOT NULL,
-  created_at timestamptz DEFAULT now()
-);
+Sem migrations. Sem novos hooks (reaproveita `useProperties`).
 
-CREATE TABLE schedule_event_assignees (
-  event_id uuid REFERENCES schedule_events ON DELETE CASCADE,
-  user_id uuid REFERENCES users ON DELETE CASCADE,
-  organization_id uuid REFERENCES organizations,
-  created_at timestamptz DEFAULT now(),
-  PRIMARY KEY (event_id, user_id)
-);
-```
+## Fora de escopo (confirmar se quer agora)
 
----
-
-## Fora do escopo (não fazer agora)
-
-- Subtarefas reais persistidas.
-- Edição em lote de eventos.
-- Repetição/recorrência de evento.
-- Notificação push web (apenas in-app por enquanto).
+- Visualização "Mês" e "Ano" não foram tocadas — só Dia/Semana têm a linha divisora.
+- Não vou mexer no `EventForm.tsx` antigo (Dialog) porque a Agenda já usa o `EventSheet`.
