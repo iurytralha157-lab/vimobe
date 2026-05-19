@@ -170,11 +170,7 @@ export function useCreateWhatsAppSession() {
       const body = provider === "evolution_go"
         ? {
             action: "instance.create",
-            body: {
-              instanceName: uniqueInstanceName,
-              qrcode: true,
-              webhook: webhookUrl ? { url: webhookUrl, base64: true, events: ["all"] } : undefined,
-            },
+            body: { name: uniqueInstanceName },
           }
         : { action: "createInstance", instanceName: uniqueInstanceName };
 
@@ -188,8 +184,38 @@ export function useCreateWhatsAppSession() {
       const failed = provider === "evolution_go" ? !result?.ok : !result?.success;
       if (failed) {
         await supabase.from("whatsapp_sessions").delete().eq("id", session.id);
-        throw new Error(result?.error || result?.data?.error || "Failed to create instance");
+        const msg =
+          result?.error ||
+          result?.data?.error?.message ||
+          result?.data?.message ||
+          result?.data?.error ||
+          "Failed to create instance";
+        throw new Error(msg);
       }
+
+      // For evolution_go: persist UUID and trigger connect with webhook
+      if (provider === "evolution_go") {
+        const evoId: string | undefined =
+          result?.data?.data?.id || result?.data?.instance?.id || result?.data?.id;
+        if (evoId) {
+          await supabase
+            .from("whatsapp_sessions")
+            .update({ instance_id: evoId } as any)
+            .eq("id", session.id);
+          (session as any).instance_id = evoId;
+        }
+
+        // Connect (registers webhook and starts QR generation)
+        await supabase.functions.invoke("evolution-go-proxy", {
+          body: {
+            action: "instance.connect",
+            instance_id: evoId,
+            body: { webhookUrl, subscribe: ["ALL"], immediate: true },
+          },
+        });
+      }
+
+
 
       return {
         session: {
