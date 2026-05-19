@@ -1400,7 +1400,19 @@ export default function Pipelines() {
                           </SelectContent>
                         </Select>
                       </div>
+                    <div className="space-y-2">
+                      <Label className="text-[11px] font-bold uppercase text-muted-foreground/70 tracking-wider">Origem do Lead</Label>
+                      <Select value={filterSource} onValueChange={setFilterSource}>
+                        <SelectTrigger className="h-10 text-sm bg-muted/30">
+                          <SelectValue placeholder="Todas" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todas as origens</SelectItem>
+                          {allSources.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
                     </div>
+                  </div>
                   </div>
 
                   {((filterUser && filterUser !== 'all') || (filterTag && filterTag !== 'all') || (filterDealStatus && filterDealStatus !== 'all') || (filterCampaign !== 'all' || filterAdSet !== 'all' || filterAd !== 'all') || searchQuery) && (
