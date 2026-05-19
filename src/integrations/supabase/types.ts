@@ -8550,6 +8550,7 @@ export type Database = {
           total_count: number
         }[]
       }
+      mark_overdue_financial_entries: { Args: never; Returns: undefined }
       normalize_phone: { Args: { phone_input: string }; Returns: string }
       notify_financial_entries: { Args: never; Returns: undefined }
       notify_whatsapp_on_lead: {

@@ -131,6 +131,11 @@ function CommissionCard({ commission, onApprove, onPay, onCancel }: {
 
         <div className="flex items-center gap-1.5 sm:gap-2 pt-2 border-t">
           {commission.status === 'forecast' && (
+            <p className="flex-1 text-[10px] sm:text-xs text-muted-foreground italic">
+              Aguardando 1º pagamento do contrato
+            </p>
+          )}
+          {commission.status === 'pending' && (
             <Button variant="outline" size="sm" className="flex-1 h-8 text-xs" onClick={onApprove}>
               <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
               Aprovar
@@ -142,7 +147,7 @@ function CommissionCard({ commission, onApprove, onPay, onCancel }: {
               Pagar
             </Button>
           )}
-          {(commission.status === 'forecast' || commission.status === 'approved') && (
+          {(commission.status === 'forecast' || commission.status === 'pending' || commission.status === 'approved') && (
             <Button variant="ghost" size="sm" className="text-destructive h-8 w-8 p-0" onClick={onCancel}>
               <XCircle className="h-4 w-4" />
             </Button>
@@ -226,9 +231,10 @@ export default function Commissions() {
   const [ruleActive, setRuleActive] = useState(true);
 
   const statusMap: Record<string, string | undefined> = {
-   pending: 'forecast',
-    history: 'paid',
-   forecast: 'approved',
+    forecast: 'forecast',
+    pending: 'pending',
+    approved: 'approved',
+    paid: 'paid',
     rules: undefined,
   };
 
@@ -371,7 +377,7 @@ export default function Commissions() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="bg-popover">
-                    {commission.status === 'forecast' && (
+                    {commission.status === 'pending' && (
                       <DropdownMenuItem onClick={() => handleApprove(commission.id)}>
                         <CheckCircle2 className="h-4 w-4 mr-2" />
                         Aprovar
@@ -385,7 +391,7 @@ export default function Commissions() {
                         Registrar Pagamento
                       </DropdownMenuItem>
                     )}
-                    {(commission.status === 'forecast' || commission.status === 'approved') && (
+                    {(commission.status === 'forecast' || commission.status === 'pending' || commission.status === 'approved') && (
                       <DropdownMenuItem 
                         className="text-destructive"
                         onClick={() => setCancelDialog({ open: true, commission })}
@@ -424,15 +430,18 @@ export default function Commissions() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="w-full grid grid-cols-4">
-            <TabsTrigger value="pending" className="text-xs sm:text-sm">
-              Pendentes
-            </TabsTrigger>
-            <TabsTrigger value="history" className="text-xs sm:text-sm">
-              Histórico
-            </TabsTrigger>
+          <TabsList className="w-full grid grid-cols-5">
             <TabsTrigger value="forecast" className="text-xs sm:text-sm">
-              Previsão
+              Previstas
+            </TabsTrigger>
+            <TabsTrigger value="pending" className="text-xs sm:text-sm">
+              Liberadas
+            </TabsTrigger>
+            <TabsTrigger value="approved" className="text-xs sm:text-sm">
+              Aprovadas
+            </TabsTrigger>
+            <TabsTrigger value="paid" className="text-xs sm:text-sm">
+              Pagas
             </TabsTrigger>
             <TabsTrigger value="rules" className="text-xs sm:text-sm">
               Regras
@@ -440,7 +449,7 @@ export default function Commissions() {
           </TabsList>
 
           {/* Commissions Tabs */}
-          {['pending', 'history', 'forecast'].map((tab) => (
+          {['forecast', 'pending', 'approved', 'paid'].map((tab) => (
             <TabsContent key={tab} value={tab}>
               <Card>
                 <CardHeader className="p-3 sm:p-4 md:p-6 pb-2 sm:pb-3 md:pb-4">
