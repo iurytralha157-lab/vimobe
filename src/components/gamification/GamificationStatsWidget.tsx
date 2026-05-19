@@ -1,11 +1,12 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Trophy, Star, Zap } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
+import { toast } from 'sonner';
 
 interface Stats {
   xp: number;
@@ -17,6 +18,9 @@ interface Stats {
 
 export function GamificationStatsWidget() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const lastLevelRef = useRef<number | null>(null);
+  const lastXpRef = useRef<number | null>(null);
 
   const { data: stats, isLoading, refetch } = useQuery({
     queryKey: ['gamification-user-stats', user?.id],
@@ -34,6 +38,21 @@ export function GamificationStatsWidget() {
   });
 
   useEffect(() => {
+    if (!stats) return;
+    if (lastLevelRef.current !== null && stats.current_level > lastLevelRef.current) {
+      toast.success(`🏆 Nível ${stats.current_level} desbloqueado!`, {
+        description: `Rank atual: ${stats.rank_tier}. Continue assim!`,
+        duration: 6000,
+      });
+    } else if (lastXpRef.current !== null && stats.xp > lastXpRef.current) {
+      const gained = stats.xp - lastXpRef.current;
+      toast(`+${gained} XP`, { description: 'Boa! Sua ação foi registrada.', duration: 3000 });
+    }
+    lastLevelRef.current = stats.current_level;
+    lastXpRef.current = stats.xp;
+  }, [stats?.xp, stats?.current_level, stats?.rank_tier]);
+
+  useEffect(() => {
     if (!user?.id) return;
     const channel = supabase
       .channel(`user-stats-${user.id}`)
@@ -42,10 +61,14 @@ export function GamificationStatsWidget() {
         schema: 'public',
         table: 'user_gamification_stats',
         filter: `user_id=eq.${user.id}`,
-      }, () => refetch())
+      }, () => {
+        refetch();
+        queryClient.invalidateQueries({ queryKey: ['gamification-missions', user.id] });
+        queryClient.invalidateQueries({ queryKey: ['gamification-recent-activities', user.id] });
+      })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [user?.id, refetch]);
+  }, [user?.id, refetch, queryClient]);
 
   if (isLoading || !stats) {
     return (

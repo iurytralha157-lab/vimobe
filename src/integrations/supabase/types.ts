@@ -2293,8 +2293,10 @@ export type Database = {
           metadata: Json | null
           organization_id: string | null
           points_earned: number
+          quantity: number
           reference_id: string | null
           user_id: string | null
+          xp_awarded: number
         }
         Insert: {
           action_type: string
@@ -2304,8 +2306,10 @@ export type Database = {
           metadata?: Json | null
           organization_id?: string | null
           points_earned: number
+          quantity?: number
           reference_id?: string | null
           user_id?: string | null
+          xp_awarded?: number
         }
         Update: {
           action_type?: string
@@ -2315,8 +2319,10 @@ export type Database = {
           metadata?: Json | null
           organization_id?: string | null
           points_earned?: number
+          quantity?: number
           reference_id?: string | null
           user_id?: string | null
+          xp_awarded?: number
         }
         Relationships: [
           {
@@ -7516,11 +7522,15 @@ export type Database = {
           id: string
           last_activity_at: string | null
           organization_id: string | null
+          rank_tier: string
           streak_days: number | null
           total_points: number | null
           updated_at: string | null
           user_id: string | null
           xp: number | null
+          xp_current_level: number
+          xp_next_level: number
+          xp_total: number
         }
         Insert: {
           created_at?: string | null
@@ -7529,11 +7539,15 @@ export type Database = {
           id?: string
           last_activity_at?: string | null
           organization_id?: string | null
+          rank_tier?: string
           streak_days?: number | null
           total_points?: number | null
           updated_at?: string | null
           user_id?: string | null
           xp?: number | null
+          xp_current_level?: number
+          xp_next_level?: number
+          xp_total?: number
         }
         Update: {
           created_at?: string | null
@@ -7542,11 +7556,15 @@ export type Database = {
           id?: string
           last_activity_at?: string | null
           organization_id?: string | null
+          rank_tier?: string
           streak_days?: number | null
           total_points?: number | null
           updated_at?: string | null
           user_id?: string | null
           xp?: number | null
+          xp_current_level?: number
+          xp_next_level?: number
+          xp_total?: number
         }
         Relationships: [
           {
@@ -7567,28 +7585,34 @@ export type Database = {
       }
       user_mission_progress: {
         Row: {
+          completed_at: string | null
           current_count: number | null
           id: string
           is_completed: boolean | null
           mission_id: string | null
+          organization_id: string | null
           reset_at: string | null
           updated_at: string | null
           user_id: string | null
         }
         Insert: {
+          completed_at?: string | null
           current_count?: number | null
           id?: string
           is_completed?: boolean | null
           mission_id?: string | null
+          organization_id?: string | null
           reset_at?: string | null
           updated_at?: string | null
           user_id?: string | null
         }
         Update: {
+          completed_at?: string | null
           current_count?: number | null
           id?: string
           is_completed?: boolean | null
           mission_id?: string | null
+          organization_id?: string | null
           reset_at?: string | null
           updated_at?: string | null
           user_id?: string | null
@@ -8420,6 +8444,9 @@ export type Database = {
           user_id: string
         }[]
       }
+      gamification_level_for_xp: { Args: { p_xp: number }; Returns: number }
+      gamification_rank_tier: { Args: { p_level: number }; Returns: string }
+      gamification_xp_for_level: { Args: { p_level: number }; Returns: number }
       generate_organization_api_key: {
         Args: { p_name: string; p_organization_id: string }
         Returns: string
@@ -8610,6 +8637,17 @@ export type Database = {
       pick_round_robin_for_lead: {
         Args: { p_lead_id: string }
         Returns: string
+      }
+      process_gamification_event: {
+        Args: {
+          p_event_type: string
+          p_metadata?: Json
+          p_org_id: string
+          p_quantity?: number
+          p_reference_id?: string
+          p_user_id: string
+        }
+        Returns: undefined
       }
       recover_stuck_executions: {
         Args: { p_stale_minutes?: number }
