@@ -453,9 +453,4 @@ ON CONFLICT (user_id) DO UPDATE SET
   last_activity_at = EXCLUDED.last_activity_at,
   updated_at       = now();
 
--- view de compatibilidade para frontend antigo
-CREATE OR REPLACE VIEW public.gamification_events AS
-  SELECT id, organization_id, user_id, action_type AS event_type,
-         'system'::text AS source_module, reference_id AS source_id,
-         metadata, points_earned, created_at
-  FROM public.gamification_activity_logs;
+-- (tabela legada gamification_events permanece intacta; frontend será migrado)
