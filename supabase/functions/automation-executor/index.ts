@@ -485,6 +485,8 @@ Deno.serve(async (req) => {
           lockReleased = true; // we just nulled the lock
           console.log(`✅ Execution ${execution_id} completed`);
           await sendAutomationNotification(supabase, execution, automation, "completed");
+          await logAutomationActivity(supabase, execution.lead_id, "automation_completed",
+            `Automação "${automation.name}" concluída`, { automation_id: automation.id, execution_id });
           currentNodeId = null;
         }
       }

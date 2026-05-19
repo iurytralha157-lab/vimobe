@@ -242,6 +242,44 @@ Deno.serve(async (req) => {
             console.error("Error calling first response:", firstResponseError);
             // Don't fail the message send if first response fails
           }
+
+          // ===== STOP AUTOMATIONS ON MANUAL HUMAN REPLY (via internal CRM chat) =====
+          // Mirror of evolution-webhook's isManualInteraction path. We cancel all
+          // running/waiting executions for this lead so the automation stops the
+          // moment the broker takes over the conversation from the app UI.
+          try {
+            const { data: activeExecs } = await supabase
+              .from("automation_executions")
+              .select("id, automation_id, automations(name)")
+              .eq("lead_id", convData.lead_id)
+              .in("status", ["running", "waiting"]);
+
+            if (activeExecs && activeExecs.length > 0) {
+              const ids = activeExecs.map((e: any) => e.id);
+              await supabase
+                .from("automation_executions")
+                .update({
+                  status: "cancelled",
+                  completed_at: new Date().toISOString(),
+                  error_message: "Cancelado: intervenção humana (chat interno)",
+                })
+                .in("id", ids);
+
+              const activityRows = activeExecs.map((e: any) => ({
+                lead_id: convData.lead_id,
+                type: "automation_cancelled_manual",
+                content: `Automação "${e.automations?.name || ""}" cancelada: atendimento humano iniciado`,
+                metadata: { is_automation: true, execution_id: e.id, automation_id: e.automation_id, source: "internal_chat" },
+                user_id: null,
+              }));
+              if (activityRows.length) {
+                await supabase.from("activities").insert(activityRows);
+              }
+              console.log(`Cancelled ${ids.length} active automation(s) due to manual reply via internal chat`);
+            }
+          } catch (cancelErr) {
+            console.error("Error cancelling automations on manual reply:", cancelErr);
+          }
         }
 
         results.push({

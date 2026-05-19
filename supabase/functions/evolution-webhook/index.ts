@@ -2018,9 +2018,9 @@ async function handleStopFollowUpOnReply(
     for (const exec of executions) {
       const triggerConfig = exec.automation?.trigger_config || {};
       
-      // Check if this automation should stop
-      if (!isManualInteraction && triggerConfig.stop_on_reply !== true) {
-        console.log(`Automation ${exec.automation?.name || exec.id} does not have stop_on_reply enabled, skipping`);
+      // Default behavior: stop on reply UNLESS explicitly disabled (stop_on_reply === false)
+      if (!isManualInteraction && triggerConfig.stop_on_reply === false) {
+        console.log(`Automation ${exec.automation?.name || exec.id} has stop_on_reply explicitly disabled, skipping`);
         continue;
       }
       
@@ -2037,6 +2037,17 @@ async function handleStopFollowUpOnReply(
           })
           .eq("id", exec.id);
         
+        // Activity log for audit
+        if (exec.lead_id) {
+          await supabase.from("activities").insert({
+            lead_id: exec.lead_id,
+            type: "automation_cancelled_manual",
+            content: `Automação "${exec.automation?.name}" cancelada: atendimento humano iniciado`,
+            metadata: { is_automation: true, execution_id: exec.id, automation_id: exec.automation?.id },
+            user_id: null,
+          }).then(() => {}, () => {});
+        }
+        if (exec.automation?.name) stoppedAutomations.add(exec.automation.name);
         console.log(`Automation ${exec.id} cancelled due to manual intervention`);
         continue;
       }
@@ -2098,7 +2109,19 @@ async function handleStopFollowUpOnReply(
             }
           }
           
+          // ===== Per-node stop_on_reply override =====
+          // If the delay node explicitly has stop_on_reply === false, keep waiting and
+          // skip this execution entirely (no branch, no cancel).
           if (delayNodeId) {
+            const delayNode = fullAutomation.nodes.find((n: any) => n.id === delayNodeId);
+            const delayCfg = (delayNode?.node_config || delayNode?.config || {}) as Record<string, unknown>;
+            if (delayCfg.stop_on_reply === false) {
+              console.log(`Delay node ${delayNodeId} has stop_on_reply=false — keeping execution running`);
+              continuedViaReplyBranch = true; // prevents the fallback cancel below
+            }
+          }
+
+          if (delayNodeId && !continuedViaReplyBranch) {
             // Now find the "replied" branch connection from this delay node
             const repliedConn = fullAutomation.connections.find(
               (c: any) => c.source_node_id === delayNodeId && c.source_handle === "replied"
@@ -2159,7 +2182,16 @@ async function handleStopFollowUpOnReply(
         
         if (!updateError) {
           console.log(`Falling back to cancel behavior for execution ${exec.id}`);
-          // Legacy auto-reply and stage move logic removed to ensure only explicit flow bubbles are executed.
+          if (exec.lead_id) {
+            await supabase.from("activities").insert({
+              lead_id: exec.lead_id,
+              type: "automation_cancelled_reply",
+              content: `Automação "${exec.automation?.name}" cancelada: lead respondeu`,
+              metadata: { is_automation: true, execution_id: exec.id, automation_id: exec.automation?.id },
+              user_id: null,
+            }).then(() => {}, () => {});
+          }
+          if (exec.automation?.name) stoppedAutomations.add(exec.automation.name);
         }
       }
 
