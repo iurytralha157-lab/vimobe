@@ -351,24 +351,28 @@ export function EventSheet({
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="p-0 w-[360px]" align="start">
-                  <Command>
-                    <CommandInput placeholder="Buscar lead..." value={leadSearch} onValueChange={setLeadSearch} />
+                  <Command shouldFilter={false}>
+                    <CommandInput placeholder="Buscar por nome, telefone ou e-mail..." value={leadSearch} onValueChange={setLeadSearch} />
                     <CommandList>
                       <CommandEmpty>Nenhum lead encontrado.</CommandEmpty>
                       <CommandGroup>
                         {searchedLeads.map((l) => (
                           <CommandItem
                             key={l.id}
+                            value={l.id}
                             onSelect={() => {
                               setSelectedLeadId(l.id);
                               setSelectedLeadName(l.name);
                               setShowLeadSelector(false);
+                              setLeadSearch("");
                             }}
                           >
-                            <User className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
-                            <div className="flex flex-col">
-                              <span className="text-sm font-medium">{l.name}</span>
-                              <span className="text-[10px] text-muted-foreground">{l.phone || l.email}</span>
+                            <User className="h-3.5 w-3.5 mr-2 text-muted-foreground shrink-0" />
+                            <div className="flex flex-col min-w-0">
+                              <span className="text-sm font-medium truncate">{l.name}</span>
+                              <span className="text-[10px] text-muted-foreground truncate">
+                                {[l.phone, l.email].filter(Boolean).join(" · ") || "Sem contato"}
+                              </span>
                             </div>
                           </CommandItem>
                         ))}
