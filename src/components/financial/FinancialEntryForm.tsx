@@ -107,9 +107,12 @@ export function FinancialEntryForm({ entry, onSuccess, onCancel }: FinancialEntr
   }, [watchIsRecurring, form]);
 
   const onSubmit = async (values: FormValues) => {
+    const selectedCategoryObj = financialCategories?.find(c => c.name === values.category);
+    
     const basePayload = {
       type: values.type,
       category: values.category || null,
+      category_group: selectedCategoryObj?.category_group || null,
       description: values.description,
       amount: values.amount,
       due_date: values.due_date,
