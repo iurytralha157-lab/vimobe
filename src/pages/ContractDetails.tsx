@@ -24,6 +24,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { LeadTimeline } from '@/components/leads/LeadTimeline';
+import { ContractDocuments } from '@/components/financial/ContractDocuments';
 
 export default function ContractDetails() {
   const { id } = useParams();
@@ -133,9 +134,10 @@ export default function ContractDetails() {
 
         {/* Tabs Content */}
         <Tabs defaultValue="installments" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 lg:w-[400px]">
+          <TabsList className="grid w-full grid-cols-4 lg:w-[520px]">
             <TabsTrigger value="installments">Parcelas</TabsTrigger>
             <TabsTrigger value="commissions">Comissões</TabsTrigger>
+            <TabsTrigger value="documents">Documentos</TabsTrigger>
             <TabsTrigger value="timeline">Histórico</TabsTrigger>
           </TabsList>
 
@@ -230,6 +232,13 @@ export default function ContractDetails() {
                 </CardContent>
               </Card>
             </div>
+          </TabsContent>
+
+          <TabsContent value="documents" className="mt-6">
+            <ContractDocuments
+              contractId={contract.id}
+              organizationId={contract.organization_id}
+            />
           </TabsContent>
 
           <TabsContent value="timeline" className="mt-6">

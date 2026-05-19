@@ -17,7 +17,7 @@ import { Sparkles, Wand2 } from 'lucide-react';
 const formSchema = z.object({
   description: z.string().min(3, 'Descrição obrigatória (mínimo 3 caracteres)'),
   type: z.enum(['payable', 'receivable']),
-  category: z.string().optional(),
+  category: z.string().min(1, 'Categoria é obrigatória'),
   amount: z.number().min(0.01, 'Valor deve ser maior que zero'),
   due_date: z.string().optional(),
   payment_method: z.string().optional(),
