@@ -803,66 +803,10 @@ export function useLinkConversationToLead() {
   });
 }
 
-// Hook for realtime conversation updates
+// Hook kept for backwards compatibility — realtime is now handled by
+// WhatsAppRealtimeBus (mounted in AppLayout). This is a no-op so callers
+// don't break.
 export function useWhatsAppRealtimeConversations() {
-  const queryClient = useQueryClient();
-
-  useEffect(() => {
-    // Play notification sound for incoming WhatsApp messages
-    const playWhatsAppSound = () => {
-      try {
-        const audio = new Audio('/sounds/notification.mp3');
-        audio.volume = 0.4;
-        audio.play().catch(() => {});
-      } catch {}
-    };
-
-    // Debounce to coalesce rapid realtime events into a single refetch
-    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
-    const debouncedInvalidate = () => {
-      if (debounceTimer) clearTimeout(debounceTimer);
-      debounceTimer = setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ["whatsapp-conversations"] });
-        // Also invalidate messages if we are in a conversation
-        queryClient.invalidateQueries({ queryKey: ["whatsapp-messages"] });
-        debounceTimer = null;
-      }, 2000); // 2 second debounce for better performance
-    };
-
-    const channel = supabase
-      .channel("whatsapp-realtime")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "whatsapp_conversations",
-        },
-        () => {
-          debouncedInvalidate();
-        }
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "whatsapp_messages",
-        },
-        (payload) => {
-          debouncedInvalidate();
-          // Play sound only for incoming messages (not sent by us)
-          const msg = payload.new as any;
-          if (msg && !msg.from_me) {
-            playWhatsAppSound();
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      if (debounceTimer) clearTimeout(debounceTimer);
-      supabase.removeChannel(channel);
-    };
-  }, [queryClient]);
+  // intentionally empty
 }
+
