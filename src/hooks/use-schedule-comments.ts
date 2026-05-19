@@ -12,7 +12,7 @@ export interface ScheduleComment {
   created_at: string;
   user?: {
     name: string;
-    avatar_url?: string;
+    avatar_url?: string | null;
   };
 }
 
@@ -27,12 +27,12 @@ export function useScheduleComments(eventId: string | undefined) {
       if (!eventId) return [];
       const { data, error } = await supabase
         .from("schedule_event_comments")
-        .select("*, user:profiles(name, avatar_url)")
+        .select("id, event_id, user_id, organization_id, content, created_at, user:profiles(name, avatar_url)")
         .eq("event_id", eventId)
         .order("created_at", { ascending: true });
 
       if (error) throw error;
-      return data as ScheduleComment[];
+      return (data || []) as unknown as ScheduleComment[];
     },
     enabled: !!eventId,
   });
@@ -45,7 +45,7 @@ export function useScheduleComments(eventId: string | undefined) {
         .from("profiles")
         .select("organization_id")
         .eq("id", user.id)
-        .single();
+        .maybeSingle();
 
       if (!profile?.organization_id) throw new Error("Organização não encontrada");
 
@@ -64,33 +64,36 @@ export function useScheduleComments(eventId: string | undefined) {
       if (error) throw error;
 
       // Buscar detalhes do evento para notificação e histórico do lead
-      const { data: event } = await supabase
+      const { data: eventData } = await supabase
         .from("schedule_events")
         .select("title, lead_id, assigned_to")
         .eq("id", eventId)
-        .single();
+        .maybeSingle();
 
-      if (event?.lead_id) {
-        // Inserir no histórico do lead
-        await supabase.from("lead_history").insert({
-          lead_id: event.lead_id,
-          organization_id: profile.organization_id,
-          user_id: user.id,
-          type: "schedule_comment",
-          content: `Comentário na tarefa "${event.title}": ${content}`,
-        });
-      }
+      if (eventData) {
+        const anyEventData = eventData as any;
+        if (anyEventData.lead_id) {
+          // Inserir no histórico do lead
+          await supabase.from("lead_history").insert({
+            lead_id: anyEventData.lead_id,
+            organization_id: profile.organization_id,
+            user_id: user.id,
+            type: "schedule_comment",
+            content: `Comentário na tarefa "${anyEventData.title}": ${content}`,
+          } as any);
+        }
 
-      // Notificação para o responsável (se não for o próprio autor)
-      if (event?.assigned_to && event.assigned_to !== user.id) {
-        await supabase.from("notifications").insert({
-          user_id: event.assigned_to,
-          organization_id: profile.organization_id,
-          type: "schedule_comment",
-          title: "Novo comentário em tarefa",
-          content: `Um novo comentário foi adicionado na tarefa: ${event.title}`,
-          link: "/agenda",
-        });
+        // Notificação para o responsável (se não for o próprio autor)
+        if (anyEventData.assigned_to && anyEventData.assigned_to !== user.id) {
+          await supabase.from("notifications").insert({
+            user_id: anyEventData.assigned_to,
+            organization_id: profile.organization_id,
+            type: "schedule_comment",
+            title: "Novo comentário em tarefa",
+            content: `Um novo comentário foi adicionado na tarefa: ${anyEventData.title}`,
+            link: "/agenda",
+          } as any);
+        }
       }
 
       return data;
@@ -98,7 +101,7 @@ export function useScheduleComments(eventId: string | undefined) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["schedule_comments", eventId] });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({
         title: "Erro ao adicionar comentário",
         description: error.message,
