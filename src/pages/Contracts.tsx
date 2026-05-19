@@ -45,6 +45,8 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ContractStatusBadge } from '@/components/financial/ContractStatusBadge';
 import { ContractForm } from '@/components/financial/ContractForm';
+import { FinancialDrawer } from '@/components/financial/FinancialDrawer';
+
 import { useContracts, useActivateContract, useDeleteContract, useRegenerateCommissions, Contract } from '@/hooks/use-contracts';
 import {
   AlertDialog,
