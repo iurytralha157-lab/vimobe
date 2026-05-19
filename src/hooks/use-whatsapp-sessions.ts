@@ -33,6 +33,7 @@ export interface WhatsAppSessionAccess {
   user_id: string;
   can_view: boolean;
   can_send: boolean;
+  only_leads_access: boolean;
   granted_by: string | null;
   created_at: string;
   user?: {
