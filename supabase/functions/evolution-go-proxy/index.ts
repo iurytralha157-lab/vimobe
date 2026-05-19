@@ -155,13 +155,13 @@ async function callEvolutionGo(c: ProxyCall) {
     }
   }
 
-  // Use instance token as apikey if provided, otherwise global API key
+  // For Evolution Go, the global API_KEY is often required for all calls.
+  // We only use the instance token if it's explicitly provided and not the default.
   const headers: Record<string, string> = {
-    "apikey": c.token || API_KEY,
+    "apikey": (c.token && c.token !== "default_token") ? c.token : API_KEY,
     "Content-Type": "application/json",
   };
   
-  // Header instanceId is optional in some Go versions when using token, but we include it for safety
   if (c.instanceId) headers["instanceId"] = c.instanceId;
 
   const init: RequestInit = { method: c.method, headers };
@@ -212,14 +212,13 @@ Deno.serve(async (req) => {
     if (payload.session_id && (!payload.instance_id || !payload.token)) {
       const { data: sess } = await supabase
         .from("whatsapp_sessions")
-        .select("instance_id, instance_name, token, advanced_settings")
+        .select("instance_id, instance_name, advanced_settings")
         .eq("id", payload.session_id)
         .maybeSingle();
       if (sess) {
         if (!payload.instance_id) payload.instance_id = sess.instance_id || sess.instance_name;
-        // Check token column or advanced_settings JSONB
         if (!payload.token) {
-          payload.token = sess.token || (sess.advanced_settings as any)?.token || "default_token";
+          payload.token = (sess.advanced_settings as any)?.token || "default_token";
         }
       }
     }
