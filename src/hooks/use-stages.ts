@@ -618,6 +618,7 @@ export function useLoadMoreLeads() {
         filterCampaign?: string;
         filterAdSet?: string;
         filterAd?: string;
+        filterSource?: string;
       };
     }) => {
       // Pre-fetch tagged lead IDs if tag filter is active
