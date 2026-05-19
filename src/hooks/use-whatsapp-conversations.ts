@@ -283,79 +283,9 @@ export function useWhatsAppMessages(
     refetchOnWindowFocus: true,
   });
 
-  useEffect(() => {
-    if (!conversationId) return;
+  // Realtime updates are now handled centrally by WhatsAppRealtimeBus
+  // (see src/contexts/WhatsAppRealtimeBus.tsx). No per-conversation channel here.
 
-    const channel = supabase
-      .channel(`messages-${conversationId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "whatsapp_messages",
-          filter: `conversation_id=eq.${conversationId}`,
-        },
-        (payload) => {
-          const newMessage = payload.new as WhatsAppMessage;
-
-          queryClient.setQueryData(
-            messageQueryKey,
-            (old: WhatsAppMessage[] | undefined) => {
-              if (!old) return [newMessage];
-
-              const newClientMsgId = (newMessage as any).client_message_id;
-              const exists = old.some((m: any) =>
-                m.id === newMessage.id ||
-                (m.client_message_id && newClientMsgId && m.client_message_id === newClientMsgId)
-              );
-
-              if (exists) {
-                return old.map((msg: any) =>
-                  (msg.id === newMessage.id ||
-                   (msg.client_message_id && newClientMsgId && msg.client_message_id === newClientMsgId))
-                    ? { ...msg, ...newMessage }
-                    : msg
-                );
-              }
-
-              return [...old, newMessage];
-            }
-          );
-        }
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "whatsapp_messages",
-          filter: `conversation_id=eq.${conversationId}`,
-        },
-        (payload) => {
-          const updatedMessage = payload.new as WhatsAppMessage;
-          const updatedClientMsgId = (updatedMessage as any).client_message_id;
-
-          queryClient.setQueryData(
-            messageQueryKey,
-            (old: WhatsAppMessage[] | undefined) => {
-              if (!old) return old;
-              return old.map((msg: any) =>
-                msg.id === updatedMessage.id ||
-                (msg.client_message_id && updatedClientMsgId && msg.client_message_id === updatedClientMsgId)
-                  ? { ...msg, ...updatedMessage }
-                  : msg
-              );
-            }
-          );
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [conversationId, leadId, queryClient]);
 
   return query;
 }
