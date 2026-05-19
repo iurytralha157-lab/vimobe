@@ -54,6 +54,7 @@ const BrokerFinancialPanel = lazy(() => import("./pages/BrokerFinancialPanel"));
 const FinancialReports = lazy(() => import("./pages/FinancialReports"));
 const FinancialDRE = lazy(() => import("./pages/FinancialDRE"));
 const MetaSettings = lazy(() => import("./pages/MetaSettings"));
+const WhatsAppInboundRules = lazy(() => import("./pages/WhatsAppInboundRules"));
 const Automations = lazy(() => import("./pages/Automations"));
 const Notifications = lazy(() => import("./pages/Notifications"));
 const GamificationLayout = lazy(() => import("./pages/gamification/GamificationLayout"));
