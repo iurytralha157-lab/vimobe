@@ -533,11 +533,16 @@ export function useSendWhatsAppMessage() {
       // Store optimistic ID in variables for use in mutationFn
       (variables as any)._optimisticId = optimisticId;
 
-      // Cancel any outgoing refetches
-      await queryClient.cancelQueries({ queryKey: ["whatsapp-messages", conversationId] });
+      // Cancel any outgoing refetches across all variants of the key
+      const messagesPredicate = (q: any) =>
+        Array.isArray(q.queryKey) &&
+        q.queryKey[0] === "whatsapp-messages" &&
+        q.queryKey[1] === conversationId;
+      await queryClient.cancelQueries({ predicate: messagesPredicate });
 
-      // Snapshot previous value
-      const previousMessages = queryClient.getQueryData<WhatsAppMessage[]>(["whatsapp-messages", conversationId]);
+      // Snapshot previous value (first cache that matches)
+      const previousMessages =
+        queryClient.getQueriesData<WhatsAppMessage[]>({ predicate: messagesPredicate })[0]?.[1];
 
       // Create optimistic message with client_message_id for deduplication
       // Don't show filename as content
