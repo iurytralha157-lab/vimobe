@@ -332,8 +332,38 @@ export function CalendarView({
     return layouts;
   }, []);
 
+  const handleDragEnd = (event: DragEndEvent) => {
+    setActiveEvent(null);
+    const { active, over } = event;
+    
+    if (over && active.id !== over.id) {
+      const scheduleEvent = active.data.current as ScheduleEvent;
+      const [dateStr, hourStr] = (over.id as string).split('|');
+      
+      const newStart = parseISO(`${dateStr}T${hourStr}:00`);
+      const originalStart = parseISO(scheduleEvent.start_time);
+      const originalEnd = parseISO(scheduleEvent.end_time);
+      const duration = differenceInMinutes(originalEnd, originalStart);
+      
+      const newEnd = addMinutes(newStart, duration);
+      
+      onEventUpdate?.(scheduleEvent.id, {
+        start_time: newStart.toISOString(),
+        end_time: newEnd.toISOString()
+      });
+    }
+  };
 
-  const renderMonthView = () => {
+  const eventsByDate = useMemo(() => {
+    const map: Record<string, ScheduleEvent[]> = {};
+    events.forEach(event => {
+      const dateKey = format(parseISO(event.start_time), 'yyyy-MM-dd');
+      if (!map[dateKey]) map[dateKey] = [];
+      map[dateKey].push(event);
+    });
+    return map;
+  }, [events]);
+
     const monthStart = startOfMonth(pivotDate);
     const monthEnd = endOfMonth(pivotDate);
     const calendarStart = startOfWeek(monthStart, { weekStartsOn: 0 });
