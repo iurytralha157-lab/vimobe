@@ -26,11 +26,16 @@ const COLORS = [
 
 function ChartSkeleton() {
   return (
-    <div className="flex flex-col items-center justify-center h-full space-y-4">
-      <Skeleton className="h-32 w-32 rounded-full" />
-      <div className="grid grid-cols-2 gap-4 w-full px-4">
-        <Skeleton className="h-10 rounded" />
-        <Skeleton className="h-10 rounded" />
+    <div className="flex flex-col items-center justify-center h-full space-y-6 py-4">
+      <div className="relative h-48 w-48 flex items-center justify-center">
+        <Skeleton className="h-full w-full rounded-full" />
+        <div className="absolute inset-0 flex items-center justify-center">
+          <Skeleton className="h-16 w-16 rounded-full bg-background/50" />
+        </div>
+      </div>
+      <div className="space-y-2 flex flex-col items-center">
+        <Skeleton className="h-3 w-20 rounded" />
+        <Skeleton className="h-8 w-12 rounded" />
       </div>
     </div>
   );
