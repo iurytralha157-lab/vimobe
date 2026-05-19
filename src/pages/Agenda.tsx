@@ -83,9 +83,8 @@ export default function Agenda() {
     localStorage.setItem("agendaViewMode", viewMode);
   }, [viewMode]);
 
-  const [eventFormOpen, setEventFormOpen] = useState(false);
-  const [editingEvent, setEditingEvent] = useState<ScheduleEvent | null>(null);
-  const [detailEvent, setDetailEvent] = useState<ScheduleEvent | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [sheetEvent, setSheetEvent] = useState<ScheduleEvent | null>(null);
   const updateEventMutation = useUpdateScheduleEvent();
 
   const dateRange = useMemo(() => {
@@ -115,28 +114,6 @@ export default function Agenda() {
     endDate: dateRange.endDate,
   });
 
-  const selectedDayEvents = useMemo(() => {
-    const s = startOfDay(selectedDate),
-      e = endOfDay(selectedDate);
-    return events.filter((ev) => {
-      const d = new Date(ev.start_time);
-      return d >= s && d <= e;
-    });
-  }, [events, selectedDate]);
-
-  const weekStats = useMemo(() => {
-    const ws = startOfWeek(new Date(), { weekStartsOn: 0 });
-    const we = endOfWeek(new Date(), { weekStartsOn: 0 });
-    const wev = events.filter((e) => isWithinInterval(new Date(e.start_time), { start: ws, end: we }));
-    return {
-      pending: wev.filter((e) => e.status !== "completed").length,
-      completed: wev.filter((e) => e.status === "completed").length,
-      meetings: wev.filter((e) => e.event_type === "meeting").length,
-      visits: wev.filter((e) => e.event_type === "visit").length,
-      tasks: wev.filter((e) => e.event_type === "task").length,
-    };
-  }, [events]);
-
   const upcomingEvents = useMemo(() => {
     const today = startOfDay(new Date());
     const next = addDays(today, 7);
@@ -148,19 +125,16 @@ export default function Agenda() {
       .slice(0, 10);
   }, [events]);
 
-  const handleEditEvent = (event: ScheduleEvent) => {
-    setDetailEvent(event);
+  const openCreateSheet = () => {
+    setSheetEvent(null);
+    setSheetOpen(true);
   };
 
-  const handleCloseEventForm = () => {
-    setEventFormOpen(false);
-    setEditingEvent(null);
+  const openEventSheet = (event: ScheduleEvent) => {
+    setSheetEvent(event);
+    setSheetOpen(true);
   };
 
-  const handleMarkDone = (id: string) => {
-    updateEventMutation.mutate({ id, status: "completed" });
-    setDetailEvent((prev) => (prev ? { ...prev, status: "completed" } : null));
-  };
 
   const canFilterUsers = profile?.role === "admin" || isTeamLeader;
 
