@@ -966,11 +966,11 @@ export default function Pipelines() {
                   size="icon"
                   className={cn(
                     "h-8 w-8 flex-shrink-0 relative",
-                    ((filterUser && filterUser !== 'all') || (filterTag && filterTag !== 'all') || (filterDealStatus && filterDealStatus !== 'all') || (filterCampaign && filterCampaign !== 'all') || (filterAdSet && filterAdSet !== 'all') || (filterAd && filterAd !== 'all') || searchQuery) && "border-primary text-primary"
+                    ((filterUser && filterUser !== 'all') || (filterTag && filterTag !== 'all') || (filterDealStatus && filterDealStatus !== 'all') || (filterCampaign && filterCampaign !== 'all') || (filterAdSet && filterAdSet !== 'all') || (filterAd && filterAd !== 'all') || (filterSource && filterSource !== 'all') || searchQuery) && "border-primary text-primary"
                   )}
                 >
                   <Filter className="h-3.5 w-3.5" />
-                  {((filterUser && filterUser !== 'all') || (filterTag && filterTag !== 'all') || (filterDealStatus && filterDealStatus !== 'all') || (filterCampaign && filterCampaign !== 'all') || (filterAdSet && filterAdSet !== 'all') || (filterAd && filterAd !== 'all') || searchQuery) && (
+                  {((filterUser && filterUser !== 'all') || (filterTag && filterTag !== 'all') || (filterDealStatus && filterDealStatus !== 'all') || (filterCampaign && filterCampaign !== 'all') || (filterAdSet && filterAdSet !== 'all') || (filterAd && filterAd !== 'all') || (filterSource && filterSource !== 'all') || searchQuery) && (
                     <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-primary" />
                   )}
                 </Button>
