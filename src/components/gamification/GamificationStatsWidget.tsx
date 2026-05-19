@@ -35,6 +35,9 @@ export function GamificationStatsWidget() {
       return (data as unknown as Stats) || { xp: 0, current_level: 1, xp_current_level: 0, xp_next_level: 100, rank_tier: 'Bronze I' };
     },
     enabled: !!user?.id,
+    staleTime: 0,
+    refetchOnWindowFocus: true,
+    refetchInterval: 15000,
   });
 
   useEffect(() => {
@@ -65,6 +68,7 @@ export function GamificationStatsWidget() {
         refetch();
         queryClient.invalidateQueries({ queryKey: ['gamification-missions', user.id] });
         queryClient.invalidateQueries({ queryKey: ['gamification-recent-activities', user.id] });
+        queryClient.invalidateQueries({ queryKey: ['gamification-ranking'] });
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
