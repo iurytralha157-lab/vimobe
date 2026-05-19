@@ -223,7 +223,7 @@ export function WhatsAppTab() {
             }
           : session.instance_name,
       );
-      const qr = data?.qrcode || data?.base64 || data?.code;
+      const qr = (data as any)?.qrcode || (data as any)?.base64;
       if (qr) setQrCode(qr);
     } catch (error) {
       console.error("Error getting QR code:", error);
@@ -274,11 +274,13 @@ export function WhatsAppTab() {
             },
           });
         } else {
+          // Recreate or Ensure instance exists for standard provider
           await supabase.functions.invoke("evolution-proxy", {
             body: { action: "createInstance", instanceName: session.instance_name },
           });
         }
-        await new Promise(r => setTimeout(r, 2000));
+        // Small delay to allow instance to boot
+        await new Promise(r => setTimeout(r, 3000));
         await refreshQRCode(session);
       } catch (e) {
         console.error("Failed to recreate instance:", e);
