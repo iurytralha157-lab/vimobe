@@ -278,7 +278,7 @@ export function EventSheet({
               <Input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="Assunto da atividade"
+                placeholder="Título da atividade"
                 className="text-xl font-bold h-auto border-0 bg-transparent px-0 py-0 focus-visible:ring-0 placeholder:text-muted-foreground/40"
               />
             </div>
