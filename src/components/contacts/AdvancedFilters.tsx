@@ -42,6 +42,7 @@ export function AdvancedFilters({
   selectedDealStatus,
   setSelectedDealStatus,
   activeCount,
+  availableSources = [],
 }: AdvancedFiltersProps) {
   return (
     <Popover>
