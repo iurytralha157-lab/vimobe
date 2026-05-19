@@ -606,26 +606,36 @@ export function useSendWhatsAppMessage() {
     onSuccess: (result, variables, context) => {
       const conversationId = variables.conversation.id;
       
-      // Update optimistic message with real data
+      // Update optimistic message with real data across all variants of the key
       if (context?.optimisticId) {
-        queryClient.setQueryData<WhatsAppMessage[]>(
-          ["whatsapp-messages", conversationId],
-          (old) => old?.map(msg => 
-            msg.id === context.optimisticId 
+        queryClient.setQueriesData<WhatsAppMessage[]>(
+          {
+            predicate: (q) =>
+              Array.isArray(q.queryKey) &&
+              q.queryKey[0] === "whatsapp-messages" &&
+              q.queryKey[1] === conversationId,
+          },
+          (old) => old?.map(msg =>
+            msg.id === context.optimisticId
               ? { ...msg, id: result?.clientMessageId || msg.id, status: "sent" }
               : msg
           )
         );
       }
-      
+
       // Invalidate conversations to update last_message
       queryClient.invalidateQueries({ queryKey: ["whatsapp-conversations"] });
     },
     onError: (error: Error, variables, context) => {
       // Rollback optimistic update on error
       if (context?.previousMessages) {
-        queryClient.setQueryData(
-          ["whatsapp-messages", variables.conversation.id],
+        queryClient.setQueriesData(
+          {
+            predicate: (q) =>
+              Array.isArray(q.queryKey) &&
+              q.queryKey[0] === "whatsapp-messages" &&
+              q.queryKey[1] === variables.conversation.id,
+          },
           context.previousMessages
         );
       }
