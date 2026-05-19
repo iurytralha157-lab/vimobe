@@ -727,24 +727,7 @@ export function CalendarView({
         {viewMode === 'year' && renderYearView()}
       </div>
 
-      {/* Legend */}
-      <div className="flex flex-wrap items-center justify-center gap-6 px-6 py-4 border-t bg-muted/10">
-        {Object.entries(eventTypeIcons).map(([type, Icon]) => (
-          <div key={type} className="flex items-center gap-2 group cursor-default">
-            <div className={cn("p-1.5 rounded-lg shadow-sm transition-transform group-hover:scale-110", eventTypeColors[type as EventType])}>
-              <Icon className="h-3.5 w-3.5" />
-            </div>
-            <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground group-hover:text-foreground transition-colors">
-              {type === 'call' ? 'Ligação' : 
-               type === 'email' ? 'E-mail' :
-               type === 'meeting' ? 'Reunião' :
-               type === 'task' ? 'Tarefa' :
-               type === 'message' ? 'Mensagem' :
-               type === 'visit' ? 'Visita' : type}
-            </span>
-          </div>
-        ))}
-      </div>
     </div>
+
   );
 }
