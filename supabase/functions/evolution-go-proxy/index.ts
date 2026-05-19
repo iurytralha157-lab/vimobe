@@ -148,7 +148,7 @@ function buildCall(action: string, payload: any): ProxyCall {
 }
 
 
-async function callEvolutionGo(c: ProxyCall) {
+async function callEvolutionGo(c: ProxyCall, action?: string) {
   const url = new URL(`${API_URL}${c.path}`);
   if (c.query) {
     for (const [k, v] of Object.entries(c.query)) {
@@ -156,20 +156,26 @@ async function callEvolutionGo(c: ProxyCall) {
     }
   }
 
-  // For Evolution Go, the global API_KEY is often required for all calls.
-  // We use the global API_KEY by default as it usually has management permissions.
   const headers: Record<string, string> = {
     "apikey": API_KEY,
     "Content-Type": "application/json",
   };
   
-  // If a specific token is provided, we can include it in a separate header if the API supports it
-  // or use it as apikey if it's explicitly required. For instance management, API_KEY is usually preferred.
   if (c.token && c.token !== "default_token" && c.path.includes("/send")) {
     headers["apikey"] = c.token;
   }
   
   if (c.instanceId) headers["instanceId"] = c.instanceId;
+
+  if (action === "instance.qr") {
+    console.log(`[DEBUG] instance.qr Pre-fetch:`, {
+      action,
+      instanceId: c.instanceId,
+      url: url.toString(),
+      method: c.method,
+      headers: { ...headers, apikey: headers.apikey ? `${headers.apikey.substring(0, 5)}***` : undefined }
+    });
+  }
 
   const init: RequestInit = { method: c.method, headers };
   if (c.body !== undefined && c.method !== "GET") {
@@ -177,15 +183,31 @@ async function callEvolutionGo(c: ProxyCall) {
   }
 
   const res = await fetch(url.toString(), init);
-  const text = await res.text();
+  const rawText = await res.text();
+  
+  if (action === "instance.qr") {
+    console.log(`[DEBUG] instance.qr Post-fetch:`, {
+      status: res.status,
+      contentType: res.headers.get("content-type"),
+      rawText: rawText
+    });
+  }
+
   let data: any;
-  try { data = text ? JSON.parse(text) : null; } catch { data = { raw: text }; }
+  try { 
+    data = rawText ? JSON.parse(rawText) : null; 
+  } catch (err) { 
+    if (action === "instance.qr") {
+      console.log(`[DEBUG] instance.qr JSON parse error:`, err.message);
+    }
+    data = { raw: rawText }; 
+  }
   
   if (!res.ok) {
     console.error(`[evolution-go-proxy] ${c.method} ${c.path} -> ${res.status}`, JSON.stringify(data));
   }
   
-  return { status: res.status, ok: res.ok, data };
+  return { status: res.status, ok: res.ok, data, rawText };
 }
 
 
@@ -231,15 +253,36 @@ Deno.serve(async (req) => {
     }
 
     const call = buildCall(action, payload);
-    const result = await callEvolutionGo(call);
+    const result = await callEvolutionGo(call, action);
 
-    // Normalize QR code for Go provider (Go returns Qrcode: base64)
+    let normalizedQrFound = false;
+    let qrFieldUsed = "";
+
+    // Normalize QR code for Go provider with extensive field checking
     if (action === "instance.qr" && result.ok) {
-      const qr = result.data?.data?.Qrcode || result.data?.Qrcode || result.data?.data?.qrcode || result.data?.qrcode || (result.data as any)?.base64;
-      if (qr) {
-        if (typeof result.data !== 'object' || result.data === null) result.data = {};
+      const data = result.data;
+      
+      const possibleFields = [
+        { field: "qrcode", value: data?.qrcode },
+        { field: "Qrcode", value: data?.Qrcode },
+        { field: "qrCode", value: data?.qrCode },
+        { field: "base64", value: data?.base64 },
+        { field: "code", value: data?.code },
+        { field: "data.qrcode", value: data?.data?.qrcode },
+        { field: "data.Qrcode", value: data?.data?.Qrcode },
+        { field: "data.base64", value: data?.data?.base64 },
+        { field: "data.code", value: data?.data?.code },
+      ];
+
+      const found = possibleFields.find(f => f.value && typeof f.value === "string");
+      
+      if (found) {
+        normalizedQrFound = true;
+        qrFieldUsed = found.field;
+        
+        if (typeof result.data !== "object" || result.data === null) result.data = {};
         if (!result.data.data) result.data.data = {};
-        result.data.data.qrcode = qr;
+        result.data.data.qrcode = found.value;
       }
     }
 
@@ -247,8 +290,22 @@ Deno.serve(async (req) => {
       ? (result.data?.error?.message || result.data?.message || result.data?.error || `HTTP ${result.status}`)
       : undefined;
 
+    const responseBody: Record<string, any> = {
+      ok: result.ok,
+      status: result.status,
+      data: result.data,
+      error: errMsg,
+    };
+
+    if (action === "instance.qr") {
+      responseBody.success = result.ok;
+      responseBody.raw = result.rawText;
+      responseBody.normalizedQrFound = normalizedQrFound;
+      responseBody.qrFieldUsed = qrFieldUsed;
+    }
+
     return new Response(
-      JSON.stringify({ ok: result.ok, status: result.status, data: result.data, error: errMsg }),
+      JSON.stringify(responseBody),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
 
