@@ -45,6 +45,7 @@ function buildCall(action: string, payload: any): ProxyCall {
       return {
         method: "POST",
         path: "/instance/connect",
+        query: { instanceId: inst },
         body: {
           webhookUrl: b.webhookUrl,
           subscribe: b.subscribe ?? ["ALL"],
