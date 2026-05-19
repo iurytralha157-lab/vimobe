@@ -30,6 +30,8 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { StartAutomationDialog } from "./StartAutomationDialog";
+import { LabelsPopover } from "./LabelsPopover";
+import { useChatLabels } from "@/hooks/use-whatsapp-labels";
 import { Link } from "react-router-dom";
 import { formatPhoneForDisplay } from "@/lib/phone-utils";
 import { cn } from "@/lib/utils";
@@ -55,6 +57,8 @@ interface ConversationHeaderProps {
   stageName?: string | null;
   stageColor?: string | null;
   conversationId?: string | null;
+  sessionId?: string | null;
+  remoteJid?: string | null;
   onArchive?: () => void;
   onDelete?: () => void;
   onCreateLead?: () => void;
@@ -76,6 +80,8 @@ export function ConversationHeader({
   stageName,
   stageColor,
   conversationId,
+  sessionId,
+  remoteJid,
   onArchive,
   onDelete,
   onCreateLead,
@@ -84,6 +90,7 @@ export function ConversationHeader({
   className
 }: ConversationHeaderProps) {
   const [showAutomationDialog, setShowAutomationDialog] = useState(false);
+  const { data: chatLabels = [] } = useChatLabels(conversationId || undefined);
   const displayName = contactName && contactName !== contactPhone 
     ? contactName 
     : formatPhoneForDisplay(contactPhone || "");
@@ -232,10 +239,46 @@ export function ConversationHeader({
               )}
             </div>
           )}
+
+          {/* WhatsApp native labels (chips) */}
+          {chatLabels.length > 0 && (
+            <div className="flex items-center gap-1 mt-1 flex-wrap">
+              {chatLabels.slice(0, 4).map((l) => (
+                <Badge
+                  key={l.id}
+                  variant="outline"
+                  className="text-[9px] px-1.5 py-0 h-4 gap-1 border-0"
+                  style={{
+                    backgroundColor: "hsl(var(--muted))",
+                  }}
+                >
+                  <span
+                    className="w-1.5 h-1.5 rounded-full"
+                    style={{
+                      backgroundColor: `hsl(${((l.color ?? 0) * 36) % 360} 70% 55%)`,
+                    }}
+                  />
+                  {l.name}
+                </Badge>
+              ))}
+              {chatLabels.length > 4 && (
+                <Badge variant="outline" className="text-[9px] px-1 py-0 h-4">
+                  +{chatLabels.length - 4}
+                </Badge>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
       <div className="flex items-center gap-1 shrink-0">
+        {sessionId && conversationId && remoteJid && !isGroup && (
+          <LabelsPopover
+            sessionId={sessionId}
+            conversationId={conversationId}
+            remoteJid={remoteJid}
+          />
+        )}
         {leadId ? (
           <Button variant="ghost" size="sm" className="h-8 text-xs" asChild>
             <Link to={`/crm/pipelines?lead=${leadId}`}>
