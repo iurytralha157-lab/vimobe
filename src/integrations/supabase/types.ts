@@ -2295,6 +2295,7 @@ export type Database = {
           points_earned: number
           quantity: number
           reference_id: string | null
+          season_id: string | null
           user_id: string | null
           xp_awarded: number
         }
@@ -2308,6 +2309,7 @@ export type Database = {
           points_earned: number
           quantity?: number
           reference_id?: string | null
+          season_id?: string | null
           user_id?: string | null
           xp_awarded?: number
         }
@@ -2321,6 +2323,7 @@ export type Database = {
           points_earned?: number
           quantity?: number
           reference_id?: string | null
+          season_id?: string | null
           user_id?: string | null
           xp_awarded?: number
         }
@@ -2533,30 +2536,42 @@ export type Database = {
       gamification_seasons: {
         Row: {
           created_at: string | null
+          created_by: string | null
           end_date: string
+          ended_at: string | null
           id: string
           is_active: boolean | null
           name: string
           organization_id: string
+          reset_reason: string | null
           start_date: string
+          started_at: string | null
         }
         Insert: {
           created_at?: string | null
+          created_by?: string | null
           end_date: string
+          ended_at?: string | null
           id?: string
           is_active?: boolean | null
           name: string
           organization_id: string
+          reset_reason?: string | null
           start_date: string
+          started_at?: string | null
         }
         Update: {
           created_at?: string | null
+          created_by?: string | null
           end_date?: string
+          ended_at?: string | null
           id?: string
           is_active?: boolean | null
           name?: string
           organization_id?: string
+          reset_reason?: string | null
           start_date?: string
+          started_at?: string | null
         }
         Relationships: [
           {
@@ -7523,6 +7538,7 @@ export type Database = {
           last_activity_at: string | null
           organization_id: string | null
           rank_tier: string
+          season_id: string | null
           streak_days: number | null
           total_points: number | null
           updated_at: string | null
@@ -7540,6 +7556,7 @@ export type Database = {
           last_activity_at?: string | null
           organization_id?: string | null
           rank_tier?: string
+          season_id?: string | null
           streak_days?: number | null
           total_points?: number | null
           updated_at?: string | null
@@ -7557,6 +7574,7 @@ export type Database = {
           last_activity_at?: string | null
           organization_id?: string | null
           rank_tier?: string
+          season_id?: string | null
           streak_days?: number | null
           total_points?: number | null
           updated_at?: string | null
@@ -8489,6 +8507,10 @@ export type Database = {
         }[]
       }
       get_my_org_id: { Args: never; Returns: string }
+      get_or_create_active_season: {
+        Args: { p_org_id: string }
+        Returns: string
+      }
       get_session_owner: { Args: { p_session_id: string }; Returns: string }
       get_team_member_ids: { Args: { p_team_id: string }; Returns: string[] }
       get_telephony_metrics: {
@@ -8678,6 +8700,14 @@ export type Database = {
         Returns: undefined
       }
       reorder_stages: { Args: { p_stages: Json }; Returns: undefined }
+      reset_gamification_season: {
+        Args: {
+          p_organization_id: string
+          p_reason?: string
+          p_season_name: string
+        }
+        Returns: string
+      }
       resolve_site_domain: {
         Args: { p_domain: string }
         Returns: {
