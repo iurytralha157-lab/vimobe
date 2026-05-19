@@ -23,6 +23,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useHasWhatsAppAccess } from "@/hooks/use-whatsapp-access";
 import { DateSeparator, shouldShowDateSeparator } from "@/components/whatsapp/DateSeparator";
 import { AudioRecorderButton } from "@/components/whatsapp/AudioRecorderButton";
+import { LabelsPopover } from "@/components/whatsapp/LabelsPopover";
 import { MessageBubble } from "@/components/whatsapp/MessageBubble";
 import { useNavigate } from "react-router-dom";
 import { formatPhoneForDisplay } from "@/lib/phone-utils";
