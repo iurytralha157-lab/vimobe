@@ -158,7 +158,7 @@ export function useCreateWhatsAppSession() {
           display_name: displayName,
           status: "disconnected",
           provider,
-          token,
+          advanced_settings: { token },
         } as any)
         .select()
         .single();
