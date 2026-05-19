@@ -524,13 +524,13 @@ function AccessControlDialog({
   const grantAccess = useGrantSessionAccess();
   const revokeAccess = useRevokeSessionAccess();
 
-  const handleToggleAccess = async (userId: string, hasAccess: boolean) => {
+  const handleToggleAccess = async (userId: string, hasAccess: boolean, onlyLeadsAccess = false) => {
     if (!session) return;
 
-    if (hasAccess) {
+    if (hasAccess && !onlyLeadsAccess) {
       await revokeAccess.mutateAsync({ sessionId: session.id, userId });
     } else {
-      await grantAccess.mutateAsync({ sessionId: session.id, userId });
+      await grantAccess.mutateAsync({ sessionId: session.id, userId, onlyLeadsAccess });
     }
   };
 
