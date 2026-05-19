@@ -37,6 +37,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { CommissionStatusBadge } from '@/components/financial/CommissionStatusBadge';
+import { FinancialDrawer } from '@/components/financial/FinancialDrawer';
+
 import { useIsMobile } from '@/hooks/use-mobile';
 import { 
   useCommissions, 
