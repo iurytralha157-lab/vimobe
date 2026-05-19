@@ -262,16 +262,21 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
     let failed = 0;
 
     // Cache common lookups
-    const pipelineMap = new Map(pipelines.map(p => [p.name.toLowerCase(), p.id]));
-    const usersMap = new Map([
-      ...users.map(u => [u.name.toLowerCase(), u.id]),
-      ...users.map(u => [u.email?.toLowerCase() || '', u.id])
-    ]);
-    const tagsMap = new Map(allTags.map(t => [t.name.toLowerCase(), t.id]));
+    const pipelineMap = new Map<string, string>();
+    pipelines.forEach(p => pipelineMap.set(p.name.toLowerCase(), p.id));
+    
+    const usersMap = new Map<string, string>();
+    users.forEach(u => {
+      usersMap.set(u.name.toLowerCase(), u.id);
+      if (u.email) usersMap.set(u.email.toLowerCase(), u.id);
+    });
+
+    const tagsMap = new Map<string, string>();
+    allTags.forEach(t => tagsMap.set(t.name.toLowerCase(), t.id));
     
     // Default values from modal
     const defaultPipelineId = selectedPipeline;
-    const defaultStageId = stagesData.length > 0 ? stagesData.sort((a, b) => a.position - b.position)[0].id : undefined;
+    const defaultStageId = stagesData.length > 0 ? [...stagesData].sort((a, b) => (a.position || 0) - (b.position || 0))[0].id : undefined;
     const defaultAssigneeId = selectedAssignee !== 'none' ? selectedAssignee : undefined;
     const finalSource = selectedSource === 'custom' ? customSource : selectedSource;
 
