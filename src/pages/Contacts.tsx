@@ -167,6 +167,14 @@ export default function Contacts() {
   const { data: users = [] } = useOrganizationUsers();
   const { data: tags = [] } = useTags();
   
+  const uniqueSources = useMemo(() => {
+    const sources = new Set<string>();
+    contacts.forEach((c: any) => {
+      if (c.source) sources.add(c.source);
+    });
+    return Array.from(sources).sort();
+  }, [contacts]);
+  
   // Fetch selected lead for detail dialog
   const { data: selectedLead } = useLead(selectedContactId);
   const deleteLead = useDeleteLead();
