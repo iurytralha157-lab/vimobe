@@ -404,8 +404,8 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
       { header: 'Mensagem', key: 'Mensagem', width: 40 },
     ];
 
-    // Get current user and pipeline for sample data
-    const currentUser = users.find(u => u.id === supabase.auth.getUser())?.name || 'Corretor Exemplo';
+    // Get a sample user and pipeline for the template
+    const sampleUser = users[0]?.name || 'Corretor Exemplo';
     const firstPipeline = pipelines[0]?.name || 'Vendas';
     const firstStage = stagesData[0]?.name || 'Novo Lead';
 
@@ -417,7 +417,7 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
         Status: 'Aberto', 
         Pipeline: firstPipeline, 
         Estagio: firstStage, 
-        Responsavel: currentUser, 
+        Responsavel: sampleUser, 
         Tags: 'quente, investidor', 
         Fonte: 'Facebook Ads',
         'Motivo de perda': '',
@@ -430,7 +430,7 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
         Status: 'Ganho', 
         Pipeline: firstPipeline, 
         Estagio: 'Contrato Assinado', 
-        Responsavel: currentUser, 
+        Responsavel: sampleUser, 
         Tags: 'imediato', 
         Fonte: 'Indicação',
         'Motivo de perda': '',
@@ -443,7 +443,7 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
         Status: 'Perdido', 
         Pipeline: firstPipeline, 
         Estagio: 'Desqualificado', 
-        Responsavel: currentUser, 
+        Responsavel: sampleUser, 
         Tags: 'curioso', 
         Fonte: 'Instagram',
         'Motivo de perda': 'Preço acima do orçamento',
