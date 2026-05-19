@@ -214,10 +214,15 @@ Deno.serve(async (req) => {
     const call = buildCall(action, payload);
     const result = await callEvolutionGo(call);
 
+    const errMsg = !result.ok
+      ? (result.data?.error?.message || result.data?.message || result.data?.error || `HTTP ${result.status}`)
+      : undefined;
+
     return new Response(
-      JSON.stringify({ ok: result.ok, status: result.status, data: result.data }),
+      JSON.stringify({ ok: result.ok, status: result.status, data: result.data, error: errMsg }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
+
   } catch (err) {
     console.error("evolution-go-proxy error:", err);
     return new Response(
