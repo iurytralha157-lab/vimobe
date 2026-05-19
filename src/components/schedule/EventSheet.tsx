@@ -33,6 +33,7 @@ import { useProperties } from "@/hooks/use-properties";
 import { useScheduleComments } from "@/hooks/use-schedule-comments";
 import { useScheduleEventAssignees } from "@/hooks/use-schedule-event-assignees";
 import { Link } from "react-router-dom";
+import { PropertyPickerDialog } from "@/components/properties/PropertyPickerDialog";
 
 const eventTypes: { type: EventType; label: string; icon: React.ElementType; color: string }[] = [
   { type: "call", label: "Ligação", icon: Phone, color: "#6366f1" },
@@ -92,11 +93,9 @@ export function EventSheet({
   const { data: searchedLeads = [] } = useLeads({ search: leadSearch, limit: 20 });
 
   // Property selector (only for "visit" type)
-  const [propertySearch, setPropertySearch] = useState("");
   const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
   const [selectedPropertyLabel, setSelectedPropertyLabel] = useState<string | null>(null);
-  const [showPropertySelector, setShowPropertySelector] = useState(false);
-  const { data: searchedProperties = [] } = useProperties(propertySearch);
+  const { data: allProperties = [] } = useProperties();
 
 
   // Assignee picker
