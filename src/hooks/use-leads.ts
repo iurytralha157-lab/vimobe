@@ -135,6 +135,7 @@ export function useCreateLead() {
       valor_interesse?: number | null;
       property_id?: string;
       deal_status?: string;
+      lost_reason?: string;
       is_own_resource?: boolean;
     }) => {
       // Buscar usuário autenticado - org_id é definido pelo trigger enforce_organization_id()
