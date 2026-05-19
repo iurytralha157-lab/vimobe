@@ -28,7 +28,7 @@ import { Loader2, Repeat, CreditCard } from 'lucide-react';
 
 const formSchema = z.object({
   type: z.enum(['receivable', 'payable']),
-  category: z.string().optional(),
+  category: z.string().min(1, 'Categoria é obrigatória'),
   description: z.string().min(1, 'Descrição é obrigatória'),
   amount: z.coerce.number().min(0.01, 'Valor deve ser maior que zero'),
   due_date: z.string().min(1, 'Data de vencimento é obrigatória'),
