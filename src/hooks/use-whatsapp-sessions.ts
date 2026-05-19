@@ -4,6 +4,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import { useState, useEffect, useCallback } from "react";
 
+export type WhatsAppProvider = "evolution" | "evolution_go";
+
 export interface WhatsAppSession {
   id: string;
   organization_id: string;
@@ -17,6 +19,8 @@ export interface WhatsAppSession {
   profile_picture: string | null;
   is_active: boolean;
   is_notification_session?: boolean;
+  provider?: WhatsAppProvider;
+  advanced_settings?: Record<string, any> | null;
   created_at: string;
   updated_at: string;
   last_connected_at?: string | null;
@@ -125,10 +129,15 @@ export function useCreateWhatsAppSession() {
   const { profile } = useAuth();
 
   return useMutation({
-    mutationFn: async (displayName: string) => {
+    mutationFn: async (
+      input: string | { displayName: string; provider?: WhatsAppProvider },
+    ) => {
       if (!profile?.organization_id || !profile?.id) {
         throw new Error("User not authenticated");
       }
+      const displayName = typeof input === "string" ? input : input.displayName;
+      const provider: WhatsAppProvider =
+        typeof input === "string" ? "evolution" : input.provider || "evolution";
 
       // Generate unique instance name: {sanitized_name}_{org_prefix}_{random_suffix}
       const orgPrefix = profile.organization_id.substring(0, 5);
@@ -136,7 +145,7 @@ export function useCreateWhatsAppSession() {
       const sanitizedName = displayName.replace(/[^a-zA-Z0-9]/g, '').toLowerCase().substring(0, 20);
       const uniqueInstanceName = `${sanitizedName}_${orgPrefix}_${randomSuffix}`;
 
-      // Create session in database with unique instance_name and friendly display_name
+      // Create session row first
       const { data: session, error: dbError } = await supabase
         .from("whatsapp_sessions")
         .insert({
@@ -145,41 +154,49 @@ export function useCreateWhatsAppSession() {
           instance_name: uniqueInstanceName,
           display_name: displayName,
           status: "disconnected",
+          provider,
         } as any)
         .select()
         .single();
 
       if (dbError) throw dbError;
 
-      // Create instance in Evolution API with unique instance name
-      const { data: result, error: fnError } = await supabase.functions.invoke(
-        "evolution-proxy",
-        {
-          body: {
-            action: "createInstance",
-            instanceName: uniqueInstanceName,
-          },
-        }
-      );
+      // Provision instance on the chosen provider
+      const proxyFn = provider === "evolution_go" ? "evolution-go-proxy" : "evolution-proxy";
+      const webhookUrl = provider === "evolution_go"
+        ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/evolution-go-webhook`
+        : undefined;
+
+      const body = provider === "evolution_go"
+        ? {
+            action: "instance.create",
+            body: {
+              instanceName: uniqueInstanceName,
+              qrcode: true,
+              webhook: webhookUrl ? { url: webhookUrl, base64: true, events: ["all"] } : undefined,
+            },
+          }
+        : { action: "createInstance", instanceName: uniqueInstanceName };
+
+      const { data: result, error: fnError } = await supabase.functions.invoke(proxyFn, { body });
 
       if (fnError) {
-        // Rollback database insert
         await supabase.from("whatsapp_sessions").delete().eq("id", session.id);
         throw fnError;
       }
 
-      if (!result.success) {
-        // Rollback database insert
+      const failed = provider === "evolution_go" ? !result?.ok : !result?.success;
+      if (failed) {
         await supabase.from("whatsapp_sessions").delete().eq("id", session.id);
-        throw new Error(result.error || "Failed to create instance");
+        throw new Error(result?.error || result?.data?.error || "Failed to create instance");
       }
 
-      return { 
+      return {
         session: {
           ...session,
           display_name: (session as any).display_name || displayName,
-        } as WhatsAppSession, 
-        evolutionData: result.data 
+        } as WhatsAppSession,
+        evolutionData: result.data,
       };
     },
     onSuccess: () => {

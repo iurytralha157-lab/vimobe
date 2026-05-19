@@ -15,6 +15,7 @@ import { SidebarProvider } from '@/contexts/SidebarContext';
 import { useWhatsAppHealthMonitor } from '@/hooks/use-whatsapp-health-monitor';
 import { usePushNotifications } from '@/hooks/use-push-notifications';
 import { usePhoneReminder } from '@/hooks/use-phone-reminder';
+import { useWhatsAppSound } from '@/hooks/use-whatsapp-sound';
 import { useSystemSettings } from '@/hooks/use-system-settings';
 import { useAuth } from '@/contexts/AuthContext';
 import { Wrench } from 'lucide-react';
@@ -57,6 +58,7 @@ function AppLayoutContent({ children, title, disableMainScroll = false }: AppLay
 
   // Daily reminder for users without phone number
   usePhoneReminder();
+  useWhatsAppSound();
 
   return (
     <div className="h-screen flex flex-col w-full bg-background overflow-hidden pt-[env(safe-area-inset-top)]">
