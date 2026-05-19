@@ -42,6 +42,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { EntryStatusBadge } from '@/components/financial/EntryStatusBadge';
 import { FinancialEntryForm } from '@/components/financial/FinancialEntryForm';
+import { FinancialDrawer } from '@/components/financial/FinancialDrawer';
+
 import { useFinancialEntries, useMarkEntryAsPaid, useDeleteFinancialEntry } from '@/hooks/use-financial';
 import { formatCurrency, formatDate, exportToExcel, prepareFinancialEntriesExport } from '@/lib/export-financial';
 import { useIsMobile } from '@/hooks/use-mobile';
