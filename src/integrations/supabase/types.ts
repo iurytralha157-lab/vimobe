@@ -990,6 +990,47 @@ export type Database = {
           },
         ]
       }
+      commission_history: {
+        Row: {
+          changed_at: string
+          changed_by: string | null
+          commission_id: string
+          id: string
+          new_status: string
+          notes: string | null
+          old_status: string | null
+          organization_id: string
+        }
+        Insert: {
+          changed_at?: string
+          changed_by?: string | null
+          commission_id: string
+          id?: string
+          new_status: string
+          notes?: string | null
+          old_status?: string | null
+          organization_id: string
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string | null
+          commission_id?: string
+          id?: string
+          new_status?: string
+          notes?: string | null
+          old_status?: string | null
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_history_commission_id_fkey"
+            columns: ["commission_id"]
+            isOneToOne: false
+            referencedRelation: "commissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       commission_rules: {
         Row: {
           created_at: string | null
