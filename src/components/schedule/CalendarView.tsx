@@ -473,7 +473,7 @@ export function CalendarView({
                   <div key={hour.toString()} className="h-14 border-b border-border/40 w-full relative">
                     <DroppableSlot 
                       id={`${format(pivotDate, 'yyyy-MM-dd')}|${hourStr}:00`}
-                      className="h-7 border-b border-border/10 w-full cursor-pointer hover:bg-primary/[0.02] transition-colors" 
+                      className="h-7 w-full cursor-pointer hover:bg-primary/[0.02] transition-colors" 
                       onQuickCreate={() => {
                         const clickDate = new Date(pivotDate);
                         clickDate.setHours(hour.getHours(), 0, 0, 0);
