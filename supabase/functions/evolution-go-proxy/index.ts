@@ -166,8 +166,12 @@ async function callEvolutionGo(c: ProxyCall) {
   const text = await res.text();
   let data: any;
   try { data = text ? JSON.parse(text) : null; } catch { data = { raw: text }; }
+  if (!res.ok) {
+    console.error(`[evolution-go-proxy] ${c.method} ${c.path} -> ${res.status}`, JSON.stringify(data));
+  }
   return { status: res.status, ok: res.ok, data };
 }
+
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
