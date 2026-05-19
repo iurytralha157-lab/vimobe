@@ -5,6 +5,7 @@ import {
   Filter,
   Eye,
   EyeOff,
+  Building2,
 } from 'lucide-react';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { useSuperAdmin } from '@/hooks/use-super-admin';
