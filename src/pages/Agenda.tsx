@@ -43,6 +43,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -82,6 +84,14 @@ export default function Agenda() {
   useEffect(() => {
     localStorage.setItem("agendaViewMode", viewMode);
   }, [viewMode]);
+
+  const [showThirtyMinLines, setShowThirtyMinLines] = useState(() => {
+    const saved = localStorage.getItem("agendaShowThirtyMinLines");
+    return saved === "true";
+  });
+  useEffect(() => {
+    localStorage.setItem("agendaShowThirtyMinLines", String(showThirtyMinLines));
+  }, [showThirtyMinLines]);
 
   const [sheetOpen, setSheetOpen] = useState(false);
   const [sheetEvent, setSheetEvent] = useState<ScheduleEvent | null>(null);
@@ -260,7 +270,7 @@ export default function Agenda() {
                     )}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-80 p-0 bg-[var(--color-background-secondary)] border-[0.5px solid rgba(255,255,255,0.1)] shadow-xl" align="end">
+                <PopoverContent className="w-80 p-0 bg-popover border border-border shadow-xl z-50" align="end">
                   <div className="p-4 flex flex-col gap-6">
                     {/* Visualização */}
                     <div className="flex flex-col gap-3">
@@ -285,6 +295,21 @@ export default function Agenda() {
                             </button>
                           );
                         })}
+                      </div>
+                    </div>
+
+                    {/* Configurações de Grade */}
+                    <div className="flex flex-col gap-3">
+                      <SideLabel>Configurações</SideLabel>
+                      <div className="flex items-center justify-between px-1">
+                        <Label htmlFor="grid-lines" className="text-xs font-medium text-[var(--color-text-secondary)]">
+                          Mostrar linhas de 30 min
+                        </Label>
+                        <Switch 
+                          id="grid-lines" 
+                          checked={showThirtyMinLines} 
+                          onCheckedChange={setShowThirtyMinLines} 
+                        />
                       </div>
                     </div>
 
