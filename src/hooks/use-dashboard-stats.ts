@@ -188,9 +188,8 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
         if (filters?.campaignId) wonQuery = wonQuery.eq('lead_meta.campaign_id', filters.campaignId);
         if (filters?.adSetId) wonQuery = wonQuery.eq('lead_meta.adset_id', filters.adSetId);
         if (filters?.adId) wonQuery = wonQuery.eq('lead_meta.ad_id', filters.adId);
-        if (filters?.userId) wonQuery = wonQuery.eq('assigned_user_id', filters.userId);
         if (filters?.source) wonQuery = wonQuery.eq('source', filters.source);
-        if (filters?.teamId) {
+        if (filters?.teamId && (visibility.canViewAll || visibility.teamMemberIds)) {
           const { data: teamMembers } = await supabase
             .from('team_members')
             .select('user_id')
@@ -199,6 +198,7 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
             wonQuery = wonQuery.in('assigned_user_id', teamMembers.map(m => m.user_id));
           }
         }
+        wonQuery = applyVisibilityFilter(wonQuery, visibility, 'assigned_user_id', filters?.userId);
 
         const { data: wonLeads } = await wonQuery;
         const closedLeads = wonLeads?.length || 0;
