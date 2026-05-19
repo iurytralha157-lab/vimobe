@@ -320,6 +320,7 @@ export function useGrantSessionAccess() {
           user_id: userId,
           can_view: canView,
           can_send: canSend,
+          only_leads_access: onlyLeadsAccess,
           granted_by: profile?.id,
         },
         { onConflict: "session_id,user_id" }
