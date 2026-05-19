@@ -8202,6 +8202,42 @@ export type Database = {
           },
         ]
       }
+      whatsapp_inbound_logs: {
+        Row: {
+          assigned_user_id: string | null
+          conversation_id: string | null
+          created_at: string
+          id: string
+          lead_id: string | null
+          match_details: Json | null
+          matched_rule_id: string | null
+          organization_id: string
+          session_id: string | null
+        }
+        Insert: {
+          assigned_user_id?: string | null
+          conversation_id?: string | null
+          created_at?: string
+          id?: string
+          lead_id?: string | null
+          match_details?: Json | null
+          matched_rule_id?: string | null
+          organization_id: string
+          session_id?: string | null
+        }
+        Update: {
+          assigned_user_id?: string | null
+          conversation_id?: string | null
+          created_at?: string
+          id?: string
+          lead_id?: string | null
+          match_details?: Json | null
+          matched_rule_id?: string | null
+          organization_id?: string
+          session_id?: string | null
+        }
+        Relationships: []
+      }
       whatsapp_inbound_rules: {
         Row: {
           campaign_label: string | null
@@ -8445,6 +8481,7 @@ export type Database = {
       }
       whatsapp_session_access: {
         Row: {
+          access_mode: string
           can_send: boolean | null
           can_view: boolean | null
           created_at: string
@@ -8455,6 +8492,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          access_mode?: string
           can_send?: boolean | null
           can_view?: boolean | null
           created_at?: string
@@ -8465,6 +8503,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          access_mode?: string
           can_send?: boolean | null
           can_view?: boolean | null
           created_at?: string
@@ -8623,6 +8662,10 @@ export type Database = {
         Returns: boolean
       }
       can_manage_session: { Args: { session_id: string }; Returns: boolean }
+      can_view_whatsapp_conversation: {
+        Args: { _conv_id: string }
+        Returns: boolean
+      }
       check_storage_org_access: {
         Args: { org_id_text: string }
         Returns: boolean
