@@ -27,6 +27,7 @@ interface AdvancedFiltersProps {
   selectedDealStatus: string;
   setSelectedDealStatus: (value: string) => void;
   activeCount: number;
+  availableSources?: string[];
 }
 
 export function AdvancedFilters({
@@ -41,6 +42,7 @@ export function AdvancedFilters({
   selectedDealStatus,
   setSelectedDealStatus,
   activeCount,
+  availableSources = [],
 }: AdvancedFiltersProps) {
   return (
     <Popover>
@@ -121,6 +123,9 @@ export function AdvancedFilters({
                 <SelectItem value="manual">Manual</SelectItem>
                 <SelectItem value="meta">Meta Ads</SelectItem>
                 <SelectItem value="site">Site</SelectItem>
+                {availableSources.filter(s => !['manual', 'meta', 'site'].includes(s)).map(s => (
+                  <SelectItem key={s} value={s}>{s}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

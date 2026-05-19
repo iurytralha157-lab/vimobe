@@ -167,6 +167,14 @@ export default function Contacts() {
   const { data: users = [] } = useOrganizationUsers();
   const { data: tags = [] } = useTags();
   
+  const uniqueSources = useMemo(() => {
+    const sources = new Set<string>();
+    contacts.forEach((c: any) => {
+      if (c.source) sources.add(c.source);
+    });
+    return Array.from(sources).sort();
+  }, [contacts]);
+  
   // Fetch selected lead for detail dialog
   const { data: selectedLead } = useLead(selectedContactId);
   const deleteLead = useDeleteLead();
@@ -342,6 +350,7 @@ export default function Contacts() {
               hasActiveFilters={!!hasActiveFilters}
               clearFilters={clearFilters}
               activeFilterCount={activeFilterCount}
+              availableSources={uniqueSources}
             />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -466,8 +475,9 @@ export default function Contacts() {
                   setSelectedSource={handleFilterChange(setSelectedSource)}
                   selectedDealStatus={selectedDealStatus}
                   setSelectedDealStatus={handleFilterChange(setSelectedDealStatus)}
-                  activeCount={activeAdvancedCount}
-                />
+                    activeCount={activeAdvancedCount}
+                    availableSources={uniqueSources}
+                  />
 
                 <DateFilterPopover
                   datePreset={datePreset}

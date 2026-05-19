@@ -18,6 +18,7 @@ interface FilteredStageCountsParams {
   filterCampaign?: string;
   filterAdSet?: string;
   filterAd?: string;
+  filterSource?: string;
 }
 
 // Limite de leads por estágio para paginação inicial (otimizado para performance)
@@ -78,17 +79,31 @@ export function useStagesWithLeads(
     filterCampaign?: string;
     filterAdSet?: string;
     filterAd?: string;
+    filterSource?: string;
   }
 ) {
   const dateFromISO = filters?.dateRange?.from?.toISOString();
   const dateToISO = filters?.dateRange?.to?.toISOString();
   
   return useQuery({
-    queryKey: ['stages-with-leads', pipelineId, filterUserId, dateFromISO, dateToISO, filters?.filterTag, filters?.filterDealStatus, filters?.searchQuery, filters?.filterCampaign, filters?.filterAdSet, filters?.filterAd],
-    staleTime: 30000, // 30 seconds
-    gcTime: 1000 * 60 * 15, // 15 minutes
+    queryKey: [
+      'stages-with-leads', 
+      pipelineId, 
+      filterUserId, 
+      dateFromISO, 
+      dateToISO, 
+      filters?.filterTag, 
+      filters?.filterDealStatus, 
+      filters?.searchQuery, 
+      filters?.filterCampaign, 
+      filters?.filterAdSet, 
+      filters?.filterAd,
+      filters?.filterSource
+    ],
+    staleTime: 30000,
+    gcTime: 1000 * 60 * 15,
     queryFn: async () => {
-      // Get default pipeline if not provided
+      // ... keep existing code
       let targetPipelineId = pipelineId;
       if (!targetPipelineId) {
         const { data: pipeline } = await supabase
@@ -137,7 +152,6 @@ export function useStagesWithLeads(
 
       // Helper to apply shared filters to a query
       const applyFilters = (query: any) => {
-        // Se houver busca, ignoramos os outros filtros para encontrar o lead em qualquer lugar
         if (normalizedSearch) {
           query = query.or(`name.ilike.%${normalizedSearch}%,phone.ilike.%${normalizedSearch}%`);
           return query;
@@ -165,6 +179,9 @@ export function useStagesWithLeads(
         }
         if (filters?.filterAd && filters.filterAd !== 'all') {
           query = query.eq('lead_meta.ad_name', filters.filterAd);
+        }
+        if (filters?.filterSource && filters.filterSource !== 'all') {
+          query = query.eq('source', filters.filterSource);
         }
         return query;
       };
@@ -312,6 +329,7 @@ export function useFilteredStageCounts({
   filterCampaign,
   filterAdSet,
   filterAd,
+  filterSource,
 }: FilteredStageCountsParams) {
   return useQuery({
     queryKey: [
@@ -327,6 +345,7 @@ export function useFilteredStageCounts({
       filterCampaign,
       filterAdSet,
       filterAd,
+      filterSource,
     ],
     enabled: !!pipelineId && stageIds.length > 0,
     staleTime: 30_000,
@@ -391,6 +410,10 @@ export function useFilteredStageCounts({
 
             if (filterAd && filterAd !== 'all') {
               query = query.eq('lead_meta.ad_name', filterAd);
+            }
+
+            if (filterSource && filterSource !== 'all') {
+              query = query.eq('source', filterSource);
             }
           }
 
@@ -595,6 +618,7 @@ export function useLoadMoreLeads() {
         filterCampaign?: string;
         filterAdSet?: string;
         filterAd?: string;
+        filterSource?: string;
       };
     }) => {
       // Pre-fetch tagged lead IDs if tag filter is active
@@ -643,6 +667,9 @@ export function useLoadMoreLeads() {
         if (filters?.filterAd && filters.filterAd !== 'all') {
           query = query.eq('lead_meta.ad_name', filters.filterAd);
         }
+        if (filters?.filterSource && filters.filterSource !== 'all') {
+          query = query.eq('source', filters.filterSource);
+        }
       }
       
       const { data, error } = await query;
@@ -657,7 +684,7 @@ export function useLoadMoreLeads() {
     onSuccess: ({ stageId, leads }, { pipelineId, filterUserId, filters }) => {
       const dateFromISO = filters?.dateRange?.from?.toISOString();
       const dateToISO = filters?.dateRange?.to?.toISOString();
-      const cacheKey = ['stages-with-leads', pipelineId, filterUserId, dateFromISO, dateToISO, filters?.filterTag, filters?.filterDealStatus, filters?.searchQuery, filters?.filterCampaign, filters?.filterAdSet, filters?.filterAd];
+      const cacheKey = ['stages-with-leads', pipelineId, filterUserId, dateFromISO, dateToISO, filters?.filterTag, filters?.filterDealStatus, filters?.searchQuery, filters?.filterCampaign, filters?.filterAdSet, filters?.filterAd, filters?.filterSource];
       
       queryClient.setQueryData(cacheKey, (old: any[] | undefined) => {
         if (!old) return old;

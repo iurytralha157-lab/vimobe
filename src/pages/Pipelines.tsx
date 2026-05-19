@@ -118,6 +118,7 @@ export default function Pipelines() {
   const [filterCampaign, setFilterCampaign] = useState<string>('all');
   const [filterAdSet, setFilterAdSet] = useState<string>('all');
   const [filterAd, setFilterAd] = useState<string>('all');
+  const [filterSource, setFilterSource] = useState<string>('all');
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [editingStageId, setEditingStageId] = useState<string | null>(null);
@@ -203,6 +204,7 @@ export default function Pipelines() {
       filterCampaign: filterCampaign !== 'all' ? filterCampaign : undefined,
       filterAdSet: filterAdSet !== 'all' ? filterAdSet : undefined,
       filterAd: filterAd !== 'all' ? filterAd : undefined,
+      filterSource: filterSource !== 'all' ? filterSource : undefined,
     }
   );
 
@@ -219,9 +221,17 @@ export default function Pipelines() {
   const canEditPipeline = useCanEditCadences();
   const { recordFirstResponse } = useRecordFirstResponseOnAction();
   const isMobile = useIsMobile();
-  // Compute VGV directly from filteredStages so the badge always matches visible leads
-  // (This must be defined after filteredStages — see below)
   
+  const allSources = useMemo(() => {
+    const sources = new Set<string>();
+    stages.forEach(stage => {
+      stage.leads?.forEach((lead: any) => {
+        if (lead.source) sources.add(lead.source);
+      });
+    });
+    return Array.from(sources).sort();
+  }, [stages]);
+
   const currentPipeline = pipelines.find(p => p.id === selectedPipelineId);
   const isLoading = pipelinesLoading || baseStagesLoading;
   const isInitialLeadsLoading = leadsLoading && stagesWithLeads.length === 0;
@@ -246,6 +256,7 @@ export default function Pipelines() {
         filterCampaign: filterCampaign !== 'all' ? filterCampaign : undefined,
         filterAdSet: filterAdSet !== 'all' ? filterAdSet : undefined,
         filterAd: filterAd !== 'all' ? filterAd : undefined,
+        filterSource: filterSource !== 'all' ? filterSource : undefined,
       },
     });
   }, [selectedPipelineId, stages, loadMoreLeads, filterUser, dateRange, filterTag, filterDealStatus, searchQuery]);
@@ -412,7 +423,8 @@ export default function Pipelines() {
       effectiveSearchQuery,
       effectiveFilterCampaign,
       effectiveFilterAdSet,
-      effectiveFilterAd
+      effectiveFilterAd,
+      filterSource
     ];
     const previousData = queryClient.getQueryData(queryKey);
     
@@ -716,6 +728,7 @@ export default function Pipelines() {
     filterDealStatus,
     searchQuery: deferredSearch,
     dateRange,
+    filterSource,
   });
   
   // Filters are now applied server-side; we merge server results AND apply a local filter for instant feedback
@@ -953,11 +966,11 @@ export default function Pipelines() {
                   size="icon"
                   className={cn(
                     "h-8 w-8 flex-shrink-0 relative",
-                    ((filterUser && filterUser !== 'all') || (filterTag && filterTag !== 'all') || (filterDealStatus && filterDealStatus !== 'all') || (filterCampaign && filterCampaign !== 'all') || (filterAdSet && filterAdSet !== 'all') || (filterAd && filterAd !== 'all') || searchQuery) && "border-primary text-primary"
+                    ((filterUser && filterUser !== 'all') || (filterTag && filterTag !== 'all') || (filterDealStatus && filterDealStatus !== 'all') || (filterCampaign && filterCampaign !== 'all') || (filterAdSet && filterAdSet !== 'all') || (filterAd && filterAd !== 'all') || (filterSource && filterSource !== 'all') || searchQuery) && "border-primary text-primary"
                   )}
                 >
                   <Filter className="h-3.5 w-3.5" />
-                  {((filterUser && filterUser !== 'all') || (filterTag && filterTag !== 'all') || (filterDealStatus && filterDealStatus !== 'all') || (filterCampaign && filterCampaign !== 'all') || (filterAdSet && filterAdSet !== 'all') || (filterAd && filterAd !== 'all') || searchQuery) && (
+                  {((filterUser && filterUser !== 'all') || (filterTag && filterTag !== 'all') || (filterDealStatus && filterDealStatus !== 'all') || (filterCampaign && filterCampaign !== 'all') || (filterAdSet && filterAdSet !== 'all') || (filterAd && filterAd !== 'all') || (filterSource && filterSource !== 'all') || searchQuery) && (
                     <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-primary" />
                   )}
                 </Button>
@@ -1049,6 +1062,21 @@ export default function Pipelines() {
                     </div>
                   </div>
 
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-bold uppercase text-muted-foreground/70 tracking-wider">Origem</Label>
+                    <Select value={filterSource} onValueChange={setFilterSource}>
+                      <SelectTrigger className={cn("h-9 w-full text-xs", filterSource && filterSource !== 'all' && "border-primary text-primary")}>
+                        <SelectValue placeholder="Origem" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todas Origens</SelectItem>
+                        {allSources.map(s => (
+                          <SelectItem key={s} value={s}>{s}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
                   {((filterUser && filterUser !== 'all') || (filterTag && filterTag !== 'all') || (filterDealStatus && filterDealStatus !== 'all') || (filterCampaign && filterCampaign !== 'all') || (filterAdSet && filterAdSet !== 'all') || (filterAd && filterAd !== 'all') || searchQuery) && (
                     <Button
                       variant="ghost"
@@ -1061,6 +1089,7 @@ export default function Pipelines() {
                         setFilterCampaign('all');
                         setFilterAdSet('all');
                         setFilterAd('all');
+                        setFilterSource('all');
                         setSearchInput('');
                         setSearchQuery('');
                       }}
@@ -1270,13 +1299,14 @@ export default function Pipelines() {
                   >
                     <Filter className="h-3.5 w-3.5" />
                     Filtros
-                    {((filterUser && filterUser !== 'all') || (filterTag && filterTag !== 'all') || (filterDealStatus && filterDealStatus !== 'all') || (filterCampaign !== 'all' || filterAdSet !== 'all' || filterAd !== 'all') || searchQuery) && (
+                    {((filterUser && filterUser !== 'all') || (filterTag && filterTag !== 'all') || (filterDealStatus && filterDealStatus !== 'all') || (filterCampaign !== 'all' || filterAdSet !== 'all' || filterAd !== 'all') || (filterSource && filterSource !== 'all') || searchQuery) && (
                       <Badge variant="default" className="h-4 w-4 p-0 flex items-center justify-center text-[10px] bg-primary">
                         {[
                           filterUser && filterUser !== 'all',
                           filterTag && filterTag !== 'all',
                           filterDealStatus && filterDealStatus !== 'all',
                           filterCampaign !== 'all' || filterAdSet !== 'all' || filterAd !== 'all',
+                          filterSource && filterSource !== 'all',
                           searchQuery
                         ].filter(Boolean).length}
                       </Badge>
@@ -1370,10 +1400,22 @@ export default function Pipelines() {
                           </SelectContent>
                         </Select>
                       </div>
+                    <div className="space-y-2">
+                      <Label className="text-[11px] font-bold uppercase text-muted-foreground/70 tracking-wider">Origem do Lead</Label>
+                      <Select value={filterSource} onValueChange={setFilterSource}>
+                        <SelectTrigger className="h-10 text-sm bg-muted/30">
+                          <SelectValue placeholder="Todas" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todas as origens</SelectItem>
+                          {allSources.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
+                  </div>
 
-                  {((filterUser && filterUser !== 'all') || (filterTag && filterTag !== 'all') || (filterDealStatus && filterDealStatus !== 'all') || (filterCampaign !== 'all' || filterAdSet !== 'all' || filterAd !== 'all') || searchQuery) && (
+                  {((filterUser && filterUser !== 'all') || (filterTag && filterTag !== 'all') || (filterDealStatus && filterDealStatus !== 'all') || (filterCampaign !== 'all' || filterAdSet !== 'all' || filterAd !== 'all') || (filterSource && filterSource !== 'all') || searchQuery) && (
                     <Button
                       variant="ghost"
                       size="sm"
@@ -1385,6 +1427,7 @@ export default function Pipelines() {
                         setFilterCampaign('all');
                         setFilterAdSet('all');
                         setFilterAd('all');
+                        setFilterSource('all');
                         setSearchInput('');
                         setSearchQuery('');
                       }}

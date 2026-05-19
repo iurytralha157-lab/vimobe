@@ -271,6 +271,18 @@ export const LeadCard = memo(function LeadCard({
                 </div>
               );
             }
+            
+            // Generic source
+            if (lead.source) {
+              return (
+                <div className="flex items-center gap-1.5 -mt-1 mb-1 min-w-0">
+                  <div className="h-3 w-3 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
+                    <Zap className="h-2 w-2 text-primary" />
+                  </div>
+                  <span className="text-[10px] text-muted-foreground/80 truncate leading-none capitalize">{lead.source}</span>
+                </div>
+              );
+            }
 
             return null;
           })()}

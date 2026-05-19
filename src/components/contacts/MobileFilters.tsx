@@ -43,6 +43,7 @@ interface MobileFiltersProps {
   hasActiveFilters: boolean;
   clearFilters: () => void;
   activeFilterCount: number;
+  availableSources?: string[];
 }
 
 export function MobileFilters({
@@ -69,6 +70,7 @@ export function MobileFilters({
   hasActiveFilters,
   clearFilters,
   activeFilterCount,
+  availableSources = [],
 }: MobileFiltersProps) {
   const [open, setOpen] = useState(false);
 
@@ -190,7 +192,9 @@ export function MobileFilters({
                     <SelectItem value="manual">Manual</SelectItem>
                     <SelectItem value="meta">Meta Ads</SelectItem>
                     <SelectItem value="site">Site</SelectItem>
-                    <SelectItem value="wordpress">WordPress</SelectItem>
+                    {availableSources.filter(s => !['manual', 'meta', 'site'].includes(s)).map(s => (
+                      <SelectItem key={s} value={s}>{s}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
