@@ -296,6 +296,12 @@ export function useSetWebhook() {
   });
 }
 
+export type WhatsAppAccessMode =
+  | "assigned_leads_only"
+  | "team_leads"
+  | "all_leads"
+  | "full_inbox";
+
 export function useGrantSessionAccess() {
   const queryClient = useQueryClient();
   const { profile } = useAuth();
@@ -306,13 +312,13 @@ export function useGrantSessionAccess() {
       userId,
       canView = true,
       canSend = true,
-      onlyLeadsAccess = false,
+      accessMode = "assigned_leads_only",
     }: {
       sessionId: string;
       userId: string;
       canView?: boolean;
       canSend?: boolean;
-      onlyLeadsAccess?: boolean;
+      accessMode?: WhatsAppAccessMode;
     }) => {
       const { error } = await supabase.from("whatsapp_session_access").upsert(
         {
@@ -320,9 +326,9 @@ export function useGrantSessionAccess() {
           user_id: userId,
           can_view: canView,
           can_send: canSend,
-          only_leads_access: onlyLeadsAccess,
+          access_mode: accessMode,
           granted_by: profile?.id,
-        },
+        } as any,
         { onConflict: "session_id,user_id" }
       );
 
@@ -331,8 +337,8 @@ export function useGrantSessionAccess() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["whatsapp-session-access", variables.sessionId] });
       toast({
-        title: "Acesso concedido",
-        description: "O usuário agora tem acesso à sessão",
+        title: "Acesso atualizado",
+        description: "Permissões salvas com sucesso",
       });
     },
   });

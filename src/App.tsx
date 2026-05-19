@@ -54,6 +54,7 @@ const BrokerFinancialPanel = lazy(() => import("./pages/BrokerFinancialPanel"));
 const FinancialReports = lazy(() => import("./pages/FinancialReports"));
 const FinancialDRE = lazy(() => import("./pages/FinancialDRE"));
 const MetaSettings = lazy(() => import("./pages/MetaSettings"));
+const WhatsAppInboundRules = lazy(() => import("./pages/WhatsAppInboundRules"));
 const Automations = lazy(() => import("./pages/Automations"));
 const Notifications = lazy(() => import("./pages/Notifications"));
 const GamificationLayout = lazy(() => import("./pages/gamification/GamificationLayout"));
@@ -272,6 +273,7 @@ function AppRoutes() {
             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             <Route path="/settings/site" element={<ProtectedRoute><AdminRoute><SiteSettings /></AdminRoute></ProtectedRoute>} />
             <Route path="/settings/integrations/meta" element={<ProtectedRoute><MetaSettings /></ProtectedRoute>} />
+            <Route path="/settings/whatsapp/inbound-rules" element={<ProtectedRoute><AdminRoute><WhatsAppInboundRules /></AdminRoute></ProtectedRoute>} />
             <Route path="/crm/conversas" element={<ProtectedRoute><Conversations /></ProtectedRoute>} />
             <Route path="/help" element={<ProtectedRoute><Help /></ProtectedRoute>} />
             

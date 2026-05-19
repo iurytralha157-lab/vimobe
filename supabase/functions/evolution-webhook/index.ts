@@ -13,6 +13,102 @@ const MAGIC_BYTES: Record<string, string[]> = {
   'application/pdf': ['25504446'],
 };
 
+// ============================================================
+// INBOUND RULES — identify & route incoming WhatsApp messages
+// ============================================================
+type InboundRule = {
+  id: string;
+  organization_id: string;
+  session_id: string | null;
+  priority: number;
+  is_active: boolean;
+  match_type: "contains" | "equals" | "regex" | "utm" | "meta_ctwa" | "any";
+  match_value: string | null;
+  match_field: string | null;
+  target_round_robin_id: string | null;
+  target_team_id: string | null;
+  target_user_id: string | null;
+  target_pipeline_id: string | null;
+  target_stage_id: string | null;
+  source_label: string | null;
+  campaign_label: string | null;
+};
+
+function extractAdContext(contextInfo: any) {
+  const ext = contextInfo?.externalAdReply || {};
+  return {
+    meta_campaign_id: ext.sourceId || ext.ctwaClid || null,
+    meta_ad_id: ext.sourceId || null,
+    meta_click_id: ext.ctwaClid || null,
+    meta_adset_id: null,
+    headline: ext.title || null,
+    body: ext.body || null,
+    source_url: ext.sourceUrl || null,
+  };
+}
+
+function extractUtmFromText(text: string) {
+  const utm: Record<string, string> = {};
+  if (!text) return utm;
+  const params = ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"];
+  for (const p of params) {
+    const m = text.match(new RegExp(`${p}=([^\\s&]+)`, "i"));
+    if (m) utm[p] = decodeURIComponent(m[1]);
+  }
+  return utm;
+}
+
+async function applyInboundRules(
+  supabase: any,
+  session: any,
+  ctx: { content: string; pushName: string; phone: string; adContext: any; utm: Record<string, string> }
+): Promise<InboundRule | null> {
+  const { data: rules } = await supabase
+    .from("whatsapp_inbound_rules")
+    .select("*")
+    .eq("organization_id", session.organization_id)
+    .eq("is_active", true)
+    .order("priority", { ascending: true });
+  if (!rules || rules.length === 0) return null;
+
+  for (const rule of rules as InboundRule[]) {
+    if (rule.session_id && rule.session_id !== session.id) continue;
+    const field = (rule.match_field || "message").toLowerCase();
+    let haystack = "";
+    if (field === "message") haystack = ctx.content || "";
+    else if (field === "push_name") haystack = ctx.pushName || "";
+    else if (field === "phone") haystack = ctx.phone || "";
+    else if (field === "meta_source_id") haystack = ctx.adContext?.meta_campaign_id || "";
+
+    const value = (rule.match_value || "").toString();
+    try {
+      switch (rule.match_type) {
+        case "any":
+          return rule;
+        case "meta_ctwa":
+          if (ctx.adContext?.meta_campaign_id || ctx.adContext?.meta_click_id) return rule;
+          break;
+        case "utm":
+          if (value && (ctx.utm["utm_campaign"] === value || ctx.utm["utm_source"] === value)) return rule;
+          break;
+        case "contains":
+          if (value && haystack.toLowerCase().includes(value.toLowerCase())) return rule;
+          break;
+        case "equals":
+          if (value && haystack.trim().toLowerCase() === value.trim().toLowerCase()) return rule;
+          break;
+        case "regex":
+          if (value && new RegExp(value, "i").test(haystack)) return rule;
+          break;
+      }
+    } catch (e) {
+      console.error("[applyInboundRules] rule error", rule.id, e);
+    }
+  }
+  return null;
+}
+
+
 function validateMagicBytes(content: Uint8Array, expectedMime: string): boolean {
   if (content.length < 4) return false;
   const hex = Array.from(content.slice(0, 8))
@@ -527,15 +623,28 @@ async function handleMessagesUpsert(
           await fetchAndSaveProfilePicture(supabase, session, conversation.id, contactPhone);
         }
 
-        // Auto-create lead ONLY for Facebook Ads leads (ctwa_ad)
-        // Normal WhatsApp conversations stay as just conversations without creating leads
-        if (!isGroup && !fromMe && isFromFacebookAds) {
-          await createLeadFromConversation(
-            supabase, session, conversation, contactName, contactPhone, content,
-            isFromFacebookAds, adSource
-          );
-        } else if (!isGroup && !fromMe) {
-          console.log(`Conversation without Facebook Ads - not creating lead for: ${contactPhone}`);
+        // ===== HUB: identificação & distribuição inbound =====
+        // Cria lead se vier do Meta Ads OU se casar com alguma regra de inbound configurada.
+        if (!isGroup && !fromMe) {
+          const adContext = extractAdContext(contextInfo);
+          const utm = extractUtmFromText(content || "");
+          const matchedRule = await applyInboundRules(supabase, session, {
+            content: content || "",
+            pushName: messageData.pushName || "",
+            phone: contactPhone,
+            adContext,
+            utm,
+          });
+
+          if (isFromFacebookAds || matchedRule) {
+            await createLeadFromConversation(
+              supabase, session, conversation, contactName, contactPhone, content,
+              isFromFacebookAds, adSource,
+              { rule: matchedRule, adContext, utm }
+            );
+          } else {
+            console.log(`Conversation sem match de regra/ads - sem criação de lead: ${contactPhone}`);
+          }
         }
 
         // ===== AUTO-LINK: Link new conversation to existing lead by phone =====
@@ -1551,7 +1660,8 @@ async function createLeadFromConversation(
   contactPhone: string,
   firstMessage: string,
   isFromAds: boolean = false,
-  adSource: string | null = null
+  adSource: string | null = null,
+  hubCtx: { rule: any | null; adContext: any; utm: Record<string, string> } | null = null
 ) {
   try {
     console.log(`Attempting to create lead: phone=${contactPhone}, session_owner=${session.owner_user_id}, org=${session.organization_id}, isFromAds=${isFromAds}, adSource=${adSource}`);
@@ -1687,7 +1797,7 @@ async function createLeadFromConversation(
       pipelineId = anyPipeline.id;
     }
 
-    const { data: stage, error: stageError } = await supabase
+    let { data: stage, error: stageError } = await supabase
       .from("stages")
       .select("id")
       .eq("pipeline_id", pipelineId)
@@ -1714,8 +1824,22 @@ async function createLeadFromConversation(
       }
     }
 
+    // ===== HUB OVERRIDES (rules) =====
+    const rule = hubCtx?.rule || null;
+    const adCtx = hubCtx?.adContext || {};
+    const utm = hubCtx?.utm || {};
+
+    if (rule?.source_label) leadSource = rule.source_label;
+    if (rule?.target_pipeline_id) pipelineId = rule.target_pipeline_id;
+    if (rule?.target_stage_id) stage = { id: rule.target_stage_id } as any;
+    if (rule?.target_user_id) assignedUserId = rule.target_user_id;
+    // round_robin/team-based assignment: deixar trigger handle_lead_intake decidir (não setamos assigned_user_id)
+    if (rule?.target_round_robin_id && !rule?.target_user_id) {
+      assignedUserId = null;
+    }
+
     // Create new lead
-    console.log(`Creating lead: name=${contactName}, phone=${contactPhone}, pipeline=${pipelineId}, stage=${stage.id}, user=${assignedUserId}, source=${leadSource}`);
+    console.log(`Creating lead: name=${contactName}, phone=${contactPhone}, pipeline=${pipelineId}, stage=${stage.id}, user=${assignedUserId}, source=${leadSource}, rule=${rule?.id || 'none'}`);
     
     const { data: newLead, error: leadError } = await supabase
       .from("leads")
@@ -1724,11 +1848,23 @@ async function createLeadFromConversation(
         name: contactName,
         phone: contactPhone,
         message: firstMessage,
+        initial_message: firstMessage,
         source: leadSource,
         pipeline_id: pipelineId,
         stage_id: stage.id,
         assigned_user_id: assignedUserId,
-        source_session_id: session.id, // Track which WhatsApp session created this lead
+        source_session_id: session.id,
+        // Meta CTWA
+        meta_campaign_id: adCtx.meta_campaign_id || null,
+        meta_ad_id: adCtx.meta_ad_id || null,
+        meta_click_id: adCtx.meta_click_id || null,
+        meta_adset_id: adCtx.meta_adset_id || null,
+        // UTM
+        utm_source: utm.utm_source || null,
+        utm_medium: utm.utm_medium || null,
+        utm_campaign: utm.utm_campaign || rule?.campaign_label || null,
+        utm_content: utm.utm_content || null,
+        utm_term: utm.utm_term || null,
       })
       .select()
       .single();
@@ -1753,10 +1889,35 @@ async function createLeadFromConversation(
       await applyFacebookAdsTag(supabase, session.organization_id, newLead.id, adSource);
     }
 
+    // Audit log
+    try {
+      await supabase.from("whatsapp_inbound_logs").insert({
+        organization_id: session.organization_id,
+        session_id: session.id,
+        conversation_id: conversation.id,
+        lead_id: newLead.id,
+        matched_rule_id: rule?.id || null,
+        assigned_user_id: assignedUserId,
+        match_details: {
+          is_from_ads: isFromAds,
+          ad_source: adSource,
+          rule_name: rule?.name || null,
+          match_type: rule?.match_type || null,
+          match_value: rule?.match_value || null,
+          meta: adCtx,
+          utm,
+        },
+      });
+    } catch (logErr) {
+      console.error("Error writing inbound log:", logErr);
+    }
+
     // Create activity
-    const activityContent = isFromAds 
-      ? `Lead criado automaticamente via WhatsApp (Facebook Ads - ${adSource || 'unknown'})`
-      : `Lead criado automaticamente via WhatsApp`;
+    const activityContent = rule
+      ? `Lead criado via regra "${rule.name}" (WhatsApp)`
+      : isFromAds 
+        ? `Lead criado automaticamente via WhatsApp (Facebook Ads - ${adSource || 'unknown'})`
+        : `Lead criado automaticamente via WhatsApp`;
     
     const { error: activityError } = await supabase
       .from("activities")
@@ -1771,7 +1932,7 @@ async function createLeadFromConversation(
       console.error("Error creating activity:", activityError);
     }
 
-    console.log(`Created new lead from WhatsApp: ${newLead.id}, isFromAds: ${isFromAds}`);
+    console.log(`Created new lead from WhatsApp: ${newLead.id}, isFromAds: ${isFromAds}, rule: ${rule?.id || 'none'}`);
 
   } catch (error) {
     console.error("Error creating lead from conversation:", error);
