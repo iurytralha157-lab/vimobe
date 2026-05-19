@@ -3505,6 +3505,7 @@ export type Database = {
           first_touch_channel: string | null
           first_touch_seconds: number | null
           id: string
+          initial_message: string | null
           interest_plan_id: string | null
           interest_property_id: string | null
           is_own_resource: boolean | null
@@ -3512,6 +3513,10 @@ export type Database = {
           lost_at: string | null
           lost_reason: string | null
           message: string | null
+          meta_ad_id: string | null
+          meta_adset_id: string | null
+          meta_campaign_id: string | null
+          meta_click_id: string | null
           meta_form_id: string | null
           meta_lead_id: string | null
           name: string
@@ -3534,6 +3539,11 @@ export type Database = {
           trabalha: boolean | null
           uf: string | null
           updated_at: string
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          utm_term: string | null
           valor_interesse: number | null
           visitor_session_id: string | null
           won_at: string | null
@@ -3565,6 +3575,7 @@ export type Database = {
           first_touch_channel?: string | null
           first_touch_seconds?: number | null
           id?: string
+          initial_message?: string | null
           interest_plan_id?: string | null
           interest_property_id?: string | null
           is_own_resource?: boolean | null
@@ -3572,6 +3583,10 @@ export type Database = {
           lost_at?: string | null
           lost_reason?: string | null
           message?: string | null
+          meta_ad_id?: string | null
+          meta_adset_id?: string | null
+          meta_campaign_id?: string | null
+          meta_click_id?: string | null
           meta_form_id?: string | null
           meta_lead_id?: string | null
           name: string
@@ -3594,6 +3609,11 @@ export type Database = {
           trabalha?: boolean | null
           uf?: string | null
           updated_at?: string
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
           valor_interesse?: number | null
           visitor_session_id?: string | null
           won_at?: string | null
@@ -3625,6 +3645,7 @@ export type Database = {
           first_touch_channel?: string | null
           first_touch_seconds?: number | null
           id?: string
+          initial_message?: string | null
           interest_plan_id?: string | null
           interest_property_id?: string | null
           is_own_resource?: boolean | null
@@ -3632,6 +3653,10 @@ export type Database = {
           lost_at?: string | null
           lost_reason?: string | null
           message?: string | null
+          meta_ad_id?: string | null
+          meta_adset_id?: string | null
+          meta_campaign_id?: string | null
+          meta_click_id?: string | null
           meta_form_id?: string | null
           meta_lead_id?: string | null
           name?: string
@@ -3654,6 +3679,11 @@ export type Database = {
           trabalha?: boolean | null
           uf?: string | null
           updated_at?: string
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
           valor_interesse?: number | null
           visitor_session_id?: string | null
           won_at?: string | null
