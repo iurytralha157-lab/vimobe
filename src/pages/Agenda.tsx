@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   format,
   startOfDay,
@@ -6,7 +6,6 @@ import {
   startOfWeek,
   endOfWeek,
   addDays,
-  isWithinInterval,
   startOfMonth,
   endOfMonth,
   startOfYear,
@@ -17,24 +16,16 @@ import {
   Plus,
   ChevronLeft,
   ChevronRight,
-  CheckCircle2,
   Clock,
   Calendar as CalendarIcon,
   List,
   LayoutGrid,
-  X,
-  Flag,
-  Building2,
-  Users,
-  MessageSquare,
-  Send,
-  Circle,
-  CheckCircle,
   Phone,
   Mail,
   Video,
   ClipboardList,
   Eye,
+  MessageSquare,
   SlidersHorizontal,
   Trash2,
 } from "lucide-react";
@@ -42,18 +33,16 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { CalendarView } from "@/components/schedule/CalendarView";
 import { EventsList } from "@/components/schedule/EventsList";
-import { EventForm } from "@/components/schedule/EventForm";
+import { EventSheet } from "@/components/schedule/EventSheet";
 import { UserFilter } from "@/components/schedule/UserFilter";
 import { useScheduleEvents, ScheduleEvent, useUpdateScheduleEvent } from "@/hooks/use-schedule-events";
 import { useUsers } from "@/hooks/use-users";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
-import { useScheduleComments } from "@/hooks/use-schedule-comments";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
