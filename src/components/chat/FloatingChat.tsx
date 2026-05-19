@@ -594,6 +594,13 @@ export function FloatingChat() {
             
             {/* Ações */}
             <div className="flex items-center gap-1 shrink-0">
+              {activeConversation.session_id && !activeConversation.is_group && (
+                <LabelsPopover
+                  sessionId={activeConversation.session_id}
+                  conversationId={activeConversation.id}
+                  remoteJid={activeConversation.remote_jid}
+                />
+              )}
               {leadId && (
                 <Tooltip>
                   <TooltipTrigger asChild>
