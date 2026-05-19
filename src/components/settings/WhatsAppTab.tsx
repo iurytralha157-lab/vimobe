@@ -134,7 +134,7 @@ export function WhatsAppTab() {
     setVerifyingSessionId(session.id);
 
     try {
-      const connected = await checkConnection(session.instance_name, session.id);
+      const connected = await checkConnection(session);
 
       if (connected === true) {
         toast({ title: "✅ Conectado!", description: "WhatsApp está online" });
@@ -143,8 +143,8 @@ export function WhatsAppTab() {
       } else {
         // Retry once before marking disconnected
         await new Promise(resolve => setTimeout(resolve, 2000));
-        const retryResult = await checkConnection(session.instance_name, session.id);
-        
+        const retryResult = await checkConnection(session);
+
         if (retryResult === true) {
           toast({ title: "✅ Conectado!", description: "WhatsApp está online" });
         } else {
@@ -174,10 +174,7 @@ export function WhatsAppTab() {
         return;
       }
 
-      const connected = await checkConnection(
-        selectedSessionRef.current.instance_name,
-        selectedSessionRef.current.id
-      );
+      const connected = await checkConnection(selectedSessionRef.current);
 
       if (connected === true) {
         toast({ title: "Conectado!", description: "WhatsApp conectado com sucesso" });
@@ -190,6 +187,7 @@ export function WhatsAppTab() {
 
     return () => clearInterval(pollInterval);
   }, [qrDialogOpen, selectedSession?.id, checkConnection, queryClient]);
+
 
   const handleCreateSession = async () => {
     if (!instanceName.trim()) return;
