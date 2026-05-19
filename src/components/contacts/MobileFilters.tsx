@@ -43,6 +43,7 @@ interface MobileFiltersProps {
   hasActiveFilters: boolean;
   clearFilters: () => void;
   activeFilterCount: number;
+  availableSources?: string[];
 }
 
 export function MobileFilters({
