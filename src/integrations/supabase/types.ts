@@ -8314,6 +8314,7 @@ export type Database = {
           created_at: string
           granted_by: string | null
           id: string
+          only_leads_access: boolean
           session_id: string
           user_id: string
         }
@@ -8323,6 +8324,7 @@ export type Database = {
           created_at?: string
           granted_by?: string | null
           id?: string
+          only_leads_access?: boolean
           session_id: string
           user_id: string
         }
@@ -8332,6 +8334,7 @@ export type Database = {
           created_at?: string
           granted_by?: string | null
           id?: string
+          only_leads_access?: boolean
           session_id?: string
           user_id?: string
         }
