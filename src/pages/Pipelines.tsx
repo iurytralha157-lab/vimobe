@@ -204,6 +204,7 @@ export default function Pipelines() {
       filterCampaign: filterCampaign !== 'all' ? filterCampaign : undefined,
       filterAdSet: filterAdSet !== 'all' ? filterAdSet : undefined,
       filterAd: filterAd !== 'all' ? filterAd : undefined,
+      filterSource: filterSource !== 'all' ? filterSource : undefined,
     }
   );
 
