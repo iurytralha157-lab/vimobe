@@ -57,6 +57,8 @@ export function WhatsAppTab() {
   const getConnectionStatus = useGetConnectionStatus();
   const logoutSession = useLogoutSession();
   const toggleNotification = useToggleNotificationSession();
+  const historySync = useHistorySync();
+  const syncAvatars = useSyncContactsAvatars();
   const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin';
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [qrDialogOpen, setQrDialogOpen] = useState(false);
