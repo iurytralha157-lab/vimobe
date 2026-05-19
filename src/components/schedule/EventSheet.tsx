@@ -201,10 +201,11 @@ export function EventSheet({
       is_all_day: false,
       user_id: primaryUserId,
       lead_id: selectedLeadId,
+      property_id: selectedType === "visit" ? selectedPropertyId : null,
     };
 
     if (event) {
-      await updateEvent.mutateAsync({ id: event.id, ...payload });
+      await updateEvent.mutateAsync({ id: event.id, ...payload } as any);
     } else {
       const created = await createEvent.mutateAsync(payload);
       // Se houver responsáveis pendentes, adiciona-os agora
