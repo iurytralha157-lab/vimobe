@@ -1,6 +1,6 @@
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useEffect, useCallback } from "react";
+import { useCallback } from "react";
 import type { WhatsAppMessage } from "./use-whatsapp-conversations";
 
 interface PaginatedMessagesResult {
@@ -56,107 +56,9 @@ export function useWhatsAppMessagesPaginated(
     enabled: !!conversationId,
   });
 
-  // Subscribe to realtime updates with INCREMENTAL inserts
-  useEffect(() => {
-    if (!conversationId) return;
+  // Realtime updates are now handled centrally by WhatsAppRealtimeBus
+  // (see src/contexts/WhatsAppRealtimeBus.tsx). No per-conversation channel here.
 
-    const channel = supabase
-      .channel(`messages-paginated-${conversationId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "whatsapp_messages",
-          filter: `conversation_id=eq.${conversationId}`,
-        },
-        (payload) => {
-          const newMessage = payload.new as WhatsAppMessage;
-          
-          // Incremental insert - add to cache without full refetch
-          queryClient.setQueryData(
-            ["whatsapp-messages-paginated", conversationId],
-            (old: any) => {
-              if (!old?.pages?.[0]) return old;
-              
-              // Check if message already exists (by id or client_message_id)
-              const allMessages = old.pages.flatMap((p: any) => p.messages);
-              const newClientMsgId = (newMessage as any).client_message_id;
-              const exists = allMessages.some((m: any) => 
-                m.id === newMessage.id || 
-                (m.client_message_id && newClientMsgId && m.client_message_id === newClientMsgId)
-              );
-              
-              if (exists) {
-                // Update existing message instead of adding
-                return {
-                  ...old,
-                  pages: old.pages.map((page: any) => ({
-                    ...page,
-                    messages: page.messages.map((msg: any) =>
-                      (msg.id === newMessage.id || 
-                       (msg.client_message_id && newClientMsgId && msg.client_message_id === newClientMsgId))
-                        ? { ...msg, ...newMessage }
-                        : msg
-                    ),
-                  })),
-                };
-              }
-              
-              // Add new message to the first page (most recent)
-              return {
-                ...old,
-                pages: [
-                  {
-                    ...old.pages[0],
-                    messages: [...old.pages[0].messages, newMessage],
-                  },
-                  ...old.pages.slice(1),
-                ],
-              };
-            }
-          );
-        }
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "whatsapp_messages",
-          filter: `conversation_id=eq.${conversationId}`,
-        },
-        (payload) => {
-          const updatedMessage = payload.new as any;
-          const updatedClientMsgId = updatedMessage.client_message_id;
-          
-          // Update message in cache (status, media_status, etc.)
-          queryClient.setQueryData(
-            ["whatsapp-messages-paginated", conversationId],
-            (old: any) => {
-              if (!old?.pages) return old;
-              return {
-                ...old,
-                pages: old.pages.map((page: any) => ({
-                  ...page,
-                  messages: page.messages.map((msg: any) =>
-                    msg.id === updatedMessage.id || 
-                    (msg.client_message_id && updatedClientMsgId && msg.client_message_id === updatedClientMsgId)
-                      ? { ...msg, ...updatedMessage }
-                      : msg
-                  ),
-                })),
-              };
-            }
-          );
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [conversationId, queryClient]);
 
   // Flatten all pages into a single messages array
   const allMessages = query.data?.pages.flatMap(page => page.messages) || [];

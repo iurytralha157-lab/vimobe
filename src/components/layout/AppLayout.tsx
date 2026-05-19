@@ -7,6 +7,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { FloatingChatProvider } from '@/contexts/FloatingChatContext';
 import { FloatingChat } from '@/components/chat/FloatingChat';
 import { FloatingChatButton } from '@/components/chat/FloatingChatButton';
+import { WhatsAppRealtimeBus } from '@/contexts/WhatsAppRealtimeBus';
 import { SidebarProvider } from '@/contexts/SidebarContext';
 // PWA components disabled
 // import { InstallPrompt } from '@/components/pwa/InstallPrompt';
@@ -90,7 +91,8 @@ function AppLayoutContent({ children, title, disableMainScroll = false }: AppLay
       {/* Mobile Bottom Navigation */}
       {isMobile && <MobileBottomNav />}
       
-      {/* Floating WhatsApp Chat */}
+      {/* Floating WhatsApp Chat + Unified Realtime Bus */}
+      <WhatsAppRealtimeBus />
       <FloatingChatButton />
       <FloatingChat />
       

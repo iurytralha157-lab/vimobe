@@ -1,139 +1,140 @@
-## Diagnóstico da duplicidade atual
+# Plano: Otimização do Sistema de Conversas/Chat
 
-Hoje, quando um lead entra pelo Meta, **4 caminhos diferentes** disparam notificação para o mesmo evento:
+Trabalho dividido em 6 fases independentes para evitar quebras. Cada fase pode ser validada isoladamente antes da próxima.
 
-1. Trigger `trigger_notify_new_lead` (DB) — insere notificação "Novo lead"
-2. Trigger `trigger_lead_intake` → `handle_lead_intake` → `notify_whatsapp_on_lead` (DB) — dispara WhatsApp "Novo lead recebido"
-3. Triggers `trg_notify_lead_assigned` + `trigger_notify_lead_assigned` + `trigger_notify_lead_first_assignment` (3 triggers redundantes na mesma coluna) — disparam "Lead atribuído"
-4. Frontend `notifyLeadCreated()` (use-lead-notifications.ts) — dispara via `notification-dispatcher` para vendedor + líderes + admins, com 3 títulos diferentes ("Novo lead recebido", "Novo lead na equipe", "Novo lead criado")
+## Diagnóstico atual (medido agora)
 
-Resultado: 2 a 3 notificações simultâneas + WhatsApp com rodapé de organização misturado em mensagens de automação.
-
----
-
-## Plano de execução
-
-### Fase 1 — Limpeza de triggers duplicados (migration SQL)
-
-Remover triggers redundantes, manter apenas um caminho canônico por evento:
-
-```text
-DROP triggers:
-  - trg_notify_lead_assigned            (duplicado)
-  - trigger_notify_lead_assigned        (duplicado)
-  - trigger_notify_lead_first_assignment (lógica movida)
-  - trigger_notify_new_lead             (substituído por handle_lead_intake)
-
-MANTER:
-  - trigger_lead_intake (INSERT)  → único responsável pelo "Novo lead recebido"
-  - novo trigger "trigger_lead_manual_assignment" (UPDATE)
-       → dispara APENAS quando assigned_user_id muda por ação humana
-         (detectado via coluna nova `last_assignment_source` = 'manual')
-```
-
-Adicionar coluna `leads.last_assignment_source text` ('auto' | 'manual' | 'roundrobin') e atualizar:
-- `handle_lead_intake` e round-robin → setam `'auto'`
-- UPDATEs vindos da UI (kanban/lead-card) → setam `'manual'` antes do save
-
-A função `notify_lead_assigned` só envia notificação se `NEW.last_assignment_source = 'manual'`.
-
-### Fase 2 — Refatorar caminho de criação de lead
-
-- Remover `notifyLeadCreated()` em `src/hooks/use-lead-notifications.ts` (e todas as 7 chamadas no frontend/edge functions).
-- Toda notificação de "novo lead" passa a vir exclusivamente do `handle_lead_intake` (DB) → `notification-dispatcher` com template `new_lead_received`.
-- Destinatários definidos no dispatcher: vendedor atribuído (se houver) **OU** líderes da pipeline **OU** admins — escolhe o destino mais específico, nunca os três.
-
-### Fase 3 — Sanear conteúdo das mensagens
-
-Atualizar templates em `notification_templates`:
-
-```text
-new_lead_received:
-  title:   "📌 Novo lead recebido"
-  message: "Lead: {{lead_name}}\nPipeline: {{pipeline_name}}\n\nAcesse o CRM para mais detalhes."
-
-lead_assigned_manual (NOVO):
-  title:   "📌 Novo lead atribuído para você"
-  message: "Lead: {{lead_name}}\nPipeline: {{pipeline_name}}\n\nAcesse o CRM para mais detalhes."
-```
-
-Remover de TODOS os templates: telefone, e-mail, origem, source, valores. Apenas `lead_name`, `pipeline_name`, `user_name`, `organization_name`.
-
-### Fase 4 — Lógica de organização contextual
-
-Em `whatsapp-notifier/index.ts`:
-- Remover o append automático `🏢 Organização: ...` que existe hoje (linhas ~115-120).
-- Adicionar parâmetro `append_org_context: boolean` no payload.
-- `notification-dispatcher` calcula esse flag: `SELECT count(*) FROM users WHERE id = user_id` em `user_organizations` (ou equivalente). Se > 1 → true.
-
-**Crítico:** `automation-executor` e `message-sender` (caminho das automações) **NUNCA** passam por `whatsapp-notifier`. Eles enviam direto via Evolution API com o texto literal da automação. Auditar e garantir que nenhuma automação invoque `whatsapp-notifier` (hoje só `notification-service` o faz, mas confirmar).
-
-### Fase 5 — Central de Notificações no Super Admin
-
-A página `/admin/notifications` já existe (`AdminNotifications.tsx` + `NotificationSettings.tsx`). Expandir:
-
-- CRUD completo de templates: título, mensagem, ícone, canais (system/whatsapp/push), variáveis disponíveis, evento gatilho, ativo/inativo.
-- Preview ao vivo (renderiza com lead fictício).
-- Lista de eventos suportados fixa no código (registry):
-  ```text
-  new_lead_received, lead_assigned_manual, lead_lost, deal_won,
-  whatsapp_received, lead_no_response, task_overdue,
-  pipeline_stage_changed, appointment_reminder, new_appointment
-  ```
-- Toggle por evento × canal (matriz).
-- Editor de variáveis com chips clicáveis: `{{lead_name}}`, `{{pipeline_name}}`, `{{organization_name}}`, `{{user_name}}`, `{{stage_name}}`.
-
-### Fase 6 — Arquitetura desacoplada (refactor leve)
-
-Reorganizar responsabilidades sem reescrever tudo:
-
-```text
-[Evento de domínio]  →  notification-dispatcher  →  [Canal]
-  (trigger DB ou                  │
-   edge function)                 ├── system   → tabela notifications
-                                  ├── push     → send-push
-                                  └── whatsapp → whatsapp-notifier (transport puro)
-
-[Automação do usuário] → automation-executor → message-sender → Evolution API
-   (nunca toca notification-dispatcher nem whatsapp-notifier)
-```
-
-Reforçar dedupe key no `notification-dispatcher` (já existe `dedupe_window_seconds` no template) com chave canônica `{event_key}:{lead_id}:{user_id}` em janela de 60s, evitando race entre trigger DB e fallback.
+- `whatsapp_messages`: **180 MB**, 305.844 mensagens
+- **55%** são mensagens de grupo (168k), **91%** sem `lead_id` vinculado
+- **75%** das mensagens (228k) têm mais de 15 dias
+- Bulk do tamanho vem de **mensagens de grupo antigas sem vínculo a lead** — não de payloads brutos (a tabela não guarda payload completo, só campos limpos: bom)
+- Realtime: existem **3 canais separados** escutando `whatsapp_messages` (conversations, paginated, global) — fonte provável dos delays/duplicidades
 
 ---
 
-## Detalhes técnicos
+## Fase 1 — Sincronização Unificada (resolve delay entre flutuante / página / lead)
 
-**SQLs necessários (consolidados em 1 migration):**
-- DROP dos 4 triggers redundantes
-- ALTER `leads` ADD `last_assignment_source text DEFAULT 'auto'`
-- CREATE trigger `trigger_lead_manual_assignment` com WHEN clause
-- INSERT/UPDATE em `notification_templates` para os textos novos + template `lead_assigned_manual`
-- Função helper `user_has_multiple_orgs(uuid) returns boolean` (SECURITY DEFINER, search_path=public)
+**Problema:** cada superfície tem seu próprio canal e cache isolado; quando uma mensagem chega, só um deles invalida — os outros esperam refetch.
 
-**Arquivos frontend a alterar:**
-- `src/hooks/use-lead-notifications.ts` — remover funções, manter só re-export vazio para compat
-- `src/services/NotificationService.ts` — adicionar opção `dedupeKey`
-- Chamadores de `notifyLeadCreated`: marcar `last_assignment_source='manual'` quando vier da UI
-- `src/components/admin/settings/NotificationSettings.tsx` — expandir editor (CRUD + matriz canais)
+**Mudanças (frontend, sem schema):**
+1. Criar `useWhatsAppRealtimeBus` central (Provider montado no AppLayout) que abre **1 único canal** por organização para `whatsapp_messages` e `whatsapp_conversations`.
+2. Esse bus alimenta o React Query cache via `setQueryData` em **3 chaves simultaneamente**: `["whatsapp-conversations"]`, `["whatsapp-messages-paginated", convId]` e `["lead-messages", leadId]`.
+3. Remover os 3 canais duplicados (`messages-${convId}`, `messages-paginated-${convId}`, `whatsapp-realtime`).
+4. Implementar **optimistic update** no envio: a mensagem aparece com `status='sending'` em todos os contextos antes do retorno do servidor; o realtime apenas confirma via `client_message_id`.
 
-**Edge functions a alterar:**
-- `whatsapp-notifier/index.ts` — remover append organização; aceitar `append_org_context`
-- `notification-dispatcher/index.ts` — calcular `append_org_context`, reforçar dedupe, escolher destinatário único
-- `public-site-contact/index.ts` — remover segunda chamada duplicada (linhas 268 e 299)
-- `create-user/index.ts` — auditar duplicidade (linhas 49 e 71)
-
-**Não-objetivos desta entrega:**
-- Não migrar histórico antigo da tabela `notifications`
-- Não alterar push notifications (continuam via trigger `trigger_push_on_notification_insert`)
-- Não mudar o visual do dropdown de notificações no header (só conteúdo)
+**Resultado:** mensagem aparece simultaneamente em flutuante, página de conversas e timeline do lead, com latência praticamente zero.
 
 ---
 
-## Validação ao final
+## Fase 2 — Abertura Instantânea do Chat Flutuante
 
-1. Criar lead via webhook Meta → recebo **1** notificação ("📌 Novo lead recebido") no sistema e **1** no WhatsApp, sem telefone, sem rodapé de org (usuário com 1 org).
-2. Atribuir manualmente lead a outro corretor no kanban → ele recebe **1** notificação "📌 Novo lead atribuído para você".
-3. Disparar automação de boas-vindas → mensagem WhatsApp chega **sem** "🏢 Organização: ...".
-4. Logar como usuário com 2+ organizações → notificações WhatsApp passam a incluir "🏢 Organização: X".
-5. Editar texto do template "new_lead_received" no Super Admin → próxima notificação reflete a mudança sem deploy.
+**Problemas detectados:**
+- `FloatingChat` (957 linhas) renderiza tudo de uma vez ao abrir
+- Conversas + sessões + mensagens carregados em paralelo bloqueando UI
+- Sem cache local entre sessões do navegador
+
+**Mudanças:**
+1. **Lazy-load** do conteúdo pesado: skeleton aparece em <50ms, lista de conversas carrega depois.
+2. `staleTime: 60s` nas conversas (hoje refaz query ao reabrir) + `keepPreviousData`.
+3. **Persistir cache de últimas conversas** em `localStorage` (top 20) via `persistQueryClient` — abertura sem rede mostra dados imediatamente.
+4. Pré-fetch das mensagens da conversa ativa **ao hover/touch do botão flutuante** (300ms antes do clique completar).
+5. Mensagens carregam paginadas progressivamente (já funciona, mas garantir que o primeiro `limit=30` não bloqueie a UI).
+
+---
+
+## Fase 3 — Persistência do Histórico ao Transferir Lead
+
+**Validação necessária** (read-only):
+- Hoje `whatsapp_conversations.lead_id` é a única ligação. Trocar `lead.assigned_to` **não afeta** as mensagens, mas precisamos confirmar que nenhum trigger limpa `conversation.lead_id` ao reatribuir.
+- Verificar `sender_name` e `sender_jid` em mensagens antigas para garantir que mesmo após troca de responsável, a autoria original é preservada.
+
+**Ajustes se necessário:**
+- Garantir que `whatsapp_messages` **nunca** seja deletada por trigger de transferência.
+- Adicionar coluna `sender_user_id uuid` (FK soft para `auth.users`) populada no envio para preservar autoria **mesmo se a sessão WhatsApp for trocada de dono**. Backfill via `session.owner_user_id` no momento do envio.
+
+---
+
+## Fase 4 — Retenção Automática (maior ganho de espaço)
+
+**Estratégia conservadora** via `pg_cron` diário:
+
+```text
+A cada noite às 03:00:
+1. DELETE whatsapp_messages WHERE conversation_id IN (
+     SELECT id FROM whatsapp_conversations
+     WHERE is_group = true AND lead_id IS NULL
+   ) AND sent_at < now() - interval '15 days';
+
+2. DELETE whatsapp_conversations WHERE is_group = true
+     AND lead_id IS NULL
+     AND last_message_at < now() - interval '30 days';
+
+3. DELETE FROM media_jobs WHERE status='done' AND updated_at < now() - 30 days;
+
+4. DELETE FROM meta_webhook_events WHERE created_at < now() - 30 days;
+```
+
+**Garantias:**
+- Nunca apaga conversa com `lead_id IS NOT NULL`
+- Nunca apaga conversa direta (1-a-1), mesmo sem lead — usuário pode ter histórico relevante
+- Mídia no Storage tem job próprio de limpeza (`media-worker` já tem lógica de retenção)
+
+**Ganho estimado:** ~120 MB de 180 MB (≈65% de redução imediata).
+
+---
+
+## Fase 5 — Otimização de Payloads e Mídia
+
+**Payloads:** auditoria já mostra que `whatsapp_messages` **não** guarda webhook bruto — bom. Verificar se há `whatsapp_webhook_logs` ou similar acumulando (não apareceu na listagem). Manter como está.
+
+**Mídia (Storage, fora do banco):**
+1. Imagens entrantes: gerar **thumbnail 400px webp** no `media-worker` e usar nas listas; full-size só ao clicar.
+2. Áudios: já chegam em OGG Opus do WhatsApp (ótimo), só validar que não estamos re-encodando.
+3. Limpeza: arquivos cujas mensagens foram apagadas pela Fase 4 também são removidos do bucket.
+
+---
+
+## Fase 6 — Correção de Menções (`@ID` → `@Nome`)
+
+**Problema:** webhook entrega menção como `@5511999998888` (JID). Hoje renderizamos cru.
+
+**Solução em `MessageBubble.tsx`:**
+1. Regex `@(\d{10,15})` no conteúdo.
+2. Para cada match, lookup em ordem: `whatsapp_conversations.contact_name` por `remote_jid` → `leads.name` por telefone normalizado → fallback `@telefone formatado`.
+3. Cache em memória dentro do componente pai (`useMentionResolver`) para não fazer N queries por mensagem.
+
+---
+
+## Detalhes Técnicos
+
+**Arquivos principais a tocar:**
+- `src/hooks/use-whatsapp-conversations.ts` — extrair canal global, remover canais duplicados
+- `src/hooks/use-whatsapp-messages-paginated.ts` — consumir do bus em vez de abrir canal
+- `src/hooks/use-lead-messages.ts` — idem + invalidação cross-cache
+- `src/components/chat/FloatingChat.tsx` — lazy + skeleton + prefetch
+- `src/components/chat/FloatingChatButton.tsx` — hover prefetch
+- `src/components/whatsapp/MessageBubble.tsx` — resolver de menções
+- Nova migration: índice parcial `idx_conv_groups_orphan` + `pg_cron` job
+- `supabase/functions/media-worker/index.ts` — thumbnail webp
+- (opcional Fase 3) migration adicionando `sender_user_id`
+
+**SQL necessário** (fornecido ao final para você rodar):
+- `pg_cron` job de limpeza diária
+- Índice `whatsapp_conversations(is_group, lead_id, last_message_at)` para o DELETE rodar rápido
+
+**O que NÃO será mexido:**
+- Estrutura de `MessageBubble` visual
+- Edge functions de envio (`message-sender`, `evolution-webhook`) na lógica de negócio — só ajustes pontuais de mídia
+- Schema de `whatsapp_messages` (exceto coluna opcional Fase 3)
+
+**Validação por fase:**
+1. Enviar mensagem no flutuante → ver aparecer em <300ms na página `/crm/conversas` aberta em outra aba
+2. Abrir flutuante 5x → tempo médio ao primeiro pixel <100ms
+3. Transferir lead → histórico intacto, `sender_name` original
+4. Rodar cleanup manualmente → conferir tamanho `whatsapp_messages` cair para ~60MB
+5. Imagens em listas carregando como thumbnail webp
+6. Menção `@5511...` renderiza como nome do contato
+
+---
+
+Posso começar pela **Fase 1 + Fase 4** (maior impacto: sincronização + 65% menos storage) e seguir nas demais. Confirma?

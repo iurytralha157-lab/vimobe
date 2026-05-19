@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
-import { useEffect } from "react";
+
 import { formatPhoneForWhatsApp, normalizePhone } from "@/lib/phone-utils";
 
 export interface WhatsAppConversation {
@@ -200,13 +200,13 @@ export function useWhatsAppConversations(
       return conversations;
     },
     enabled: !!profile?.organization_id,
-    // Fallback polling: refetch every 15s if realtime fails
-    // Refetch less often automatically, rely more on realtime
-    refetchInterval: 30000, 
+    // Realtime push via WhatsAppRealtimeBus + 2min safety refetch
+    refetchInterval: 120_000,
     refetchIntervalInBackground: false,
-    staleTime: 10000,
-    gcTime: 1000 * 60 * 5,
+    staleTime: 60_000,
+    gcTime: 1000 * 60 * 10,
   });
+
 }
 
 export function useWhatsAppConversation(conversationId: string | null) {
@@ -275,87 +275,18 @@ export function useWhatsAppMessages(
       return (data?.messages || []) as WhatsAppMessage[];
     },
     enabled: !!conversationId || !!leadId,
-    refetchInterval: 20000, // Reduced polling frequency
+    // Realtime updates are pushed by WhatsAppRealtimeBus — no polling needed
     refetchIntervalInBackground: false,
-    staleTime: 5000, // Messages stay fresh longer
-    gcTime: 1000 * 60 * 2,
-    refetchOnMount: true,
-    refetchOnWindowFocus: true,
+    staleTime: 60_000,
+    gcTime: 1000 * 60 * 5,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
   });
 
-  useEffect(() => {
-    if (!conversationId) return;
 
-    const channel = supabase
-      .channel(`messages-${conversationId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "whatsapp_messages",
-          filter: `conversation_id=eq.${conversationId}`,
-        },
-        (payload) => {
-          const newMessage = payload.new as WhatsAppMessage;
+  // Realtime updates are now handled centrally by WhatsAppRealtimeBus
+  // (see src/contexts/WhatsAppRealtimeBus.tsx). No per-conversation channel here.
 
-          queryClient.setQueryData(
-            messageQueryKey,
-            (old: WhatsAppMessage[] | undefined) => {
-              if (!old) return [newMessage];
-
-              const newClientMsgId = (newMessage as any).client_message_id;
-              const exists = old.some((m: any) =>
-                m.id === newMessage.id ||
-                (m.client_message_id && newClientMsgId && m.client_message_id === newClientMsgId)
-              );
-
-              if (exists) {
-                return old.map((msg: any) =>
-                  (msg.id === newMessage.id ||
-                   (msg.client_message_id && newClientMsgId && msg.client_message_id === newClientMsgId))
-                    ? { ...msg, ...newMessage }
-                    : msg
-                );
-              }
-
-              return [...old, newMessage];
-            }
-          );
-        }
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "whatsapp_messages",
-          filter: `conversation_id=eq.${conversationId}`,
-        },
-        (payload) => {
-          const updatedMessage = payload.new as WhatsAppMessage;
-          const updatedClientMsgId = (updatedMessage as any).client_message_id;
-
-          queryClient.setQueryData(
-            messageQueryKey,
-            (old: WhatsAppMessage[] | undefined) => {
-              if (!old) return old;
-              return old.map((msg: any) =>
-                msg.id === updatedMessage.id ||
-                (msg.client_message_id && updatedClientMsgId && msg.client_message_id === updatedClientMsgId)
-                  ? { ...msg, ...updatedMessage }
-                  : msg
-              );
-            }
-          );
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [conversationId, leadId, queryClient]);
 
   return query;
 }
@@ -873,66 +804,10 @@ export function useLinkConversationToLead() {
   });
 }
 
-// Hook for realtime conversation updates
+// Hook kept for backwards compatibility — realtime is now handled by
+// WhatsAppRealtimeBus (mounted in AppLayout). This is a no-op so callers
+// don't break.
 export function useWhatsAppRealtimeConversations() {
-  const queryClient = useQueryClient();
-
-  useEffect(() => {
-    // Play notification sound for incoming WhatsApp messages
-    const playWhatsAppSound = () => {
-      try {
-        const audio = new Audio('/sounds/notification.mp3');
-        audio.volume = 0.4;
-        audio.play().catch(() => {});
-      } catch {}
-    };
-
-    // Debounce to coalesce rapid realtime events into a single refetch
-    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
-    const debouncedInvalidate = () => {
-      if (debounceTimer) clearTimeout(debounceTimer);
-      debounceTimer = setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ["whatsapp-conversations"] });
-        // Also invalidate messages if we are in a conversation
-        queryClient.invalidateQueries({ queryKey: ["whatsapp-messages"] });
-        debounceTimer = null;
-      }, 2000); // 2 second debounce for better performance
-    };
-
-    const channel = supabase
-      .channel("whatsapp-realtime")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "whatsapp_conversations",
-        },
-        () => {
-          debouncedInvalidate();
-        }
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "whatsapp_messages",
-        },
-        (payload) => {
-          debouncedInvalidate();
-          // Play sound only for incoming messages (not sent by us)
-          const msg = payload.new as any;
-          if (msg && !msg.from_me) {
-            playWhatsAppSound();
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      if (debounceTimer) clearTimeout(debounceTimer);
-      supabase.removeChannel(channel);
-    };
-  }, [queryClient]);
+  // intentionally empty
 }
+
