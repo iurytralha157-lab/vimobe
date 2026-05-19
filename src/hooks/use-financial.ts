@@ -9,6 +9,7 @@ export interface FinancialCategory {
   name: string;
   type: 'income' | 'expense';
   created_at: string;
+  category_group?: string;
 }
 
 export interface FinancialEntry {
