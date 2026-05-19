@@ -1797,7 +1797,7 @@ async function createLeadFromConversation(
       pipelineId = anyPipeline.id;
     }
 
-    const { data: stage, error: stageError } = await supabase
+    let { data: stage, error: stageError } = await supabase
       .from("stages")
       .select("id")
       .eq("pipeline_id", pipelineId)
