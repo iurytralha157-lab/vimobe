@@ -28,12 +28,12 @@ export function useScheduleComments(eventId: string | undefined) {
       if (!eventId) return [];
       const { data, error } = await (supabase as any)
         .from("schedule_event_comments")
-        .select("id, event_id, user_id, organization_id, content, created_at, user:users!schedule_event_comments_user_id_fkey(id, name, avatar_url)")
+        .select("id, event_id, user_id, organization_id, content, created_at, user:users(id, name, avatar_url)")
         .eq("event_id", eventId)
         .order("created_at", { ascending: true });
 
       if (error) {
-        // fallback: select sem o join caso a FK ainda não exista
+        console.warn("Falling back to bare comments fetch", error);
         const { data: bare } = await (supabase as any)
           .from("schedule_event_comments")
           .select("id, event_id, user_id, organization_id, content, created_at")
@@ -61,7 +61,7 @@ export function useScheduleComments(eventId: string | undefined) {
           user_id: user.id,
           organization_id: orgId,
         })
-        .select()
+        .select("id, event_id, user_id, organization_id, content, created_at")
         .single();
 
       if (error) throw error;
@@ -111,11 +111,10 @@ export function useScheduleComments(eventId: string | undefined) {
             title: "Novo comentário em tarefa",
             content: `Comentário em "${eventData.title}": ${content.slice(0, 120)}`,
           }));
-          try {
-            await (supabase as any).from("notifications").insert(rows);
-          } catch (e) {
-            console.warn("notifications insert failed", e);
-          }
+          // Fire-and-forget notifications
+          supabase.from("notifications").insert(rows).then(({ error: e }) => {
+            if (e) console.warn("notifications insert failed", e);
+          });
         }
       }
 
