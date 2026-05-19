@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { MediaViewer } from "./MediaViewer";
 import { useCreateLeadAttachment } from "@/hooks/use-lead-attachments";
+import { useMentionNames } from "@/hooks/use-mention-names";
 import {
   AlertDialog,
   AlertDialogAction,
