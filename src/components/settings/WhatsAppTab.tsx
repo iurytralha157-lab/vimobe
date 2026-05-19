@@ -590,7 +590,7 @@ export function WhatsAppTab() {
               <div className="flex gap-2 mt-4">
                 <Button
                   variant="outline"
-                  onClick={() => selectedSession && refreshQRCode(selectedSession.instance_name)}
+                  onClick={() => selectedSession && refreshQRCode(selectedSession)}
                   disabled={isRefreshingQr}>
 
                   <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshingQr ? "animate-spin" : ""}`} />
