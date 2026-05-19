@@ -23,8 +23,10 @@ import {
   CheckCircle,
   XCircle,
   Loader2,
-  Bell } from
+  Bell,
+  History } from
 "lucide-react";
+import { useHistorySync, useSyncContactsAvatars } from "@/hooks/use-whatsapp-contacts";
 import {
   useWhatsAppSessions,
   useCreateWhatsAppSession,
