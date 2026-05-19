@@ -12,6 +12,9 @@ verify_jwt = true
 [functions.evolution-go-webhook]
 verify_jwt = false
 
+[functions.sync-whatsapp-contacts]
+verify_jwt = true
+
 [functions.evolution-webhook]
 verify_jwt = false
 
