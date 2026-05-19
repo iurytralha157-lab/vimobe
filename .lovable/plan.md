@@ -1,119 +1,166 @@
+## Diagnóstico confirmado
 
-# Auditoria — Arena Imobiliária
+- O relatório de prospecção foi inserido às `05:44`, mas o último registro em `gamification_activity_logs` é `05:26`; ou seja, a ação entra no banco, mas não vira XP/pontos.
+- Não existe nenhum trigger ativo nas tabelas que deveriam alimentar a Arena: `leads`, `telephony_calls`, `prospecting_reports`, `activities` e `schedule_events` retornaram vazio em `information_schema.triggers`.
+- A função `process_gamification_event` existe, mas precisa de correção estrutural: ela usa `v_inserted boolean` para `ROW_COUNT`, deveria ser inteiro, e precisa parar imediatamente quando o evento for duplicado para não arriscar somar XP errado.
+- O botão de ligação no card do pipeline registra atividade (`activities`); portanto ele depende do trigger de `activities`. Como o trigger está ausente, a ligação não pontua.
+- O sistema já tem tabela `gamification_seasons`, mas ela não está integrada ao cálculo, ranking, histórico ou reset de nível.
 
-## Diagnóstico (raiz dos problemas)
+## Plano de correção
 
-**1. Duas fontes de verdade competindo**
-- `gamification_activity_logs` (142 linhas) é alimentada pelos triggers atuais e por `award_gamification_points`.
-- `gamification_events` (71 linhas) é uma tabela paralela; **o `GamificationStatsWidget` (XP/Nível) lê dela**, mas quase ninguém escreve nela → barra de XP nunca sobe.
-- `user_gamification_stats` recebe `total_points` em alguns triggers, mas `xp` e `current_level` só são atualizados em `sync_user_level_and_xp` (chamado apenas pelo trigger de `prospecting_reports`). Resultado: nível não evolui.
+### 1. SQL de emergência para voltar a pontuar
+Criar uma migration SQL que:
 
-**2. Três funções de gamificação rivais e inconsistentes**
-`handle_activity_gamification`, `handle_gamification_event`, `handle_call_gamification`, `handle_lead_gamification`, `handle_prospecting_report_gamification`, `handle_prospecting_report_points`, `handle_schedule_gamification`. Cada uma escreve em locais diferentes, com `action_type` divergente (`call_made` vs `call`, `visit_made` vs `visit_confirmed`, `meeting_held` vs `meeting_made`).
+- Recria os triggers ausentes:
+  - `tr_lead_gamification` em `leads`
+  - `tr_call_gamification` em `telephony_calls`
+  - `tr_prospecting_report_points` em `prospecting_reports`
+  - `tr_activity_gamification` em `activities`
+  - `tr_schedule_gamification` em `schedule_events`
+- Corrige `process_gamification_event`:
+  - troca `v_inserted boolean` por `v_inserted int`
+  - usa `GET DIAGNOSTICS v_inserted = ROW_COUNT`
+  - se `v_inserted = 0`, dá `RETURN` para evitar duplicidade
+  - grava metadata rica: quantidade, pontos unitários, origem e temporada
+- Recalcula `user_gamification_stats` com base nos logs atuais para deixar dashboard, ranking e nível sincronizados.
 
-**3. Triggers reais ativos hoje**
-Apenas: `tr_lead_gamification` (leads), `tr_call_gamification` (telephony_calls), `tr_prospecting_report_points` (prospecting_reports). **Não há trigger em `activities` nem em `schedule_events`** — por isso ligações/visitas registradas pelo CRM não geram XP de forma consistente.
+### 2. Temporadas e reset de níveis sem apagar histórico
+Usar a tabela existente `gamification_seasons` e adicionar somente o que falta:
 
-**4. Missões mortas**
-`user_mission_progress` tem **0 linhas**. Nenhuma função/trigger incrementa progresso de missão. O widget só lê — nunca há escrita.
+- `started_at timestamptz`
+- `ended_at timestamptz`
+- `created_by uuid`
+- `reset_reason text`
+- `season_id uuid` em `gamification_activity_logs`
+- `season_id uuid` em `user_gamification_stats`
 
-**5. Sem motor central**
-Não existe `processGamificationEvent`. Lógica espalhada em SQL, frontend e RPCs avulsas.
+Criar RPC segura:
 
-**6. UX/Frontend**
-- Cores hardcoded (`text-orange-600`, `bg-orange-50`, `text-emerald-600`) quebram em dark mode.
-- `RecentActivitiesTable` mostra ação genérica, sem metadata (quantidade, lead, valor).
-- Sem filtros de data globais; sem realtime nas missões/ranking; sem toasts de level-up.
-
----
-
-## Plano de execução
-
-### Fase 1 — Consolidação de schema (1 migration)
-1. **Eliminar `gamification_events`** (ou tornar VIEW sobre `gamification_activity_logs` para compatibilidade).
-2. **Padronizar enum `app_gamification_event`**: `CALL`, `MESSAGE`, `VISIT_SCHEDULED`, `VISIT_DONE`, `MEETING_SCHEDULED`, `MEETING_DONE`, `LEAD_CREATED`, `PROPOSAL`, `SALE`, `PROPERTY_CAPTURED`, `MISSION_BONUS`, `STREAK_BONUS`, `LEVEL_UP`.
-3. Acrescentar em `gamification_activity_logs`: `quantity int default 1`, garantir `metadata jsonb` (já existe), `xp_awarded int`.
-4. Acrescentar em `user_gamification_stats`: `xp_total`, `xp_current_level`, `xp_next_level`, `rank_tier text`. Computar via função `gamification_level_for_xp(xp)` com a tabela de níveis solicitada (1→0, 2→100, 3→250, 4→500, 5→900, …, crescimento quadrático).
-5. Migrar dados existentes de `gamification_events` + `users.xp/points` → `user_gamification_stats`.
-6. Garantir `gamification_streaks` com tipos `daily_login`, `daily_activity`.
-
-### Fase 2 — Motor central `process_gamification_event` (RPC)
-Uma única função SECURITY DEFINER:
-```
-process_gamification_event(
-  p_user_id, p_org_id, p_event_type, p_quantity, p_reference_id, p_metadata
+```sql
+public.reset_gamification_season(
+  p_organization_id uuid,
+  p_season_name text
 )
 ```
-Responsabilidades (atômicas, transação única):
-1. Resolver pontos via `gamification_rules` (fallback no enum padrão).
-2. Inserir em `gamification_activity_logs` com `quantity`, `xp_awarded`, `metadata`.
-3. Atualizar `user_gamification_stats` (xp, xp_total, xp_current_level, xp_next_level, current_level, last_activity_at).
-4. Detectar **level-up** e empilhar evento `LEVEL_UP` + notificação.
-5. Atualizar `gamification_streaks` (incrementa se atividade no dia, quebra após 36h).
-6. Recalcular `current_rank`/tier (Bronze I/II/III, Prata, Ouro…).
-7. Atualizar `user_mission_progress` para toda missão ativa com `action_type = p_event_type` (ou compatível) no período correto (`daily`/`weekly`); ao bater target, marcar `is_completed`, gerar `MISSION_BONUS` e notificação.
-8. Inserir notificação realtime em `notifications` para level-up / missão / streak.
 
-### Fase 3 — Substituir triggers antigos por wrappers finos
-Reescrever `handle_lead_gamification`, `handle_call_gamification`, `handle_prospecting_report_points`, `handle_schedule_gamification` para apenas mapear a linha → `process_gamification_event(...)`. Remover `handle_gamification_event`, `handle_activity_gamification` duplicadas. Criar **novos triggers** que faltam:
-- `tr_activity_gamification` em `activities` (chama o motor).
-- `tr_schedule_gamification` em `schedule_events` (INSERT + UPDATE→completed).
-- `tr_contract_sale_gamification` em `contracts` quando status vira ativo (SALE).
+Essa função vai:
 
-### Fase 4 — Wrapper no frontend
-`src/services/gamification.ts`:
-```ts
-export async function trackGamificationEvent(input) {
-  return supabase.rpc('process_gamification_event', { ... });
-}
+- Encerrar a temporada ativa anterior.
+- Criar a nova temporada ativa.
+- Zerar somente os acumuladores atuais:
+  - `total_points = 0`
+  - `xp = 0`
+  - `xp_total = 0`
+  - `current_level = 1`
+  - `rank_tier = 'Bronze I'`
+  - `current_rank = 'Bronze I'`
+- Resetar progresso de missões atuais.
+- Manter todo o histórico em `gamification_activity_logs` intacto.
+- Enviar notificação para todos os usuários ativos da imobiliária avisando que a nova temporada iniciou.
+
+### 3. Amarrar eventos novos à temporada ativa
+Atualizar `process_gamification_event` para buscar a temporada ativa da organização e gravar `season_id` no log e no stats atual.
+
+Se não existir temporada ativa, a função cria uma temporada padrão automaticamente para aquela organização, evitando Arena quebrada por falta de configuração.
+
+### 4. Corrigir ligações vindas do CRM/pipeline
+Manter a pontuação por `activities` para o clique de ligação no card do pipeline, porque é isso que esse fluxo cria hoje.
+
+No detalhe do lead, onde também existe criação de `telephony_calls`, evitar pontuação duplicada usando metadata de controle quando a ligação já foi registrada por atividade visual.
+
+### 5. Corrigir frontend da Arena
+Atualizar telas para refletir a temporada atual:
+
+- `GamificationStatsWidget`: mostrar nível da temporada atual.
+- `GamificationRanking`: ranking padrão passa a ser da temporada ativa, não do mês inteiro antigo.
+- `GamificationPerformance`: métricas filtradas pela temporada ativa.
+- `RecentActivitiesTable` e histórico: mostrar quantidade e pontos corretamente, por exemplo `120 ligações × 5 XP = 600 XP`.
+- `MissionsWidget`: refetch realtime quando novos logs/missões forem atualizados.
+
+### 6. Botão administrativo para reiniciar temporada
+Adicionar na área administrativa da gamificação uma aba/área `Temporadas` com:
+
+- Campo `Nome da temporada`.
+- Botão `Iniciar nova temporada`.
+- Confirmação antes de resetar.
+- Toast de sucesso.
+- Invalidação/refetch de stats, missões, ranking, performance e histórico.
+
+### 7. Testes controlados depois da migration
+Validar etapa por etapa:
+
+1. Conferir se os triggers existem.
+2. Inserir/usar um lançamento de prospecção com ligações.
+3. Confirmar novo registro em `gamification_activity_logs`.
+4. Confirmar `user_gamification_stats.xp` aumentando.
+5. Confirmar ranking atualizando.
+6. Confirmar missão de ligação avançando.
+7. Iniciar temporada nova.
+8. Confirmar nível zerado para 1, histórico preservado e notificação criada.
+
+## SQL principal que será gerado
+
+A migration vai conter, em essência:
+
+```sql
+ALTER TABLE public.gamification_seasons
+  ADD COLUMN IF NOT EXISTS started_at timestamptz DEFAULT now(),
+  ADD COLUMN IF NOT EXISTS ended_at timestamptz,
+  ADD COLUMN IF NOT EXISTS created_by uuid,
+  ADD COLUMN IF NOT EXISTS reset_reason text;
+
+ALTER TABLE public.gamification_activity_logs
+  ADD COLUMN IF NOT EXISTS season_id uuid REFERENCES public.gamification_seasons(id);
+
+ALTER TABLE public.user_gamification_stats
+  ADD COLUMN IF NOT EXISTS season_id uuid REFERENCES public.gamification_seasons(id);
+
+CREATE OR REPLACE FUNCTION public.process_gamification_event(...)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+-- função corrigida: idempotência, temporada ativa, XP, missões e notificações
+$$;
+
+CREATE OR REPLACE FUNCTION public.reset_gamification_season(
+  p_organization_id uuid,
+  p_season_name text
+)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+-- fecha temporada anterior, cria nova, zera stats atuais, reseta missões e notifica usuários
+$$;
+
+DROP TRIGGER IF EXISTS tr_lead_gamification ON public.leads;
+DROP TRIGGER IF EXISTS tr_call_gamification ON public.telephony_calls;
+DROP TRIGGER IF EXISTS tr_prospecting_report_points ON public.prospecting_reports;
+DROP TRIGGER IF EXISTS tr_activity_gamification ON public.activities;
+DROP TRIGGER IF EXISTS tr_schedule_gamification ON public.schedule_events;
+
+CREATE TRIGGER tr_lead_gamification
+AFTER INSERT OR UPDATE ON public.leads
+FOR EACH ROW EXECUTE FUNCTION public.handle_lead_gamification();
+
+CREATE TRIGGER tr_call_gamification
+AFTER INSERT ON public.telephony_calls
+FOR EACH ROW EXECUTE FUNCTION public.handle_call_gamification();
+
+CREATE TRIGGER tr_prospecting_report_points
+AFTER INSERT ON public.prospecting_reports
+FOR EACH ROW EXECUTE FUNCTION public.handle_prospecting_report_points();
+
+CREATE TRIGGER tr_activity_gamification
+AFTER INSERT ON public.activities
+FOR EACH ROW EXECUTE FUNCTION public.handle_activity_gamification();
+
+CREATE TRIGGER tr_schedule_gamification
+AFTER INSERT OR UPDATE ON public.schedule_events
+FOR EACH ROW EXECUTE FUNCTION public.handle_schedule_gamification();
 ```
-Substituir chamadas diretas dispersas (ProspectingReportModal, ManualEntryForm) por este wrapper. Manter triggers DB como fonte primária; o wrapper só é usado para ações que não têm linha persistida (ex.: micro-interações).
 
-### Fase 5 — Frontend Arena
-1. **`GamificationStatsWidget`**: passar a ler `user_gamification_stats` (não mais `gamification_events`), mostrar `xp_current_level / xp_next_level`, tier (Bronze II etc.), animação de barra com `motion`.
-2. **`MissionsWidget`**: realtime subscribe em `user_mission_progress`; remover cores hardcoded → tokens semânticos (`text-primary`, `bg-primary/10`, `text-emerald-foreground`).
-3. **`RecentActivitiesTable` → Feed inteligente**: ler `gamification_activity_logs` com `quantity`/`metadata`; formatar:
-   - `📞 10 ligações realizadas (+50 XP)`
-   - `🏠 Visita agendada — Villa Toscana (+10 XP)`
-   - `💰 Venda — R$ 850.000 (+500 XP)`
-4. **Filtro global de data** (`Hoje | 7d | 30d | 90d | custom`) em contexto compartilhado, aplicado a Ranking, Performance, Histórico, Feed.
-5. **Gráficos** (`GamificationPerformance`): trocar cores hardcoded por `hsl(var(--primary))`, `hsl(var(--muted-foreground))`; testar dark/light.
-6. **UX**: toast animado em level-up / missão concluída, realtime via canal Supabase `user-gamification-${user.id}`.
-
-### Fase 6 — Notificações & recompensas
-Triggers em `user_gamification_stats` (UPDATE de `current_level`) e `user_mission_progress` (UPDATE `is_completed=true`) inserindo em `notifications` com tipo `gamification` + payload (novo nível, missão, bônus).
-
-### Fase 7 — Backfill & validação
-1. Recalcular `user_gamification_stats` a partir de `gamification_activity_logs` (soma + nível).
-2. Script de teste: inserir activity de tipo `call` para usuário de teste, verificar log + stats + missão atualizando.
-3. Linter Supabase + verificar duplicidade de triggers.
-
----
-
-## Tabela de níveis (XP acumulado)
-| Nível | XP necessário (total) |
-|-------|----------------------|
-| 1 | 0 |
-| 2 | 100 |
-| 3 | 250 |
-| 4 | 500 |
-| 5 | 900 |
-| N≥6 | `100 * (N-1)^2` |
-
-## Tiers de rank
-Bronze I (Nv 1-3) · Bronze II (4-6) · Prata I (7-10) · Prata II (11-15) · Ouro I (16-20) · Ouro II (21+).
-
----
-
-## Entregáveis
-- 1 migration de schema + funções (Fases 1-3, 6).
-- `src/services/gamification.ts` (wrapper).
-- Refator de `GamificationStatsWidget`, `MissionsWidget`, `RecentActivitiesTable`, `GamificationPerformance`, `GamificationRanking`, `GamificationDashboard` (filtros + tema + realtime + animações).
-- Script SQL de backfill.
-
-## Riscos
-- Pontuações históricas podem variar após backfill (informar usuário).
-- Remoção de `gamification_events`: manter view de compatibilidade por 1 release.
-- Triggers em `activities` podem gerar dupla contagem com triggers de `leads`/`telephony_calls` — mitigado por `action_type` distinto + `idempotency_key`.
-
-Pronto para implementar?
+Após aprovação, eu implemento a migration, os ajustes de frontend e executo as consultas de validação.
