@@ -1,31 +1,88 @@
-O usuário relatou que todas as instâncias do WhatsApp estão visíveis para todos os usuários da organização, o que não deveria acontecer. O objetivo é restringir a visibilidade para que:
-1. Usuários comuns vejam apenas suas próprias instâncias (owner).
-2. Usuários comuns vejam instâncias de terceiros apenas se tiverem acesso explicitamente concedido (tabela `whatsapp_session_access`).
-3. Administradores da organização continuem vendo todas as instâncias da sua própria organização.
-4. Super administradores continuem vendo tudo.
+# Corrigir privacidade do WhatsApp
 
-Para isso, preciso:
-1. Identificar e remover políticas de RLS excessivamente permissivas.
-2. Unificar a lógica de acesso usando funções auxiliares robustas.
-3. Aplicar as novas políticas nas tabelas `whatsapp_sessions`, `whatsapp_conversations` e `whatsapp_messages`.
+## Problema
 
-### Detalhes Técnicos
+Hoje existem múltiplas policies conflitantes nas tabelas `whatsapp_sessions`, `whatsapp_conversations` e `whatsapp_messages`. Como policies PERMISSIVE são combinadas com OR, qualquer policy antiga liberando acesso por organização sobrescreve as novas restrições. Resultado atual: ninguém está vendo nada porque algumas dependências (ex: `organization_members`) podem estar vazias, e a lógica ficou contraditória.
 
-1. **Remoção de Políticas Antigas**:
-   - `whatsapp_sessions`: Remover "Users can view their own sessions", "Users can view sessions they own or have access to", etc.
-   - `whatsapp_messages`: Remover "Users can view their own messages".
-   - `whatsapp_conversations`: Remover qualquer política que use apenas o ID da organização.
+Policies problemáticas detectadas:
+- `whatsapp_sessions`: "Users can view their own sessions", "Users can update/delete their own sessions", "whatsapp_sessions_policy" (todas redundantes/conflitantes com `sessions_select`)
+- `whatsapp_conversations`: "whatsapp_conversations_policy" (ALL, baseado em organização)
+- `whatsapp_messages`: "Users can view their own messages", "whatsapp_messages_policy" (ALL)
 
-2. **Novas Políticas para `whatsapp_sessions`**:
-   - SELECT: Usar `is_super_admin() OR can_access_whatsapp_session(id)`.
-   - INSERT: Apenas para a própria organização e o próprio usuário como dono.
-   - UPDATE/DELETE: Apenas dono ou administrador da organização.
+## Regra desejada (simplificada)
 
-3. **Novas Políticas para `whatsapp_conversations` e `whatsapp_messages`**:
-   - Devem herdar o acesso da sessão vinculada através da função `can_view_whatsapp_conversation`.
+- **Cada usuário vê apenas as instâncias (`whatsapp_sessions`) que ele criou** (`owner_user_id = auth.uid()`)
+- **Conversas e mensagens**: visíveis apenas se pertencem a uma instância do próprio usuário
+- **Super Admin**: continua vendo tudo (manutenção)
+- Acesso compartilhado via `whatsapp_session_access` fica desabilitado por ora (conforme "por ora vamos deixar assim")
 
-### Implementação
+## Migração SQL
 
-Vou criar uma nova migração SQL para consolidar essas mudanças, garantindo que a lógica de `is_admin()` e `can_access_whatsapp_session` esteja alinhada com as necessidades do usuário.
+```sql
+-- whatsapp_sessions: limpar e recriar
+DROP POLICY IF EXISTS "Users can view their own sessions" ON public.whatsapp_sessions;
+DROP POLICY IF EXISTS "Users can update their own sessions" ON public.whatsapp_sessions;
+DROP POLICY IF EXISTS "Users can delete their own sessions" ON public.whatsapp_sessions;
+DROP POLICY IF EXISTS "Users can insert their own sessions" ON public.whatsapp_sessions;
+DROP POLICY IF EXISTS "Users can create sessions in their org" ON public.whatsapp_sessions;
+DROP POLICY IF EXISTS "Session owners and admins can update" ON public.whatsapp_sessions;
+DROP POLICY IF EXISTS "Session owners and admins can delete" ON public.whatsapp_sessions;
+DROP POLICY IF EXISTS whatsapp_sessions_policy ON public.whatsapp_sessions;
+DROP POLICY IF EXISTS sessions_select ON public.whatsapp_sessions;
 
-**Nota**: A função `can_access_whatsapp_session` já existe e parece correta, mas as políticas existentes estão sobrescrevendo o comportamento desejado.
+CREATE POLICY sessions_select_own ON public.whatsapp_sessions
+  FOR SELECT TO authenticated
+  USING (is_super_admin() OR owner_user_id = auth.uid());
+
+CREATE POLICY sessions_insert_own ON public.whatsapp_sessions
+  FOR INSERT TO authenticated
+  WITH CHECK (owner_user_id = auth.uid() AND organization_id = get_user_organization_id());
+
+CREATE POLICY sessions_update_own ON public.whatsapp_sessions
+  FOR UPDATE TO authenticated
+  USING (is_super_admin() OR owner_user_id = auth.uid());
+
+CREATE POLICY sessions_delete_own ON public.whatsapp_sessions
+  FOR DELETE TO authenticated
+  USING (is_super_admin() OR owner_user_id = auth.uid());
+
+-- whatsapp_conversations: limpar policy antiga por organização
+DROP POLICY IF EXISTS whatsapp_conversations_policy ON public.whatsapp_conversations;
+-- mantém conversations_select/update/delete que já usam can_view_whatsapp_conversation
+
+-- whatsapp_messages: limpar policies redundantes
+DROP POLICY IF EXISTS "Users can view their own messages" ON public.whatsapp_messages;
+DROP POLICY IF EXISTS whatsapp_messages_policy ON public.whatsapp_messages;
+-- mantém messages_select/insert/update que usam can_view_whatsapp_conversation
+
+-- Atualizar a função central para refletir "somente owner"
+CREATE OR REPLACE FUNCTION public.can_access_whatsapp_session(p_session_id uuid, p_user_id uuid DEFAULT auth.uid())
+RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.whatsapp_sessions
+    WHERE id = p_session_id
+      AND (owner_user_id = p_user_id OR is_super_admin())
+  );
+$$;
+
+CREATE OR REPLACE FUNCTION public.can_view_whatsapp_conversation(p_conversation_id uuid)
+RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.whatsapp_conversations c
+    JOIN public.whatsapp_sessions s ON s.id = c.session_id
+    WHERE c.id = p_conversation_id
+      AND (s.owner_user_id = auth.uid() OR is_super_admin())
+  );
+$$;
+```
+
+## Frontend
+
+Nenhuma mudança necessária — `useAccessibleSessions` já filtra por `owner_user_id` e o restante usa as policies do banco.
+
+## Validação
+
+1. Login com usuário comum → vê apenas instâncias onde é `owner_user_id`
+2. Conversas e mensagens dessas instâncias aparecem normalmente
+3. Outro usuário da mesma organização não vê as instâncias alheias
+4. Super Admin segue vendo tudo
