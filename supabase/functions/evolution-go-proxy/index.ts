@@ -374,67 +374,6 @@ Deno.serve(async (req) => {
 
     // --- Action Handlers ---
 
-    // 5. debug.status.compare
-    if (action === "debug.status.compare") {
-      const { instance_id, instance_name } = payload;
-      const tests = [
-        { 
-          name: "Status by ID (Header)", 
-          method: "GET", 
-          path: "/instance/status", 
-          instanceId: instance_id,
-          query: { instanceId: instance_id }
-        },
-        { 
-          name: "Status by Name (Header)", 
-          method: "GET", 
-          path: "/instance/status", 
-          instanceId: instance_name,
-          query: { instanceId: instance_name }
-        },
-        { 
-          name: "Get by ID (URL)", 
-          method: "GET", 
-          path: `/instance/get/${instance_id}` 
-        },
-        { 
-          name: "Get by Name (URL)", 
-          method: "GET", 
-          path: `/instance/get/${instance_name}` 
-        }
-      ];
-
-      const results = [];
-      for (const test of tests) {
-        try {
-          const res = await evolutionFetch(test.method, test.path, { 
-            action, 
-            instanceId: test.instanceId,
-            query: test.query
-          });
-          
-          const normStatus = normalizeStatus(res.data, "instance.status");
-          results.push({
-            test: test.name,
-            endpoint: test.path,
-            headerInstanceId: test.instanceId || "none",
-            httpStatus: res.status,
-            rawText: res.rawText.substring(0, 500),
-            rawStatus: (res.data?.state || res.data?.status || res.data?.instance?.state || "").toLowerCase(),
-            normalizedStatus: normStatus,
-            isConnected: normStatus === "connected"
-          });
-        } catch (e: any) {
-          results.push({ test: test.name, error: e.message });
-        }
-      }
-
-      return new Response(
-        JSON.stringify({ ok: true, debugCompareResults: results }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
-
     // Standard Actions
     const config = getActionConfig(action, payload);
     const result = await evolutionFetch(config.method, config.path, {
@@ -449,12 +388,9 @@ Deno.serve(async (req) => {
     if (action === "instance.qr" && result.ok) {
       const qrData = normalizeQRCodeResponse(result.data);
       if (qrData.found) {
-        // Inject normalized field for frontend compatibility
         if (typeof result.data !== "object" || result.data === null) result.data = {};
         if (!result.data.data) result.data.data = {};
         result.data.data.qrcode = qrData.value;
-        
-        // Add metadata about normalization
         (result as any).normalizedQrFound = true;
         (result as any).qrFieldUsed = qrData.field;
       }
@@ -473,29 +409,22 @@ Deno.serve(async (req) => {
       isConnected,
       rawStatus,
       rawResponse: result.rawText,
-      error: !result.ok 
+      error: !result.ok
         ? (result.data?.error?.message || result.data?.message || result.data?.error || `HTTP ${result.status}`)
         : undefined,
-      ...(result as any).normalizedQrFound ? { 
+      ...(result as any).normalizedQrFound ? {
         normalizedQrFound: (result as any).normalizedQrFound,
         qrFieldUsed: (result as any).qrFieldUsed
       } : {}
     };
 
-    // Auto-update status in database if verifying status
-    if (isConnected && payload.session_id) {
-       await supabase.from("whatsapp_sessions")
-        .update({ 
-          status: "connected", 
-          last_connected_at: new Date().toISOString() 
-        })
-        .eq("id", payload.session_id);
-    }
+    // NOTE: Status is written ONLY by the evolution-go-webhook. Proxy never writes status.
 
     return new Response(
       JSON.stringify(responseBody),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
+
 
   } catch (err: any) {
     console.error("evolution-go-proxy error:", err);
