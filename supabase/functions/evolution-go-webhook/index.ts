@@ -222,11 +222,29 @@ async function handleConnectionUpdate(session: any, event: any) {
     const phone = event.data?.jid?.split("@")[0] || event.jid?.split("@")[0];
     if (phone) update.phone_number = phone;
   }
+
+  console.log(`[EvolutionWebhook] Update: manual_verify=${!!event.manual_verify}`, {
+    session_id: session.id,
+    instance_id: session.instance_id,
+    instance_name: session.instance_name,
+    old_status: session.status,
+    new_status: status,
+    filter: { id: session.id }
+  });
+
   await supabase.from("whatsapp_sessions").update(update).eq("id", session.id);
 }
 
 async function handleQrUpdate(session: any, event: any) {
   const qr = event.data?.qrcode || event.qrcode || event.qr;
+  
+  console.log(`[EvolutionWebhook] QR Update:`, {
+    session_id: session.id,
+    instance_name: session.instance_name,
+    new_status: "qr_ready",
+    filter: { id: session.id }
+  });
+
   await supabase.from("whatsapp_sessions").update({
     status: "qr_ready",
     advanced_settings: { ...(session.advanced_settings || {}), qr_code: qr, qr_updated_at: new Date().toISOString() },
@@ -280,6 +298,7 @@ Deno.serve(async (req) => {
     }
 
     const url = new URL(req.url);
+    const sid = url.searchParams.get("session_id") || url.searchParams.get("sessionId");
     const instanceId = url.searchParams.get("instance_id")
       || url.searchParams.get("instanceId")
       || req.headers.get("instanceid")
@@ -288,13 +307,17 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const event = body?.event || body?.type || body?.action || "";
 
-    // Find the session
+    // Find the session - Prioritize session_id from query for uniqueness
     let session: any = null;
-    const sid = body?.session_id || body?.sessionId;
-    if (sid) {
-      const { data } = await supabase.from("whatsapp_sessions").select("*").eq("id", sid).maybeSingle();
+    const bodySid = body?.session_id || body?.sessionId;
+    const finalSid = sid || bodySid;
+
+    if (finalSid) {
+      const { data } = await supabase.from("whatsapp_sessions").select("*").eq("id", finalSid).maybeSingle();
       session = data;
     }
+
+    // Fallbacks only if session_id didn't work
     if (!session && instanceId) {
       const { data } = await supabase.from("whatsapp_sessions").select("*")
         .or(`instance_id.eq.${instanceId},instance_name.eq.${instanceId}`)
@@ -311,8 +334,8 @@ Deno.serve(async (req) => {
     }
 
     if (!session) {
-      console.warn("evolution-go-webhook: session not found", { event, instanceId });
-      return new Response(JSON.stringify({ ok: true, ignored: true }),
+      console.warn("evolution-go-webhook: BLOCKED_STATUS_UPDATE_NO_UNIQUE_SESSION", { event, instanceId, sid: finalSid });
+      return new Response(JSON.stringify({ ok: true, ignored: true, reason: "BLOCKED_STATUS_UPDATE_NO_UNIQUE_SESSION" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
