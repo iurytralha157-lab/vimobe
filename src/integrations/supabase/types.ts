@@ -8811,7 +8811,7 @@ export type Database = {
       }
       can_manage_session: { Args: { session_id: string }; Returns: boolean }
       can_view_whatsapp_conversation: {
-        Args: { _conv_id: string }
+        Args: { p_conversation_id: string }
         Returns: boolean
       }
       check_storage_org_access: {
