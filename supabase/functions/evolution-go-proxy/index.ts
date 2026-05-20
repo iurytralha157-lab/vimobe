@@ -384,24 +384,87 @@ Deno.serve(async (req) => {
       action
     });
 
-    // instance.qr Normalization
-    if (action === "instance.qr" && result.ok) {
-      const qrData = normalizeQRCodeResponse(result.data);
-      if (qrData.found) {
+    // instance.qr Diagnostic & Normalization
+    if (action === "instance.qr") {
+      const { API_URL, API_KEY } = getEvolutionConfig();
+      const instance_id = payload.instance_id;
+      const instance_name = payload.instance_name;
+
+      console.log("QR Debug Evolution Go - Start Diagnostics", {
+        session_id: payload.session_id,
+        instance_id,
+        instance_name,
+        endpoint: `${API_URL}/instance/qr`,
+        apiKeyMasked: maskApiKey(API_KEY)
+      });
+
+      const tests = [
+        { name: "Teste A (Header id)", path: "/instance/qr", headerId: instance_id, queryId: null },
+        { name: "Teste B (Header name)", path: "/instance/qr", headerId: instance_name, queryId: null },
+        { name: "Teste C (Query id)", path: "/instance/qr", headerId: null, queryId: instance_id },
+        { name: "Teste D (Query name)", path: "/instance/qr", headerId: null, queryId: instance_name },
+      ];
+
+      const results = [];
+      let successfulQr = null;
+
+      for (const test of tests) {
+        try {
+          const url = new URL(`${API_URL}${test.path}`);
+          if (test.queryId) url.searchParams.set("instanceId", test.queryId);
+          
+          const headers: Record<string, string> = {
+            "apikey": API_KEY,
+            "Content-Type": "application/json",
+          };
+          if (test.headerId) headers["instanceId"] = test.headerId;
+
+          const res = await fetch(url.toString(), { method: "GET", headers });
+          const rawText = await res.text();
+          let data;
+          try { data = JSON.parse(rawText); } catch { data = { raw: rawText }; }
+
+          const qrInfo = normalizeQRCodeResponse(data);
+          
+          results.push({
+            teste: test.name,
+            endpoint: url.toString().replace(API_URL, ""),
+            instanceIdUsed: test.headerId || test.queryId,
+            httpStatus: res.status,
+            rawText: rawText.substring(0, 100),
+            qrFound: qrInfo.found,
+            qrFieldUsed: qrInfo.field
+          });
+
+          if (qrInfo.found && !successfulQr) {
+            successfulQr = { value: qrInfo.value, field: qrInfo.field, testName: test.name };
+          }
+        } catch (err: any) {
+          results.push({ teste: test.name, error: err.message });
+        }
+      }
+
+      console.log("QR Debug Evolution Go - Results:", JSON.stringify(results, null, 2));
+
+      if (successfulQr) {
         if (typeof result.data !== "object" || result.data === null) result.data = {};
         if (!result.data.data) result.data.data = {};
-        result.data.data.qrcode = qrData.value;
+        result.data.data.qrcode = successfulQr.value;
         (result as any).normalizedQrFound = true;
-        (result as any).qrFieldUsed = qrData.field;
+        (result as any).qrFieldUsed = successfulQr.field;
+        (result as any).winningTest = successfulQr.testName;
       }
+      
+      (result as any).diagnosticResults = results;
     }
+
 
     const normalizedStatus = normalizeStatus(result.data, action);
     const isConnected = normalizedStatus === "connected";
     const rawStatus = (result.data?.state || result.data?.connectionStatus || result.data?.status || result.data?.instance?.state || "").toLowerCase();
 
     const responseBody: Record<string, any> = {
-      ok: result.ok,
+      ok: action === "instance.qr" ? true : result.ok,
       status: result.status,
       httpStatus: result.status,
       data: result.data,
@@ -414,8 +477,11 @@ Deno.serve(async (req) => {
         : undefined,
       ...(result as any).normalizedQrFound ? {
         normalizedQrFound: (result as any).normalizedQrFound,
-        qrFieldUsed: (result as any).qrFieldUsed
-      } : {}
+        qrFieldUsed: (result as any).qrFieldUsed,
+        winningTest: (result as any).winningTest
+      } : {},
+      diagnosticResults: (result as any).diagnosticResults
+
     };
 
     // NOTE: Status is written ONLY by the evolution-go-webhook. Proxy never writes status.

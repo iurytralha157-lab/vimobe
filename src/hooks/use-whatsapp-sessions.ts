@@ -338,7 +338,8 @@ export function useDeleteWhatsAppSession() {
 export function useGetQRCode() {
   return useMutation({
     mutationFn: async (
-      arg: string | { provider: WhatsAppProvider; instanceName: string; sessionId?: string; instanceId?: string | null },
+      arg: string | { provider: WhatsAppProvider; instanceName: string; sessionId?: string; instanceId?: string | null; instance_name?: string },
+
     ) => {
       // Legacy: string => evolution-proxy
       if (typeof arg === "string") {
@@ -353,8 +354,18 @@ export function useGetQRCode() {
 
       if (arg.provider === "evolution_go") {
         const { data, error } = await supabase.functions.invoke("evolution-go-proxy", {
-          body: { action: "instance.qr", session_id: arg.sessionId, instance_id: arg.instanceId ?? undefined },
+          body: { 
+            action: "instance.qr", 
+            session_id: arg.sessionId, 
+            instance_id: arg.instanceId ?? undefined,
+            instance_name: arg.instanceName || arg.instance_name
+          },
         });
+        
+        if (data?.diagnosticResults) {
+          console.log("QR Debug Evolution Go", data.diagnosticResults);
+        }
+
         if (error) throw error;
         if (!data?.ok) throw new Error(data?.error || "Failed to get QR code");
         const qr = data?.data?.data?.qrcode ?? data?.data?.qrcode ?? data?.data?.Qrcode ?? null;
