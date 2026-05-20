@@ -38,15 +38,18 @@ export function useWhatsAppHealthMonitor() {
   const checkSessionHealth = useCallback(async (
     sessionId: string, 
     instanceName: string, 
-    displayName: string
+    displayName: string,
+    provider: string = "evolution"
   ): Promise<boolean> => {
+
     try {
-      const { data, error } = await supabase.functions.invoke("evolution-proxy", {
-        body: {
-          action: "getConnectionStatus",
-          instanceName,
-        },
+      const isGo = provider === "evolution_go";
+      const { data, error } = await supabase.functions.invoke(isGo ? "evolution-go-proxy" : "evolution-proxy", {
+        body: isGo
+          ? { action: "instance.status", session_id: sessionId }
+          : { action: "getConnectionStatus", instanceName },
       });
+
 
       if (error) {
         // Treat transient Edge Runtime unavailability (503) as inconclusive,
@@ -61,11 +64,16 @@ export function useWhatsAppHealthMonitor() {
         return false;
       }
 
+      if (isGo) {
+        return data?.normalizedStatus === "connected" || (data?.data?.data?.connected === true) || (data?.data?.connected === true);
+      }
+      
       const reportedState = (data?.data?.state || "").toLowerCase();
       const isConnected = data?.success && (
         data.data?.connected === true || 
         reportedState === "open"
       );
+
 
       return isConnected;
     } catch (err) {
@@ -149,8 +157,10 @@ export function useWhatsAppHealthMonitor() {
       const isConnected = await checkSessionHealth(
         session.id,
         session.instance_name,
-        state.displayName
+        state.displayName,
+        session.provider
       );
+
 
       if (isConnected) {
         // Reset failures on successful check
@@ -217,8 +227,10 @@ export function useWhatsAppHealthMonitor() {
           const isConnected = await checkSessionHealth(
             session.id,
             session.instance_name,
-            displayName
+            displayName,
+            session.provider
           );
+
 
           if (!isConnected) {
             allHealthy = false;
