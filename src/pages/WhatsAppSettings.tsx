@@ -307,6 +307,14 @@ export default function WhatsAppSettings() {
     await logoutSession.mutateAsync(session);
   };
 
+  const copyWebhookUrl = () => {
+    navigator.clipboard.writeText(webhookUrl);
+    toast({
+      title: "Copiado!",
+      description: "URL do webhook copiada para a área de transferência",
+    });
+  };
+
   const handleDebugInstances = async (session: WhatsAppSession) => {
     setSelectedSession(session);
     setDebugDialogOpen(true);
@@ -343,17 +351,6 @@ export default function WhatsAppSettings() {
         title: "Copiado!",
         description: "Resultados copiados para a área de transferência",
       });
-    }
-  };
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "connected":
-        return <Badge className="bg-orange-500 hover:bg-orange-600"><CheckCircle className="w-3 h-3 mr-1" />Conectado</Badge>;
-      case "connecting":
-        return <Badge className="bg-yellow-500 hover:bg-yellow-600"><Loader2 className="w-3 h-3 mr-1 animate-spin" />Conectando</Badge>;
-      default:
-        return <Badge variant="secondary"><XCircle className="w-3 h-3 mr-1" />Desconectado</Badge>;
     }
   };
 
