@@ -141,13 +141,13 @@ async function evolutionFetch(
     }
   }
 
-  // 2. Centralized Headers
+  // Enviar headers obrigatórios: apikey, Content-Type e instanceId (se disponível)
   const headers: Record<string, string> = {
     "apikey": API_KEY,
     "Content-Type": "application/json",
   };
   
-  // Use instance token if provided (instance-specific auth)
+  // Usar token da instância se fornecido
   if (options.token && options.token !== "default_token") {
     headers["apikey"] = options.token;
   }
@@ -156,11 +156,15 @@ async function evolutionFetch(
     headers["instanceId"] = options.instanceId;
   }
 
-  const isDebug = options.action?.startsWith("debug.") || options.action === "instance.qr";
+  const isStatusAction = options.action === "instance.status";
+  const isDebug = options.action?.startsWith("debug.") || options.action === "instance.qr" || isStatusAction;
+  
   if (isDebug) {
-    console.log(`[EvolutionProxy] ${method} ${path}`, {
+    console.log(`[EvolutionProxy] ${method} ${url.pathname}${url.search}`, {
       action: options.action,
       instanceId: options.instanceId,
+      apiKeyLength: headers.apikey?.length,
+      apiKeyPrefix: headers.apikey?.substring(0, 6),
       headers: { ...headers, apikey: maskApiKey(headers.apikey) }
     });
   }
@@ -180,7 +184,7 @@ async function evolutionFetch(
     
     if (isDebug) {
       console.log(`[EvolutionProxy] Response ${res.status}`, {
-        rawText: rawText.substring(0, 200) + (rawText.length > 200 ? "..." : "")
+        rawText: rawText.substring(0, 500) + (rawText.length > 500 ? "..." : "")
       });
     }
 
@@ -460,11 +464,19 @@ Deno.serve(async (req) => {
     }
 
     const normalizedStatus = normalizeStatus(result.data, action);
+    const isConnected = normalizedStatus === "connected";
+    const rawStatus = (result.data?.state || result.data?.connectionStatus || result.data?.status || "").toLowerCase();
+
     const responseBody: Record<string, any> = {
       ok: result.ok,
       status: result.status,
+      httpStatus: result.status, // Para compatibilidade solicitada
       data: result.data,
       normalizedStatus,
+      isConnected,
+      rawStatus,
+      rawResponse: result.rawText,
+    };
       isConnected: normalizedStatus === "connected",
       rawStatus: result.data?.state || result.data?.status || result.data?.connectionStatus || null,
       rawResponse: result.data,

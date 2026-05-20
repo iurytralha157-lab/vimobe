@@ -118,7 +118,7 @@ export function WhatsAppTab() {
 
       // Rule: status open = connected, status close = disconnected
       const isConnected = isGo
-        ? (normalizedStatus === "connected")
+        ? (data?.isConnected === true || normalizedStatus === "connected")
         : (result?.state === "open" || result?.connected === true);
 
       // Final status mapping
