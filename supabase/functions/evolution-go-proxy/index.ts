@@ -141,14 +141,17 @@ async function evolutionFetch(
     }
   }
 
-  // Enviar headers obrigatórios: apikey, Content-Type e instanceId (se disponível)
+  // Priority 1: Use Global API Key
+  // Priority 2: Use Instance Token if provided
+  // Evolution Go usually requires the global key for instance-level actions
   const headers: Record<string, string> = {
     "apikey": API_KEY,
     "Content-Type": "application/json",
   };
   
-  // Usar token da instância se fornecido
-  if (options.token && options.token !== "default_token") {
+  // Only override if specifically requested or if it's an action that might require it
+  // But for status checks, global key is usually safer
+  if (options.token && options.token !== "default_token" && options.action !== "instance.status") {
     headers["apikey"] = options.token;
   }
   
@@ -163,8 +166,7 @@ async function evolutionFetch(
     console.log(`[EvolutionProxy] ${method} ${url.pathname}${url.search}`, {
       action: options.action,
       instanceId: options.instanceId,
-      apiKeyLength: headers.apikey?.length,
-      apiKeyPrefix: headers.apikey?.substring(0, 6),
+      apiKeyUsed: headers.apikey === API_KEY ? "global" : "instance_token",
       headers: { ...headers, apikey: maskApiKey(headers.apikey) }
     });
   }
@@ -179,7 +181,15 @@ async function evolutionFetch(
   }
 
   try {
-    const res = await fetch(url.toString(), init);
+    let res = await fetch(url.toString(), init);
+    
+    // Fallback: If 401 and we used instance token, retry with global key
+    if (res.status === 401 && headers.apikey !== API_KEY) {
+      console.log("[EvolutionProxy] 401 with instance token, retrying with global API KEY");
+      headers.apikey = API_KEY;
+      res = await fetch(url.toString(), { ...init, headers });
+    }
+
     const rawText = await res.text();
     
     if (isDebug) {
@@ -369,75 +379,6 @@ Deno.serve(async (req) => {
       }
     }
 
-    // --- Action Handlers ---
-
-    // 5. debug.auth
-    if (action === "debug.auth") {
-      const endpoints = ["/instance", "/instance/all"];
-      const results = [];
-
-      for (const path of endpoints) {
-        try {
-          const res = await evolutionFetch("GET", path, { action });
-          results.push({
-            endpoint: path,
-            status: res.status,
-            rawText: res.rawText,
-            apiKeyMasked: maskApiKey(API_KEY)
-          });
-        } catch (e: any) {
-          results.push({ endpoint: path, error: e.message });
-        }
-      }
-
-      return new Response(
-        JSON.stringify({ ok: true, debugResults: results }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
-
-    // 5. debug.instances
-    if (action === "debug.instances") {
-      const instanceId = payload?.instance_id || payload?.instanceId;
-      const results = [];
-
-      const tests = [
-        { name: "List All", method: "GET", path: "/instance/all" },
-        { name: "Get Single", method: "GET", path: `/instance/get/${instanceId || "test"}` },
-        { name: "QR Code", method: "GET", path: "/instance/qr", instanceId },
-        { 
-          name: "Connect", 
-          method: "POST", 
-          path: "/instance/connect", 
-          instanceId,
-          body: { webhookUrl: "https://example.com", subscribe: ["ALL"], immediate: true }
-        }
-      ];
-
-      for (const test of tests) {
-        try {
-          const res = await evolutionFetch(test.method, test.path, { 
-            action, 
-            instanceId: test.instanceId,
-            body: test.body 
-          });
-          results.push({
-            test: test.name,
-            status: res.status,
-            rawText: res.rawText.substring(0, 500),
-            ok: res.ok
-          });
-        } catch (e: any) {
-          results.push({ test: test.name, error: e.message, status: 500 });
-        }
-      }
-
-      return new Response(
-        JSON.stringify({ ok: true, debugInstancesResults: results }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
-
     // Standard Actions
     const config = getActionConfig(action, payload);
     const result = await evolutionFetch(config.method, config.path, {
@@ -448,7 +389,7 @@ Deno.serve(async (req) => {
       action
     });
 
-    // 4. instance.qr Normalization
+    // instance.qr Normalization
     if (action === "instance.qr" && result.ok) {
       const qrData = normalizeQRCodeResponse(result.data);
       if (qrData.found) {
@@ -470,16 +411,12 @@ Deno.serve(async (req) => {
     const responseBody: Record<string, any> = {
       ok: result.ok,
       status: result.status,
-      httpStatus: result.status, // Para compatibilidade solicitada
+      httpStatus: result.status,
       data: result.data,
       normalizedStatus,
       isConnected,
       rawStatus,
       rawResponse: result.rawText,
-    };
-      isConnected: normalizedStatus === "connected",
-      rawStatus: result.data?.state || result.data?.status || result.data?.connectionStatus || null,
-      rawResponse: result.data,
       error: !result.ok 
         ? (result.data?.error?.message || result.data?.message || result.data?.error || `HTTP ${result.status}`)
         : undefined,
@@ -488,7 +425,6 @@ Deno.serve(async (req) => {
         qrFieldUsed: (result as any).qrFieldUsed
       } : {}
     };
-
 
     return new Response(
       JSON.stringify(responseBody),
