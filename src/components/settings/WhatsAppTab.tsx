@@ -174,8 +174,8 @@ export function WhatsAppTab() {
 
     setVerifyingSessionId(session.id);
 
-    console.group(`[Diagnostic] Verifying WhatsApp Session: ${session.display_name || session.instance_name}`);
-    console.log("1. Before call:", {
+    console.group(`[Diagnostic] Manual Verify: ${session.display_name || session.instance_name}`);
+    console.log("1. Current State in UI:", {
       id: session.id,
       instance_id: session.instance_id,
       instance_name: session.instance_name,
@@ -193,21 +193,34 @@ export function WhatsAppTab() {
         },
       );
 
-      console.log("2. Edge Function Response:", {
-        success: isGo ? data?.ok : data?.success,
-        httpStatus: data?.status || data?.httpStatus,
+      const ok = isGo ? data?.ok : data?.success;
+      const httpStatus = data?.status || data?.httpStatus;
+
+      console.log("2. API Response:", {
+        ok,
+        httpStatus,
         rawStatus: data?.rawStatus,
         normalizedStatus: data?.normalizedStatus,
         isConnected: data?.isConnected,
-        error: error || data?.error,
-        rawResponse: data?.rawResponse || data
+        error: error || data?.error
       });
 
       if (error) throw error;
       
-      const ok = isGo ? data?.ok : data?.success;
+      // Rule: API Errors SHOULD NOT overwrite status to disconnected
+      if (isGo && !ok) {
+        console.warn(`[ManualVerify] Verification failed with status ${httpStatus}. NOT updating DB to disconnected.`);
+        toast({ 
+          title: "Não foi possível verificar agora", 
+          description: `A API retornou erro ${httpStatus}. O status anterior foi mantido.`,
+          variant: "destructive" 
+        });
+        return;
+      }
+
       if (!ok) {
-        console.warn("Verification returned NOT OK from API");
+        toast({ title: "Erro na verificação", description: data?.error || "A API não respondeu corretamente", variant: "destructive" });
+        return;
       }
 
       const normalizedStatus = data?.normalizedStatus;
@@ -215,49 +228,44 @@ export function WhatsAppTab() {
         ? (data?.isConnected === true || normalizedStatus === "connected")
         : (data?.data?.state === "open" || data?.data?.connected === true);
 
-      const finalStatus = normalizedStatus || (isConnected ? "connected" : "disconnected");
+      const isDisconnected = isGo
+        ? (normalizedStatus === "disconnected")
+        : (data?.data?.state === "close" || data?.data?.connected === false);
+
+      const finalStatus = normalizedStatus || (isConnected ? "connected" : (isDisconnected ? "disconnected" : session.status));
       
-      const updatePayload = { 
-        status: finalStatus,
-        updated_at: new Date().toISOString()
-      };
-
-      console.log("3. Update in Supabase:", {
-        table: "whatsapp_sessions",
-        where: { id: session.id },
-        payload: updatePayload
-      });
-
-      const { error: updateError } = await supabase
-        .from("whatsapp_sessions")
-        .update(updatePayload)
-        .eq("id", session.id);
-
-      if (updateError) {
-        console.error("4. Update ERROR:", updateError);
-        toast({ title: "Erro no Banco", description: updateError.message, variant: "destructive" });
+      if (finalStatus === session.status && !isConnected) {
+        console.log("3. No change in status. Skipping DB update.");
+        toast({ title: "Status verificado", description: `A sessão continua como: ${finalStatus}` });
       } else {
-        console.log("4. Update SUCCESS");
-        
-        // Final verification fetch
-        const { data: verifiedData } = await supabase
-          .from("whatsapp_sessions")
-          .select("id, instance_id, instance_name, status, updated_at")
-          .eq("id", session.id)
-          .single();
-        
-        console.log("5. Current status in Database:", verifiedData);
+        const updatePayload = { 
+          status: finalStatus,
+          updated_at: new Date().toISOString()
+        };
 
-        if (isConnected) {
-          toast({ title: "✅ Conectado!", description: "WhatsApp está online" });
+        console.log(`[ManualVerify] UPDATING DB: ${session.status} -> ${finalStatus}`, updatePayload);
+
+        const { error: updateError } = await supabase
+          .from("whatsapp_sessions")
+          .update(updatePayload)
+          .eq("id", session.id);
+
+        if (updateError) {
+          console.error("4. DB Update Error:", updateError);
+          toast({ title: "Erro ao salvar", description: updateError.message, variant: "destructive" });
         } else {
-          toast({ title: "⚠️ Desconectado", description: `Status: ${finalStatus}` });
+          console.log("4. DB Update Success");
+          if (isConnected) {
+            toast({ title: "✅ Conectado!", description: "WhatsApp está online" });
+          } else {
+            toast({ title: "⚠️ Status: " + finalStatus, description: "Verificação concluída" });
+          }
         }
       }
 
       queryClient.invalidateQueries({ queryKey: ["whatsapp-sessions"] });
     } catch (error: any) {
-      console.error("[Diagnostic] Error during verification:", error);
+      console.error("[ManualVerify] Critical Error:", error);
       toast({ title: "Erro Crítico", description: error.message || "Falha na verificação", variant: "destructive" });
     } finally {
       console.groupEnd();
