@@ -27,7 +27,9 @@ import {
   History,
   Tag,
   UsersRound,
-  ImageIcon } from
+  ImageIcon,
+  Bug,
+  Copy } from
 "lucide-react";
 import { LabelsManagerSheet } from "@/components/whatsapp/LabelsManagerSheet";
 import { GroupsManagerSheet } from "@/components/whatsapp/GroupsManagerSheet";
@@ -77,6 +79,9 @@ export function WhatsAppTab() {
   const [verifyingSessionId, setVerifyingSessionId] = useState<string | null>(null);
   const [labelsSession, setLabelsSession] = useState<WhatsAppSession | null>(null);
   const [groupsSession, setGroupsSession] = useState<WhatsAppSession | null>(null);
+  const [debugDialogOpen, setDebugDialogOpen] = useState(false);
+  const [debugResults, setDebugResults] = useState<any>(null);
+  const [debugLoading, setDebugLoading] = useState(false);
 
   // Refs para evitar stale closures no polling
   const selectedSessionRef = useRef(selectedSession);
@@ -304,6 +309,48 @@ export function WhatsAppTab() {
 
   const handleLogout = async (session: WhatsAppSession) => {
     await logoutSession.mutateAsync(session);
+  };
+
+  const handleDebugInstances = async (session?: WhatsAppSession) => {
+    if (!session) {
+      toast({ title: "Nenhuma conexão", description: "Crie ou selecione uma conexão WhatsApp primeiro.", variant: "destructive" });
+      return;
+    }
+
+    setSelectedSession(session);
+    setDebugDialogOpen(true);
+    setDebugResults(null);
+    setDebugLoading(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke("evolution-go-proxy", {
+        body: {
+          action: "debug.instances",
+          instance_id: session.instance_id || session.instance_name,
+        },
+      });
+
+      console.log("Debug Evolution Instances:", data);
+      console.log("Erro:", error);
+
+      if (error) {
+        setDebugResults({ error: error.message || String(error) });
+      } else {
+        setDebugResults(data);
+      }
+    } catch (err: any) {
+      console.log("Debug Evolution Instances:", null);
+      console.log("Erro:", err);
+      setDebugResults({ error: err.message || String(err) });
+    } finally {
+      setDebugLoading(false);
+    }
+  };
+
+  const copyDebugResults = () => {
+    if (!debugResults) return;
+    navigator.clipboard.writeText(JSON.stringify(debugResults, null, 2));
+    toast({ title: "Copiado!", description: "JSON de debug copiado." });
   };
 
   const getStatusBadge = (status: string) => {
