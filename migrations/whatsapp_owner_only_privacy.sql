@@ -3,7 +3,12 @@
 -- instâncias, conversas e mensagens. Super admin vê tudo.
 -- =========================================================
 
--- ---------- whatsapp_sessions ----------
+-- ---------- REMOVER FUNÇÕES ANTIGAS ----------
+DROP FUNCTION IF EXISTS public.can_access_whatsapp_session(uuid, uuid);
+DROP FUNCTION IF EXISTS public.can_access_whatsapp_session(uuid);
+DROP FUNCTION IF EXISTS public.can_view_whatsapp_conversation(uuid);
+
+-- ---------- LIMPAR POLICIES ANTIGAS: whatsapp_sessions ----------
 DROP POLICY IF EXISTS "Users can view their own sessions" ON public.whatsapp_sessions;
 DROP POLICY IF EXISTS "Users can update their own sessions" ON public.whatsapp_sessions;
 DROP POLICY IF EXISTS "Users can delete their own sessions" ON public.whatsapp_sessions;
@@ -18,33 +23,22 @@ DROP POLICY IF EXISTS sessions_insert_own ON public.whatsapp_sessions;
 DROP POLICY IF EXISTS sessions_update_own ON public.whatsapp_sessions;
 DROP POLICY IF EXISTS sessions_delete_own ON public.whatsapp_sessions;
 
-CREATE POLICY sessions_select_own ON public.whatsapp_sessions
-  FOR SELECT TO authenticated
-  USING (is_super_admin() OR owner_user_id = auth.uid());
-
-CREATE POLICY sessions_insert_own ON public.whatsapp_sessions
-  FOR INSERT TO authenticated
-  WITH CHECK (
-    owner_user_id = auth.uid()
-    AND organization_id = get_user_organization_id()
-  );
-
-CREATE POLICY sessions_update_own ON public.whatsapp_sessions
-  FOR UPDATE TO authenticated
-  USING (is_super_admin() OR owner_user_id = auth.uid());
-
-CREATE POLICY sessions_delete_own ON public.whatsapp_sessions
-  FOR DELETE TO authenticated
-  USING (is_super_admin() OR owner_user_id = auth.uid());
-
--- ---------- whatsapp_conversations ----------
+-- ---------- LIMPAR POLICIES ANTIGAS: whatsapp_conversations ----------
 DROP POLICY IF EXISTS whatsapp_conversations_policy ON public.whatsapp_conversations;
 
--- ---------- whatsapp_messages ----------
+-- ---------- LIMPAR POLICIES ANTIGAS: whatsapp_messages ----------
 DROP POLICY IF EXISTS "Users can view their own messages" ON public.whatsapp_messages;
 DROP POLICY IF EXISTS whatsapp_messages_policy ON public.whatsapp_messages;
 
--- ---------- funções auxiliares (somente owner + super admin) ----------
+-- ---------- LIMPAR POLICIES ANTIGAS: whatsapp_session_access ----------
+DROP POLICY IF EXISTS whatsapp_session_access_management ON public.whatsapp_session_access;
+DROP POLICY IF EXISTS session_access_manage ON public.whatsapp_session_access;
+DROP POLICY IF EXISTS session_access_select ON public.whatsapp_session_access;
+
+-- =========================================================
+-- CRIAR FUNÇÕES NOVAS (somente owner + super admin)
+-- =========================================================
+
 CREATE OR REPLACE FUNCTION public.can_access_whatsapp_session(p_session_id uuid, p_user_id uuid DEFAULT auth.uid())
 RETURNS boolean
 LANGUAGE sql
@@ -72,3 +66,31 @@ AS $$
       AND (s.owner_user_id = auth.uid() OR public.is_super_admin())
   );
 $$;
+
+-- =========================================================
+-- CRIAR POLICIES NOVAS: whatsapp_sessions
+-- =========================================================
+
+CREATE POLICY sessions_select_own ON public.whatsapp_sessions
+  FOR SELECT TO authenticated
+  USING (is_super_admin() OR owner_user_id = auth.uid());
+
+CREATE POLICY sessions_insert_own ON public.whatsapp_sessions
+  FOR INSERT TO authenticated
+  WITH CHECK (
+    owner_user_id = auth.uid()
+    AND organization_id = get_user_organization_id()
+  );
+
+CREATE POLICY sessions_update_own ON public.whatsapp_sessions
+  FOR UPDATE TO authenticated
+  USING (is_super_admin() OR owner_user_id = auth.uid());
+
+CREATE POLICY sessions_delete_own ON public.whatsapp_sessions
+  FOR DELETE TO authenticated
+  USING (is_super_admin() OR owner_user_id = auth.uid());
+
+-- =========================================================
+-- POLICIES: whatsapp_conversations e whatsapp_messages
+-- Já usam can_view_whatsapp_conversation(), não precisa mudar
+-- =========================================================
