@@ -201,34 +201,41 @@ async function handleMessageUpsert(session: any, event: any) {
 }
 
 async function handleConnectionUpdate(session: any, event: any) {
-  const state = (event.data?.state || event.state || event.status || "").toLowerCase();
-  if (!state) return;
+  const target = event.data || event;
+  const state = (target.state || target.status || "").toLowerCase();
+  if (!state && target.loggedIn === undefined) return;
   
-  const map: Record<string, string> = {
-    open: "connected",
-    connected: "connected",
-    connecting: "connecting",
-    close: "disconnected",
-    closed: "disconnected",
-    disconnected: "disconnected",
-    qr: "qr_ready",
-  };
-  const status = map[state] || state;
+  const loggedIn = target.loggedIn === true || target.LoggedIn === true;
+  const connected = target.connected === true || target.Connected === true;
+
+  let status = "disconnected";
+  let reason = "unknown";
+
+  if (loggedIn || state === "open" || state === "connected") {
+    status = "connected";
+    reason = "LoggedIn is true or state is open";
+  } else if (connected || state === "qr") {
+    status = "qr_ready";
+    reason = "Instance connected but not LoggedIn";
+  } else if (state === "close" || state === "closed" || state === "disconnected") {
+    status = "disconnected";
+    reason = "State is closed/disconnected";
+  }
 
   const update: any = { status, updated_at: new Date().toISOString() };
   if (status === "connected") {
     update.last_connected_at = new Date().toISOString();
     // Try to get phone from event if available
-    const phone = event.data?.jid?.split("@")[0] || event.jid?.split("@")[0];
+    const phone = target.jid?.split("@")[0] || event.jid?.split("@")[0];
     if (phone) update.phone_number = phone;
   }
 
-  console.log(`[EvolutionWebhook] Update: manual_verify=${!!event.manual_verify}`, {
+  console.log(`[EvolutionWebhook] Update: status=${status}, reason=${reason}`, {
     session_id: session.id,
-    instance_id: session.instance_id,
     instance_name: session.instance_name,
-    old_status: session.status,
-    new_status: status,
+    connected_flag: connected,
+    loggedIn_flag: loggedIn,
+    raw_state: state,
     filter: { id: session.id }
   });
 
