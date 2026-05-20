@@ -100,15 +100,18 @@ export function WhatsAppTab() {
         },
       );
 
-      if (error) throw error;
+      if (error) {
+        console.log(`[Polling] API Error for session ${session.id}:`, error);
+        return null; // Don't change status on function error
+      }
+
       const ok = isGo ? data?.ok : data?.success;
+      const httpStatus = data?.status || data?.httpStatus;
       
-      // Strict: if API returns 404 or not OK, it's disconnected for Evolution Go
+      // Rule: API Errors (401, 404, 500, etc) SHOULD NOT overwrite status to disconnected
       if (isGo && !ok) {
-        if (session.status !== "disconnected") {
-          await supabase.from("whatsapp_sessions").update({ status: "disconnected" }).eq("id", session.id);
-        }
-        return false;
+        console.warn(`[Polling] Session ${session.id} verification failed (Status: ${httpStatus}). Keeping existing state: ${session.status}`);
+        return null;
       }
       
       if (!ok) return null;
@@ -121,19 +124,24 @@ export function WhatsAppTab() {
         ? (data?.isConnected === true || normalizedStatus === "connected")
         : (result?.state === "open" || result?.connected === true);
 
+      const isDisconnected = isGo
+        ? (normalizedStatus === "disconnected")
+        : (result?.state === "close" || result?.connected === false);
+
       // Final status mapping
-      const finalStatus = normalizedStatus || (isConnected ? "connected" : "disconnected");
+      const finalStatus = normalizedStatus || (isConnected ? "connected" : (isDisconnected ? "disconnected" : session.status));
 
       const phone = isGo
         ? (result?.jid?.split("@")[0] || null)
         : (result?.phone || result?.instance?.wuid?.split("@")[0] || null);
       
-      const update: any = { status: finalStatus };
-      if (phone) update.phone_number = phone;
-      if (isConnected) update.last_connected_at = new Date().toISOString();
+      // Only update if we have a definitive state (connected or disconnected) from a SUCCESSFUL call
+      if (finalStatus !== session.status) {
+        console.log(`[Polling] Updating session ${session.id}: ${session.status} -> ${finalStatus} (Source: polling_qr)`);
+        const update: any = { status: finalStatus };
+        if (phone) update.phone_number = phone;
+        if (isConnected) update.last_connected_at = new Date().toISOString();
 
-      // Always update if the status changed OR if we just confirmed it's connected (to update phone/last_connected)
-      if (finalStatus !== session.status || isConnected) {
         await supabase
           .from("whatsapp_sessions")
           .update(update)
@@ -142,7 +150,7 @@ export function WhatsAppTab() {
       
       return isConnected;
     } catch (error) {
-      console.log("Polling check failed:", error);
+      console.log(`[Polling] Critical error for session ${session.id}:`, error);
       return null;
     }
   }, []);
