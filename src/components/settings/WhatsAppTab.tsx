@@ -152,23 +152,93 @@ export function WhatsAppTab() {
   const handleVerifyConnection = async (session: WhatsAppSession) => {
     setVerifyingSessionId(session.id);
 
-    try {
-      // Direct call to ensure we get the latest status
-      const isConnected = await checkConnection(session);
+    console.group(`[Diagnostic] Verifying WhatsApp Session: ${session.display_name || session.instance_name}`);
+    console.log("1. Before call:", {
+      id: session.id,
+      instance_id: session.instance_id,
+      instance_name: session.instance_name,
+      status: session.status
+    });
 
-      if (isConnected === true) {
-        toast({ title: "✅ Conectado!", description: "WhatsApp está online" });
-      } else if (isConnected === false) {
-        toast({ title: "⚠️ Desconectado", description: "WhatsApp não está conectado" });
+    try {
+      const isGo = session.provider === "evolution_go";
+      const { data, error } = await supabase.functions.invoke(
+        isGo ? "evolution-go-proxy" : "evolution-proxy",
+        {
+          body: isGo
+            ? { action: "instance.status", session_id: session.id, instance_id: session.instance_id ?? undefined }
+            : { action: "getConnectionStatus", instanceName: session.instance_name },
+        },
+      );
+
+      console.log("2. Edge Function Response:", {
+        success: isGo ? data?.ok : data?.success,
+        httpStatus: data?.status || data?.httpStatus,
+        rawStatus: data?.rawStatus,
+        normalizedStatus: data?.normalizedStatus,
+        isConnected: data?.isConnected,
+        error: error || data?.error,
+        rawResponse: data?.rawResponse || data
+      });
+
+      if (error) throw error;
+      
+      const ok = isGo ? data?.ok : data?.success;
+      if (!ok) {
+        console.warn("Verification returned NOT OK from API");
+      }
+
+      const normalizedStatus = data?.normalizedStatus;
+      const isConnected = isGo
+        ? (data?.isConnected === true || normalizedStatus === "connected")
+        : (data?.data?.state === "open" || data?.data?.connected === true);
+
+      const finalStatus = normalizedStatus || (isConnected ? "connected" : "disconnected");
+      
+      const updatePayload = { 
+        status: finalStatus,
+        updated_at: new Date().toISOString()
+      };
+
+      console.log("3. Update in Supabase:", {
+        table: "whatsapp_sessions",
+        where: { id: session.id },
+        payload: updatePayload
+      });
+
+      const { error: updateError } = await supabase
+        .from("whatsapp_sessions")
+        .update(updatePayload)
+        .eq("id", session.id);
+
+      if (updateError) {
+        console.error("4. Update ERROR:", updateError);
+        toast({ title: "Erro no Banco", description: updateError.message, variant: "destructive" });
       } else {
-        toast({ title: "⚠️ Não foi possível verificar", description: "Tente novamente em alguns segundos" });
+        console.log("4. Update SUCCESS");
+        
+        // Final verification fetch
+        const { data: verifiedData } = await supabase
+          .from("whatsapp_sessions")
+          .select("id, instance_id, instance_name, status, updated_at")
+          .eq("id", session.id)
+          .single();
+        
+        console.log("5. Current status in Database:", verifiedData);
+
+        if (isConnected) {
+          toast({ title: "✅ Conectado!", description: "WhatsApp está online" });
+        } else {
+          toast({ title: "⚠️ Desconectado", description: `Status: ${finalStatus}` });
+        }
       }
 
       queryClient.invalidateQueries({ queryKey: ["whatsapp-sessions"] });
-    } catch (error) {
-      console.error("Error verifying connection:", error);
-      toast({ title: "Erro", description: "Não foi possível verificar a conexão", variant: "destructive" });
+    } catch (error: any) {
+      console.error("[Diagnostic] Error during verification:", error);
+      toast({ title: "Erro Crítico", description: error.message || "Falha na verificação", variant: "destructive" });
     } finally {
+      console.groupEnd();
       setVerifyingSessionId(null);
     }
   };
