@@ -79,9 +79,6 @@ export function WhatsAppTab() {
   const [verifyingSessionId, setVerifyingSessionId] = useState<string | null>(null);
   const [labelsSession, setLabelsSession] = useState<WhatsAppSession | null>(null);
   const [groupsSession, setGroupsSession] = useState<WhatsAppSession | null>(null);
-  const [debugDialogOpen, setDebugDialogOpen] = useState(false);
-  const [debugResults, setDebugResults] = useState<any>(null);
-  const [debugLoading, setDebugLoading] = useState(false);
 
   // Refs para evitar stale closures no polling
   const selectedSessionRef = useRef(selectedSession);
@@ -222,31 +219,55 @@ export function WhatsAppTab() {
     }
   };
 
-  const refreshQRCode = async (session: WhatsAppSession) => {
+  const refreshQRCode = async (session: WhatsAppSession, retries = 3) => {
     setIsRefreshingQr(true);
     try {
       const isGo = session.provider === "evolution_go";
-      const data = await getQRCode.mutateAsync(
-        isGo
-          ? {
-              provider: "evolution_go",
-              instanceName: session.instance_name,
-              sessionId: session.id,
-              instanceId: session.instance_id,
-            }
-          : session.instance_name,
-      );
-      const qr = (data as any)?.qrcode || (data as any)?.base64;
-      if (qr) {
-        setQrCode(qr);
+      
+      let lastQr = null;
+      let attempt = 0;
+      
+      // Retry loop for QR code
+      while (attempt < retries && !lastQr) {
+        if (attempt > 0) {
+          console.log(`Retrying QR fetch (attempt ${attempt + 1}/${retries})...`);
+          await new Promise(r => setTimeout(r, 2000));
+        }
+        
+        const data = await getQRCode.mutateAsync(
+          isGo
+            ? {
+                provider: "evolution_go",
+                instanceName: session.instance_name,
+                sessionId: session.id,
+                instanceId: session.instance_id,
+              }
+            : session.instance_name,
+        );
+        
+        lastQr = (data as any)?.qrcode || (data as any)?.base64;
+        attempt++;
+      }
+
+      if (lastQr) {
+        setQrCode(lastQr);
+        // Important: Rule - QR gerado = aguardando leitura
+        // Do not change to "connected" here
         if (session.status !== "connected") {
           await supabase.from("whatsapp_sessions").update({ status: "qr_ready" }).eq("id", session.id);
           queryClient.invalidateQueries({ queryKey: ["whatsapp-sessions"] });
         }
+      } else {
+        toast({ 
+          title: "Atenção", 
+          description: "O QR Code ainda não está pronto. Clique em Atualizar em alguns instantes.",
+          variant: "default" 
+        });
       }
 
     } catch (error) {
       console.error("Error getting QR code:", error);
+      toast({ title: "Erro", description: "Falha ao obter QR Code", variant: "destructive" });
     } finally {
       setIsRefreshingQr(false);
     }
@@ -326,47 +347,6 @@ export function WhatsAppTab() {
     await logoutSession.mutateAsync(session);
   };
 
-  const handleDebugInstances = async (session?: WhatsAppSession) => {
-    if (!session) {
-      toast({ title: "Nenhuma conexão", description: "Crie ou selecione uma conexão WhatsApp primeiro.", variant: "destructive" });
-      return;
-    }
-
-    setSelectedSession(session);
-    setDebugDialogOpen(true);
-    setDebugResults(null);
-    setDebugLoading(true);
-
-    try {
-      const { data, error } = await supabase.functions.invoke("evolution-go-proxy", {
-        body: {
-          action: "debug.instances",
-          instance_id: session.instance_id || session.instance_name,
-        },
-      });
-
-      console.log("Debug Evolution Instances:", data);
-      console.log("Erro:", error);
-
-      if (error) {
-        setDebugResults({ error: error.message || String(error) });
-      } else {
-        setDebugResults(data);
-      }
-    } catch (err: any) {
-      console.log("Debug Evolution Instances:", null);
-      console.log("Erro:", err);
-      setDebugResults({ error: err.message || String(err) });
-    } finally {
-      setDebugLoading(false);
-    }
-  };
-
-  const copyDebugResults = () => {
-    if (!debugResults) return;
-    navigator.clipboard.writeText(JSON.stringify(debugResults, null, 2));
-    toast({ title: "Copiado!", description: "JSON de debug copiado." });
-  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -398,16 +378,6 @@ export function WhatsAppTab() {
             </CardDescription>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleDebugInstances(sessions?.[0])}
-              disabled={!sessions?.length || debugLoading}
-              className="shrink-0"
-            >
-              <Bug className="w-4 h-4 mr-1.5" />
-              Debug Evolution Instances
-            </Button>
             <Button data-tour="whatsapp-new-session" size="sm" onClick={() => setCreateDialogOpen(true)} className="shrink-0">
               <Plus className="w-4 h-4 mr-1.5" />
               Nova
@@ -512,16 +482,6 @@ export function WhatsAppTab() {
                     <Button variant="outline" size="sm" className="h-8 w-8 p-0 shrink-0" onClick={() => handleOpenAccessDialog(session)}>
                       <Users className="w-3.5 h-3.5" />
                     </Button>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button variant="outline" size="sm" className="h-8 w-8 p-0 shrink-0" onClick={() => handleDebugInstances(session)} disabled={debugLoading}>
-                            {debugLoading && selectedSession?.id === session.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Bug className="w-3.5 h-3.5" />}
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Debug Evolution Instances</TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
                     {(session as any).provider === "evolution_go" && session.status === "connected" && (
                       <TooltipProvider>
                         <Tooltip>
@@ -748,33 +708,6 @@ export function WhatsAppTab() {
           </DialogContent>
         </Dialog>
 
-        <Dialog open={debugDialogOpen} onOpenChange={setDebugDialogOpen}>
-          <DialogContent className="w-[95%] sm:max-w-3xl max-h-[80vh] overflow-y-auto rounded-lg">
-            <DialogHeader>
-              <DialogTitle>Debug Evolution Instances</DialogTitle>
-              <DialogDescription>
-                Resultado bruto dos testes com {selectedSession?.display_name || selectedSession?.instance_name}
-              </DialogDescription>
-            </DialogHeader>
-            {debugLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-              </div>
-            ) : debugResults ? (
-              <div className="space-y-4">
-                <div className="bg-muted p-4 rounded-lg overflow-x-auto">
-                  <pre className="text-xs font-mono whitespace-pre-wrap break-words">
-                    {JSON.stringify(debugResults, null, 2)}
-                  </pre>
-                </div>
-                <Button variant="outline" onClick={copyDebugResults} className="w-full">
-                  <Copy className="w-4 h-4 mr-2" />
-                  Copiar JSON
-                </Button>
-              </div>
-            ) : null}
-          </DialogContent>
-        </Dialog>
       </CardContent>
     </Card>);
 
