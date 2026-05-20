@@ -250,7 +250,7 @@ async function handleConnectionUpdate(session: any, event: any) {
 
   console.log(`[Diagnostic] Attempting update on 'whatsapp_sessions' for id ${session.id} with status: ${status}`);
 
-  const { data: updatedRows, error, count } = await supabase
+  const { data: updatedRows, error } = await supabase
     .from("whatsapp_sessions")
     .update(update)
     .eq("id", session.id)
@@ -327,7 +327,9 @@ Deno.serve(async (req) => {
     delete safeHeaders["x-api-key"];
 
     const event = body?.event || body?.type || body?.action || "";
-    const instanceId = body?.instanceId || body?.instance_id || body?.instance || "";
+    
+    // More robust identification fields from body
+    const instanceIdFromBody = body?.instance_id || body?.instanceId || body?.id || body?.instance || body?.instanceName || body?.name;
     const queryInstanceId = url.searchParams.get("instance_id") || url.searchParams.get("instanceId") || "";
     
     const data = body?.data || body || {};
@@ -337,7 +339,7 @@ Deno.serve(async (req) => {
       queryParams,
       headers: safeHeaders,
       event,
-      instanceId,
+      instanceId: instanceIdFromBody,
       queryInstanceId,
       status: data.status,
       state: data.state,
@@ -362,24 +364,23 @@ Deno.serve(async (req) => {
       session = s;
     }
     
-    const searchInstanceId = instanceId || queryInstanceId;
-    if (!session && searchInstanceId) {
+    const searchIdentifier = instanceIdFromBody || queryInstanceId;
+    if (!session && searchIdentifier) {
       const { data: s } = await supabase.from("whatsapp_sessions").select("*")
-        .or(`instance_id.eq.${searchInstanceId},instance_name.eq.${searchInstanceId}`)
+        .or(`instance_id.eq.${searchIdentifier},instance_name.eq.${searchIdentifier}`)
         .eq("provider", "evolution_go")
         .maybeSingle();
       session = s;
     }
 
     if (!session) {
-      console.warn("[Diagnostic] Session not found for identifiers:", { sid, instanceId, queryInstanceId });
+      console.warn("[Diagnostic] Session not found for identifiers:", { sid, searchIdentifier });
       return new Response(JSON.stringify({ 
         received: true, 
         ignored: true, 
         reason: "session_not_found",
         event,
-        instanceId,
-        queryInstanceId
+        searchIdentifier
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -437,7 +438,7 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ 
       received: true, 
       event, 
-      instanceId, 
+      instanceId: instanceIdFromBody, 
       queryInstanceId, 
       normalizedStatus 
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
