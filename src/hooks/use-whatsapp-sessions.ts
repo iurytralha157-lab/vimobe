@@ -49,6 +49,33 @@ export interface WhatsAppSessionAccess {
 
 export function useWhatsAppSessions() {
   const { profile } = useAuth();
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!profile?.organization_id) return;
+
+    // Supabase Realtime subscription to reflect webhook updates immediately
+    const channel = supabase
+      .channel('whatsapp_sessions_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'whatsapp_sessions',
+          filter: `organization_id=eq.${profile.organization_id}`
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["whatsapp-sessions", profile?.organization_id] });
+          queryClient.invalidateQueries({ queryKey: ["whatsapp-session"] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [profile?.organization_id, queryClient]);
 
   return useQuery({
     queryKey: ["whatsapp-sessions", profile?.organization_id],
