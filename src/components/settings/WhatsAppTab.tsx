@@ -191,29 +191,6 @@ export function WhatsAppTab() {
 
 
 
-  const checkConnectionStatus = async (session: WhatsAppSession) => {
-    try {
-      const isGo = session.provider === "evolution_go";
-      const data = await getConnectionStatus.mutateAsync(
-        isGo
-          ? {
-              provider: "evolution_go",
-              instanceName: session.instance_name,
-              sessionId: session.id,
-              instanceId: session.instance_id,
-            }
-          : session.instance_name,
-      );
-      if (data?.state === "open" || data?.connected === true) {
-        toast({ title: "Conectado!", description: "WhatsApp conectado com sucesso" });
-        setQrDialogOpen(false);
-        setQrCode(null);
-      }
-    } catch (error) {
-      console.error("Error checking status:", error);
-    }
-  };
-
   const handleOpenQRDialog = async (session: WhatsAppSession) => {
     setSelectedSession(session);
     setQrDialogOpen(true);
@@ -223,7 +200,7 @@ export function WhatsAppTab() {
       // Reconnect attempt
       try {
         if (session.provider === "evolution_go") {
-          const webhookUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/evolution-go-webhook`;
+          const webhookUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/evolution-go-webhook?session_id=${session.id}`;
           await supabase.functions.invoke("evolution-go-proxy", {
             body: {
               action: "instance.connect",
@@ -233,20 +210,18 @@ export function WhatsAppTab() {
             },
           });
         } else {
-          // Recreate or Ensure instance exists for standard provider
           await supabase.functions.invoke("evolution-proxy", {
             body: { action: "createInstance", instanceName: session.instance_name },
           });
         }
-        // Small delay to allow instance to boot
         await new Promise(r => setTimeout(r, 3000));
         await refreshQRCode(session);
       } catch (e) {
         console.error("Failed to recreate instance:", e);
-        toast({ title: "Erro", description: "Não foi possível reconectar. Tente excluir e criar uma nova conexão.", variant: "destructive" });
       }
     }
   };
+
 
 
   const handleOpenAccessDialog = (session: WhatsAppSession) => {
