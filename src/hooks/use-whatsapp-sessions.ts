@@ -374,13 +374,13 @@ export function useGetConnectionStatus() {
         }
 
         const normalizedStatus = data?.normalizedStatus || "disconnected";
-        const isConnected = data?.isConnected === true;
+        const isConnected = normalizedStatus === "connected";
         const rawData = data?.data?.data ?? data?.data ?? {};
 
         return {
           connected: isConnected,
           status: normalizedStatus,
-          state: isConnected ? "open" : "close",
+          state: isConnected ? "open" : (normalizedStatus === "qr_ready" ? "qr" : "close"),
           instance: { wuid: rawData.jid || rawData.Name || null },
           rawResponse: data?.rawResponse,
           rawStatus: data?.rawStatus
