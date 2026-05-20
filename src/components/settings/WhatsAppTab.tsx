@@ -196,6 +196,20 @@ export function WhatsAppTab() {
     return () => clearInterval(pollInterval);
   }, [qrDialogOpen, selectedSession?.id, checkConnection, queryClient]);
 
+  // Fechar o diálogo de QR Code automaticamente se o status mudar para conectado (via Realtime)
+  useEffect(() => {
+    if (qrDialogOpen && selectedSession) {
+      const currentSession = sessions?.find(s => s.id === selectedSession.id);
+      if (currentSession?.status === 'connected') {
+        toast({ title: "Conectado!", description: "WhatsApp conectado com sucesso" });
+        setQrDialogOpen(false);
+        setQrCode(null);
+        setSelectedSession(null);
+      }
+    }
+  }, [sessions, qrDialogOpen, selectedSession]);
+
+
 
   const handleCreateSession = async () => {
     if (!instanceName.trim()) return;
@@ -217,7 +231,7 @@ export function WhatsAppTab() {
     }
   };
 
-  const refreshQRCode = async (session: WhatsAppSession, retries = 3) => {
+  const refreshQRCode = async (session: WhatsAppSession, retries = 5) => {
     setIsRefreshingQr(true);
     try {
       const isGo = session.provider === "evolution_go";
@@ -227,10 +241,11 @@ export function WhatsAppTab() {
       
       // Retry loop for QR code
       while (attempt < retries && !lastQr) {
-        if (attempt > 0) {
-          console.log(`Retrying QR fetch (attempt ${attempt + 1}/${retries})...`);
-          await new Promise(r => setTimeout(r, 2000));
+        if (attempt > 0 || isGo) {
+          console.log(`Waiting for QR fetch (attempt ${attempt + 1}/${retries})...`);
+          await new Promise(r => setTimeout(r, 3000));
         }
+
         
         const data = await getQRCode.mutateAsync(
           isGo
