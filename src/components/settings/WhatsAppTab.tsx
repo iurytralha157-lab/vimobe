@@ -87,7 +87,7 @@ export function WhatsAppTab() {
     qrDialogOpenRef.current = qrDialogOpen;
   }, [selectedSession, qrDialogOpen]);
 
-  // Função de check separada para usar no polling
+  // Função de check separada para usar no polling - APENAS CONSULTA, NÃO ESCREVE NO BANCO
   const checkConnection = useCallback(async (session: WhatsAppSession): Promise<boolean | null> => {
     try {
       const isGo = session.provider === "evolution_go";
@@ -101,172 +101,61 @@ export function WhatsAppTab() {
       );
 
       if (error) {
-        // Silently log polling errors to console only
-        console.log(`[Polling] API Connection error for session ${session.id}:`, error);
+        console.log(`[Polling] API Diagnostic error for session ${session.id}:`, error);
         return null; 
       }
 
       const ok = isGo ? data?.ok : data?.success;
-      const httpStatus = data?.status || data?.httpStatus;
       
-      // Rule: API Errors in polling SHOULD NOT trigger toasts or change status
-      if (isGo && !ok) {
-        console.log(`[Polling] Session ${session.id} status check (HTTP ${httpStatus}). Waiting for webhook.`);
+      if (!ok) {
+        console.log(`[Polling] Session ${session.id} status check returned NOT OK. Waiting for webhook update.`);
         return null;
       }
-      
-      if (!ok) return null;
 
       const result = isGo ? (data?.data?.data ?? data?.data) : data.data;
       const normalizedStatus = data?.normalizedStatus;
 
-      // Rule: status open = connected, status close = disconnected
+      // Rule: status open = connected
       const isConnected = isGo
         ? (data?.isConnected === true || normalizedStatus === "connected")
         : (result?.state === "open" || result?.connected === true);
 
-      const isDisconnected = isGo
-        ? (normalizedStatus === "disconnected")
-        : (result?.state === "close" || result?.connected === false);
-
-      // Final status mapping
-      const finalStatus = normalizedStatus || (isConnected ? "connected" : (isDisconnected ? "disconnected" : session.status));
-
-      const phone = isGo
-        ? (result?.jid?.split("@")[0] || null)
-        : (result?.phone || result?.instance?.wuid?.split("@")[0] || null);
-      
-      // Only update if we have a definitive state (connected or disconnected) from a SUCCESSFUL call
-      if (finalStatus !== session.status) {
-        console.log(`[Polling] Updating session ${session.id}: ${session.status} -> ${finalStatus} (Source: polling_qr)`);
-        const update: any = { status: finalStatus };
-        if (phone) update.phone_number = phone;
-        if (isConnected) update.last_connected_at = new Date().toISOString();
-
-        await supabase
-          .from("whatsapp_sessions")
-          .update(update)
-          .eq("id", session.id);
-      }
+      // FRONT-END NÃO ESCREVE MAIS NO BANCO. 
+      // O status é atualizado apenas via webhook.
       
       return isConnected;
     } catch (error) {
-      console.log(`[Polling] Critical error for session ${session.id}:`, error);
+      console.log(`[Polling] Diagnostic check failed:`, error);
       return null;
     }
   }, []);
 
 
-  // Verificar conexão manualmente
+  // Sincronizar status do banco de dados (Visual)
   const handleVerifyConnection = async (session: WhatsAppSession) => {
-    // Debug diagnostic call
-    if (session.provider === "evolution_go") {
-      console.log("[Diagnostic] Running debug.status.compare...");
-      supabase.functions.invoke("evolution-go-proxy", {
-        body: {
-          action: "debug.status.compare",
-          instance_id: session.instance_id,
-          instance_name: session.instance_name
-        }
-      }).then(({ data }) => {
-        console.log("[Diagnostic] debug.status.compare results:", data?.debugCompareResults);
-      });
-    }
-
     setVerifyingSessionId(session.id);
 
-    console.group(`[Diagnostic] Manual Verify: ${session.display_name || session.instance_name}`);
-    console.log("1. Current State in UI:", {
-      id: session.id,
-      instance_id: session.instance_id,
-      instance_name: session.instance_name,
-      status: session.status
-    });
-
+    console.group(`[Diagnostic] Syncing WhatsApp Session: ${session.display_name || session.instance_name}`);
+    
     try {
-      const isGo = session.provider === "evolution_go";
-      const { data, error } = await supabase.functions.invoke(
-        isGo ? "evolution-go-proxy" : "evolution-proxy",
-        {
-          body: isGo
-            ? { action: "instance.status", session_id: session.id, instance_id: session.instance_id ?? undefined }
-            : { action: "getConnectionStatus", instanceName: session.instance_name },
-        },
-      );
+      // Invalida a query para forçar o Realtime/Refetch a trazer os dados mais recentes do banco
+      await queryClient.invalidateQueries({ queryKey: ["whatsapp-sessions"] });
+      
+      // Opcional: consulta API apenas para diagnóstico no console
+      if (session.provider === "evolution_go") {
+        const { data } = await supabase.functions.invoke("evolution-go-proxy", {
+          body: { action: "instance.status", session_id: session.id, instance_id: session.instance_id ?? undefined },
+        });
+        console.log("[Diagnostic] API Status Check:", data);
+      }
 
-      const ok = isGo ? data?.ok : data?.success;
-      const httpStatus = data?.status || data?.httpStatus;
-
-      console.log("2. API Response:", {
-        ok,
-        httpStatus,
-        rawStatus: data?.rawStatus,
-        normalizedStatus: data?.normalizedStatus,
-        isConnected: data?.isConnected,
-        error: error || data?.error
+      toast({ 
+        title: "Status sincronizado", 
+        description: "Os dados foram atualizados a partir do servidor." 
       });
 
-      if (error) throw error;
-      
-      // Rule: API Errors in manual verify show neutral toast
-      if (isGo && !ok) {
-        console.log(`[ManualVerify] Verification unavailable (HTTP ${httpStatus}). Keeping existing state.`);
-        toast({ 
-          title: "Status indisponível via API", 
-          description: `Aguardando atualização via webhook. Status atual mantido.`,
-        });
-        return;
-      }
-
-      if (!ok) {
-        toast({ title: "Erro na verificação", description: data?.error || "A API não respondeu corretamente", variant: "destructive" });
-        return;
-      }
-
-      const normalizedStatus = data?.normalizedStatus;
-      const isConnected = isGo
-        ? (data?.isConnected === true || normalizedStatus === "connected")
-        : (data?.data?.state === "open" || data?.data?.connected === true);
-
-      const isDisconnected = isGo
-        ? (normalizedStatus === "disconnected")
-        : (data?.data?.state === "close" || data?.data?.connected === false);
-
-      const finalStatus = normalizedStatus || (isConnected ? "connected" : (isDisconnected ? "disconnected" : session.status));
-      
-      if (finalStatus === session.status && !isConnected) {
-        console.log("3. No change in status. Skipping DB update.");
-        toast({ title: "Status verificado", description: `A sessão continua como: ${finalStatus}` });
-      } else {
-        const updatePayload = { 
-          status: finalStatus,
-          updated_at: new Date().toISOString()
-        };
-
-        console.log(`[ManualVerify] UPDATING DB: ${session.status} -> ${finalStatus}`, updatePayload);
-
-        const { error: updateError } = await supabase
-          .from("whatsapp_sessions")
-          .update(updatePayload)
-          .eq("id", session.id);
-
-        if (updateError) {
-          console.error("4. DB Update Error:", updateError);
-          toast({ title: "Erro ao salvar", description: updateError.message, variant: "destructive" });
-        } else {
-          console.log("4. DB Update Success");
-          if (isConnected) {
-            toast({ title: "✅ Conectado!", description: "WhatsApp está online" });
-          } else {
-            toast({ title: "⚠️ Status: " + finalStatus, description: "Verificação concluída" });
-          }
-        }
-      }
-
-      queryClient.invalidateQueries({ queryKey: ["whatsapp-sessions"] });
     } catch (error: any) {
-      console.error("[ManualVerify] Critical Error:", error);
-      toast({ title: "Erro Crítico", description: error.message || "Falha na verificação", variant: "destructive" });
+      console.error("[Diagnostic] Error during sync:", error);
     } finally {
       console.groupEnd();
       setVerifyingSessionId(null);
