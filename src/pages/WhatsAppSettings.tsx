@@ -375,10 +375,21 @@ export default function WhatsAppSettings() {
               Gerencie suas conexões de WhatsApp via Evolution API
             </p>
           </div>
-          <Button onClick={() => setCreateDialogOpen(true)}>
-            <Plus className="w-4 h-4 mr-2" />
-            Nova Conexão
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => sessions?.[0] && handleDebugInstances(sessions[0])}
+              disabled={!sessions?.length || debugLoading}
+              className="text-blue-500 hover:text-blue-600 border-blue-200"
+            >
+              <Bug className="w-4 h-4 mr-2" />
+              Debug Evolution
+            </Button>
+            <Button onClick={() => setCreateDialogOpen(true)}>
+              <Plus className="w-4 h-4 mr-2" />
+              Nova Conexão
+            </Button>
+          </div>
         </div>
 
         {/* Webhook Info */}
