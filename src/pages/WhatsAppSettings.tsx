@@ -307,12 +307,43 @@ export default function WhatsAppSettings() {
     await logoutSession.mutateAsync(session);
   };
 
-  const copyWebhookUrl = () => {
-    navigator.clipboard.writeText(webhookUrl);
-    toast({
-      title: "Copiado!",
-      description: "URL do webhook copiada para a área de transferência",
-    });
+  const handleDebugInstances = async (session: WhatsAppSession) => {
+    setSelectedSession(session);
+    setDebugDialogOpen(true);
+    setDebugResults(null);
+    setDebugLoading(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke("evolution-go-proxy", {
+        body: {
+          action: "debug.instances",
+          instance_id: session.instance_id || session.instance_name,
+        },
+      });
+
+      console.log("Debug Evolution Instances:", data);
+      if (error) {
+        console.error("Erro:", error);
+        setDebugResults({ error: error.message || String(error) });
+      } else {
+        setDebugResults(data);
+      }
+    } catch (err: any) {
+      console.error("Erro:", err);
+      setDebugResults({ error: err.message || String(err) });
+    } finally {
+      setDebugLoading(false);
+    }
+  };
+
+  const copyDebugResults = () => {
+    if (debugResults) {
+      navigator.clipboard.writeText(JSON.stringify(debugResults, null, 2));
+      toast({
+        title: "Copiado!",
+        description: "Resultados copiados para a área de transferência",
+      });
+    }
   };
 
   const getStatusBadge = (status: string) => {
