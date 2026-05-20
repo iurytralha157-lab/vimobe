@@ -367,12 +367,17 @@ export function WhatsAppTab() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "connected":
-        return <Badge className="bg-orange-500 hover:bg-orange-600"><CheckCircle className="w-3 h-3 mr-1" />Conectado</Badge>;
+        return <Badge className="bg-green-500 hover:bg-green-600"><CheckCircle className="w-3 h-3 mr-1" />Conectado</Badge>;
+      case "qr_ready":
+        return <Badge className="bg-blue-500 hover:bg-blue-600"><QrCode className="w-3 h-3 mr-1" />Aguardando Leitura</Badge>;
       case "connecting":
         return <Badge className="bg-yellow-500 hover:bg-yellow-600"><Loader2 className="w-3 h-3 mr-1 animate-spin" />Conectando</Badge>;
+      case "error":
+        return <Badge variant="destructive"><XCircle className="w-3 h-3 mr-1" />Erro</Badge>;
       default:
         return <Badge variant="secondary"><XCircle className="w-3 h-3 mr-1" />Desconectado</Badge>;
     }
+
   };
 
   return (
