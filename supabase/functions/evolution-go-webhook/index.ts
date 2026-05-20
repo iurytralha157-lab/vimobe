@@ -201,20 +201,27 @@ async function handleMessageUpsert(session: any, event: any) {
 }
 
 async function handleConnectionUpdate(session: any, event: any) {
-  const state = event.data?.state || event.state || event.status;
+  const state = (event.data?.state || event.state || event.status || "").toLowerCase();
   if (!state) return;
+  
   const map: Record<string, string> = {
     open: "connected",
     connected: "connected",
     connecting: "connecting",
     close: "disconnected",
+    closed: "disconnected",
     disconnected: "disconnected",
     qr: "qr_ready",
   };
   const status = map[state] || state;
 
   const update: any = { status, updated_at: new Date().toISOString() };
-  if (status === "connected") update.last_connected_at = new Date().toISOString();
+  if (status === "connected") {
+    update.last_connected_at = new Date().toISOString();
+    // Try to get phone from event if available
+    const phone = event.data?.jid?.split("@")[0] || event.jid?.split("@")[0];
+    if (phone) update.phone_number = phone;
+  }
   await supabase.from("whatsapp_sessions").update(update).eq("id", session.id);
 }
 
@@ -312,16 +319,24 @@ Deno.serve(async (req) => {
     // Run handler (fire-and-forget via waitUntil if possible)
     const work = (async () => {
       try {
-        switch (event) {
+        const normalizedEvent = event.toLowerCase().replace(/_/g, ".");
+        
+        switch (normalizedEvent) {
           case "qrcode.updated":
           case "qr.updated":
+          case "qr":
             await handleQrUpdate(session, body); break;
           case "connection.update":
           case "connection.status":
+          case "connection":
             await handleConnectionUpdate(session, body); break;
+          case "pair.success":
+            // On pair success, we can treat it as connected
+            await handleConnectionUpdate(session, { ...body, state: "open" }); break;
           case "messages.upsert":
           case "message.upsert":
           case "messages.received":
+          case "messages.upsert":
             await handleMessageUpsert(session, body); break;
           case "labels.upsert":
           case "labels.set":
