@@ -68,12 +68,16 @@ function normalizeQRCodeResponse(data: any) {
 function normalizeStatus(data: any, action?: string) {
   if (!data) return "disconnected";
 
-  // Check for explicit connection indicators
+  // Check for explicit connection indicators (Strict rules)
+  const state = (data.state || data.connectionStatus || "").toLowerCase();
+  const status = (data.status || "").toLowerCase();
+  
   const isConnected = 
     data.connected === true || 
     data.Connected === true || 
-    data.state === "open" || 
-    data.connectionStatus === "open" || 
+    state === "open" || 
+    state === "connected" ||
+    status === "connected" ||
     data.loggedIn === true || 
     data.LoggedIn === true;
 
@@ -81,16 +85,28 @@ function normalizeStatus(data: any, action?: string) {
 
   // Check for QR indicators
   const qr = normalizeQRCodeResponse(data);
-  if (qr.found || action === "instance.qr" || data.status === "qr") {
+  if (qr.found || action === "instance.qr" || status === "qr") {
     return "qr_ready";
   }
 
-  if (data.status === "connecting" || data.state === "connecting") {
+  if (status === "connecting" || state === "connecting") {
     return "connecting";
   }
 
-  if (data.status === "error" || data.error) {
-    return "error";
+  // Disconnected if it matches any of these or if no connection indicator found
+  const isDisconnected = 
+    state === "close" || 
+    state === "closed" || 
+    state === "disconnected" || 
+    state === "disconnect" ||
+    state === "offline" ||
+    status === "close" ||
+    status === "closed" ||
+    status === "disconnected" ||
+    status === "offline";
+
+  if (isDisconnected || data.status === "error" || data.error) {
+    return "disconnected";
   }
 
   return "disconnected";
@@ -438,11 +454,15 @@ Deno.serve(async (req) => {
       }
     }
 
+    const normalizedStatus = normalizeStatus(result.data, action);
     const responseBody: Record<string, any> = {
       ok: result.ok,
       status: result.status,
       data: result.data,
-      normalizedStatus: normalizeStatus(result.data, action),
+      normalizedStatus,
+      isConnected: normalizedStatus === "connected",
+      rawStatus: result.data?.state || result.data?.status || result.data?.connectionStatus || null,
+      rawResponse: result.data,
       error: !result.ok 
         ? (result.data?.error?.message || result.data?.message || result.data?.error || `HTTP ${result.status}`)
         : undefined,

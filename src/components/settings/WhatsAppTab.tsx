@@ -107,37 +107,45 @@ export function WhatsAppTab() {
 
       if (error) throw error;
       const ok = isGo ? data?.ok : data?.success;
+      
+      // Strict: if API returns 404 or not OK, it's disconnected for Evolution Go
+      if (isGo && !ok) {
+        if (session.status !== "disconnected") {
+          await supabase.from("whatsapp_sessions").update({ status: "disconnected" }).eq("id", session.id);
+        }
+        return false;
+      }
+      
       if (!ok) return null;
 
       const result = isGo ? (data?.data?.data ?? data?.data) : data.data;
       const normalizedStatus = data?.normalizedStatus;
 
+      // Use the normalized status from the Edge Function if available
       const isConnected = isGo
-        ? (normalizedStatus === "connected" || result?.Connected === true || result?.connected === true || result?.LoggedIn === true)
+        ? (data?.isConnected === true)
         : (result?.state === "open" || result?.connected === true);
 
-      const status = isConnected ? "connected" : (normalizedStatus || (isGo ? "disconnected" : (result?.state === "open" ? "connected" : "disconnected")));
+      // Map normalized status or fallback
+      const finalStatus = isConnected ? "connected" : (normalizedStatus || "disconnected");
 
-      if (status !== session.status) {
-        const phone = isGo
-          ? (result?.jid?.split("@")[0] || null)
-          : (result?.phone || result?.instance?.wuid?.split("@")[0] || null);
-        
-        const update: any = { status };
-        if (phone) update.phone_number = phone;
-        if (status === "connected") update.last_connected_at = new Date().toISOString();
+      const phone = isGo
+        ? (result?.jid?.split("@")[0] || null)
+        : (result?.phone || result?.instance?.wuid?.split("@")[0] || null);
+      
+      const update: any = { status: finalStatus };
+      if (phone) update.phone_number = phone;
+      if (isConnected) update.last_connected_at = new Date().toISOString();
 
+      // Always update if the status changed OR if we just confirmed it's connected (to update phone/last_connected)
+      if (finalStatus !== session.status || isConnected) {
         await supabase
           .from("whatsapp_sessions")
           .update(update)
           .eq("id", session.id);
-
-        return status === "connected";
       }
       
-      return status === "connected";
-
-      return false;
+      return isConnected;
     } catch (error) {
       console.log("Polling check failed:", error);
       return null;
@@ -150,26 +158,15 @@ export function WhatsAppTab() {
     setVerifyingSessionId(session.id);
 
     try {
-      const connected = await checkConnection(session);
+      // Direct call to ensure we get the latest status
+      const isConnected = await checkConnection(session);
 
-      if (connected === true) {
+      if (isConnected === true) {
         toast({ title: "✅ Conectado!", description: "WhatsApp está online" });
-      } else if (connected === null) {
-        toast({ title: "⚠️ Não foi possível verificar", description: "Tente novamente em alguns segundos" });
+      } else if (isConnected === false) {
+        toast({ title: "⚠️ Desconectado", description: "WhatsApp não está conectado" });
       } else {
-        // Retry once before marking disconnected
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        const retryResult = await checkConnection(session);
-
-        if (retryResult === true) {
-          toast({ title: "✅ Conectado!", description: "WhatsApp está online" });
-        } else {
-          await supabase.
-          from("whatsapp_sessions").
-          update({ status: "disconnected" }).
-          eq("id", session.id);
-          toast({ title: "⚠️ Desconectado", description: "WhatsApp não está conectado" });
-        }
+        toast({ title: "⚠️ Não foi possível verificar", description: "Tente novamente em alguns segundos" });
       }
 
       queryClient.invalidateQueries({ queryKey: ["whatsapp-sessions"] });
