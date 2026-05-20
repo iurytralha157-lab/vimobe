@@ -201,28 +201,66 @@ function getActionConfig(action: string, payload: any) {
     case "instance.logout":
       return { method: "DELETE", path: "/instance/logout", instanceId: inst, token };
 
-    // ---------- Messages & Other ----------
-    case "send.text":
-      return { method: "POST", path: "/send/text", body: b, instanceId: inst, token };
-    case "send.media":
-      return { method: "POST", path: "/send/media", body: b, instanceId: inst, token };
-    case "send.audio":
-      return { 
-        method: "POST", 
-        path: "/send/media", 
-        body: { ...b, mediatype: "audio", ptt: true }, 
-        instanceId: inst, 
-        token 
-      };
-    
-    // Add other cases as needed by following the pattern
+    case "instance.pair":
+      return { method: "POST", path: "/instance/pair", body: b, instanceId: inst, token };
+
+    // ---------- Send ----------
+    case "send.text":     return { method: "POST", path: "/send/text",     body: b, instanceId: inst, token };
+    case "send.media":    return { method: "POST", path: "/send/media",    body: b, instanceId: inst, token };
+    case "send.audio":    return { method: "POST", path: "/send/media",    body: { ...b, mediatype: "audio", ptt: true }, instanceId: inst, token };
+    case "send.sticker":  return { method: "POST", path: "/send/sticker",  body: b, instanceId: inst, token };
+    case "send.location": return { method: "POST", path: "/send/location", body: b, instanceId: inst, token };
+    case "send.contact":  return { method: "POST", path: "/send/contact",  body: b, instanceId: inst, token };
+    case "send.link":     return { method: "POST", path: "/send/link",     body: b, instanceId: inst, token };
+    case "send.poll":     return { method: "POST", path: "/send/poll",     body: b, instanceId: inst, token };
+
+    // ---------- Message ----------
+    case "message.delete":   return { method: "POST", path: "/message/delete",        body: b, instanceId: inst, token };
+    case "message.edit":     return { method: "POST", path: "/message/edit",          body: b, instanceId: inst, token };
+    case "message.react":    return { method: "POST", path: "/message/react",         body: b, instanceId: inst, token };
+    case "message.markread": return { method: "POST", path: "/message/markread",      body: b, instanceId: inst, token };
+    case "message.presence": return { method: "POST", path: "/message/presence",      body: b, instanceId: inst, token };
+    case "message.status":   return { method: "POST", path: "/message/status",        body: b, instanceId: inst, token };
+    case "message.downloadMedia": return { method: "POST", path: "/message/downloadimage", body: b, instanceId: inst, token };
+
+    // ---------- Chat ----------
+    case "chat.archive":   return { method: "POST", path: "/chat/archive",   body: b, instanceId: inst, token };
+    case "chat.unarchive": return { method: "POST", path: "/chat/archive",   body: { ...b, archive: false }, instanceId: inst, token };
+    case "chat.mute":      return { method: "POST", path: "/chat/mute",      body: b, instanceId: inst, token };
+    case "chat.unmute":    return { method: "POST", path: "/chat/mute",      body: { ...b, mute: false }, instanceId: inst, token };
+    case "chat.pin":       return { method: "POST", path: "/chat/pin",       body: b, instanceId: inst, token };
+    case "chat.unpin":     return { method: "POST", path: "/chat/unpin",     body: b, instanceId: inst, token };
+
+    // ---------- Label ----------
+    case "label.list":       return { method: "GET",  path: "/label", instanceId: inst, token };
+    case "label.edit":       return { method: "POST", path: "/label/edit",     body: b, instanceId: inst, token };
+    case "label.addChat":    return { method: "POST", path: "/label/chat",     body: b, instanceId: inst, token };
+    case "label.addMsg":     return { method: "POST", path: "/label/message",  body: b, instanceId: inst, token };
+    case "label.removeChat": return { method: "POST", path: "/unlabel/chat",    body: b, instanceId: inst, token };
+    case "label.removeMsg":  return { method: "POST", path: "/unlabel/message", body: b, instanceId: inst, token };
+
+    // ---------- Group ----------
+    case "group.list":        return { method: "GET",  path: "/group/list",  instanceId: inst, token };
+    case "group.myAll":       return { method: "GET",  path: "/group/myall", instanceId: inst, token };
+    case "group.info":        return { method: "POST", path: "/group/info",         body: b, instanceId: inst, token };
+    case "group.create":      return { method: "POST", path: "/group/create",       body: b, instanceId: inst, token };
+    case "group.setName":     return { method: "POST", path: "/group/name",         body: b, instanceId: inst, token };
+    case "group.setPhoto":    return { method: "POST", path: "/group/photo",        body: b, instanceId: inst, token };
+    case "group.inviteLink":  return { method: "POST", path: "/group/invitelink",   body: b, instanceId: inst, token };
+    case "group.join":        return { method: "POST", path: "/group/join",         body: b, instanceId: inst, token };
+    case "group.leave":       return { method: "POST", path: "/group/leave",        body: b, instanceId: inst, token };
+    case "group.participant": return { method: "POST", path: "/group/participant",  body: b, instanceId: inst, token };
+
+    // ---------- User ----------
+    case "user.avatar":    return { method: "POST", path: "/user/avatar",   body: b, instanceId: inst, token };
+    case "user.info":      return { method: "POST", path: "/user/info",     body: b, instanceId: inst, token };
+    case "user.check":     return { method: "POST", path: "/user/check",    body: b, instanceId: inst, token };
+    case "user.contacts":  return { method: "GET",  path: "/user/contacts", instanceId: inst, token };
+    case "user.block":     return { method: "POST", path: "/user/block",    body: b, instanceId: inst, token };
+    case "user.unblock":   return { method: "POST", path: "/user/unblock",  body: b, instanceId: inst, token };
+    case "user.blocklist": return { method: "GET",  path: "/user/blocklist", instanceId: inst, token };
+
     default:
-      // Fallback to direct mapping for common send/message actions if they match path
-      if (action.includes(".")) {
-        const [category, sub] = action.split(".");
-        const path = `/${category}/${sub}`;
-        return { method: "POST", path, body: b, instanceId: inst, token };
-      }
       throw new Error(`Unknown action: ${action}`);
   }
 }
