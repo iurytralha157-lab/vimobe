@@ -203,33 +203,31 @@ async function handleMessageUpsert(session: any, event: any) {
 async function handleConnectionUpdate(session: any, event: any) {
   const data = event.data || event;
   const state = (data.state || data.connectionStatus || data.status || "").toLowerCase();
-  const eventName = (event.event || event.type || "").toLowerCase();
+  const eventName = (event.event || event.type || event.action || "").toLowerCase();
   
-  console.log(`[Webhook] Processing connection update for session ${session.id}:`, {
-    state,
-    eventName,
-    instance: session.instance_name
-  });
+  console.log(`[Diagnostic] Normalizing status for event ${eventName} (state: ${state})`);
 
+  // Normalized logic requested by user
   const isConnected = 
-    state === "open" || 
-    state === "connected" || 
-    eventName === "pair.success" ||
+    ["pairsuccess", "connected", "connection", "open"].includes(eventName) ||
+    ["open", "connected"].includes(state) ||
     data.connected === true ||
     data.loggedIn === true;
 
   const isDisconnected = 
-    state === "close" || 
-    state === "closed" || 
-    state === "disconnected" || 
-    state === "disconnect" ||
-    state === "offline";
+    ["loggedout", "disconnected", "qrtimeout", "close", "closed", "offline"].includes(eventName) ||
+    ["close", "closed", "disconnected", "disconnect", "offline"].includes(state);
 
   let status = session.status;
-  if (isConnected) status = "connected";
-  else if (isDisconnected) status = "disconnected";
-  else if (state === "connecting") status = "connecting";
-  else if (state === "qr" || eventName === "qrcode.updated") status = "qr_ready";
+  if (isConnected) {
+    status = "connected";
+  } else if (isDisconnected) {
+    status = "disconnected";
+  } else if (state === "connecting") {
+    status = "connecting";
+  } else if (state === "qr" || ["qrcode", "qr_ready"].includes(eventName)) {
+    status = "qr_ready";
+  }
 
   const update: any = { 
     status, 
@@ -238,11 +236,9 @@ async function handleConnectionUpdate(session: any, event: any) {
 
   if (status === "connected") {
     update.last_connected_at = new Date().toISOString();
-    // Try to get phone from event if available
     const phone = data.jid?.split("@")[0] || data.phone || data.number;
     if (phone) update.phone_number = phone;
     
-    // Clear QR code related settings if they exist in advanced_settings
     if (session.advanced_settings?.qr_code) {
       update.advanced_settings = { 
         ...session.advanced_settings, 
@@ -252,13 +248,21 @@ async function handleConnectionUpdate(session: any, event: any) {
     }
   }
 
-  const { error } = await supabase.from("whatsapp_sessions").update(update).eq("id", session.id);
+  console.log(`[Diagnostic] Attempting update on 'whatsapp_sessions' for id ${session.id} with status: ${status}`);
+
+  const { data: updatedRows, error, count } = await supabase
+    .from("whatsapp_sessions")
+    .update(update)
+    .eq("id", session.id)
+    .select();
   
   if (error) {
-    console.error(`[Webhook] Error updating session ${session.id}:`, error);
+    console.error(`[Diagnostic] Error updating session ${session.id}:`, error);
   } else {
-    console.log(`[Webhook] Session ${session.id} updated to ${status}`);
+    console.log(`[Diagnostic] Success: Session ${session.id} updated. Rows affected: ${updatedRows?.length || 0}`);
   }
+  
+  return status;
 }
 
 async function handleQrUpdate(session: any, event: any) {
@@ -309,101 +313,137 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
+    const url = new URL(req.url);
+    const bodyText = await req.text();
+    const body = bodyText ? JSON.parse(bodyText) : {};
+    
+    const method = req.method;
+    const queryParams = Object.fromEntries(url.searchParams.entries());
+    const headers = Object.fromEntries(req.headers.entries());
+    // Filter out potential secrets from headers for logging
+    const safeHeaders = { ...headers };
+    delete safeHeaders["authorization"];
+    delete safeHeaders["apikey"];
+    delete safeHeaders["x-api-key"];
+
+    const event = body?.event || body?.type || body?.action || "";
+    const instanceId = body?.instanceId || body?.instance_id || body?.instance || "";
+    const queryInstanceId = url.searchParams.get("instance_id") || url.searchParams.get("instanceId") || "";
+    
+    const data = body?.data || body || {};
+    const diag = {
+      method,
+      url: req.url,
+      queryParams,
+      headers: safeHeaders,
+      event,
+      instanceId,
+      queryInstanceId,
+      status: data.status,
+      state: data.state,
+      connectionStatus: data.connectionStatus
+    };
+
+    console.log("[Diagnostic] Webhook received:", JSON.stringify(diag, null, 2));
+    console.log("[Diagnostic] Raw body:", bodyText);
+
     // Security: validate Evolution Go apikey header
     const incomingKey = req.headers.get("apikey") || req.headers.get("x-api-key");
     if (API_KEY && incomingKey && incomingKey !== API_KEY) {
+      console.warn("[Diagnostic] Forbidden: Invalid API Key");
       return new Response("forbidden", { status: 403, headers: corsHeaders });
     }
-
-    const url = new URL(req.url);
-    const instanceId = url.searchParams.get("instance_id")
-      || url.searchParams.get("instanceId")
-      || req.headers.get("instanceid")
-      || req.headers.get("instance-id");
-
-    const body = await req.json().catch(() => ({}));
-    const event = body?.event || body?.type || body?.action || "";
 
     // Find the session
     let session: any = null;
     const sid = body?.session_id || body?.sessionId;
     if (sid) {
-      const { data } = await supabase.from("whatsapp_sessions").select("*").eq("id", sid).maybeSingle();
-      session = data;
+      const { data: s } = await supabase.from("whatsapp_sessions").select("*").eq("id", sid).maybeSingle();
+      session = s;
     }
-    if (!session && instanceId) {
-      const { data } = await supabase.from("whatsapp_sessions").select("*")
-        .or(`instance_id.eq.${instanceId},instance_name.eq.${instanceId}`)
+    
+    const searchInstanceId = instanceId || queryInstanceId;
+    if (!session && searchInstanceId) {
+      const { data: s } = await supabase.from("whatsapp_sessions").select("*")
+        .or(`instance_id.eq.${searchInstanceId},instance_name.eq.${searchInstanceId}`)
         .eq("provider", "evolution_go")
         .maybeSingle();
-      session = data;
-    }
-    if (!session && body?.instance) {
-      const { data } = await supabase.from("whatsapp_sessions").select("*")
-        .or(`instance_id.eq.${body.instance},instance_name.eq.${body.instance}`)
-        .eq("provider", "evolution_go")
-        .maybeSingle();
-      session = data;
+      session = s;
     }
 
     if (!session) {
-      console.warn("evolution-go-webhook: session not found", { event, instanceId });
-      return new Response(JSON.stringify({ ok: true, ignored: true }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      console.warn("[Diagnostic] Session not found for identifiers:", { sid, instanceId, queryInstanceId });
+      return new Response(JSON.stringify({ 
+        received: true, 
+        ignored: true, 
+        reason: "session_not_found",
+        event,
+        instanceId,
+        queryInstanceId
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Run handler (fire-and-forget via waitUntil if possible)
-    const work = (async () => {
-      try {
-        const normalizedEvent = event.toLowerCase().replace(/_/g, ".");
-        
-        console.log(`[Webhook] Normalized event: ${normalizedEvent} for session: ${session.id}`);
+    let normalizedStatus = "unknown";
 
-        switch (normalizedEvent) {
-          case "qrcode.updated":
-          case "qr.updated":
-          case "qr":
-          case "qrcode":
-            await handleQrUpdate(session, body); break;
-          case "connection.update":
-          case "connection.status":
-          case "connection":
-            await handleConnectionUpdate(session, body); break;
-          case "pair.success":
-            // On pair success, we can treat it as connected
-            await handleConnectionUpdate(session, { ...body, state: "open" }); break;
-          case "messages.upsert":
-          case "message.upsert":
-          case "messages.received":
-          case "message":
-            await handleMessageUpsert(session, body); break;
-          case "labels.upsert":
-          case "labels.set":
-            await handleLabelsUpsert(session, body); break;
-          case "groups.upsert":
-          case "groups.update":
-            await handleGroupsUpsert(session, body); break;
-          case "history.sync":
-          case "history_sync":
-            console.log(`[Webhook] History sync event received for session ${session.id}`);
-            // History sync doesn't necessarily change connection status but we log it
-            break;
-          default:
-            console.log("[Webhook] Unhandled event:", event);
-        }
-      } catch (e) {
-        console.error("handler error:", e);
+    // Run handler
+    try {
+      const normalizedEvent = event.toLowerCase().replace(/_/g, ".");
+      console.log(`[Diagnostic] Processing event: ${normalizedEvent} for session: ${session.id}`);
+
+      switch (normalizedEvent) {
+        case "qrcode.updated":
+        case "qr.updated":
+        case "qr":
+        case "qrcode":
+          normalizedStatus = "qr_ready";
+          await handleQrUpdate(session, body); 
+          break;
+        case "connection.update":
+        case "connection.status":
+        case "connection":
+        case "connected":
+        case "pair.success":
+        case "pairsuccess":
+        case "loggedout":
+        case "disconnected":
+        case "qrtimeout":
+          normalizedStatus = await handleConnectionUpdate(session, body); 
+          break;
+        case "messages.upsert":
+        case "message.upsert":
+        case "messages.received":
+        case "message":
+          await handleMessageUpsert(session, body); 
+          break;
+        case "labels.upsert":
+        case "labels.set":
+          await handleLabelsUpsert(session, body); 
+          break;
+        case "groups.upsert":
+        case "groups.update":
+          await handleGroupsUpsert(session, body); 
+          break;
+        case "history.sync":
+        case "history_sync":
+          console.log(`[Diagnostic] History sync for session ${session.id}`);
+          break;
+        default:
+          console.log("[Diagnostic] Unhandled event type:", event);
       }
-    })();
+    } catch (e) {
+      console.error("[Diagnostic] Handler error:", e);
+    }
 
-    // @ts-ignore EdgeRuntime is provided by Supabase
-    if (typeof EdgeRuntime !== "undefined") EdgeRuntime.waitUntil(work);
-    else await work;
+    return new Response(JSON.stringify({ 
+      received: true, 
+      event, 
+      instanceId, 
+      queryInstanceId, 
+      normalizedStatus 
+    }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-    return new Response(JSON.stringify({ ok: true }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (err) {
-    console.error("evolution-go-webhook fatal:", err);
+    console.error("[Diagnostic] Fatal error:", err);
     return new Response(
       JSON.stringify({ ok: false, error: err instanceof Error ? err.message : String(err) }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
