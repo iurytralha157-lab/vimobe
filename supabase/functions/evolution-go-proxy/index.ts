@@ -287,6 +287,107 @@ Deno.serve(async (req) => {
       );
     }
 
+    if (action === "debug.instances") {
+      const instanceId = payload?.instance_id || payload?.instanceId;
+      const results = [];
+
+      const tests = [
+        {
+          name: "GET /instance/all",
+          method: "GET",
+          path: "/instance/all",
+          headers: { "apikey": API_KEY },
+          body: null,
+          useInstanceId: false
+        },
+        {
+          name: "GET /instance/get/{instanceId}",
+          method: "GET",
+          path: `/instance/get/${instanceId || "test-instance"}`,
+          headers: { "apikey": API_KEY, ...(instanceId ? { "instanceId": instanceId } : {}) },
+          body: null,
+          useInstanceId: true
+        },
+        {
+          name: "GET /instance/qr (no query string, instanceId in header only)",
+          method: "GET",
+          path: "/instance/qr",
+          headers: { "apikey": API_KEY, ...(instanceId ? { "instanceId": instanceId } : {}) },
+          body: null,
+          useInstanceId: true
+        },
+        {
+          name: "POST /instance/connect",
+          method: "POST",
+          path: "/instance/connect",
+          headers: { 
+            "apikey": API_KEY,
+            "Content-Type": "application/json",
+            ...(instanceId ? { "instanceId": instanceId } : {})
+          },
+          body: {
+            webhookUrl: "https://example.com/webhook",
+            subscribe: ["ALL"],
+            immediate: true
+          },
+          useInstanceId: true
+        }
+      ];
+
+      for (const test of tests) {
+        try {
+          const url = `${API_URL}${test.path}`;
+          const headers: Record<string, string> = {};
+          
+          // Prepare headers without showing full API key
+          for (const [k, v] of Object.entries(test.headers)) {
+            if (k === "apikey") {
+              headers[k] = `${v.substring(0, 6)}***`;
+            } else {
+              headers[k] = v;
+            }
+          }
+
+          // Make the actual request
+          const fetchInit: RequestInit = {
+            method: test.method,
+            headers: test.headers
+          };
+          if (test.body && test.method !== "GET") {
+            fetchInit.body = JSON.stringify(test.body);
+          }
+
+          const res = await fetch(url, fetchInit);
+          const rawText = await res.text();
+
+          results.push({
+            test: test.name,
+            endpoint: test.path,
+            method: test.method,
+            headersSent: headers,
+            bodySent: test.body,
+            status: res.status,
+            rawText: rawText.substring(0, 500), // Truncate long responses
+            instanceIdUsed: test.useInstanceId ? instanceId : "not used",
+            fullUrl: url
+          });
+        } catch (e: any) {
+          results.push({
+            test: test.name,
+            endpoint: test.path,
+            method: test.method,
+            error: e.message,
+            instanceIdUsed: test.useInstanceId ? instanceId : "not used"
+          });
+        }
+      }
+
+      return new Response(
+        JSON.stringify({ ok: true, debugInstancesResults: results }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
     const call = buildCall(action, payload);
     const result = await callEvolutionGo(call, action);
 
