@@ -209,8 +209,10 @@ async function handleConnectionUpdate(session: any, event: any) {
     connecting: "connecting",
     close: "disconnected",
     disconnected: "disconnected",
+    qr: "qr_ready",
   };
   const status = map[state] || state;
+
   const update: any = { status, updated_at: new Date().toISOString() };
   if (status === "connected") update.last_connected_at = new Date().toISOString();
   await supabase.from("whatsapp_sessions").update(update).eq("id", session.id);
@@ -219,7 +221,7 @@ async function handleConnectionUpdate(session: any, event: any) {
 async function handleQrUpdate(session: any, event: any) {
   const qr = event.data?.qrcode || event.qrcode || event.qr;
   await supabase.from("whatsapp_sessions").update({
-    status: "qr",
+    status: "qr_ready",
     advanced_settings: { ...(session.advanced_settings || {}), qr_code: qr, qr_updated_at: new Date().toISOString() },
     updated_at: new Date().toISOString(),
   }).eq("id", session.id);
