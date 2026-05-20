@@ -362,19 +362,29 @@ export function useGetConnectionStatus() {
         const { data, error } = await supabase.functions.invoke("evolution-go-proxy", {
           body: { action: "instance.status", session_id: arg.sessionId, instance_id: arg.instanceId ?? undefined },
         });
+        
         if (error) throw error;
+        
+        // If not OK, but we have a data object (like 404), handle it
         if (!data?.ok) {
-          if (data?.status === 404) return { instanceNotFound: true };
+          if (data?.status === 404 || data?.data?.status === 404) {
+            return { connected: false, status: "disconnected", instanceNotFound: true };
+          }
           throw new Error(data?.error || "Failed to get status");
         }
-        const s = data?.data?.data ?? data?.data ?? {};
-        return {
-          connected: data?.normalizedStatus === "connected" || s.Connected === true || s.connected === true,
-          status: data?.normalizedStatus || (s.Connected || s.connected ? "connected" : "disconnected"),
-          state: s.LoggedIn || s.Connected || data?.normalizedStatus === "connected" ? "open" : "close",
-          instance: { wuid: s.jid || s.Name || null },
-        };
 
+        const normalizedStatus = data?.normalizedStatus || "disconnected";
+        const isConnected = data?.isConnected === true;
+        const rawData = data?.data?.data ?? data?.data ?? {};
+
+        return {
+          connected: isConnected,
+          status: normalizedStatus,
+          state: isConnected ? "open" : "close",
+          instance: { wuid: rawData.jid || rawData.Name || null },
+          rawResponse: data?.rawResponse,
+          rawStatus: data?.rawStatus
+        };
       }
 
       const { data, error } = await supabase.functions.invoke("evolution-proxy", {
