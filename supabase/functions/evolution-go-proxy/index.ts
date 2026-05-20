@@ -372,6 +372,69 @@ Deno.serve(async (req) => {
       }
     }
 
+    // --- Action Handlers ---
+
+    // 5. debug.status.compare
+    if (action === "debug.status.compare") {
+      const { instance_id, instance_name } = payload;
+      const tests = [
+        { 
+          name: "Status by ID (Header)", 
+          method: "GET", 
+          path: "/instance/status", 
+          instanceId: instance_id,
+          query: { instanceId: instance_id }
+        },
+        { 
+          name: "Status by Name (Header)", 
+          method: "GET", 
+          path: "/instance/status", 
+          instanceId: instance_name,
+          query: { instanceId: instance_name }
+        },
+        { 
+          name: "Get by ID (URL)", 
+          method: "GET", 
+          path: `/instance/get/${instance_id}` 
+        },
+        { 
+          name: "Get by Name (URL)", 
+          method: "GET", 
+          path: `/instance/get/${instance_name}` 
+        }
+      ];
+
+      const results = [];
+      for (const test of tests) {
+        try {
+          const res = await evolutionFetch(test.method, test.path, { 
+            action, 
+            instanceId: test.instanceId,
+            query: test.query
+          });
+          
+          const normStatus = normalizeStatus(res.data, "instance.status");
+          results.push({
+            test: test.name,
+            endpoint: test.path,
+            headerInstanceId: test.instanceId || "none",
+            httpStatus: res.status,
+            rawText: res.rawText.substring(0, 500),
+            rawStatus: (res.data?.state || res.data?.status || res.data?.instance?.state || "").toLowerCase(),
+            normalizedStatus: normStatus,
+            isConnected: normStatus === "connected"
+          });
+        } catch (e: any) {
+          results.push({ test: test.name, error: e.message });
+        }
+      }
+
+      return new Response(
+        JSON.stringify({ ok: true, debugCompareResults: results }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
     // Standard Actions
     const config = getActionConfig(action, payload);
     const result = await evolutionFetch(config.method, config.path, {
