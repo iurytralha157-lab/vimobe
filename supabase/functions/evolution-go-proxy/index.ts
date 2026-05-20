@@ -78,32 +78,38 @@ function normalizeStatus(data: any) {
 
   const rawState = (target.state || target.connectionStatus || "").toLowerCase();
   const rawStatus = (target.status || "").toLowerCase();
-  const isConnectedValue = target.connected === true || target.Connected === true || target.loggedIn === true || target.LoggedIn === true;
+  
+  // Rule: LoggedIn is the definitive truth for Evolution Go
+  const loggedIn = target.loggedIn === true || target.LoggedIn === true;
+  const connected = target.connected === true || target.Connected === true;
 
-  // Connected mapping
-  const isConnected = 
-    isConnectedValue || 
-    ["open", "connected"].includes(rawState) ||
-    ["open", "connected"].includes(rawStatus) ||
-    target.status === "open";
+  // 1. Connected: Only if loggedIn is true
+  if (loggedIn || rawState === "open" || rawStatus === "open") {
+    // Safety check: if we have an explicit LoggedIn: false, it's not connected
+    if (target.LoggedIn === false || target.loggedIn === false) {
+      console.log(`[EvolutionProxy] Normalization: Connected=true but LoggedIn=false. Mapping to qr_ready.`);
+      return "qr_ready";
+    }
+    return "connected";
+  }
 
-  if (isConnected) return "connected";
+  // 2. QR Ready: If connected (instance active) but not loggedIn (no session)
+  // Or if we explicitly find a QR code
+  const qr = normalizeQRCodeResponse(data);
+  if (connected || qr.found || rawStatus === "qr") {
+    console.log(`[EvolutionProxy] Normalization: Instance active (Connected: ${connected}) but not LoggedIn. Mapping to qr_ready.`);
+    return "qr_ready";
+  }
 
-  // Disconnected mapping
+  // 3. Disconnected: Everything else
   const isDisconnected = 
-    isConnectedValue === false ||
+    loggedIn === false ||
     ["close", "closed", "disconnected", "disconnect", "offline", "logout", "logged_out"].includes(rawState) ||
     ["close", "closed", "disconnected", "offline", "logout", "logged_out"].includes(rawStatus) ||
     rawState === "null" ||
     !rawState;
 
   if (isDisconnected) return "disconnected";
-
-  // If we have a QR, it's ready but not connected
-  const qr = normalizeQRCodeResponse(data);
-  if (qr.found || rawStatus === "qr") {
-    return "qr_ready";
-  }
 
   return "disconnected";
 }
