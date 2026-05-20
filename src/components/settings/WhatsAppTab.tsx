@@ -150,6 +150,20 @@ export function WhatsAppTab() {
 
   // Verificar conexão manualmente
   const handleVerifyConnection = async (session: WhatsAppSession) => {
+    // Debug diagnostic call
+    if (session.provider === "evolution_go") {
+      console.log("[Diagnostic] Running debug.status.compare...");
+      supabase.functions.invoke("evolution-go-proxy", {
+        body: {
+          action: "debug.status.compare",
+          instance_id: session.instance_id,
+          instance_name: session.instance_name
+        }
+      }).then(({ data }) => {
+        console.log("[Diagnostic] debug.status.compare results:", data?.debugCompareResults);
+      });
+    }
+
     setVerifyingSessionId(session.id);
 
     console.group(`[Diagnostic] Verifying WhatsApp Session: ${session.display_name || session.instance_name}`);
