@@ -121,13 +121,13 @@ export function WhatsAppTab() {
       const result = isGo ? (data?.data?.data ?? data?.data) : data.data;
       const normalizedStatus = data?.normalizedStatus;
 
-      // Use the normalized status from the Edge Function if available
+      // Rule: status open = connected, status close = disconnected
       const isConnected = isGo
-        ? (data?.isConnected === true)
+        ? (normalizedStatus === "connected")
         : (result?.state === "open" || result?.connected === true);
 
-      // Map normalized status or fallback
-      const finalStatus = isConnected ? "connected" : (normalizedStatus || "disconnected");
+      // Final status mapping
+      const finalStatus = normalizedStatus || (isConnected ? "connected" : "disconnected");
 
       const phone = isGo
         ? (result?.jid?.split("@")[0] || null)

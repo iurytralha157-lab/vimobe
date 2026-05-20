@@ -68,47 +68,52 @@ function normalizeQRCodeResponse(data: any) {
 function normalizeStatus(data: any, action?: string) {
   if (!data) return "disconnected";
 
-  // Check for explicit connection indicators (Strict rules)
-  const state = (data.state || data.connectionStatus || "").toLowerCase();
-  const status = (data.status || "").toLowerCase();
-  
+  // 1. Get raw state and status
+  const rawState = (data.state || data.connectionStatus || "").toLowerCase();
+  const rawStatus = (data.status || "").toLowerCase();
+  const isConnectedValue = data.connected === true || data.Connected === true || data.loggedIn === true || data.LoggedIn === true;
+
+  // 2. Connected conditions (Rule: status open = conectado)
   const isConnected = 
-    data.connected === true || 
-    data.Connected === true || 
-    state === "open" || 
-    state === "connected" ||
-    status === "connected" ||
-    data.loggedIn === true || 
-    data.LoggedIn === true;
+    isConnectedValue || 
+    rawState === "open" || 
+    rawState === "connected" ||
+    rawStatus === "open" ||
+    rawStatus === "connected";
 
   if (isConnected) return "connected";
 
-  // Check for QR indicators
+  // 3. QR conditions (Rule: QR gerado = aguardando leitura)
   const qr = normalizeQRCodeResponse(data);
-  if (qr.found || action === "instance.qr" || status === "qr") {
+  if (qr.found || action === "instance.qr" || rawStatus === "qr") {
     return "qr_ready";
   }
 
-  if (status === "connecting" || state === "connecting") {
+  // 4. Connecting conditions
+  if (rawStatus === "connecting" || rawState === "connecting") {
     return "connecting";
   }
 
-  // Disconnected if it matches any of these or if no connection indicator found
+  // 5. Disconnected conditions (Rule: status close = desconectado)
   const isDisconnected = 
-    state === "close" || 
-    state === "closed" || 
-    state === "disconnected" || 
-    state === "disconnect" ||
-    state === "offline" ||
-    status === "close" ||
-    status === "closed" ||
-    status === "disconnected" ||
-    status === "offline";
+    rawState === "close" || 
+    rawState === "closed" || 
+    rawState === "disconnected" || 
+    rawState === "disconnect" ||
+    rawState === "offline" ||
+    rawStatus === "close" ||
+    rawStatus === "closed" ||
+    rawStatus === "disconnected" ||
+    rawStatus === "offline" ||
+    rawState === "null" ||
+    rawState === "" ||
+    !rawState;
 
   if (isDisconnected || data.status === "error" || data.error) {
     return "disconnected";
   }
 
+  // Default fallback
   return "disconnected";
 }
 
