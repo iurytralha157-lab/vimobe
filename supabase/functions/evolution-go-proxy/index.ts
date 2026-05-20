@@ -238,6 +238,15 @@ Deno.serve(async (req) => {
       if (isValid && normalizedStatus && session?.id) {
         // Only update if normalized status is connected or disconnected
         if (["connected", "disconnected"].includes(normalizedStatus)) {
+          console.log(`[EvolutionProxy] manual_verify Update:`, {
+            session_id: session.id,
+            instance_id: session.instance_id,
+            instance_name: session.instance_name,
+            old_status: session.status,
+            new_status: normalizedStatus,
+            filter: { id: session.id }
+          });
+
           const { error: updateError } = await supabase
             .from("whatsapp_sessions")
             .update({ status: normalizedStatus, updated_at: new Date().toISOString() })
