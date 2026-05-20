@@ -68,52 +68,31 @@ function normalizeQRCodeResponse(data: any) {
 function normalizeStatus(data: any, action?: string) {
   if (!data) return "disconnected";
 
-  // 1. Get raw state and status
-  const rawState = (data.state || data.connectionStatus || data.instance?.state || "").toLowerCase();
-  const rawStatus = (data.status || "").toLowerCase();
-  const isConnectedValue = data.connected === true || data.Connected === true || data.loggedIn === true || data.LoggedIn === true || data.instance?.state === "open";
-
-  // 2. Connected conditions (Rule: status open = conectado)
+  // Check for explicit connection indicators
   const isConnected = 
-    isConnectedValue || 
-    rawState === "open" || 
-    rawState === "connected" ||
-    rawStatus === "open" ||
-    rawStatus === "connected";
+    data.connected === true || 
+    data.Connected === true || 
+    data.state === "open" || 
+    data.connectionStatus === "open" || 
+    data.loggedIn === true || 
+    data.LoggedIn === true;
 
   if (isConnected) return "connected";
 
-  // 3. QR conditions (Rule: QR gerado = aguardando leitura)
+  // Check for QR indicators
   const qr = normalizeQRCodeResponse(data);
-  if (qr.found || action === "instance.qr" || rawStatus === "qr") {
+  if (qr.found || action === "instance.qr" || data.status === "qr") {
     return "qr_ready";
   }
 
-  // 4. Connecting conditions
-  if (rawStatus === "connecting" || rawState === "connecting") {
+  if (data.status === "connecting" || data.state === "connecting") {
     return "connecting";
   }
 
-  // 5. Disconnected conditions (Rule: status close = desconectado)
-  const isDisconnected = 
-    rawState === "close" || 
-    rawState === "closed" || 
-    rawState === "disconnected" || 
-    rawState === "disconnect" ||
-    rawState === "offline" ||
-    rawStatus === "close" ||
-    rawStatus === "closed" ||
-    rawStatus === "disconnected" ||
-    rawStatus === "offline" ||
-    rawState === "null" ||
-    rawState === "" ||
-    !rawState;
-
-  if (isDisconnected || data.status === "error" || data.error) {
-    return "disconnected";
+  if (data.status === "error" || data.error) {
+    return "error";
   }
 
-  // Default fallback
   return "disconnected";
 }
 
@@ -141,22 +120,24 @@ async function evolutionFetch(
     }
   }
 
-  // Enviar headers: apikey, Content-Type
+  // 2. Centralized Headers
   const headers: Record<string, string> = {
     "apikey": API_KEY,
     "Content-Type": "application/json",
   };
   
-  // Use instanceId if provided
+  // Use instance token if provided (instance-specific auth)
+  if (options.token && options.token !== "default_token") {
+    headers["apikey"] = options.token;
+  }
+  
   if (options.instanceId) {
     headers["instanceId"] = options.instanceId;
   }
 
-  const isStatusAction = options.action === "instance.status";
-  const isDebug = options.action?.startsWith("debug.") || options.action === "instance.qr" || isStatusAction;
-  
+  const isDebug = options.action?.startsWith("debug.") || options.action === "instance.qr";
   if (isDebug) {
-    console.log(`[EvolutionProxy] ${method} ${url.pathname}${url.search}`, {
+    console.log(`[EvolutionProxy] ${method} ${path}`, {
       action: options.action,
       instanceId: options.instanceId,
       headers: { ...headers, apikey: maskApiKey(headers.apikey) }
@@ -173,21 +154,12 @@ async function evolutionFetch(
   }
 
   try {
-    let res = await fetch(url.toString(), init);
-    
-    // Fallback logic for Evolution Go:
-    // If /instance/status returns 401 with instanceId header, try /instance/get/{instanceId} instead
-    if (res.status === 401 && isStatusAction && options.instanceId) {
-      console.log(`[EvolutionProxy] 401 on /instance/status, retrying with /instance/get/${options.instanceId}`);
-      const fallbackUrl = new URL(`${API_URL}/instance/get/${options.instanceId}`);
-      res = await fetch(fallbackUrl.toString(), { ...init, method: "GET" });
-    }
-
+    const res = await fetch(url.toString(), init);
     const rawText = await res.text();
     
     if (isDebug) {
       console.log(`[EvolutionProxy] Response ${res.status}`, {
-        rawText: rawText.substring(0, 500) + (rawText.length > 500 ? "..." : "")
+        rawText: rawText.substring(0, 200) + (rawText.length > 200 ? "..." : "")
       });
     }
 
@@ -360,7 +332,7 @@ Deno.serve(async (req) => {
     if (payload.session_id && (!payload.instance_id || !payload.token)) {
       const { data: sess } = await supabase
         .from("whatsapp_sessions")
-        .select("id, instance_id, instance_name, advanced_settings")
+        .select("instance_id, instance_name, advanced_settings")
         .eq("id", payload.session_id)
         .maybeSingle();
       
@@ -374,6 +346,73 @@ Deno.serve(async (req) => {
 
     // --- Action Handlers ---
 
+    // 5. debug.auth
+    if (action === "debug.auth") {
+      const endpoints = ["/instance", "/instance/all"];
+      const results = [];
+
+      for (const path of endpoints) {
+        try {
+          const res = await evolutionFetch("GET", path, { action });
+          results.push({
+            endpoint: path,
+            status: res.status,
+            rawText: res.rawText,
+            apiKeyMasked: maskApiKey(API_KEY)
+          });
+        } catch (e: any) {
+          results.push({ endpoint: path, error: e.message });
+        }
+      }
+
+      return new Response(
+        JSON.stringify({ ok: true, debugResults: results }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    // 5. debug.instances
+    if (action === "debug.instances") {
+      const instanceId = payload?.instance_id || payload?.instanceId;
+      const results = [];
+
+      const tests = [
+        { name: "List All", method: "GET", path: "/instance/all" },
+        { name: "Get Single", method: "GET", path: `/instance/get/${instanceId || "test"}` },
+        { name: "QR Code", method: "GET", path: "/instance/qr", instanceId },
+        { 
+          name: "Connect", 
+          method: "POST", 
+          path: "/instance/connect", 
+          instanceId,
+          body: { webhookUrl: "https://example.com", subscribe: ["ALL"], immediate: true }
+        }
+      ];
+
+      for (const test of tests) {
+        try {
+          const res = await evolutionFetch(test.method, test.path, { 
+            action, 
+            instanceId: test.instanceId,
+            body: test.body 
+          });
+          results.push({
+            test: test.name,
+            status: res.status,
+            rawText: res.rawText.substring(0, 500),
+            ok: res.ok
+          });
+        } catch (e: any) {
+          results.push({ test: test.name, error: e.message, status: 500 });
+        }
+      }
+
+      return new Response(
+        JSON.stringify({ ok: true, debugInstancesResults: results }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
     // Standard Actions
     const config = getActionConfig(action, payload);
     const result = await evolutionFetch(config.method, config.path, {
@@ -384,113 +423,40 @@ Deno.serve(async (req) => {
       action
     });
 
-    // instance.qr Diagnostic & Normalization
-    if (action === "instance.qr") {
-      const { API_URL, API_KEY } = getEvolutionConfig();
-      const instance_id = payload.instance_id;
-      const instance_name = payload.instance_name;
-
-      console.log("QR Debug Evolution Go - Start Diagnostics", {
-        session_id: payload.session_id,
-        instance_id,
-        instance_name,
-        endpoint: `${API_URL}/instance/qr`,
-        apiKeyMasked: maskApiKey(API_KEY)
-      });
-
-      const tests = [
-        { name: "Teste A (Header id)", path: "/instance/qr", headerId: instance_id, queryId: null },
-        { name: "Teste B (Header name)", path: "/instance/qr", headerId: instance_name, queryId: null },
-        { name: "Teste C (Query id)", path: "/instance/qr", headerId: null, queryId: instance_id },
-        { name: "Teste D (Query name)", path: "/instance/qr", headerId: null, queryId: instance_name },
-      ];
-
-      const results = [];
-      let successfulQr = null;
-
-      for (const test of tests) {
-        try {
-          const url = new URL(`${API_URL}${test.path}`);
-          if (test.queryId) url.searchParams.set("instanceId", test.queryId);
-          
-          const headers: Record<string, string> = {
-            "apikey": API_KEY,
-            "Content-Type": "application/json",
-          };
-          if (test.headerId) headers["instanceId"] = test.headerId;
-
-          const res = await fetch(url.toString(), { method: "GET", headers });
-          const rawText = await res.text();
-          let data;
-          try { data = JSON.parse(rawText); } catch { data = { raw: rawText }; }
-
-          const qrInfo = normalizeQRCodeResponse(data);
-          
-          results.push({
-            teste: test.name,
-            endpoint: url.toString().replace(API_URL, ""),
-            instanceIdUsed: test.headerId || test.queryId,
-            httpStatus: res.status,
-            rawText: rawText.substring(0, 100),
-            qrFound: qrInfo.found,
-            qrFieldUsed: qrInfo.field
-          });
-
-          if (qrInfo.found && !successfulQr) {
-            successfulQr = { value: qrInfo.value, field: qrInfo.field, testName: test.name };
-          }
-        } catch (err: any) {
-          results.push({ teste: test.name, error: err.message });
-        }
-      }
-
-      console.log("QR Debug Evolution Go - Results:", JSON.stringify(results, null, 2));
-
-      if (successfulQr) {
+    // 4. instance.qr Normalization
+    if (action === "instance.qr" && result.ok) {
+      const qrData = normalizeQRCodeResponse(result.data);
+      if (qrData.found) {
+        // Inject normalized field for frontend compatibility
         if (typeof result.data !== "object" || result.data === null) result.data = {};
         if (!result.data.data) result.data.data = {};
-        result.data.data.qrcode = successfulQr.value;
+        result.data.data.qrcode = qrData.value;
+        
+        // Add metadata about normalization
         (result as any).normalizedQrFound = true;
-        (result as any).qrFieldUsed = successfulQr.field;
-        (result as any).winningTest = successfulQr.testName;
+        (result as any).qrFieldUsed = qrData.field;
       }
-      
-      (result as any).diagnosticResults = results;
     }
 
-
-    const normalizedStatus = normalizeStatus(result.data, action);
-    const isConnected = normalizedStatus === "connected";
-    const rawStatus = (result.data?.state || result.data?.connectionStatus || result.data?.status || result.data?.instance?.state || "").toLowerCase();
-
     const responseBody: Record<string, any> = {
-      ok: action === "instance.qr" ? true : result.ok,
+      ok: result.ok,
       status: result.status,
-      httpStatus: result.status,
       data: result.data,
-      normalizedStatus,
-      isConnected,
-      rawStatus,
-      rawResponse: result.rawText,
-      error: !result.ok
+      normalizedStatus: normalizeStatus(result.data, action),
+      error: !result.ok 
         ? (result.data?.error?.message || result.data?.message || result.data?.error || `HTTP ${result.status}`)
         : undefined,
-      ...(result as any).normalizedQrFound ? {
+      ...(result as any).normalizedQrFound ? { 
         normalizedQrFound: (result as any).normalizedQrFound,
-        qrFieldUsed: (result as any).qrFieldUsed,
-        winningTest: (result as any).winningTest
-      } : {},
-      diagnosticResults: (result as any).diagnosticResults
-
+        qrFieldUsed: (result as any).qrFieldUsed
+      } : {}
     };
 
-    // NOTE: Status is written ONLY by the evolution-go-webhook. Proxy never writes status.
 
     return new Response(
       JSON.stringify(responseBody),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
-
 
   } catch (err: any) {
     console.error("evolution-go-proxy error:", err);

@@ -49,33 +49,6 @@ export interface WhatsAppSessionAccess {
 
 export function useWhatsAppSessions() {
   const { profile } = useAuth();
-  const queryClient = useQueryClient();
-
-  useEffect(() => {
-    if (!profile?.organization_id) return;
-
-    // Supabase Realtime subscription to reflect webhook updates immediately
-    const channel = supabase
-      .channel('whatsapp_sessions_changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'whatsapp_sessions',
-          filter: `organization_id=eq.${profile.organization_id}`
-        },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ["whatsapp-sessions", profile?.organization_id] });
-          queryClient.invalidateQueries({ queryKey: ["whatsapp-session"] });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [profile?.organization_id, queryClient]);
 
   return useQuery({
     queryKey: ["whatsapp-sessions", profile?.organization_id],
@@ -251,12 +224,11 @@ export function useCreateWhatsAppSession() {
             session_id: session.id,
             instance_id: evoId,
             token,
-            body: {
-              webhookUrl: `${webhookUrl}?session_id=${session.id}`,
-              subscribe: ["ALL"],
-              immediate: true
+            body: { 
+              webhookUrl: `${webhookUrl}?instance_id=${evoId}`, 
+              subscribe: ["ALL"], 
+              immediate: true 
             },
-
           },
         });
       }
@@ -338,8 +310,7 @@ export function useDeleteWhatsAppSession() {
 export function useGetQRCode() {
   return useMutation({
     mutationFn: async (
-      arg: string | { provider: WhatsAppProvider; instanceName: string; sessionId?: string; instanceId?: string | null; instance_name?: string },
-
+      arg: string | { provider: WhatsAppProvider; instanceName: string; sessionId?: string; instanceId?: string | null },
     ) => {
       // Legacy: string => evolution-proxy
       if (typeof arg === "string") {
@@ -354,18 +325,8 @@ export function useGetQRCode() {
 
       if (arg.provider === "evolution_go") {
         const { data, error } = await supabase.functions.invoke("evolution-go-proxy", {
-          body: { 
-            action: "instance.qr", 
-            session_id: arg.sessionId, 
-            instance_id: arg.instanceId ?? undefined,
-            instance_name: arg.instanceName || arg.instance_name
-          },
+          body: { action: "instance.qr", session_id: arg.sessionId, instance_id: arg.instanceId ?? undefined },
         });
-        
-        if (data?.diagnosticResults) {
-          console.log("QR Debug Evolution Go", data.diagnosticResults);
-        }
-
         if (error) throw error;
         if (!data?.ok) throw new Error(data?.error || "Failed to get QR code");
         const qr = data?.data?.data?.qrcode ?? data?.data?.qrcode ?? data?.data?.Qrcode ?? null;
@@ -401,29 +362,20 @@ export function useGetConnectionStatus() {
         const { data, error } = await supabase.functions.invoke("evolution-go-proxy", {
           body: { action: "instance.status", session_id: arg.sessionId, instance_id: arg.instanceId ?? undefined },
         });
-
-        // Never throw — front-end must not surface API errors as toast
-        if (error) {
-          console.log("[Status] invoke error (ignored):", error);
-          return { connected: false, status: "unknown", state: "unknown", apiError: true };
-        }
+        if (error) throw error;
         if (!data?.ok) {
-          console.log("[Status] API not OK (ignored):", data?.httpStatus, data?.error);
-          return { connected: false, status: "unknown", state: "unknown", apiError: true };
+          if (data?.status === 404) return { instanceNotFound: true };
+          throw new Error(data?.error || "Failed to get status");
         }
-
-        const normalizedStatus = data?.normalizedStatus || "disconnected";
-        const isConnected = data?.isConnected === true || normalizedStatus === "connected";
-        const rawData = data?.data?.data ?? data?.data ?? {};
-
+        const s = data?.data?.data ?? data?.data ?? {};
         return {
-          connected: isConnected,
-          status: normalizedStatus,
-          state: isConnected ? "open" : (normalizedStatus === "qr_ready" ? "qr" : "close"),
-          instance: { wuid: rawData.jid || rawData.Name || null },
+          connected: data?.normalizedStatus === "connected" || s.Connected === true || s.connected === true,
+          status: data?.normalizedStatus || (s.Connected || s.connected ? "connected" : "disconnected"),
+          state: s.LoggedIn || s.Connected || data?.normalizedStatus === "connected" ? "open" : "close",
+          instance: { wuid: s.jid || s.Name || null },
         };
-      }
 
+      }
 
       const { data, error } = await supabase.functions.invoke("evolution-proxy", {
         body: { action: "getConnectionStatus", instanceName: arg.instanceName },

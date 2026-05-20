@@ -201,71 +201,21 @@ async function handleMessageUpsert(session: any, event: any) {
 }
 
 async function handleConnectionUpdate(session: any, event: any) {
-  const data = event.data || event;
-  // Check multiple fields for state/status
-  const state = (data.state || data.connectionStatus || data.status || event.state || event.status || "").toLowerCase();
-  const eventName = (event.event || event.type || event.action || "").toLowerCase();
-  
-  console.log(`[Diagnostic] Normalizing status. Event: '${eventName}', State: '${state}'`);
-
-  // Normalized logic requested by user
-  const isConnected = 
-    ["pairsuccess", "connected", "connection", "open"].includes(eventName) ||
-    ["open", "connected"].includes(state) ||
-    data.connected === true ||
-    data.loggedIn === true;
-
-  const isDisconnected = 
-    ["loggedout", "disconnected", "qrtimeout", "close", "closed", "offline"].includes(eventName) ||
-    ["close", "closed", "disconnected", "disconnect", "offline"].includes(state);
-
-  let status = session.status;
-  if (isConnected) {
-    status = "connected";
-  } else if (isDisconnected) {
-    status = "disconnected";
-  } else if (state === "connecting") {
-    status = "connecting";
-  } else if (state === "qr" || ["qrcode", "qr_ready"].includes(eventName)) {
-    status = "qr_ready";
-  }
-
-  const update: any = { 
-    status, 
-    updated_at: new Date().toISOString() 
+  const state = event.data?.state || event.state || event.status;
+  if (!state) return;
+  const map: Record<string, string> = {
+    open: "connected",
+    connected: "connected",
+    connecting: "connecting",
+    close: "disconnected",
+    disconnected: "disconnected",
+    qr: "qr_ready",
   };
+  const status = map[state] || state;
 
-  if (status === "connected") {
-    update.last_connected_at = new Date().toISOString();
-    const phone = data.jid?.split("@")[0] || data.phone || data.number;
-    if (phone) update.phone_number = phone;
-    
-    // Clear QR code if connected
-    if (session.advanced_settings?.qr_code) {
-      update.advanced_settings = { 
-        ...session.advanced_settings, 
-        qr_code: null, 
-        qr_updated_at: null 
-      };
-    }
-  }
-
-  console.log(`[Diagnostic] UPDATE ATTEMPT: session_id=${session.id}, status_target=${status}`);
-
-  const { data: updatedRows, error } = await supabase
-    .from("whatsapp_sessions")
-    .update(update)
-    .eq("id", session.id)
-    .select("id, status, updated_at");
-  
-  if (error) {
-    console.error(`[Diagnostic] UPDATE ERROR for session ${session.id}:`, error);
-  } else {
-    const row = updatedRows?.[0];
-    console.log(`[Diagnostic] UPDATE SUCCESS: id=${row?.id}, status=${row?.status}, updated_at=${row?.updated_at}, rows_affected=${updatedRows?.length || 0}`);
-  }
-  
-  return status;
+  const update: any = { status, updated_at: new Date().toISOString() };
+  if (status === "connected") update.last_connected_at = new Date().toISOString();
+  await supabase.from("whatsapp_sessions").update(update).eq("id", session.id);
 }
 
 async function handleQrUpdate(session: any, event: any) {
@@ -316,186 +266,85 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    const url = new URL(req.url);
-    const bodyText = await req.text();
-    const body = bodyText ? JSON.parse(bodyText) : {};
-    
-    const method = req.method;
-    const queryParams = Object.fromEntries(url.searchParams.entries());
-    const headers = Object.fromEntries(req.headers.entries());
-    
-    // Filter out potential secrets from headers for logging
-    const safeHeaders = { ...headers };
-    delete safeHeaders["authorization"];
-    delete safeHeaders["apikey"];
-    delete safeHeaders["x-api-key"];
-
-    const event = body?.event || body?.type || body?.action || body?.type || "";
-    
-    // Robust identification fields from body and query
-    const instanceIdFromBody = body?.instance_id || body?.instanceId || body?.id || body?.instance || body?.instanceName || body?.name;
-    const queryInstanceId = url.searchParams.get("instance_id") || url.searchParams.get("instanceId") || "";
-    
-    // Check if the body itself has nested instance data (Evolution Go common structure)
-    const data = body?.data || body || {};
-    const instanceData = body?.instance || body?.data?.instance || {};
-    const instanceIdFromNested = instanceData?.id || instanceData?.instanceId || instanceData?.name;
-    
-    const diag = {
-      method,
-      url: req.url,
-      queryParams,
-      headers: safeHeaders,
-      event,
-      instanceId: instanceIdFromBody,
-      queryInstanceId,
-      instanceIdFromNested,
-      status: data.status,
-      state: data.state,
-      connectionStatus: data.connectionStatus,
-      dataStatus: data?.status,
-      dataState: data?.state,
-      dataConnectionStatus: data?.connectionStatus
-    };
-
-    console.log("[Diagnostic] Webhook Received:", JSON.stringify(diag, null, 2));
-    console.log("[Diagnostic] Full Raw Body:", bodyText);
-
     // Security: validate Evolution Go apikey header
     const incomingKey = req.headers.get("apikey") || req.headers.get("x-api-key");
     if (API_KEY && incomingKey && incomingKey !== API_KEY) {
-      console.warn("[Diagnostic] Forbidden: Invalid API Key");
+      return new Response("forbidden", { status: 403, headers: corsHeaders });
     }
+
+    const url = new URL(req.url);
+    const instanceId = url.searchParams.get("instance_id")
+      || url.searchParams.get("instanceId")
+      || req.headers.get("instanceid")
+      || req.headers.get("instance-id");
+
+    const body = await req.json().catch(() => ({}));
+    const event = body?.event || body?.type || body?.action || "";
 
     // Find the session
     let session: any = null;
-    
-    // 1. Try by session_id in body (if passed)
     const sid = body?.session_id || body?.sessionId;
     if (sid) {
-      const { data: s } = await supabase.from("whatsapp_sessions").select("*").eq("id", sid).maybeSingle();
-      session = s;
-      if (session) console.log(`[Diagnostic] Session found by body.session_id: ${session.id}`);
+      const { data } = await supabase.from("whatsapp_sessions").select("*").eq("id", sid).maybeSingle();
+      session = data;
     }
-    
-    // 2. Try by query param instance_id (which could be the session.id OR instance_id)
-    if (!session && queryInstanceId) {
-      // Try as session.id first
-      const { data: sBySid } = await supabase.from("whatsapp_sessions").select("*").eq("id", queryInstanceId).maybeSingle();
-      if (sBySid) {
-        session = sBySid;
-        console.log(`[Diagnostic] Session found by queryInstanceId as session.id: ${session.id}`);
-      } else {
-        // Try as instance_id or instance_name
-        const { data: sByInst } = await supabase.from("whatsapp_sessions").select("*")
-          .or(`instance_id.eq.${queryInstanceId},instance_name.eq.${queryInstanceId}`)
-          .eq("provider", "evolution_go")
-          .maybeSingle();
-        if (sByInst) {
-          session = sByInst;
-          console.log(`[Diagnostic] Session found by queryInstanceId as instance identifier: ${session.id}`);
-        }
-      }
-    }
-
-    // 3. Try by various body identifiers
-    const bodyIdentifier = instanceIdFromBody || instanceIdFromNested;
-    if (!session && bodyIdentifier) {
-      const { data: s } = await supabase.from("whatsapp_sessions").select("*")
-        .or(`instance_id.eq.${bodyIdentifier},instance_name.eq.${bodyIdentifier}`)
+    if (!session && instanceId) {
+      const { data } = await supabase.from("whatsapp_sessions").select("*")
+        .or(`instance_id.eq.${instanceId},instance_name.eq.${instanceId}`)
         .eq("provider", "evolution_go")
         .maybeSingle();
-      if (s) {
-        session = s;
-        console.log(`[Diagnostic] Session found by body identifier (${bodyIdentifier}): ${session.id}`);
-      }
+      session = data;
+    }
+    if (!session && body?.instance) {
+      const { data } = await supabase.from("whatsapp_sessions").select("*")
+        .or(`instance_id.eq.${body.instance},instance_name.eq.${body.instance}`)
+        .eq("provider", "evolution_go")
+        .maybeSingle();
+      session = data;
     }
 
     if (!session) {
-      console.warn("[Diagnostic] SESSION_NOT_FOUND. Payload identifiers:", { 
-        sid, 
-        queryInstanceId, 
-        instanceIdFromBody, 
-        instanceIdFromNested 
-      });
-      return new Response(JSON.stringify({ 
-        received: true, 
-        ignored: true, 
-        reason: "SESSION_NOT_FOUND",
-        event,
-        identifiers: { sid, queryInstanceId, instanceIdFromBody, instanceIdFromNested }
-      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      console.warn("evolution-go-webhook: session not found", { event, instanceId });
+      return new Response(JSON.stringify({ ok: true, ignored: true }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    let normalizedStatus = "unknown";
-
-    // Run handler
-    try {
-      const normalizedEvent = (event || "").toLowerCase().replace(/_/g, ".");
-      console.log(`[Diagnostic] Processing event: '${normalizedEvent}' for session: ${session.id} (${session.instance_name})`);
-
-      switch (normalizedEvent) {
-        case "qrcode.updated":
-        case "qr.updated":
-        case "qr":
-        case "qrcode":
-          normalizedStatus = "qr_ready";
-          await handleQrUpdate(session, body); 
-          break;
-        case "connection.update":
-        case "connection.status":
-        case "connection":
-        case "connected":
-        case "pair.success":
-        case "pairsuccess":
-        case "loggedout":
-        case "disconnected":
-        case "qrtimeout":
-          normalizedStatus = await handleConnectionUpdate(session, body); 
-          break;
-        case "messages.upsert":
-        case "message.upsert":
-        case "messages.received":
-        case "message":
-          await handleMessageUpsert(session, body); 
-          break;
-        case "labels.upsert":
-        case "labels.set":
-          await handleLabelsUpsert(session, body); 
-          break;
-        case "groups.upsert":
-        case "groups.update":
-          await handleGroupsUpsert(session, body); 
-          break;
-        case "history.sync":
-        case "history_sync":
-          console.log(`[Diagnostic] History sync for session ${session.id}`);
-          break;
-        default:
-          // Check if it's a connection update even if the event name didn't match
-          const state = (data.state || data.connectionStatus || data.status || "").toLowerCase();
-          if (["open", "connected", "connecting", "close", "closed", "disconnected"].includes(state)) {
-             console.log(`[Diagnostic] No matching event, but state '${state}' found. Handling as connection update.`);
-             normalizedStatus = await handleConnectionUpdate(session, body);
-          } else {
-             console.log("[Diagnostic] Unhandled event type:", event);
-          }
+    // Run handler (fire-and-forget via waitUntil if possible)
+    const work = (async () => {
+      try {
+        switch (event) {
+          case "qrcode.updated":
+          case "qr.updated":
+            await handleQrUpdate(session, body); break;
+          case "connection.update":
+          case "connection.status":
+            await handleConnectionUpdate(session, body); break;
+          case "messages.upsert":
+          case "message.upsert":
+          case "messages.received":
+            await handleMessageUpsert(session, body); break;
+          case "labels.upsert":
+          case "labels.set":
+            await handleLabelsUpsert(session, body); break;
+          case "groups.upsert":
+          case "groups.update":
+            await handleGroupsUpsert(session, body); break;
+          default:
+            console.log("evolution-go-webhook: unhandled event", event);
+        }
+      } catch (e) {
+        console.error("handler error:", e);
       }
-    } catch (e) {
-      console.error("[Diagnostic] Handler error:", e);
-    }
+    })();
 
-    return new Response(JSON.stringify({ 
-      received: true, 
-      event, 
-      resolvedSessionId: session.id,
-      instanceId: instanceIdFromBody, 
-      queryInstanceId, 
-      normalizedStatus 
-    }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    // @ts-ignore EdgeRuntime is provided by Supabase
+    if (typeof EdgeRuntime !== "undefined") EdgeRuntime.waitUntil(work);
+    else await work;
 
+    return new Response(JSON.stringify({ ok: true }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (err) {
-    console.error("[Diagnostic] Fatal error:", err);
+    console.error("evolution-go-webhook fatal:", err);
     return new Response(
       JSON.stringify({ ok: false, error: err instanceof Error ? err.message : String(err) }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
