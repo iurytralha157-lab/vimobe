@@ -202,10 +202,11 @@ async function handleMessageUpsert(session: any, event: any) {
 
 async function handleConnectionUpdate(session: any, event: any) {
   const data = event.data || event;
-  const state = (data.state || data.connectionStatus || data.status || "").toLowerCase();
+  // Check multiple fields for state/status
+  const state = (data.state || data.connectionStatus || data.status || event.state || event.status || "").toLowerCase();
   const eventName = (event.event || event.type || event.action || "").toLowerCase();
   
-  console.log(`[Diagnostic] Normalizing status for event ${eventName} (state: ${state})`);
+  console.log(`[Diagnostic] Normalizing status. Event: '${eventName}', State: '${state}'`);
 
   // Normalized logic requested by user
   const isConnected = 
@@ -239,6 +240,7 @@ async function handleConnectionUpdate(session: any, event: any) {
     const phone = data.jid?.split("@")[0] || data.phone || data.number;
     if (phone) update.phone_number = phone;
     
+    // Clear QR code if connected
     if (session.advanced_settings?.qr_code) {
       update.advanced_settings = { 
         ...session.advanced_settings, 
@@ -248,18 +250,19 @@ async function handleConnectionUpdate(session: any, event: any) {
     }
   }
 
-  console.log(`[Diagnostic] Attempting update on 'whatsapp_sessions' for id ${session.id} with status: ${status}`);
+  console.log(`[Diagnostic] UPDATE ATTEMPT: session_id=${session.id}, status_target=${status}`);
 
   const { data: updatedRows, error } = await supabase
     .from("whatsapp_sessions")
     .update(update)
     .eq("id", session.id)
-    .select();
+    .select("id, status, updated_at");
   
   if (error) {
-    console.error(`[Diagnostic] Error updating session ${session.id}:`, error);
+    console.error(`[Diagnostic] UPDATE ERROR for session ${session.id}:`, error);
   } else {
-    console.log(`[Diagnostic] Success: Session ${session.id} updated. Rows affected: ${updatedRows?.length || 0}`);
+    const row = updatedRows?.[0];
+    console.log(`[Diagnostic] UPDATE SUCCESS: id=${row?.id}, status=${row?.status}, updated_at=${row?.updated_at}, rows_affected=${updatedRows?.length || 0}`);
   }
   
   return status;
