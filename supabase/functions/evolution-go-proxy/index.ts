@@ -470,16 +470,12 @@ Deno.serve(async (req) => {
     const responseBody: Record<string, any> = {
       ok: result.ok,
       status: result.status,
-      httpStatus: result.status, // Para compatibilidade solicitada
+      httpStatus: result.status,
       data: result.data,
       normalizedStatus,
       isConnected,
       rawStatus,
       rawResponse: result.rawText,
-    };
-      isConnected: normalizedStatus === "connected",
-      rawStatus: result.data?.state || result.data?.status || result.data?.connectionStatus || null,
-      rawResponse: result.data,
       error: !result.ok 
         ? (result.data?.error?.message || result.data?.message || result.data?.error || `HTTP ${result.status}`)
         : undefined,
@@ -488,7 +484,6 @@ Deno.serve(async (req) => {
         qrFieldUsed: (result as any).qrFieldUsed
       } : {}
     };
-
 
     return new Response(
       JSON.stringify(responseBody),
