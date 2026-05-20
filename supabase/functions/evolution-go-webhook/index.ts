@@ -201,28 +201,64 @@ async function handleMessageUpsert(session: any, event: any) {
 }
 
 async function handleConnectionUpdate(session: any, event: any) {
-  const state = (event.data?.state || event.state || event.status || "").toLowerCase();
-  if (!state) return;
+  const data = event.data || event;
+  const state = (data.state || data.connectionStatus || data.status || "").toLowerCase();
+  const eventName = (event.event || event.type || "").toLowerCase();
   
-  const map: Record<string, string> = {
-    open: "connected",
-    connected: "connected",
-    connecting: "connecting",
-    close: "disconnected",
-    closed: "disconnected",
-    disconnected: "disconnected",
-    qr: "qr_ready",
-  };
-  const status = map[state] || state;
+  console.log(`[Webhook] Processing connection update for session ${session.id}:`, {
+    state,
+    eventName,
+    instance: session.instance_name
+  });
 
-  const update: any = { status, updated_at: new Date().toISOString() };
+  const isConnected = 
+    state === "open" || 
+    state === "connected" || 
+    eventName === "pair.success" ||
+    data.connected === true ||
+    data.loggedIn === true;
+
+  const isDisconnected = 
+    state === "close" || 
+    state === "closed" || 
+    state === "disconnected" || 
+    state === "disconnect" ||
+    state === "offline";
+
+  let status = session.status;
+  if (isConnected) status = "connected";
+  else if (isDisconnected) status = "disconnected";
+  else if (state === "connecting") status = "connecting";
+  else if (state === "qr" || eventName === "qrcode.updated") status = "qr_ready";
+
+  const update: any = { 
+    status, 
+    updated_at: new Date().toISOString() 
+  };
+
   if (status === "connected") {
     update.last_connected_at = new Date().toISOString();
     // Try to get phone from event if available
-    const phone = event.data?.jid?.split("@")[0] || event.jid?.split("@")[0];
+    const phone = data.jid?.split("@")[0] || data.phone || data.number;
     if (phone) update.phone_number = phone;
+    
+    // Clear QR code related settings if they exist in advanced_settings
+    if (session.advanced_settings?.qr_code) {
+      update.advanced_settings = { 
+        ...session.advanced_settings, 
+        qr_code: null, 
+        qr_updated_at: null 
+      };
+    }
   }
-  await supabase.from("whatsapp_sessions").update(update).eq("id", session.id);
+
+  const { error } = await supabase.from("whatsapp_sessions").update(update).eq("id", session.id);
+  
+  if (error) {
+    console.error(`[Webhook] Error updating session ${session.id}:`, error);
+  } else {
+    console.log(`[Webhook] Session ${session.id} updated to ${status}`);
+  }
 }
 
 async function handleQrUpdate(session: any, event: any) {
@@ -321,10 +357,13 @@ Deno.serve(async (req) => {
       try {
         const normalizedEvent = event.toLowerCase().replace(/_/g, ".");
         
+        console.log(`[Webhook] Normalized event: ${normalizedEvent} for session: ${session.id}`);
+
         switch (normalizedEvent) {
           case "qrcode.updated":
           case "qr.updated":
           case "qr":
+          case "qrcode":
             await handleQrUpdate(session, body); break;
           case "connection.update":
           case "connection.status":
@@ -336,7 +375,7 @@ Deno.serve(async (req) => {
           case "messages.upsert":
           case "message.upsert":
           case "messages.received":
-          case "messages.upsert":
+          case "message":
             await handleMessageUpsert(session, body); break;
           case "labels.upsert":
           case "labels.set":
@@ -344,8 +383,13 @@ Deno.serve(async (req) => {
           case "groups.upsert":
           case "groups.update":
             await handleGroupsUpsert(session, body); break;
+          case "history.sync":
+          case "history_sync":
+            console.log(`[Webhook] History sync event received for session ${session.id}`);
+            // History sync doesn't necessarily change connection status but we log it
+            break;
           default:
-            console.log("evolution-go-webhook: unhandled event", event);
+            console.log("[Webhook] Unhandled event:", event);
         }
       } catch (e) {
         console.error("handler error:", e);

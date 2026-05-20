@@ -416,7 +416,8 @@ export function WhatsAppTab() {
             </Button>
           </div> :
 
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 px-[10px]">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+
             {sessions?.map((session) =>
           <Card key={session.id} className="border">
                 <CardContent className="p-3 space-y-2.5">
@@ -639,10 +640,16 @@ export function WhatsAppTab() {
                   <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
                 </div> :
               qrCode ?
-              <img
-                src={qrCode.startsWith("data:") ? qrCode : `data:image/png;base64,${qrCode}`}
-                alt="QR Code"
-                className="w-64 h-64 rounded-lg" /> :
+                <div className="flex flex-col items-center">
+                  <img
+                    src={qrCode.startsWith("data:") ? qrCode : `data:image/png;base64,${qrCode}`}
+                    alt="QR Code"
+                    className="w-64 h-64 rounded-lg" />
+                  <p className="mt-4 text-sm font-medium text-blue-600 animate-pulse">
+                    Aguardando leitura do QR Code...
+                  </p>
+                </div> :
+
 
 
               <div className="w-64 h-64 flex items-center justify-center bg-muted rounded-lg">
