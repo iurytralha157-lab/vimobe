@@ -65,6 +65,38 @@ function normalizeQRCodeResponse(data: any) {
   return { found: false };
 }
 
+function normalizeStatus(data: any, action?: string) {
+  if (!data) return "disconnected";
+
+  // Check for explicit connection indicators
+  const isConnected = 
+    data.connected === true || 
+    data.Connected === true || 
+    data.state === "open" || 
+    data.connectionStatus === "open" || 
+    data.loggedIn === true || 
+    data.LoggedIn === true;
+
+  if (isConnected) return "connected";
+
+  // Check for QR indicators
+  const qr = normalizeQRCodeResponse(data);
+  if (qr.found || action === "instance.qr" || data.status === "qr") {
+    return "qr_ready";
+  }
+
+  if (data.status === "connecting" || data.state === "connecting") {
+    return "connecting";
+  }
+
+  if (data.status === "error" || data.error) {
+    return "error";
+  }
+
+  return "disconnected";
+}
+
+
 async function evolutionFetch(
   method: string, 
   path: string, 
@@ -410,6 +442,7 @@ Deno.serve(async (req) => {
       ok: result.ok,
       status: result.status,
       data: result.data,
+      normalizedStatus: normalizeStatus(result.data, action),
       error: !result.ok 
         ? (result.data?.error?.message || result.data?.message || result.data?.error || `HTTP ${result.status}`)
         : undefined,
@@ -418,6 +451,7 @@ Deno.serve(async (req) => {
         qrFieldUsed: (result as any).qrFieldUsed
       } : {}
     };
+
 
     return new Response(
       JSON.stringify(responseBody),

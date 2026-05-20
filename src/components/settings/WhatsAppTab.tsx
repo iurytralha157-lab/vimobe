@@ -110,22 +110,33 @@ export function WhatsAppTab() {
       if (!ok) return null;
 
       const result = isGo ? (data?.data?.data ?? data?.data) : data.data;
+      const normalizedStatus = data?.normalizedStatus;
 
       const isConnected = isGo
-        ? (result?.Connected === true || result?.connected === true || result?.LoggedIn === true)
+        ? (normalizedStatus === "connected" || result?.Connected === true || result?.connected === true || result?.LoggedIn === true)
         : (result?.state === "open" || result?.connected === true);
 
-      if (isConnected) {
+      const status = isConnected ? "connected" : (normalizedStatus || (isGo ? "disconnected" : (result?.state === "open" ? "connected" : "disconnected")));
+
+      if (status !== session.status) {
         const phone = isGo
           ? (result?.jid?.split("@")[0] || null)
           : (result?.phone || result?.instance?.wuid?.split("@")[0] || null);
+        
+        const update: any = { status };
+        if (phone) update.phone_number = phone;
+        if (status === "connected") update.last_connected_at = new Date().toISOString();
+
         await supabase
           .from("whatsapp_sessions")
-          .update({ status: "connected", phone_number: phone })
+          .update(update)
           .eq("id", session.id);
 
-        return true;
+        return status === "connected";
       }
+      
+      return status === "connected";
+
       return false;
     } catch (error) {
       console.log("Polling check failed:", error);
@@ -229,7 +240,14 @@ export function WhatsAppTab() {
           : session.instance_name,
       );
       const qr = (data as any)?.qrcode || (data as any)?.base64;
-      if (qr) setQrCode(qr);
+      if (qr) {
+        setQrCode(qr);
+        if (session.status !== "connected") {
+          await supabase.from("whatsapp_sessions").update({ status: "qr_ready" }).eq("id", session.id);
+          queryClient.invalidateQueries({ queryKey: ["whatsapp-sessions"] });
+        }
+      }
+
     } catch (error) {
       console.error("Error getting QR code:", error);
     } finally {
@@ -356,12 +374,17 @@ export function WhatsAppTab() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "connected":
-        return <Badge className="bg-orange-500 hover:bg-orange-600"><CheckCircle className="w-3 h-3 mr-1" />Conectado</Badge>;
+        return <Badge className="bg-green-500 hover:bg-green-600"><CheckCircle className="w-3 h-3 mr-1" />Conectado</Badge>;
+      case "qr_ready":
+        return <Badge className="bg-blue-500 hover:bg-blue-600"><QrCode className="w-3 h-3 mr-1" />Aguardando Leitura</Badge>;
       case "connecting":
         return <Badge className="bg-yellow-500 hover:bg-yellow-600"><Loader2 className="w-3 h-3 mr-1 animate-spin" />Conectando</Badge>;
+      case "error":
+        return <Badge variant="destructive"><XCircle className="w-3 h-3 mr-1" />Erro</Badge>;
       default:
         return <Badge variant="secondary"><XCircle className="w-3 h-3 mr-1" />Desconectado</Badge>;
     }
+
   };
 
   return (

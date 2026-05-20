@@ -369,10 +369,12 @@ export function useGetConnectionStatus() {
         }
         const s = data?.data?.data ?? data?.data ?? {};
         return {
-          connected: s.Connected === true || s.connected === true,
-          state: s.LoggedIn || s.Connected ? "open" : "close",
+          connected: data?.normalizedStatus === "connected" || s.Connected === true || s.connected === true,
+          status: data?.normalizedStatus || (s.Connected || s.connected ? "connected" : "disconnected"),
+          state: s.LoggedIn || s.Connected || data?.normalizedStatus === "connected" ? "open" : "close",
           instance: { wuid: s.jid || s.Name || null },
         };
+
       }
 
       const { data, error } = await supabase.functions.invoke("evolution-proxy", {
