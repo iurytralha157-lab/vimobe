@@ -240,7 +240,14 @@ export function WhatsAppTab() {
           : session.instance_name,
       );
       const qr = (data as any)?.qrcode || (data as any)?.base64;
-      if (qr) setQrCode(qr);
+      if (qr) {
+        setQrCode(qr);
+        if (session.status !== "connected") {
+          await supabase.from("whatsapp_sessions").update({ status: "qr_ready" }).eq("id", session.id);
+          queryClient.invalidateQueries({ queryKey: ["whatsapp-sessions"] });
+        }
+      }
+
     } catch (error) {
       console.error("Error getting QR code:", error);
     } finally {
