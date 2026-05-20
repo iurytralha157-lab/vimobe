@@ -543,18 +543,14 @@ export function WhatsAppTab() {
                   variant="outline"
                   onClick={() => selectedSession && refreshQRCode(selectedSession)}
                   disabled={isRefreshingQr}>
-
                   <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshingQr ? "animate-spin" : ""}`} />
-                  Atualizar
-                </Button>
-                <Button
-                  onClick={() => selectedSession && checkConnectionStatus(selectedSession)}
-                  disabled={getConnectionStatus.isPending}>
-
-                  {getConnectionStatus.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                  Verificar Conexão
+                  Atualizar QR Code
                 </Button>
               </div>
+              <p className="text-xs text-muted-foreground mt-2 text-center">
+                A conexão será detectada automaticamente após o escaneamento.
+              </p>
+
             </div>
           </DialogContent>
         </Dialog>
