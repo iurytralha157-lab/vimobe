@@ -87,105 +87,24 @@ export function WhatsAppTab() {
     qrDialogOpenRef.current = qrDialogOpen;
   }, [selectedSession, qrDialogOpen]);
 
-  // Função de check separada para usar no polling - APENAS CONSULTA, NÃO ESCREVE NO BANCO
-  const checkConnection = useCallback(async (session: WhatsAppSession): Promise<boolean | null> => {
-    try {
-      const isGo = session.provider === "evolution_go";
-      const { data, error } = await supabase.functions.invoke(
-        isGo ? "evolution-go-proxy" : "evolution-proxy",
-        {
-          body: isGo
-            ? { action: "instance.status", session_id: session.id, instance_id: session.instance_id ?? undefined }
-            : { action: "getConnectionStatus", instanceName: session.instance_name },
-        },
-      );
-
-      if (error) {
-        console.log(`[Polling] API Diagnostic error for session ${session.id}:`, error);
-        return null; 
-      }
-
-      const ok = isGo ? data?.ok : data?.success;
-      
-      if (!ok) {
-        console.log(`[Polling] Session ${session.id} status check returned NOT OK. Waiting for webhook update.`);
-        return null;
-      }
-
-      const result = isGo ? (data?.data?.data ?? data?.data) : data.data;
-      const normalizedStatus = data?.normalizedStatus;
-
-      // Rule: status open = connected
-      const isConnected = isGo
-        ? (data?.isConnected === true || normalizedStatus === "connected")
-        : (result?.state === "open" || result?.connected === true);
-
-      // FRONT-END NÃO ESCREVE MAIS NO BANCO. 
-      // O status é atualizado apenas via webhook.
-      
-      return isConnected;
-    } catch (error) {
-      console.log(`[Polling] Diagnostic check failed:`, error);
-      return null;
-    }
-  }, []);
-
-
-  // Sincronizar status do banco de dados (Visual)
+  // Verify button: only refetch the table — never writes status
   const handleVerifyConnection = async (session: WhatsAppSession) => {
     setVerifyingSessionId(session.id);
-
-    console.group(`[Diagnostic] Syncing WhatsApp Session: ${session.display_name || session.instance_name}`);
-    
     try {
-      // Invalida a query para forçar o Realtime/Refetch a trazer os dados mais recentes do banco
       await queryClient.invalidateQueries({ queryKey: ["whatsapp-sessions"] });
-      
-      // Opcional: consulta API apenas para diagnóstico no console
+      // Optional: log API for diagnostics (does NOT write to DB)
       if (session.provider === "evolution_go") {
-        const { data } = await supabase.functions.invoke("evolution-go-proxy", {
+        supabase.functions.invoke("evolution-go-proxy", {
           body: { action: "instance.status", session_id: session.id, instance_id: session.instance_id ?? undefined },
-        });
-        console.log("[Diagnostic] API Status Check:", data);
+        }).then(({ data }) => console.log("[Verify] API diagnostic:", data)).catch(() => {});
       }
-
-      toast({ 
-        title: "Status sincronizado", 
-        description: "Os dados foram atualizados a partir do servidor." 
-      });
-
-    } catch (error: any) {
-      console.error("[Diagnostic] Error during sync:", error);
+      toast({ title: "Atualizado", description: "Status sincronizado com o banco." });
     } finally {
-      console.groupEnd();
       setVerifyingSessionId(null);
     }
   };
-  // Polling para verificar conexão automaticamente quando o QR dialog está aberto
-  useEffect(() => {
-    if (!qrDialogOpen || !selectedSession) return;
 
-    const pollInterval = setInterval(async () => {
-      if (!qrDialogOpenRef.current || !selectedSessionRef.current) {
-        clearInterval(pollInterval);
-        return;
-      }
-
-      const connected = await checkConnection(selectedSessionRef.current);
-
-      if (connected === true) {
-        toast({ title: "Conectado!", description: "WhatsApp conectado com sucesso" });
-        setQrDialogOpen(false);
-        setQrCode(null);
-        queryClient.invalidateQueries({ queryKey: ["whatsapp-sessions"] });
-        clearInterval(pollInterval);
-      }
-    }, 5000);
-
-    return () => clearInterval(pollInterval);
-  }, [qrDialogOpen, selectedSession?.id, checkConnection, queryClient]);
-
-  // Fechar o diálogo de QR Code automaticamente se o status mudar para conectado (via Realtime)
+  // Realtime: when DB status becomes "connected", close QR dialog automatically
   useEffect(() => {
     if (qrDialogOpen && selectedSession) {
       const currentSession = sessions?.find(s => s.id === selectedSession.id);
@@ -197,6 +116,7 @@ export function WhatsAppTab() {
       }
     }
   }, [sessions, qrDialogOpen, selectedSession]);
+
 
 
 
@@ -253,50 +173,23 @@ export function WhatsAppTab() {
 
       if (lastQr) {
         setQrCode(lastQr);
-        // Important: Rule - QR gerado = aguardando leitura
-        // Do not change to "connected" here
-        if (session.status !== "connected") {
-          await supabase.from("whatsapp_sessions").update({ status: "qr_ready" }).eq("id", session.id);
-          queryClient.invalidateQueries({ queryKey: ["whatsapp-sessions"] });
-        }
+        // Front-end NEVER writes status. Webhook is the only writer.
       } else {
-        toast({ 
-          title: "Atenção", 
+        toast({
+          title: "Atenção",
           description: "O QR Code ainda não está pronto. Clique em Atualizar em alguns instantes.",
-          variant: "default" 
+          variant: "default"
         });
       }
 
     } catch (error) {
       console.error("Error getting QR code:", error);
-      toast({ title: "Erro", description: "Falha ao obter QR Code", variant: "destructive" });
     } finally {
       setIsRefreshingQr(false);
     }
   };
 
-  const checkConnectionStatus = async (session: WhatsAppSession) => {
-    try {
-      const isGo = session.provider === "evolution_go";
-      const data = await getConnectionStatus.mutateAsync(
-        isGo
-          ? {
-              provider: "evolution_go",
-              instanceName: session.instance_name,
-              sessionId: session.id,
-              instanceId: session.instance_id,
-            }
-          : session.instance_name,
-      );
-      if (data?.state === "open" || data?.connected === true) {
-        toast({ title: "Conectado!", description: "WhatsApp conectado com sucesso" });
-        setQrDialogOpen(false);
-        setQrCode(null);
-      }
-    } catch (error) {
-      console.error("Error checking status:", error);
-    }
-  };
+
 
   const handleOpenQRDialog = async (session: WhatsAppSession) => {
     setSelectedSession(session);
@@ -307,7 +200,7 @@ export function WhatsAppTab() {
       // Reconnect attempt
       try {
         if (session.provider === "evolution_go") {
-          const webhookUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/evolution-go-webhook`;
+          const webhookUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/evolution-go-webhook?session_id=${session.id}`;
           await supabase.functions.invoke("evolution-go-proxy", {
             body: {
               action: "instance.connect",
@@ -317,20 +210,18 @@ export function WhatsAppTab() {
             },
           });
         } else {
-          // Recreate or Ensure instance exists for standard provider
           await supabase.functions.invoke("evolution-proxy", {
             body: { action: "createInstance", instanceName: session.instance_name },
           });
         }
-        // Small delay to allow instance to boot
         await new Promise(r => setTimeout(r, 3000));
         await refreshQRCode(session);
       } catch (e) {
         console.error("Failed to recreate instance:", e);
-        toast({ title: "Erro", description: "Não foi possível reconectar. Tente excluir e criar uma nova conexão.", variant: "destructive" });
       }
     }
   };
+
 
 
   const handleOpenAccessDialog = (session: WhatsAppSession) => {
@@ -652,18 +543,14 @@ export function WhatsAppTab() {
                   variant="outline"
                   onClick={() => selectedSession && refreshQRCode(selectedSession)}
                   disabled={isRefreshingQr}>
-
                   <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshingQr ? "animate-spin" : ""}`} />
-                  Atualizar
-                </Button>
-                <Button
-                  onClick={() => selectedSession && checkConnectionStatus(selectedSession)}
-                  disabled={getConnectionStatus.isPending}>
-
-                  {getConnectionStatus.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                  Verificar Conexão
+                  Atualizar QR Code
                 </Button>
               </div>
+              <p className="text-xs text-muted-foreground mt-2 text-center">
+                A conexão será detectada automaticamente após o escaneamento.
+              </p>
+
             </div>
           </DialogContent>
         </Dialog>
