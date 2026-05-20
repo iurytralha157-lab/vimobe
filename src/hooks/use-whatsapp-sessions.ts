@@ -49,6 +49,33 @@ export interface WhatsAppSessionAccess {
 
 export function useWhatsAppSessions() {
   const { profile } = useAuth();
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!profile?.organization_id) return;
+
+    // Supabase Realtime subscription to reflect webhook updates immediately
+    const channel = supabase
+      .channel('whatsapp_sessions_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'whatsapp_sessions',
+          filter: `organization_id=eq.${profile.organization_id}`
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["whatsapp-sessions", profile?.organization_id] });
+          queryClient.invalidateQueries({ queryKey: ["whatsapp-session"] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [profile?.organization_id, queryClient]);
 
   return useQuery({
     queryKey: ["whatsapp-sessions", profile?.organization_id],
@@ -362,19 +389,29 @@ export function useGetConnectionStatus() {
         const { data, error } = await supabase.functions.invoke("evolution-go-proxy", {
           body: { action: "instance.status", session_id: arg.sessionId, instance_id: arg.instanceId ?? undefined },
         });
+        
         if (error) throw error;
+        
+        // If not OK, but we have a data object (like 404), handle it
         if (!data?.ok) {
-          if (data?.status === 404) return { instanceNotFound: true };
+          if (data?.status === 404 || data?.data?.status === 404) {
+            return { connected: false, status: "disconnected", instanceNotFound: true };
+          }
           throw new Error(data?.error || "Failed to get status");
         }
-        const s = data?.data?.data ?? data?.data ?? {};
-        return {
-          connected: data?.normalizedStatus === "connected" || s.Connected === true || s.connected === true,
-          status: data?.normalizedStatus || (s.Connected || s.connected ? "connected" : "disconnected"),
-          state: s.LoggedIn || s.Connected || data?.normalizedStatus === "connected" ? "open" : "close",
-          instance: { wuid: s.jid || s.Name || null },
-        };
 
+        const normalizedStatus = data?.normalizedStatus || "disconnected";
+        const isConnected = normalizedStatus === "connected";
+        const rawData = data?.data?.data ?? data?.data ?? {};
+
+        return {
+          connected: isConnected,
+          status: normalizedStatus,
+          state: isConnected ? "open" : (normalizedStatus === "qr_ready" ? "qr" : "close"),
+          instance: { wuid: rawData.jid || rawData.Name || null },
+          rawResponse: data?.rawResponse,
+          rawStatus: data?.rawStatus
+        };
       }
 
       const { data, error } = await supabase.functions.invoke("evolution-proxy", {

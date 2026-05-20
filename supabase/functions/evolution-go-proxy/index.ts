@@ -68,31 +68,52 @@ function normalizeQRCodeResponse(data: any) {
 function normalizeStatus(data: any, action?: string) {
   if (!data) return "disconnected";
 
-  // Check for explicit connection indicators
+  // 1. Get raw state and status
+  const rawState = (data.state || data.connectionStatus || "").toLowerCase();
+  const rawStatus = (data.status || "").toLowerCase();
+  const isConnectedValue = data.connected === true || data.Connected === true || data.loggedIn === true || data.LoggedIn === true;
+
+  // 2. Connected conditions (Rule: status open = conectado)
   const isConnected = 
-    data.connected === true || 
-    data.Connected === true || 
-    data.state === "open" || 
-    data.connectionStatus === "open" || 
-    data.loggedIn === true || 
-    data.LoggedIn === true;
+    isConnectedValue || 
+    rawState === "open" || 
+    rawState === "connected" ||
+    rawStatus === "open" ||
+    rawStatus === "connected";
 
   if (isConnected) return "connected";
 
-  // Check for QR indicators
+  // 3. QR conditions (Rule: QR gerado = aguardando leitura)
   const qr = normalizeQRCodeResponse(data);
-  if (qr.found || action === "instance.qr" || data.status === "qr") {
+  if (qr.found || action === "instance.qr" || rawStatus === "qr") {
     return "qr_ready";
   }
 
-  if (data.status === "connecting" || data.state === "connecting") {
+  // 4. Connecting conditions
+  if (rawStatus === "connecting" || rawState === "connecting") {
     return "connecting";
   }
 
-  if (data.status === "error" || data.error) {
-    return "error";
+  // 5. Disconnected conditions (Rule: status close = desconectado)
+  const isDisconnected = 
+    rawState === "close" || 
+    rawState === "closed" || 
+    rawState === "disconnected" || 
+    rawState === "disconnect" ||
+    rawState === "offline" ||
+    rawStatus === "close" ||
+    rawStatus === "closed" ||
+    rawStatus === "disconnected" ||
+    rawStatus === "offline" ||
+    rawState === "null" ||
+    rawState === "" ||
+    !rawState;
+
+  if (isDisconnected || data.status === "error" || data.error) {
+    return "disconnected";
   }
 
+  // Default fallback
   return "disconnected";
 }
 
@@ -438,11 +459,15 @@ Deno.serve(async (req) => {
       }
     }
 
+    const normalizedStatus = normalizeStatus(result.data, action);
     const responseBody: Record<string, any> = {
       ok: result.ok,
       status: result.status,
       data: result.data,
-      normalizedStatus: normalizeStatus(result.data, action),
+      normalizedStatus,
+      isConnected: normalizedStatus === "connected",
+      rawStatus: result.data?.state || result.data?.status || result.data?.connectionStatus || null,
+      rawResponse: result.data,
       error: !result.ok 
         ? (result.data?.error?.message || result.data?.message || result.data?.error || `HTTP ${result.status}`)
         : undefined,
