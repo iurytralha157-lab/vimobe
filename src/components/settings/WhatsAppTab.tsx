@@ -110,22 +110,33 @@ export function WhatsAppTab() {
       if (!ok) return null;
 
       const result = isGo ? (data?.data?.data ?? data?.data) : data.data;
+      const normalizedStatus = data?.normalizedStatus;
 
       const isConnected = isGo
-        ? (result?.Connected === true || result?.connected === true || result?.LoggedIn === true)
+        ? (normalizedStatus === "connected" || result?.Connected === true || result?.connected === true || result?.LoggedIn === true)
         : (result?.state === "open" || result?.connected === true);
 
-      if (isConnected) {
+      const status = isConnected ? "connected" : (normalizedStatus || (isGo ? "disconnected" : (result?.state === "open" ? "connected" : "disconnected")));
+
+      if (status !== session.status) {
         const phone = isGo
           ? (result?.jid?.split("@")[0] || null)
           : (result?.phone || result?.instance?.wuid?.split("@")[0] || null);
+        
+        const update: any = { status };
+        if (phone) update.phone_number = phone;
+        if (status === "connected") update.last_connected_at = new Date().toISOString();
+
         await supabase
           .from("whatsapp_sessions")
-          .update({ status: "connected", phone_number: phone })
+          .update(update)
           .eq("id", session.id);
 
-        return true;
+        return status === "connected";
       }
+      
+      return status === "connected";
+
       return false;
     } catch (error) {
       console.log("Polling check failed:", error);
