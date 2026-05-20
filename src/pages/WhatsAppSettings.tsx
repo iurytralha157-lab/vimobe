@@ -59,12 +59,15 @@ export default function WhatsAppSettings() {
   const [qrDialogOpen, setQrDialogOpen] = useState(false);
   const [accessDialogOpen, setAccessDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [debugDialogOpen, setDebugDialogOpen] = useState(false);
   const [instanceName, setInstanceName] = useState("");
   const [selectedSession, setSelectedSession] = useState<WhatsAppSession | null>(null);
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [isRefreshingQr, setIsRefreshingQr] = useState(false);
   const [verifyingSessionId, setVerifyingSessionId] = useState<string | null>(null);
   const [instanceNotFound, setInstanceNotFound] = useState(false);
+  const [debugResults, setDebugResults] = useState<any>(null);
+  const [debugLoading, setDebugLoading] = useState(false);
 
   const webhookUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/evolution-webhook`;
 
