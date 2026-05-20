@@ -252,6 +252,41 @@ Deno.serve(async (req) => {
       }
     }
 
+    if (action === "debug.auth") {
+      const endpoints = ["/instance", "/instance/all", "/instance/list"];
+      const results = [];
+
+      for (const path of endpoints) {
+        const url = `${API_URL}${path}`;
+        const headers = { "apikey": API_KEY };
+        try {
+          const res = await fetch(url, { method: "GET", headers });
+          const rawText = await res.text();
+          results.push({
+            endpoint: url,
+            status: res.status,
+            rawText,
+            baseUrl: API_URL,
+            apiKeyLength: API_KEY.length,
+            apiKeyPrefix: API_KEY.substring(0, 6)
+          });
+        } catch (e: any) {
+          results.push({
+            endpoint: url,
+            error: e.message,
+            baseUrl: API_URL,
+            apiKeyLength: API_KEY.length,
+            apiKeyPrefix: API_KEY.substring(0, 6)
+          });
+        }
+      }
+
+      return new Response(
+        JSON.stringify({ ok: true, debugResults: results }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
     const call = buildCall(action, payload);
     const result = await callEvolutionGo(call, action);
 
