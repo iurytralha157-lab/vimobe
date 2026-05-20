@@ -21,7 +21,8 @@ import {
   CheckCircle,
   XCircle,
   Loader2,
-  Copy
+  Copy,
+  Bug
 } from "lucide-react";
 import { 
   useWhatsAppSessions, 
@@ -58,12 +59,15 @@ export default function WhatsAppSettings() {
   const [qrDialogOpen, setQrDialogOpen] = useState(false);
   const [accessDialogOpen, setAccessDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [debugDialogOpen, setDebugDialogOpen] = useState(false);
   const [instanceName, setInstanceName] = useState("");
   const [selectedSession, setSelectedSession] = useState<WhatsAppSession | null>(null);
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [isRefreshingQr, setIsRefreshingQr] = useState(false);
   const [verifyingSessionId, setVerifyingSessionId] = useState<string | null>(null);
   const [instanceNotFound, setInstanceNotFound] = useState(false);
+  const [debugResults, setDebugResults] = useState<any>(null);
+  const [debugLoading, setDebugLoading] = useState(false);
 
   const webhookUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/evolution-webhook`;
 
@@ -311,6 +315,45 @@ export default function WhatsAppSettings() {
     });
   };
 
+  const handleDebugInstances = async (session: WhatsAppSession) => {
+    setSelectedSession(session);
+    setDebugDialogOpen(true);
+    setDebugResults(null);
+    setDebugLoading(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke("evolution-go-proxy", {
+        body: {
+          action: "debug.instances",
+          instance_id: session.instance_id || session.instance_name,
+        },
+      });
+
+      console.log("Debug Evolution Instances:", data);
+      if (error) {
+        console.error("Erro:", error);
+        setDebugResults({ error: error.message || String(error) });
+      } else {
+        setDebugResults(data);
+      }
+    } catch (err: any) {
+      console.error("Erro:", err);
+      setDebugResults({ error: err.message || String(err) });
+    } finally {
+      setDebugLoading(false);
+    }
+  };
+
+  const copyDebugResults = () => {
+    if (debugResults) {
+      navigator.clipboard.writeText(JSON.stringify(debugResults, null, 2));
+      toast({
+        title: "Copiado!",
+        description: "Resultados copiados para a área de transferência",
+      });
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "connected":
@@ -452,6 +495,16 @@ export default function WhatsAppSettings() {
                       className="text-destructive hover:text-destructive"
                     >
                       <Trash2 className="w-4 h-4" />
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handleDebugInstances(session)}
+                      disabled={debugLoading}
+                      className="text-blue-500 hover:text-blue-600"
+                    >
+                      <Bug className="w-4 h-4" />
+                      {debugLoading && selectedSession?.id === session.id ? "..." : "Debug"}
                     </Button>
                   </div>
                 </CardContent>
@@ -595,6 +648,36 @@ export default function WhatsAppSettings() {
                 Excluir
               </Button>
             </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Debug Evolution Instances Dialog */}
+        <Dialog open={debugDialogOpen} onOpenChange={setDebugDialogOpen}>
+          <DialogContent className="w-[90%] sm:max-w-2xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Debug Evolution Instances</DialogTitle>
+              <DialogDescription>
+                Resultados dos testes com {selectedSession?.instance_name}
+              </DialogDescription>
+            </DialogHeader>
+            
+            {debugLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : debugResults ? (
+              <div className="space-y-4">
+                <div className="bg-muted p-4 rounded-lg overflow-x-auto">
+                  <pre className="text-xs font-mono whitespace-pre-wrap break-words">
+                    {JSON.stringify(debugResults, null, 2)}
+                  </pre>
+                </div>
+                <Button onClick={copyDebugResults} className="w-full">
+                  <Copy className="w-4 h-4 mr-2" />
+                  Copiar JSON
+                </Button>
+              </div>
+            ) : null}
           </DialogContent>
         </Dialog>
       </div>
