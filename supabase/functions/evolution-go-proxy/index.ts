@@ -464,7 +464,7 @@ Deno.serve(async (req) => {
     const rawStatus = (result.data?.state || result.data?.connectionStatus || result.data?.status || result.data?.instance?.state || "").toLowerCase();
 
     const responseBody: Record<string, any> = {
-      ok: result.ok,
+      ok: action === "instance.qr" ? true : result.ok,
       status: result.status,
       httpStatus: result.status,
       data: result.data,
