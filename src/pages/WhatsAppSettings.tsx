@@ -21,7 +21,8 @@ import {
   CheckCircle,
   XCircle,
   Loader2,
-  Copy
+  Copy,
+  Bug
 } from "lucide-react";
 import { 
   useWhatsAppSessions, 
