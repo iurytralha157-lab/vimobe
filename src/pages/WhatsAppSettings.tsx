@@ -496,6 +496,16 @@ export default function WhatsAppSettings() {
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handleDebugInstances(session)}
+                      disabled={debugLoading}
+                      className="text-blue-500 hover:text-blue-600"
+                    >
+                      <Bug className="w-4 h-4" />
+                      {debugLoading && selectedSession?.id === session.id ? "..." : "Debug"}
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
