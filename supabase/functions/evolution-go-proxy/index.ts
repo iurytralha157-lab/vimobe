@@ -69,9 +69,9 @@ function normalizeStatus(data: any, action?: string) {
   if (!data) return "disconnected";
 
   // 1. Get raw state and status
-  const rawState = (data.state || data.connectionStatus || "").toLowerCase();
+  const rawState = (data.state || data.connectionStatus || data.instance?.state || "").toLowerCase();
   const rawStatus = (data.status || "").toLowerCase();
-  const isConnectedValue = data.connected === true || data.Connected === true || data.loggedIn === true || data.LoggedIn === true;
+  const isConnectedValue = data.connected === true || data.Connected === true || data.loggedIn === true || data.LoggedIn === true || data.instance?.state === "open";
 
   // 2. Connected conditions (Rule: status open = conectado)
   const isConnected = 
@@ -141,20 +141,13 @@ async function evolutionFetch(
     }
   }
 
-  // Priority 1: Use Global API Key
-  // Priority 2: Use Instance Token if provided
-  // Evolution Go usually requires the global key for instance-level actions
+  // Enviar headers: apikey, Content-Type
   const headers: Record<string, string> = {
     "apikey": API_KEY,
     "Content-Type": "application/json",
   };
   
-  // Only override if specifically requested or if it's an action that might require it
-  // But for status checks, global key is usually safer
-  if (options.token && options.token !== "default_token" && options.action !== "instance.status") {
-    headers["apikey"] = options.token;
-  }
-  
+  // Use instanceId if provided
   if (options.instanceId) {
     headers["instanceId"] = options.instanceId;
   }
@@ -166,7 +159,6 @@ async function evolutionFetch(
     console.log(`[EvolutionProxy] ${method} ${url.pathname}${url.search}`, {
       action: options.action,
       instanceId: options.instanceId,
-      apiKeyUsed: headers.apikey === API_KEY ? "global" : "instance_token",
       headers: { ...headers, apikey: maskApiKey(headers.apikey) }
     });
   }
@@ -183,11 +175,12 @@ async function evolutionFetch(
   try {
     let res = await fetch(url.toString(), init);
     
-    // Fallback: If 401 and we used instance token, retry with global key
-    if (res.status === 401 && headers.apikey !== API_KEY) {
-      console.log("[EvolutionProxy] 401 with instance token, retrying with global API KEY");
-      headers.apikey = API_KEY;
-      res = await fetch(url.toString(), { ...init, headers });
+    // Fallback logic for Evolution Go:
+    // If /instance/status returns 401 with instanceId header, try /instance/get/{instanceId} instead
+    if (res.status === 401 && isStatusAction && options.instanceId) {
+      console.log(`[EvolutionProxy] 401 on /instance/status, retrying with /instance/get/${options.instanceId}`);
+      const fallbackUrl = new URL(`${API_URL}/instance/get/${options.instanceId}`);
+      res = await fetch(fallbackUrl.toString(), { ...init, method: "GET" });
     }
 
     const rawText = await res.text();
@@ -367,7 +360,7 @@ Deno.serve(async (req) => {
     if (payload.session_id && (!payload.instance_id || !payload.token)) {
       const { data: sess } = await supabase
         .from("whatsapp_sessions")
-        .select("instance_id, instance_name, advanced_settings")
+        .select("id, instance_id, instance_name, advanced_settings")
         .eq("id", payload.session_id)
         .maybeSingle();
       
@@ -406,7 +399,7 @@ Deno.serve(async (req) => {
 
     const normalizedStatus = normalizeStatus(result.data, action);
     const isConnected = normalizedStatus === "connected";
-    const rawStatus = (result.data?.state || result.data?.connectionStatus || result.data?.status || "").toLowerCase();
+    const rawStatus = (result.data?.state || result.data?.connectionStatus || result.data?.status || result.data?.instance?.state || "").toLowerCase();
 
     const responseBody: Record<string, any> = {
       ok: result.ok,
@@ -425,6 +418,16 @@ Deno.serve(async (req) => {
         qrFieldUsed: (result as any).qrFieldUsed
       } : {}
     };
+
+    // Auto-update status in database if verifying status
+    if (isConnected && payload.session_id) {
+       await supabase.from("whatsapp_sessions")
+        .update({ 
+          status: "connected", 
+          last_connected_at: new Date().toISOString() 
+        })
+        .eq("id", payload.session_id);
+    }
 
     return new Response(
       JSON.stringify(responseBody),
