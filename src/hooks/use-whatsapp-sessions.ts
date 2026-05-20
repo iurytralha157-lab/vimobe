@@ -390,15 +390,15 @@ export function useGetConnectionStatus() {
         const { data, error } = await supabase.functions.invoke("evolution-go-proxy", {
           body: { action: "instance.status", session_id: arg.sessionId, instance_id: arg.instanceId ?? undefined },
         });
-        
-        if (error) throw error;
-        
-        // If not OK, but we have a data object (like 404), handle it
+
+        // Never throw — front-end must not surface API errors as toast
+        if (error) {
+          console.log("[Status] invoke error (ignored):", error);
+          return { connected: false, status: "unknown", state: "unknown", apiError: true };
+        }
         if (!data?.ok) {
-          if (data?.status === 404 || data?.data?.status === 404) {
-            return { connected: false, status: "disconnected", instanceNotFound: true };
-          }
-          throw new Error(data?.error || "Failed to get status");
+          console.log("[Status] API not OK (ignored):", data?.httpStatus, data?.error);
+          return { connected: false, status: "unknown", state: "unknown", apiError: true };
         }
 
         const normalizedStatus = data?.normalizedStatus || "disconnected";
@@ -410,11 +410,9 @@ export function useGetConnectionStatus() {
           status: normalizedStatus,
           state: isConnected ? "open" : (normalizedStatus === "qr_ready" ? "qr" : "close"),
           instance: { wuid: rawData.jid || rawData.Name || null },
-          rawResponse: data?.rawResponse,
-          rawStatus: data?.rawStatus,
-          httpStatus: data?.httpStatus
         };
       }
+
 
       const { data, error } = await supabase.functions.invoke("evolution-proxy", {
         body: { action: "getConnectionStatus", instanceName: arg.instanceName },
