@@ -6,20 +6,39 @@ const corsHeaders = {
 };
 
 async function checkInstanceConnection(
-  evolutionApiUrl: string,
-  evolutionApiKey: string,
-  instanceName: string
+  session: any
 ): Promise<{ isConnected: boolean; data: any }> {
-  const response = await fetch(
-    `${evolutionApiUrl}/instance/connectionState/${instanceName}`,
-    {
-      method: "GET",
-      headers: { "apikey": evolutionApiKey },
-    }
-  );
+  const isGo = session.provider === "evolution_go";
+  const evolutionUrl = isGo ? Deno.env.get("EVOLUTION_GO_API_URL") : Deno.env.get("EVOLUTION_API_URL");
+  const evolutionKey = isGo ? Deno.env.get("EVOLUTION_GO_API_KEY") : Deno.env.get("EVOLUTION_API_KEY");
+
+  if (!evolutionUrl || !evolutionKey) {
+    throw new Error(`Missing config for provider ${session.provider}`);
+  }
+
+  const endpoint = isGo 
+    ? `/instance/status?instanceId=${session.instance_id || session.instance_name}` 
+    : `/instance/connectionState/${session.instance_name}`;
+  
+  const response = await fetch(`${evolutionUrl}${endpoint}`, {
+    headers: { "apikey": evolutionKey }
+  });
+  
+  if (!response.ok) {
+    return { isConnected: false, data: { status: response.status, error: "HTTP error" } };
+  }
+
   const data = await response.json();
-  const instanceState = (data?.instance?.state || data?.state || "").toLowerCase();
-  const isConnected = instanceState === "open" || instanceState === "connected";
+  
+  let isConnected = false;
+  if (isGo) {
+    const s = data?.data?.data ?? data?.data ?? {};
+    isConnected = s.connected === true || s.Connected === true || s.state === "open" || s.LoggedIn === true;
+  } else {
+    const state = (data?.instance?.state || data?.state || "").toLowerCase();
+    isConnected = state === "open" || state === "connected";
+  }
+  
   return { isConnected, data };
 }
 
@@ -31,16 +50,6 @@ Deno.serve(async (req) => {
   try {
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const EVOLUTION_API_URL = Deno.env.get("EVOLUTION_API_URL");
-    const EVOLUTION_API_KEY = Deno.env.get("EVOLUTION_API_KEY");
-
-    if (!EVOLUTION_API_URL || !EVOLUTION_API_KEY) {
-      console.log("Evolution API credentials not configured");
-      return new Response(
-        JSON.stringify({ success: false, error: "Evolution API not configured" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
@@ -65,33 +74,7 @@ Deno.serve(async (req) => {
 
     for (const session of sessions || []) {
       try {
-        // First check
-        const isGo = session.provider === "evolution_go";
-        const evolutionUrl = isGo ? Deno.env.get("EVOLUTION_GO_API_URL") : EVOLUTION_API_URL;
-        const evolutionKey = isGo ? Deno.env.get("EVOLUTION_GO_API_KEY") : EVOLUTION_API_KEY;
-
-        if (!evolutionUrl || !evolutionKey) {
-          results.push({ session_id: session.id, error: "Missing config for provider" });
-          continue;
-        }
-
-        const endpoint = isGo ? `/instance/status?instanceId=${session.instance_id || session.instance_name}` : `/instance/connectionState/${session.instance_name}`;
-        const response = await fetch(`${evolutionUrl}${endpoint}`, {
-          headers: { "apikey": evolutionKey }
-        });
-        const data = await response.json();
-        
-        let isConnected = false;
-        if (isGo) {
-          const s = data?.data?.data ?? data?.data ?? {};
-          isConnected = s.connected === true || s.Connected === true || s.state === "open" || s.LoggedIn === true;
-        } else {
-          const state = (data?.instance?.state || data?.state || "").toLowerCase();
-          isConnected = state === "open" || state === "connected";
-        }
-
-        const firstCheck = { isConnected, data };
-
+        const firstCheck = await checkInstanceConnection(session);
         console.log(`Health check #1 for ${session.instance_name}:`, firstCheck.data);
 
         const updateData: any = {
@@ -99,7 +82,6 @@ Deno.serve(async (req) => {
         };
 
         if (firstCheck.isConnected) {
-          // Connected - just update timestamp and fix status if needed
           if (session.status !== "connected") {
             updateData.status = "connected";
             updateData.last_connected_at = new Date().toISOString();
@@ -118,17 +100,20 @@ Deno.serve(async (req) => {
             success: true
           });
         } else {
-          // First check says NOT connected - wait 3 seconds and retry before concluding
           console.log(`Session ${session.instance_name} failed first check, retrying in 3s...`);
           await new Promise(resolve => setTimeout(resolve, 3000));
 
-          const secondCheck = await checkInstanceConnection(EVOLUTION_API_URL, EVOLUTION_API_KEY, session.instance_name);
+          const secondCheck = await checkInstanceConnection(session);
           console.log(`Health check #2 for ${session.instance_name}:`, secondCheck.data);
 
           if (secondCheck.isConnected) {
-            // Second check passed - it was just a transient blip, keep connected
             console.log(`Session ${session.instance_name} recovered on retry - keeping connected`);
             
+            if (session.status !== "connected") {
+              updateData.status = "connected";
+              updateData.last_connected_at = new Date().toISOString();
+            }
+
             await supabase
               .from("whatsapp_sessions")
               .update(updateData)
@@ -143,7 +128,6 @@ Deno.serve(async (req) => {
               success: true
             });
           } else {
-            // Both checks failed - NOW mark as disconnected
             console.log(`Session ${session.instance_name} confirmed disconnected after retry`);
             updateData.status = "disconnected";
 
@@ -227,7 +211,6 @@ Deno.serve(async (req) => {
 
       } catch (error) {
         console.error(`Error checking session ${session.instance_name}:`, error);
-        // On error, do NOT change status - just log and move on
         results.push({
           session_id: session.id,
           instance_name: session.instance_name,
