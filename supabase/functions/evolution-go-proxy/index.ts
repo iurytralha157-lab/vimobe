@@ -442,6 +442,7 @@ Deno.serve(async (req) => {
       ok: result.ok,
       status: result.status,
       data: result.data,
+      normalizedStatus: normalizeStatus(result.data, action),
       error: !result.ok 
         ? (result.data?.error?.message || result.data?.message || result.data?.error || `HTTP ${result.status}`)
         : undefined,
@@ -450,6 +451,7 @@ Deno.serve(async (req) => {
         qrFieldUsed: (result as any).qrFieldUsed
       } : {}
     };
+
 
     return new Response(
       JSON.stringify(responseBody),
