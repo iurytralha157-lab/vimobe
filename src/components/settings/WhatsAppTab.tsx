@@ -27,9 +27,7 @@ import {
   History,
   Tag,
   UsersRound,
-  ImageIcon,
-  Bug,
-  Copy } from
+  ImageIcon } from
 "lucide-react";
 import { LabelsManagerSheet } from "@/components/whatsapp/LabelsManagerSheet";
 import { GroupsManagerSheet } from "@/components/whatsapp/GroupsManagerSheet";
