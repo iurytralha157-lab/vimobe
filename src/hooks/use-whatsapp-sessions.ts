@@ -252,7 +252,7 @@ export function useCreateWhatsAppSession() {
             instance_id: evoId,
             token,
             body: { 
-              webhookUrl: `${webhookUrl}?instance_id=${evoId}`, 
+              webhookUrl: `${webhookUrl}?session_id=${session.id}&instance_id=${evoId}`, 
               subscribe: ["ALL"], 
               immediate: true 
             },
