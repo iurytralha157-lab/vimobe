@@ -727,6 +727,34 @@ export function WhatsAppTab() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        <Dialog open={debugDialogOpen} onOpenChange={setDebugDialogOpen}>
+          <DialogContent className="w-[95%] sm:max-w-3xl max-h-[80vh] overflow-y-auto rounded-lg">
+            <DialogHeader>
+              <DialogTitle>Debug Evolution Instances</DialogTitle>
+              <DialogDescription>
+                Resultado bruto dos testes com {selectedSession?.display_name || selectedSession?.instance_name}
+              </DialogDescription>
+            </DialogHeader>
+            {debugLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : debugResults ? (
+              <div className="space-y-4">
+                <div className="bg-muted p-4 rounded-lg overflow-x-auto">
+                  <pre className="text-xs font-mono whitespace-pre-wrap break-words">
+                    {JSON.stringify(debugResults, null, 2)}
+                  </pre>
+                </div>
+                <Button variant="outline" onClick={copyDebugResults} className="w-full">
+                  <Copy className="w-4 h-4 mr-2" />
+                  Copiar JSON
+                </Button>
+              </div>
+            ) : null}
+          </DialogContent>
+        </Dialog>
       </CardContent>
     </Card>);
 
