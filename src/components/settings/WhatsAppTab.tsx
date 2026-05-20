@@ -101,16 +101,17 @@ export function WhatsAppTab() {
       );
 
       if (error) {
-        console.log(`[Polling] API Error for session ${session.id}:`, error);
-        return null; // Don't change status on function error
+        // Silently log polling errors to console only
+        console.log(`[Polling] API Connection error for session ${session.id}:`, error);
+        return null; 
       }
 
       const ok = isGo ? data?.ok : data?.success;
       const httpStatus = data?.status || data?.httpStatus;
       
-      // Rule: API Errors (401, 404, 500, etc) SHOULD NOT overwrite status to disconnected
+      // Rule: API Errors in polling SHOULD NOT trigger toasts or change status
       if (isGo && !ok) {
-        console.warn(`[Polling] Session ${session.id} verification failed (Status: ${httpStatus}). Keeping existing state: ${session.status}`);
+        console.log(`[Polling] Session ${session.id} status check (HTTP ${httpStatus}). Waiting for webhook.`);
         return null;
       }
       
@@ -207,13 +208,12 @@ export function WhatsAppTab() {
 
       if (error) throw error;
       
-      // Rule: API Errors SHOULD NOT overwrite status to disconnected
+      // Rule: API Errors in manual verify show neutral toast
       if (isGo && !ok) {
-        console.warn(`[ManualVerify] Verification failed with status ${httpStatus}. NOT updating DB to disconnected.`);
+        console.log(`[ManualVerify] Verification unavailable (HTTP ${httpStatus}). Keeping existing state.`);
         toast({ 
-          title: "Não foi possível verificar agora", 
-          description: `A API retornou erro ${httpStatus}. O status anterior foi mantido.`,
-          variant: "destructive" 
+          title: "Status indisponível via API", 
+          description: `Aguardando atualização via webhook. Status atual mantido.`,
         });
         return;
       }
