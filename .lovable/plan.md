@@ -1,21 +1,31 @@
-I will prepare a SQL script to ensure the database structure is fully compatible with the current WhatsApp integration and fix the QR code generation issue by improving the Edge Function's communication with the Evolution Go API.
+O usuário relatou que todas as instâncias do WhatsApp estão visíveis para todos os usuários da organização, o que não deveria acontecer. O objetivo é restringir a visibilidade para que:
+1. Usuários comuns vejam apenas suas próprias instâncias (owner).
+2. Usuários comuns vejam instâncias de terceiros apenas se tiverem acesso explicitamente concedido (tabela `whatsapp_session_access`).
+3. Administradores da organização continuem vendo todas as instâncias da sua própria organização.
+4. Super administradores continuem vendo tudo.
 
-### SQL Improvements
-- Create or update the `whatsapp_sessions` table with all required columns (`provider`, `instance_id`, `display_name`, etc.).
-- Ensure `whatsapp_session_access`, `whatsapp_conversations`, and `whatsapp_messages` tables exist with proper constraints and RLS policies.
-- Add necessary indices for performance.
-- Ensure the `get_user_organization_id()` and `is_admin()` functions are present and working.
+Para isso, preciso:
+1. Identificar e remover políticas de RLS excessivamente permissivas.
+2. Unificar a lógica de acesso usando funções auxiliares robustas.
+3. Aplicar as novas políticas nas tabelas `whatsapp_sessions`, `whatsapp_conversations` e `whatsapp_messages`.
 
-### Code Improvements
-- **Edge Function (`evolution-go-proxy`)**:
-  - Update the authentication logic to handle cases where the instance token might not be accepted as a global API key.
-  - Improve error logging to diagnose why the API returns 401.
-  - Fix QR code normalization to handle different field name capitalizations from Evolution Go.
-- **Frontend Hook (`use-whatsapp-sessions.ts`)**:
-  - Include the `instance_id` in the webhook URL query parameters to ensure the webhook can identify the session even if the instance ID is missing from headers.
-  - Ensure the `token` is persisted correctly in `advanced_settings`.
+### Detalhes Técnicos
 
-### Technical Details
-- The SQL script will use `CREATE TABLE IF NOT EXISTS` and `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` to be non-destructive.
-- The webhook URL update: `${SUPABASE_URL}/functions/v1/evolution-go-webhook?instance_id=${evoId}`.
-- Authentication fallback in proxy: If a call with an instance token fails, retry with the global API key if applicable.
+1. **Remoção de Políticas Antigas**:
+   - `whatsapp_sessions`: Remover "Users can view their own sessions", "Users can view sessions they own or have access to", etc.
+   - `whatsapp_messages`: Remover "Users can view their own messages".
+   - `whatsapp_conversations`: Remover qualquer política que use apenas o ID da organização.
+
+2. **Novas Políticas para `whatsapp_sessions`**:
+   - SELECT: Usar `is_super_admin() OR can_access_whatsapp_session(id)`.
+   - INSERT: Apenas para a própria organização e o próprio usuário como dono.
+   - UPDATE/DELETE: Apenas dono ou administrador da organização.
+
+3. **Novas Políticas para `whatsapp_conversations` e `whatsapp_messages`**:
+   - Devem herdar o acesso da sessão vinculada através da função `can_view_whatsapp_conversation`.
+
+### Implementação
+
+Vou criar uma nova migração SQL para consolidar essas mudanças, garantindo que a lógica de `is_admin()` e `can_access_whatsapp_session` esteja alinhada com as necessidades do usuário.
+
+**Nota**: A função `can_access_whatsapp_session` já existe e parece correta, mas as políticas existentes estão sobrescrevendo o comportamento desejado.
