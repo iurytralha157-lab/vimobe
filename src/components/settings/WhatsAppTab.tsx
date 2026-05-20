@@ -377,10 +377,22 @@ export function WhatsAppTab() {
               Gerencie suas conexões via Evolution API
             </CardDescription>
           </div>
-          <Button data-tour="whatsapp-new-session" size="sm" onClick={() => setCreateDialogOpen(true)} className="shrink-0">
-            <Plus className="w-4 h-4 mr-1.5" />
-            Nova
-          </Button>
+          <div className="flex items-center gap-2 shrink-0">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleDebugInstances(sessions?.[0])}
+              disabled={!sessions?.length || debugLoading}
+              className="shrink-0"
+            >
+              <Bug className="w-4 h-4 mr-1.5" />
+              Debug Evolution Instances
+            </Button>
+            <Button data-tour="whatsapp-new-session" size="sm" onClick={() => setCreateDialogOpen(true)} className="shrink-0">
+              <Plus className="w-4 h-4 mr-1.5" />
+              Nova
+            </Button>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
@@ -480,6 +492,16 @@ export function WhatsAppTab() {
                     <Button variant="outline" size="sm" className="h-8 w-8 p-0 shrink-0" onClick={() => handleOpenAccessDialog(session)}>
                       <Users className="w-3.5 h-3.5" />
                     </Button>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="outline" size="sm" className="h-8 w-8 p-0 shrink-0" onClick={() => handleDebugInstances(session)} disabled={debugLoading}>
+                            {debugLoading && selectedSession?.id === session.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Bug className="w-3.5 h-3.5" />}
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Debug Evolution Instances</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                     {(session as any).provider === "evolution_go" && session.status === "connected" && (
                       <TooltipProvider>
                         <Tooltip>
