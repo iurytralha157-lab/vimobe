@@ -3,6 +3,24 @@
 -- instâncias, conversas e mensagens. Super admin vê tudo.
 -- =========================================================
 
+-- ---------- LIMPAR POLICIES ANTIGAS: whatsapp_conversations ----------
+DROP POLICY IF EXISTS whatsapp_conversations_policy ON public.whatsapp_conversations;
+DROP POLICY IF EXISTS conversations_select ON public.whatsapp_conversations;
+DROP POLICY IF EXISTS conversations_update ON public.whatsapp_conversations;
+DROP POLICY IF EXISTS conversations_delete ON public.whatsapp_conversations;
+
+-- ---------- LIMPAR POLICIES ANTIGAS: whatsapp_messages ----------
+DROP POLICY IF EXISTS "Users can view their own messages" ON public.whatsapp_messages;
+DROP POLICY IF EXISTS whatsapp_messages_policy ON public.whatsapp_messages;
+DROP POLICY IF EXISTS messages_select ON public.whatsapp_messages;
+DROP POLICY IF EXISTS messages_insert ON public.whatsapp_messages;
+DROP POLICY IF EXISTS messages_update ON public.whatsapp_messages;
+
+-- ---------- LIMPAR POLICIES ANTIGAS: whatsapp_session_access ----------
+DROP POLICY IF EXISTS whatsapp_session_access_management ON public.whatsapp_session_access;
+DROP POLICY IF EXISTS session_access_manage ON public.whatsapp_session_access;
+DROP POLICY IF EXISTS session_access_select ON public.whatsapp_session_access;
+
 -- ---------- REMOVER FUNÇÕES ANTIGAS ----------
 DROP FUNCTION IF EXISTS public.can_access_whatsapp_session(uuid, uuid);
 DROP FUNCTION IF EXISTS public.can_access_whatsapp_session(uuid);
@@ -22,18 +40,6 @@ DROP POLICY IF EXISTS sessions_select_own ON public.whatsapp_sessions;
 DROP POLICY IF EXISTS sessions_insert_own ON public.whatsapp_sessions;
 DROP POLICY IF EXISTS sessions_update_own ON public.whatsapp_sessions;
 DROP POLICY IF EXISTS sessions_delete_own ON public.whatsapp_sessions;
-
--- ---------- LIMPAR POLICIES ANTIGAS: whatsapp_conversations ----------
-DROP POLICY IF EXISTS whatsapp_conversations_policy ON public.whatsapp_conversations;
-
--- ---------- LIMPAR POLICIES ANTIGAS: whatsapp_messages ----------
-DROP POLICY IF EXISTS "Users can view their own messages" ON public.whatsapp_messages;
-DROP POLICY IF EXISTS whatsapp_messages_policy ON public.whatsapp_messages;
-
--- ---------- LIMPAR POLICIES ANTIGAS: whatsapp_session_access ----------
-DROP POLICY IF EXISTS whatsapp_session_access_management ON public.whatsapp_session_access;
-DROP POLICY IF EXISTS session_access_manage ON public.whatsapp_session_access;
-DROP POLICY IF EXISTS session_access_select ON public.whatsapp_session_access;
 
 -- =========================================================
 -- CRIAR FUNÇÕES NOVAS (somente owner + super admin)
@@ -91,6 +97,33 @@ CREATE POLICY sessions_delete_own ON public.whatsapp_sessions
   USING (is_super_admin() OR owner_user_id = auth.uid());
 
 -- =========================================================
--- POLICIES: whatsapp_conversations e whatsapp_messages
--- Já usam can_view_whatsapp_conversation(), não precisa mudar
+-- CRIAR POLICIES NOVAS: whatsapp_conversations
 -- =========================================================
+
+CREATE POLICY conversations_select ON public.whatsapp_conversations
+  FOR SELECT TO authenticated
+  USING (can_view_whatsapp_conversation(id));
+
+CREATE POLICY conversations_update ON public.whatsapp_conversations
+  FOR UPDATE TO authenticated
+  USING (can_view_whatsapp_conversation(id));
+
+CREATE POLICY conversations_delete ON public.whatsapp_conversations
+  FOR DELETE TO authenticated
+  USING (is_super_admin() OR can_view_whatsapp_conversation(id));
+
+-- =========================================================
+-- CRIAR POLICIES NOVAS: whatsapp_messages
+-- =========================================================
+
+CREATE POLICY messages_select ON public.whatsapp_messages
+  FOR SELECT TO authenticated
+  USING (can_view_whatsapp_conversation(conversation_id));
+
+CREATE POLICY messages_insert ON public.whatsapp_messages
+  FOR INSERT TO authenticated
+  WITH CHECK (can_view_whatsapp_conversation(conversation_id));
+
+CREATE POLICY messages_update ON public.whatsapp_messages
+  FOR UPDATE TO authenticated
+  USING (can_view_whatsapp_conversation(conversation_id));
