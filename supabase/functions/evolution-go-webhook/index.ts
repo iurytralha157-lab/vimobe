@@ -203,33 +203,31 @@ async function handleMessageUpsert(session: any, event: any) {
 async function handleConnectionUpdate(session: any, event: any) {
   const data = event.data || event;
   const state = (data.state || data.connectionStatus || data.status || "").toLowerCase();
-  const eventName = (event.event || event.type || "").toLowerCase();
+  const eventName = (event.event || event.type || event.action || "").toLowerCase();
   
-  console.log(`[Webhook] Processing connection update for session ${session.id}:`, {
-    state,
-    eventName,
-    instance: session.instance_name
-  });
+  console.log(`[Diagnostic] Normalizing status for event ${eventName} (state: ${state})`);
 
+  // Normalized logic requested by user
   const isConnected = 
-    state === "open" || 
-    state === "connected" || 
-    eventName === "pair.success" ||
+    ["pairsuccess", "connected", "connection", "open"].includes(eventName) ||
+    ["open", "connected"].includes(state) ||
     data.connected === true ||
     data.loggedIn === true;
 
   const isDisconnected = 
-    state === "close" || 
-    state === "closed" || 
-    state === "disconnected" || 
-    state === "disconnect" ||
-    state === "offline";
+    ["loggedout", "disconnected", "qrtimeout", "close", "closed", "offline"].includes(eventName) ||
+    ["close", "closed", "disconnected", "disconnect", "offline"].includes(state);
 
   let status = session.status;
-  if (isConnected) status = "connected";
-  else if (isDisconnected) status = "disconnected";
-  else if (state === "connecting") status = "connecting";
-  else if (state === "qr" || eventName === "qrcode.updated") status = "qr_ready";
+  if (isConnected) {
+    status = "connected";
+  } else if (isDisconnected) {
+    status = "disconnected";
+  } else if (state === "connecting") {
+    status = "connecting";
+  } else if (state === "qr" || ["qrcode", "qr_ready"].includes(eventName)) {
+    status = "qr_ready";
+  }
 
   const update: any = { 
     status, 
@@ -238,11 +236,9 @@ async function handleConnectionUpdate(session: any, event: any) {
 
   if (status === "connected") {
     update.last_connected_at = new Date().toISOString();
-    // Try to get phone from event if available
     const phone = data.jid?.split("@")[0] || data.phone || data.number;
     if (phone) update.phone_number = phone;
     
-    // Clear QR code related settings if they exist in advanced_settings
     if (session.advanced_settings?.qr_code) {
       update.advanced_settings = { 
         ...session.advanced_settings, 
@@ -252,13 +248,21 @@ async function handleConnectionUpdate(session: any, event: any) {
     }
   }
 
-  const { error } = await supabase.from("whatsapp_sessions").update(update).eq("id", session.id);
+  console.log(`[Diagnostic] Attempting update on 'whatsapp_sessions' for id ${session.id} with status: ${status}`);
+
+  const { data: updatedRows, error, count } = await supabase
+    .from("whatsapp_sessions")
+    .update(update)
+    .eq("id", session.id)
+    .select();
   
   if (error) {
-    console.error(`[Webhook] Error updating session ${session.id}:`, error);
+    console.error(`[Diagnostic] Error updating session ${session.id}:`, error);
   } else {
-    console.log(`[Webhook] Session ${session.id} updated to ${status}`);
+    console.log(`[Diagnostic] Success: Session ${session.id} updated. Rows affected: ${updatedRows?.length || 0}`);
   }
+  
+  return status;
 }
 
 async function handleQrUpdate(session: any, event: any) {
