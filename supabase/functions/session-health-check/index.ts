@@ -19,7 +19,7 @@ async function checkInstanceConnection(
   );
   const data = await response.json();
   const instanceState = (data?.instance?.state || data?.state || "").toLowerCase();
-  const isConnected = instanceState === "open" || instanceState === "connected" || instanceState === "connecting";
+  const isConnected = instanceState === "open" || instanceState === "connected";
   return { isConnected, data };
 }
 
@@ -66,7 +66,32 @@ Deno.serve(async (req) => {
     for (const session of sessions || []) {
       try {
         // First check
-        const firstCheck = await checkInstanceConnection(EVOLUTION_API_URL, EVOLUTION_API_KEY, session.instance_name);
+        const isGo = session.provider === "evolution_go";
+        const evolutionUrl = isGo ? Deno.env.get("EVOLUTION_GO_API_URL") : EVOLUTION_API_URL;
+        const evolutionKey = isGo ? Deno.env.get("EVOLUTION_GO_API_KEY") : EVOLUTION_API_KEY;
+
+        if (!evolutionUrl || !evolutionKey) {
+          results.push({ session_id: session.id, error: "Missing config for provider" });
+          continue;
+        }
+
+        const endpoint = isGo ? `/instance/status?instanceId=${session.instance_id || session.instance_name}` : `/instance/connectionState/${session.instance_name}`;
+        const response = await fetch(`${evolutionUrl}${endpoint}`, {
+          headers: { "apikey": evolutionKey }
+        });
+        const data = await response.json();
+        
+        let isConnected = false;
+        if (isGo) {
+          const s = data?.data?.data ?? data?.data ?? {};
+          isConnected = s.connected === true || s.Connected === true || s.state === "open" || s.LoggedIn === true;
+        } else {
+          const state = (data?.instance?.state || data?.state || "").toLowerCase();
+          isConnected = state === "open" || state === "connected";
+        }
+
+        const firstCheck = { isConnected, data };
+
         console.log(`Health check #1 for ${session.instance_name}:`, firstCheck.data);
 
         const updateData: any = {
