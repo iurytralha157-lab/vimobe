@@ -173,27 +173,23 @@ export function WhatsAppTab() {
 
       if (lastQr) {
         setQrCode(lastQr);
-        // Important: Rule - QR gerado = aguardando leitura
-        // Do not change to "connected" here
-        if (session.status !== "connected") {
-          await supabase.from("whatsapp_sessions").update({ status: "qr_ready" }).eq("id", session.id);
-          queryClient.invalidateQueries({ queryKey: ["whatsapp-sessions"] });
-        }
+        // Front-end NEVER writes status. Webhook is the only writer.
       } else {
-        toast({ 
-          title: "Atenção", 
+        toast({
+          title: "Atenção",
           description: "O QR Code ainda não está pronto. Clique em Atualizar em alguns instantes.",
-          variant: "default" 
+          variant: "default"
         });
       }
 
     } catch (error) {
       console.error("Error getting QR code:", error);
-      toast({ title: "Erro", description: "Falha ao obter QR Code", variant: "destructive" });
     } finally {
       setIsRefreshingQr(false);
     }
   };
+
+
 
   const checkConnectionStatus = async (session: WhatsAppSession) => {
     try {
