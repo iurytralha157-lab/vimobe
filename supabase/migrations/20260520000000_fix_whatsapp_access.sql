@@ -45,6 +45,9 @@ DROP POLICY IF EXISTS "session_access_manage" ON public.whatsapp_session_access;
 DROP POLICY IF EXISTS "Users can view access grants for accessible sessions" ON public.whatsapp_session_access;
 DROP POLICY IF EXISTS "Session owners and admins can manage access" ON public.whatsapp_session_access;
 
+-- 5. WhatsApp Groups
+DROP POLICY IF EXISTS "whatsapp_groups_select" ON public.whatsapp_groups;
+
 -- Update the function can_view_whatsapp_conversation to include Org Admin check
 CREATE OR REPLACE FUNCTION public.can_view_whatsapp_conversation(_conv_id uuid)
  RETURNS boolean
@@ -162,3 +165,8 @@ USING (
     AND (s.owner_user_id = auth.uid() OR public.is_admin())
   )
 );
+
+-- WHATSAPP GROUPS
+CREATE POLICY "whatsapp_groups_select" ON public.whatsapp_groups
+FOR SELECT TO authenticated
+USING (public.can_access_whatsapp_session(session_id));
