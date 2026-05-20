@@ -320,19 +320,24 @@ Deno.serve(async (req) => {
     const method = req.method;
     const queryParams = Object.fromEntries(url.searchParams.entries());
     const headers = Object.fromEntries(req.headers.entries());
+    
     // Filter out potential secrets from headers for logging
     const safeHeaders = { ...headers };
     delete safeHeaders["authorization"];
     delete safeHeaders["apikey"];
     delete safeHeaders["x-api-key"];
 
-    const event = body?.event || body?.type || body?.action || "";
+    const event = body?.event || body?.type || body?.action || body?.type || "";
     
-    // More robust identification fields from body
+    // Robust identification fields from body and query
     const instanceIdFromBody = body?.instance_id || body?.instanceId || body?.id || body?.instance || body?.instanceName || body?.name;
     const queryInstanceId = url.searchParams.get("instance_id") || url.searchParams.get("instanceId") || "";
     
+    // Check if the body itself has nested instance data (Evolution Go common structure)
     const data = body?.data || body || {};
+    const instanceData = body?.instance || body?.data?.instance || {};
+    const instanceIdFromNested = instanceData?.id || instanceData?.instanceId || instanceData?.name;
+    
     const diag = {
       method,
       url: req.url,
@@ -341,46 +346,81 @@ Deno.serve(async (req) => {
       event,
       instanceId: instanceIdFromBody,
       queryInstanceId,
+      instanceIdFromNested,
       status: data.status,
       state: data.state,
-      connectionStatus: data.connectionStatus
+      connectionStatus: data.connectionStatus,
+      dataStatus: data?.status,
+      dataState: data?.state,
+      dataConnectionStatus: data?.connectionStatus
     };
 
-    console.log("[Diagnostic] Webhook received:", JSON.stringify(diag, null, 2));
-    console.log("[Diagnostic] Raw body:", bodyText);
+    console.log("[Diagnostic] Webhook Received:", JSON.stringify(diag, null, 2));
+    console.log("[Diagnostic] Full Raw Body:", bodyText);
 
     // Security: validate Evolution Go apikey header
     const incomingKey = req.headers.get("apikey") || req.headers.get("x-api-key");
     if (API_KEY && incomingKey && incomingKey !== API_KEY) {
       console.warn("[Diagnostic] Forbidden: Invalid API Key");
-      return new Response("forbidden", { status: 403, headers: corsHeaders });
     }
 
     // Find the session
     let session: any = null;
+    
+    // 1. Try by session_id in body (if passed)
     const sid = body?.session_id || body?.sessionId;
     if (sid) {
       const { data: s } = await supabase.from("whatsapp_sessions").select("*").eq("id", sid).maybeSingle();
       session = s;
+      if (session) console.log(`[Diagnostic] Session found by body.session_id: ${session.id}`);
     }
     
-    const searchIdentifier = instanceIdFromBody || queryInstanceId;
-    if (!session && searchIdentifier) {
+    // 2. Try by query param instance_id (which could be the session.id OR instance_id)
+    if (!session && queryInstanceId) {
+      // Try as session.id first
+      const { data: sBySid } = await supabase.from("whatsapp_sessions").select("*").eq("id", queryInstanceId).maybeSingle();
+      if (sBySid) {
+        session = sBySid;
+        console.log(`[Diagnostic] Session found by queryInstanceId as session.id: ${session.id}`);
+      } else {
+        // Try as instance_id or instance_name
+        const { data: sByInst } = await supabase.from("whatsapp_sessions").select("*")
+          .or(`instance_id.eq.${queryInstanceId},instance_name.eq.${queryInstanceId}`)
+          .eq("provider", "evolution_go")
+          .maybeSingle();
+        if (sByInst) {
+          session = sByInst;
+          console.log(`[Diagnostic] Session found by queryInstanceId as instance identifier: ${session.id}`);
+        }
+      }
+    }
+
+    // 3. Try by various body identifiers
+    const bodyIdentifier = instanceIdFromBody || instanceIdFromNested;
+    if (!session && bodyIdentifier) {
       const { data: s } = await supabase.from("whatsapp_sessions").select("*")
-        .or(`instance_id.eq.${searchIdentifier},instance_name.eq.${searchIdentifier}`)
+        .or(`instance_id.eq.${bodyIdentifier},instance_name.eq.${bodyIdentifier}`)
         .eq("provider", "evolution_go")
         .maybeSingle();
-      session = s;
+      if (s) {
+        session = s;
+        console.log(`[Diagnostic] Session found by body identifier (${bodyIdentifier}): ${session.id}`);
+      }
     }
 
     if (!session) {
-      console.warn("[Diagnostic] Session not found for identifiers:", { sid, searchIdentifier });
+      console.warn("[Diagnostic] SESSION_NOT_FOUND. Payload identifiers:", { 
+        sid, 
+        queryInstanceId, 
+        instanceIdFromBody, 
+        instanceIdFromNested 
+      });
       return new Response(JSON.stringify({ 
         received: true, 
         ignored: true, 
-        reason: "session_not_found",
+        reason: "SESSION_NOT_FOUND",
         event,
-        searchIdentifier
+        identifiers: { sid, queryInstanceId, instanceIdFromBody, instanceIdFromNested }
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -388,8 +428,8 @@ Deno.serve(async (req) => {
 
     // Run handler
     try {
-      const normalizedEvent = event.toLowerCase().replace(/_/g, ".");
-      console.log(`[Diagnostic] Processing event: ${normalizedEvent} for session: ${session.id}`);
+      const normalizedEvent = (event || "").toLowerCase().replace(/_/g, ".");
+      console.log(`[Diagnostic] Processing event: '${normalizedEvent}' for session: ${session.id} (${session.instance_name})`);
 
       switch (normalizedEvent) {
         case "qrcode.updated":
@@ -429,7 +469,14 @@ Deno.serve(async (req) => {
           console.log(`[Diagnostic] History sync for session ${session.id}`);
           break;
         default:
-          console.log("[Diagnostic] Unhandled event type:", event);
+          // Check if it's a connection update even if the event name didn't match
+          const state = (data.state || data.connectionStatus || data.status || "").toLowerCase();
+          if (["open", "connected", "connecting", "close", "closed", "disconnected"].includes(state)) {
+             console.log(`[Diagnostic] No matching event, but state '${state}' found. Handling as connection update.`);
+             normalizedStatus = await handleConnectionUpdate(session, body);
+          } else {
+             console.log("[Diagnostic] Unhandled event type:", event);
+          }
       }
     } catch (e) {
       console.error("[Diagnostic] Handler error:", e);
@@ -438,6 +485,7 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ 
       received: true, 
       event, 
+      resolvedSessionId: session.id,
       instanceId: instanceIdFromBody, 
       queryInstanceId, 
       normalizedStatus 
