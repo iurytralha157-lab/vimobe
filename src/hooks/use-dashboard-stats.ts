@@ -126,10 +126,14 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
         const prevFrom = new Date(currentFrom.getTime() - interval);
 
         // Visibilidade obrigatória — usuário comum só vê próprios leads
+        // Otimização: checkLeadVisibility usa cache do TanStack se chamado via hook, 
+        // mas aqui estamos num queryFn. O cache manual ou Promise.all ajuda.
         const visibility = currentUserId
           ? await checkLeadVisibility(currentUserId)
           : { canViewAll: false, userId: undefined };
 
+        // 1. Definição das queries básicas
+        
         // Base filters for current period
         let query = supabase
           .from('leads')
@@ -138,7 +142,6 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
           .gte('created_at', currentFrom.toISOString())
           .lte('created_at', currentTo.toISOString());
 
-        // Join with lead_meta if Meta filters are present
         if (filters?.campaignId || filters?.adSetId || filters?.adId) {
           query = supabase
             .from('leads')
@@ -151,32 +154,10 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
           if (filters.adSetId) query = query.eq('lead_meta.adset_id', filters.adSetId);
           if (filters.adId) query = query.eq('lead_meta.ad_id', filters.adId);
         }
-
         if (filters?.source) query = query.eq('source', filters.source);
-
-        if (filters?.teamId && (visibility.canViewAll || visibility.teamMemberIds)) {
-          const { data: teamMembers } = await supabase
-            .from('team_members')
-            .select('user_id')
-            .eq('team_id', filters.teamId);
-          if (teamMembers?.length) {
-            query = query.in('assigned_user_id', teamMembers.map(m => m.user_id));
-          }
-        }
-
-        // Aplica visibilidade (admin/líder/usuário próprio); filters.userId só funciona se a visibilidade permitir
         query = applyVisibilityFilter(query, visibility, 'assigned_user_id', filters?.userId);
 
-        const { data: leads, count, error } = await query;
-
-        if (error) {
-          console.error('Error fetching leads stats:', error);
-          throw error;
-        }
-
-        const totalLeads = count || 0;
-
-        // Vendas ganhas: filtrar por won_at (data da venda), não por created_at
+        // 2. Query de Vendas Ganhas
         let wonQuery = supabase
           .from('leads')
           .select('id, valor_interesse, assigned_user_id, source, lead_meta!left(campaign_id, adset_id, ad_id)')
@@ -189,31 +170,9 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
         if (filters?.adSetId) wonQuery = wonQuery.eq('lead_meta.adset_id', filters.adSetId);
         if (filters?.adId) wonQuery = wonQuery.eq('lead_meta.ad_id', filters.adId);
         if (filters?.source) wonQuery = wonQuery.eq('source', filters.source);
-        if (filters?.teamId && (visibility.canViewAll || visibility.teamMemberIds)) {
-          const { data: teamMembers } = await supabase
-            .from('team_members')
-            .select('user_id')
-            .eq('team_id', filters.teamId);
-          if (teamMembers?.length) {
-            wonQuery = wonQuery.in('assigned_user_id', teamMembers.map(m => m.user_id));
-          }
-        }
         wonQuery = applyVisibilityFilter(wonQuery, visibility, 'assigned_user_id', filters?.userId);
 
-        const { data: wonLeads } = await wonQuery;
-        const closedLeads = wonLeads?.length || 0;
-        const totalSalesValue = (wonLeads || []).reduce(
-          (sum, l: any) => sum + (Number(l.valor_interesse) || 0),
-          0
-        );
-
-        const respTimes = leads?.filter(l => l.first_response_seconds != null)
-          .map(l => Number(l.first_response_seconds)) || [];
-        const avgRespSec = respTimes.length > 0 
-          ? respTimes.reduce((a, b) => a + b, 0) / respTimes.length 
-          : null;
-
-        // Previous period for trends
+        // 3. Query de Período Anterior (Trends)
         let prevQuery = supabase
           .from('leads')
           .select('id, deal_status', { count: 'exact', head: true })
@@ -232,11 +191,77 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
           if (filters.adSetId) prevQuery = prevQuery.eq('lead_meta.adset_id', filters.adSetId);
           if (filters.adId) prevQuery = prevQuery.eq('lead_meta.ad_id', filters.adId);
         }
-        
         if (filters?.source) prevQuery = prevQuery.eq('source', filters.source);
         prevQuery = applyVisibilityFilter(prevQuery, visibility, 'assigned_user_id', filters?.userId);
-        
-        const { count: prevTotal } = await prevQuery;
+
+        // 4. Se houver filtro de equipe, buscar membros primeiro (necessário para as outras queries)
+        let teamMemberIds: string[] | null = null;
+        if (filters?.teamId && (visibility.canViewAll || visibility.teamMemberIds)) {
+          const { data: teamMembers } = await supabase
+            .from('team_members')
+            .select('user_id')
+            .eq('team_id', filters.teamId);
+          if (teamMembers?.length) {
+            teamMemberIds = teamMembers.map(m => m.user_id);
+            query = query.in('assigned_user_id', teamMemberIds);
+            wonQuery = wonQuery.in('assigned_user_id', teamMemberIds);
+            prevQuery = prevQuery.in('assigned_user_id', teamMemberIds);
+          }
+        }
+
+        // EXECUÇÃO PARALELA DAS QUERIES
+        const [leadsResult, wonResult, prevResult] = await Promise.all([
+          query,
+          wonQuery,
+          prevQuery
+        ]);
+
+        const totalLeads = leadsResult.count || 0;
+        const leads = leadsResult.data || [];
+        const wonLeads = wonResult.data || [];
+        const closedLeads = wonLeads.length;
+        const prevTotal = prevResult.count || 0;
+
+        const totalSalesValue = wonLeads.reduce(
+          (sum, l: any) => sum + (Number(l.valor_interesse) || 0),
+          0
+        );
+
+        const respTimes = leads.filter(l => l.first_response_seconds != null)
+          .map(l => Number(l.first_response_seconds)) || [];
+        const avgRespSec = respTimes.length > 0 
+          ? respTimes.reduce((a, b) => a + b, 0) / respTimes.length 
+          : null;
+
+        const formatAvgTime = (seconds: number | null) => {
+          if (seconds === null) return '--';
+          if (seconds < 60) return `${Math.round(seconds)}s`;
+          if (seconds < 3600) return `${Math.round(seconds / 60)}m`;
+          return `${Math.round(seconds / 3600)}h`;
+        };
+
+        const conversionRate = totalLeads > 0 ? (closedLeads / totalLeads) * 100 : 0;
+        const leadsTrend = prevTotal && prevTotal > 0 
+          ? Math.round(((totalLeads - prevTotal) / prevTotal) * 100) 
+          : 0;
+
+        return {
+          totalLeads,
+          conversionRate,
+          closedLeads,
+          avgResponseTime: formatAvgTime(avgRespSec),
+          totalSalesValue,
+          pendingCommissions: 0,
+          leadsTrend,
+          conversionTrend: 0,
+          closedTrend: 0,
+          totalReceivables: 0,
+          totalPayables: 0,
+          overdueReceivables: 0,
+          overduePayables: 0,
+          paidCommissions: 0,
+        };
+      });
 
         const formatAvgTime = (seconds: number | null) => {
           if (seconds === null) return '--';
