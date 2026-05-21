@@ -4,6 +4,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import { useState, useEffect, useCallback } from "react";
 
+/**
+ * Feature flag to enable/disable creation of new Evolution Go instances.
+ * When false, all new connections will use the standard Evolution provider.
+ */
+export const EVOLUTION_GO_CREATION_ENABLED = false;
+
 export type WhatsAppProvider = "evolution" | "evolution_go";
 
 export interface WhatsAppSession {
@@ -163,8 +169,14 @@ export function useCreateWhatsAppSession() {
         throw new Error("User not authenticated");
       }
       const displayName = typeof input === "string" ? input : input.displayName;
-      const provider: WhatsAppProvider =
+      let provider: WhatsAppProvider =
         typeof input === "string" ? "evolution" : input.provider || "evolution";
+      
+      // Security: Force 'evolution' if Evolution Go creation is disabled
+      if (!EVOLUTION_GO_CREATION_ENABLED && provider === "evolution_go") {
+        console.warn("Evolution Go creation is disabled. Defaulting to standard Evolution.");
+        provider = "evolution";
+      }
 
       // Generate unique instance name: {sanitized_name}_{org_prefix}_{random_suffix}
       const orgPrefix = profile.organization_id.substring(0, 5);

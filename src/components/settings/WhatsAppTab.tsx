@@ -43,8 +43,9 @@ import {
   useGrantSessionAccess,
   useRevokeSessionAccess,
   useToggleNotificationSession,
-  WhatsAppSession } from
-"@/hooks/use-whatsapp-sessions";
+  WhatsAppSession,
+  EVOLUTION_GO_CREATION_ENABLED } from
+  "@/hooks/use-whatsapp-sessions";
 import { useOrganizationUsers } from "@/hooks/use-users";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
@@ -70,7 +71,7 @@ export function WhatsAppTab() {
   const [accessDialogOpen, setAccessDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [instanceName, setInstanceName] = useState("");
-  const [newProvider, setNewProvider] = useState<"evolution" | "evolution_go">("evolution_go");
+  const [newProvider, setNewProvider] = useState<"evolution" | "evolution_go">(EVOLUTION_GO_CREATION_ENABLED ? "evolution_go" : "evolution");
   const [selectedSession, setSelectedSession] = useState<WhatsAppSession | null>(null);
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [isRefreshingQr, setIsRefreshingQr] = useState(false);
@@ -587,21 +588,23 @@ export function WhatsAppTab() {
               </SheetDescription>
             </SheetHeader>
             <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label>Provedor</Label>
-                <Select value={newProvider} onValueChange={(v) => setNewProvider(v as any)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="evolution_go">Evolution Go (Novo, recomendado)</SelectItem>
-                    <SelectItem value="evolution">Evolution (Legado)</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">
-                  Evolution Go é a nova versão em Go, mais rápida e estável. Use para conexões novas.
-                </p>
-              </div>
+              {EVOLUTION_GO_CREATION_ENABLED && (
+                <div className="space-y-2">
+                  <Label>Provedor</Label>
+                  <Select value={newProvider} onValueChange={(v) => setNewProvider(v as any)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="evolution_go">Evolution Go (Novo, recomendado)</SelectItem>
+                      <SelectItem value="evolution">Evolution (Legado)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Evolution Go é a nova versão em Go, mais rápida e estável. Use para conexões novas.
+                  </p>
+                </div>
+              )}
               <div className="space-y-2">
                 <Label>Nome da Instância</Label>
                 <Input
