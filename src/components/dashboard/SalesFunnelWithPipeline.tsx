@@ -154,16 +154,21 @@ export function SalesFunnelWithPipeline({ filters }: SalesFunnelWithPipelineProp
                         )}
                       </div>
                     </TooltipTrigger>
-                    <TooltipContent side="right" className="bg-popover/95 backdrop-blur-sm border-primary/20 p-3 shadow-xl">
-                      <div className="text-xs space-y-1.5">
-                        <p className="font-bold text-primary uppercase tracking-wider">{item.name}</p>
-                        <div className="space-y-1 border-t border-border pt-1.5">
-                          <p className="text-muted-foreground flex justify-between gap-4">
-                            Quantidade: <span className="text-foreground font-bold">{item.value} leads</span>
-                          </p>
-                          <p className="text-muted-foreground flex justify-between gap-4">
-                            Percentual: <span className="text-foreground font-bold">{item.percentage}% do funil</span>
-                          </p>
+                    <TooltipContent 
+                      side="right" 
+                      className="bg-popover/95 backdrop-blur-md border border-border p-3 shadow-xl rounded-xl animate-in fade-in zoom-in duration-200 min-w-[160px]"
+                    >
+                      <div className="space-y-2">
+                        <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{item.name}</p>
+                        <div className="space-y-1.5 border-t border-border pt-2">
+                          <div className="flex justify-between items-center gap-4">
+                            <span className="text-xs text-muted-foreground font-medium">Quantidade:</span>
+                            <span className="text-xs font-bold text-foreground tabular-nums">{item.value} leads</span>
+                          </div>
+                          <div className="flex justify-between items-center gap-4">
+                            <span className="text-xs text-muted-foreground font-medium">Percentual:</span>
+                            <span className="text-xs font-bold text-foreground tabular-nums">{item.percentage}% do funil</span>
+                          </div>
                         </div>
                       </div>
                     </TooltipContent>
