@@ -169,9 +169,13 @@ export function useMetaConnectPage() {
 
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["meta-integrations"] });
-      toast.success("Página conectada com sucesso!");
+      if (data.success && data.messenger_active === false) {
+        toast.success("A página foi conectada para leads. Mensagens do Messenger exigem permissão adicional.");
+      } else {
+        toast.success("Página conectada com sucesso!");
+      }
     },
     onError: (error: Error) => {
       toast.error(`Erro ao conectar página: ${error.message}`);
