@@ -285,6 +285,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       setSession(session);
       setUser(session.user);
+      console.log('[AuthContext] login user loaded:', session.user.id);
 
       try {
         await Promise.all([
@@ -292,12 +293,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           checkMultiOrg(session.user.id)
         ]);
       } catch (err) {
-        console.error('Error during initial auth data fetch:', err);
+        console.error('[AuthContext] Error during initial auth data fetch:', err);
       } finally {
         if (isMounted) {
           setLoading(false);
           setAuthInitialized(true);
-          console.log('Auth initialization complete naturally');
+          console.log('[AuthContext] Auth initialization complete naturally');
         }
       }
     });
@@ -490,6 +491,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         // Se já selecionamos nesta sessão, não precisamos perguntar de novo
         if (sessionStorage.getItem('org_selected') === 'true') {
+          console.log('[AuthContext] organization already selected in this session');
           setNeedsOrgSelection(false);
           return;
         }
@@ -500,12 +502,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .eq('user_id', userId)
           .eq('is_active', true);
 
-        if (!error && data && data.length > 1) {
+        const count = data?.length || 0;
+        console.log('[AuthContext] accessible organizations count:', count);
+
+        if (!error && data && count > 1) {
+          console.log('[AuthContext] redirect decision: /select-organization (multi-org)');
           setNeedsOrgSelection(true);
+        } else if (!error && data && count === 1) {
+          const onlyOrgId = data[0].organization_id;
+          console.log('[AuthContext] redirect decision: dashboard (single org:', onlyOrgId, ')');
+          await switchOrganization(onlyOrgId);
+          setNeedsOrgSelection(false);
         } else {
+          console.log('[AuthContext] redirect decision: no active organizations found');
           setNeedsOrgSelection(false);
         }
-      } catch {
+      } catch (err) {
+        console.error('[AuthContext] Error checking multi-org:', err);
         setNeedsOrgSelection(false);
       }
     });

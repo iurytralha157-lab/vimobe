@@ -138,8 +138,9 @@ export function useSetupGuide() {
 
   // Load progress from DB (with metadata fallback)
   useEffect(() => {
-    if (!userId) {
-      setLoaded(false);
+    // Solo carregar se tivermos usuário E organização ativa
+    if (!userId || !profile?.organization_id) {
+      if (!userId) setLoaded(false);
       return;
     }
     let cancelled = false;
@@ -154,10 +155,17 @@ export function useSetupGuide() {
         if (cancelled) return;
         
         if (error) {
-          // If table is missing or other error, use metadata
-          console.warn('[SetupGuide] falling back to user metadata', error);
-          setProgress(metaProgress);
-          setSkipped(metaSkipped);
+          // Check if it's a 404/missing table error and suppress from console if possible
+          // In PostgREST, a missing table usually returns 404
+          if (error.code === 'PGRST204' || error.status === 404) {
+            // Silently fallback to metadata
+            setProgress(metaProgress);
+            setSkipped(metaSkipped);
+          } else {
+            console.warn('[SetupGuide] falling back to user metadata', error);
+            setProgress(metaProgress);
+            setSkipped(metaSkipped);
+          }
         } else if (data) {
           const row: any = data;
           setProgress((row.completed_steps as Record<string, boolean>) || {});
@@ -177,7 +185,7 @@ export function useSetupGuide() {
       }
     })();
     return () => { cancelled = true; };
-  }, [userId, metaProgress, metaSkipped]);
+  }, [userId, profile?.organization_id, metaProgress, metaSkipped]);
 
   // Persist helper (debounced)
   const persist = useCallback(

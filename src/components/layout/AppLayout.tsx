@@ -106,6 +106,23 @@ function AppLayoutContent({ children, title, disableMainScroll = false }: AppLay
 }
 
 export function AppLayout({ children, title, disableMainScroll = false }: AppLayoutProps) {
+  const { organization, isSuperAdmin, impersonating } = useAuth();
+  const allowRender = !!organization || isSuperAdmin || !!impersonating;
+
+  console.log('[AppLayout] render allowed:', allowRender, { 
+    hasOrg: !!organization, 
+    isSuperAdmin, 
+    impersonating: !!impersonating 
+  });
+
+  if (!allowRender) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-background">
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <SidebarProvider>
       <FloatingChatProvider>
