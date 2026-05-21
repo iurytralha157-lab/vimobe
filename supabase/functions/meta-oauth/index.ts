@@ -495,40 +495,95 @@ serve(async (req) => {
           }
         }
 
-        // Subscribe to leadgen webhook (FASE 1: bloquear conexão se a inscrição falhar)
+        // Subscribe to webhooks
+        // FASE 1: Leadgen (Obrigatório para Lead Ads)
         console.log("Subscribing to leadgen webhook for page:", page_id);
         const subscribeUrl = `https://graph.facebook.com/v19.0/${page_id}/subscribed_apps`;
-        let subscribeData: any = null;
+        
+        let leadgenSuccess = false;
+        let messengerSuccess = false;
+        let messengerError = null;
+        let tokenPermissions: string[] = [];
+
+        // Log token permissions for debugging
         try {
-          const subscribeResponse = await fetch(subscribeUrl, {
+          const permUrl = `https://graph.facebook.com/v19.0/me/permissions?access_token=${page.access_token}`;
+          const permRes = await fetch(permUrl);
+          const permData = await permRes.json();
+          if (permData.data) {
+            tokenPermissions = permData.data.filter((p: any) => p.status === "granted").map((p: any) => p.permission);
+            console.log(`Page token permissions: ${tokenPermissions.join(", ")}`);
+          }
+        } catch (e) {
+          console.warn("Could not fetch token permissions:", e);
+        }
+
+        try {
+          // Inscrição primária: leadgen + feed (campos básicos para leads)
+          console.log(`Subscribing to fields: leadgen,feed for page_id: ${page_id}`);
+          const leadgenResponse = await fetch(subscribeUrl, {
             method: "POST",
             headers: { "Content-Type": "application/x-www-form-urlencoded" },
             body: new URLSearchParams({
               access_token: page.access_token,
-              subscribed_fields: "leadgen,messages,messaging_postbacks,feed"
+              subscribed_fields: "leadgen,feed"
             }).toString()
           });
-          subscribeData = await subscribeResponse.json();
+          const leadgenData = await leadgenResponse.json();
+          
+          if (leadgenData.success || !leadgenData.error) {
+            leadgenSuccess = true;
+            console.log(`Leadgen subscription success for page ${page_id}`);
+          } else {
+            console.error(`Leadgen subscription failed for page ${page_id}:`, leadgenData.error);
+            return new Response(JSON.stringify({
+              error: leadgenData.error?.message || "Não foi possível inscrever a página no webhook para leads.",
+              error_code: leadgenData.error?.code,
+            }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+          }
         } catch (subErr) {
-          console.error("Webhook subscription request failed:", subErr);
+          console.error(`Leadgen subscription request failed for page ${page_id}:`, subErr);
           return new Response(JSON.stringify({
-            error: "Falha ao inscrever a página no webhook do Meta. Verifique permissões da página e tente novamente.",
+            error: "Falha de rede ao inscrever a página no webhook do Meta.",
             details: (subErr as Error).message,
           }), { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } });
         }
 
-        console.log("Webhook subscription response:", JSON.stringify(subscribeData));
-
-        if (subscribeData?.error || subscribeData?.success === false) {
-          console.error("Webhook subscription error:", subscribeData?.error);
-          return new Response(JSON.stringify({
-            error: subscribeData?.error?.message
-              || "Não foi possível inscrever a página no webhook. Conexão não foi finalizada para evitar perda de leads.",
-            error_code: subscribeData?.error?.code,
-            error_subcode: subscribeData?.error?.error_subcode,
-          }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        // FASE 2: Messenger (Opcional - Não bloqueia a conexão de leads)
+        if (leadgenSuccess) {
+          const hasMessagingPermission = tokenPermissions.includes("pages_messaging");
+          console.log(`Checking for Messenger permissions: ${hasMessagingPermission ? "YES" : "NO"}`);
+          
+          if (hasMessagingPermission) {
+            try {
+              console.log(`Attempting to add Messenger fields (messages,messaging_postbacks) for page ${page_id}`);
+              const messengerResponse = await fetch(subscribeUrl, {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: new URLSearchParams({
+                  access_token: page.access_token,
+                  subscribed_fields: "leadgen,feed,messages,messaging_postbacks"
+                }).toString()
+              });
+              const messengerData = await messengerResponse.json();
+              
+              if (messengerData.success || !messengerData.error) {
+                messengerSuccess = true;
+                console.log(`Messenger subscription success for page ${page_id}`);
+              } else {
+                messengerError = messengerData.error?.message;
+                console.log(`Messenger subscription failed for page ${page_id}:`, messengerError);
+              }
+            } catch (e) {
+              console.warn(`Messenger subscription attempt failed for page ${page_id} (non-blocking):`, e);
+            }
+          } else {
+            console.log(`Skipping Messenger subscription for page ${page_id} due to missing pages_messaging permission`);
+            messengerError = "Missing pages_messaging permission";
+          }
         }
-        console.log("Successfully subscribed to leadgen webhook");
+
+
 
         // Upsert integration (somente após webhook OK)
         const { error: upsertError } = await supabase
@@ -572,7 +627,11 @@ serve(async (req) => {
           }
         }
 
-        return new Response(JSON.stringify({ success: true }), {
+        return new Response(JSON.stringify({ 
+          success: true,
+          messenger_active: messengerSuccess,
+          messenger_error: messengerError
+        }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
