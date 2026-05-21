@@ -212,8 +212,14 @@ async function handleConnectionUpdate(session: any, event: any) {
   let reason = "unknown";
 
   if (loggedIn || state === "open" || state === "connected") {
-    status = "connected";
-    reason = "LoggedIn is true or state is open";
+    // Safety check: LoggedIn: false is definitive for Evolution Go
+    if (target.LoggedIn === false || target.loggedIn === false) {
+      status = "qr_ready";
+      reason = "Connected but LoggedIn is explicitly false";
+    } else {
+      status = "connected";
+      reason = "LoggedIn is true or state is open";
+    }
   } else if (connected || state === "qr") {
     status = "qr_ready";
     reason = "Instance connected but not LoggedIn";
