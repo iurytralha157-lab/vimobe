@@ -58,8 +58,18 @@ export const AppHeader = React.memo(function AppHeader({
   } = useUnreadNotificationsCount();
   const markRead = useMarkNotificationRead();
   const markAllRead = useMarkAllNotificationsRead();
-  const { data: userOrganizations = [] } = useUserOrganizations(user?.id, organization?.id);
+  const { data: rawUserOrganizations = [] } = useUserOrganizations(user?.id, organization?.id);
   
+  const userOrganizations = React.useMemo(() => {
+    const map = new Map();
+    rawUserOrganizations.forEach(org => {
+      if (!map.has(org.organization_id)) {
+        map.set(org.organization_id, org);
+      }
+    });
+    return Array.from(map.values());
+  }, [rawUserOrganizations]);
+
   const hasMultipleOrgs = userOrganizations.length > 1;
 
   const handleSwitchOrg = async (orgId: string) => {

@@ -555,9 +555,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .eq('user_id', userId)
           .eq('is_active', true);
 
-        const availableOrgs = data || [];
-        const count = availableOrgs.length;
-        console.log('[AuthContext] accessible organizations found:', count);
+        // Remover duplicidade por organization_id e garantir que sejam únicas e ativas
+        const uniqueOrgs = Array.from(new Map((data || []).map((m: any) => [m.organization_id, m])).values());
+        const count = uniqueOrgs.length;
+        console.log('[AuthContext] unique active organizations found:', count);
 
         if (error) {
           console.error('[AuthContext] Error fetching accessible organizations:', error);
@@ -567,7 +568,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         // 1. Validar se a organização salva ainda é acessível
-        const isSavedOrgValid = savedOrgId && availableOrgs.some((m: any) => m.organization_id === savedOrgId);
+        const isSavedOrgValid = savedOrgId && uniqueOrgs.some((m: any) => m.organization_id === savedOrgId);
 
         if (isSavedOrgValid && savedOrgId) {
           console.log('[AuthContext] decision: dashboard (saved org is valid:', savedOrgId, ')');
@@ -576,7 +577,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } 
         // 2. Se for org única, definir automaticamente
         else if (count === 1) {
-          const onlyOrgId = (availableOrgs as any[])[0].organization_id;
+          const onlyOrgId = (uniqueOrgs as any[])[0].organization_id;
           console.log('[AuthContext] decision: dashboard (single org:', onlyOrgId, ')');
           await switchOrganization(onlyOrgId);
           setNeedsOrgSelection(false);
