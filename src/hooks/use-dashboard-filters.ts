@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useFilters } from '@/contexts/FilterContext';
 import { subDays, startOfDay, endOfDay, startOfMonth, endOfMonth, startOfQuarter, startOfYear, subMonths } from 'date-fns';
 
 export type DatePreset = 
@@ -77,21 +78,20 @@ export function getDateRangeFromPreset(preset: DatePreset): { from: Date; to: Da
 }
 
 export function useDashboardFilters() {
-  const [datePreset, setDatePreset] = useState<DatePreset>('last30days');
-  const [customDateRange, setCustomDateRange] = useState<{ from: Date; to: Date } | null>(null);
+  const { 
+    datePreset, 
+    setDatePreset, 
+    customDateRange, 
+    setCustomDateRange, 
+    activeDateRange: dateRange 
+  } = useFilters();
+
   const [teamId, setTeamId] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [source, setSource] = useState<string | null>(null);
   const [campaignId, setCampaignId] = useState<string | null>(null);
   const [adSetId, setAdSetId] = useState<string | null>(null);
   const [adId, setAdId] = useState<string | null>(null);
-
-  const dateRange = useMemo(() => {
-    if (datePreset === 'custom' && customDateRange) {
-      return customDateRange;
-    }
-    return getDateRangeFromPreset(datePreset);
-  }, [datePreset, customDateRange]);
 
   const filters: DashboardFilters = useMemo(() => ({
     datePreset,

@@ -35,6 +35,7 @@ import { DateFilterPopover } from '@/components/ui/date-filter-popover';
 import { LeadCard } from '@/components/leads/LeadCard';
 import { LeadDetailDialog } from '@/components/leads/LeadDetailDialog';
 import { DatePreset, getDateRangeFromPreset } from '@/hooks/use-dashboard-filters';
+import { useFilters } from '@/contexts/FilterContext';
 
 import {
   DropdownMenu,
@@ -134,8 +135,7 @@ export default function Pipelines() {
   const [newStageColor, setNewStageColor] = useState('#6b7280');
   const [slaSettingsOpen, setSlaSettingsOpen] = useState(false);
   const [stagesEditorOpen, setStagesEditorOpen] = useState(false);
-  const [datePreset, setDatePreset] = useState<DatePreset>('last7days');
-  const [customDateRange, setCustomDateRange] = useState<{ from: Date; to: Date } | null>(null);
+  const { datePreset, setDatePreset, customDateRange, setCustomDateRange, activeDateRange: dateRange } = useFilters();
   const [isRefreshing, setIsRefreshing] = useState(false);
   
   // Ref para bloquear refetch durante drag-and-drop (evita race condition)
@@ -185,11 +185,8 @@ export default function Pipelines() {
     }
   }, [profile, isAdmin, filterUser, hasLeadViewAll, permissionLoading, isTeamLeader]);
   
-  // Get date range for filtering (must be before useStagesWithLeads)
-  const dateRange = useMemo(() => {
-    if (customDateRange) return customDateRange;
-    return getDateRangeFromPreset(datePreset);
-  }, [datePreset, customDateRange]);
+  // Date range is now handled by FilterContext
+
 
   const { data: baseStages = [], isLoading: baseStagesLoading } = useStages(selectedPipelineId || undefined);
 
