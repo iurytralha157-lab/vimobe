@@ -88,10 +88,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [authInitialized, setAuthInitialized] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [needsOrgSelection, setNeedsOrgSelection] = useState(false);
+  const [organizationsLoaded, setOrganizationsLoaded] = useState(false);
 
   useEffect(() => {
-    console.log('[AuthContext] active organization changed:', organization?.id || 'none');
-  }, [organization]);
+    if (organization) {
+      console.log('[AuthContext] active organization changed:', organization.id);
+      if (user) {
+        localStorage.setItem(`vimob_active_organization_${user.id}`, organization.id);
+      }
+    }
+  }, [organization, user]);
   const [impersonating, setImpersonating] = useState<ImpersonateSession | null>(() => {
     const stored = localStorage.getItem('impersonating');
     return stored ? JSON.parse(stored) : null;
