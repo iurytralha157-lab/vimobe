@@ -1,4 +1,4 @@
-import { Users, User, Globe, X, SlidersHorizontal, Calendar as CalendarIcon, Check } from 'lucide-react';
+import { Users, User, Globe, X, SlidersHorizontal, Calendar as CalendarIcon, Check, Facebook } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -308,9 +308,9 @@ export function DashboardFilters({
 
   // Desktop layout - Split into Period and Filters
   return (
-    <div className="flex items-center justify-between w-full bg-background/50 backdrop-blur-sm border border-border/50 rounded-lg p-1.5 shadow-sm">
+    <div className="flex items-center justify-end gap-2 w-full bg-background/50 backdrop-blur-sm border border-border/50 rounded-lg p-1.5 shadow-sm">
       {/* Bloco 1: Período */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center">
         <Popover open={periodPopoverOpen} onOpenChange={setPeriodPopoverOpen}>
           <PopoverTrigger asChild>
             <Button 
@@ -325,7 +325,7 @@ export function DashboardFilters({
               <span>{currentPeriodLabel()}</span>
             </Button>
           </PopoverTrigger>
-          <PopoverContent align="start" className="w-auto p-0 border-border/40 shadow-xl overflow-hidden">
+          <PopoverContent align="end" className="w-auto p-0 border-border/40 shadow-xl overflow-hidden">
             <div className="flex bg-background">
               {/* Botões Rápidos (Esquerda) */}
               <div className="w-[180px] p-2 bg-muted/30 border-r border-border/40 space-y-1">
@@ -389,7 +389,7 @@ export function DashboardFilters({
       </div>
 
       {/* Bloco 2: Filtros */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1">
         <Popover>
           <PopoverTrigger asChild>
             <Button 
@@ -409,48 +409,48 @@ export function DashboardFilters({
               )}
             </Button>
           </PopoverTrigger>
-          <PopoverContent align="end" className="w-80 p-4 border-border/40 shadow-2xl">
-            <div className="space-y-4">
+          <PopoverContent align="end" className="w-72 p-3 border-border/40 shadow-2xl">
+            <div className="space-y-3">
               <div className="flex items-center justify-between border-b border-border/40 pb-2">
-                <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Filtros Avançados</span>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Filtros Avançados</span>
                 {hasActiveFilters && (
                   <Button 
                     variant="ghost" 
                     size="sm" 
                     onClick={onClear} 
-                    className="h-6 px-2 text-[9px] uppercase font-bold text-primary hover:bg-primary/10"
+                    className="h-5 px-1.5 text-[9px] uppercase font-bold text-primary hover:bg-primary/10"
                   >
-                    Limpar tudo
+                    Limpar
                   </Button>
                 )}
               </div>
 
-              <div className="grid gap-3">
+              <div className="grid gap-2">
                 {/* Equipe */}
                 {availableTeams.length > 0 && (
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-tight px-1">Equipe</label>
+                  <div className="space-y-1">
                     <TeamFilter />
                   </div>
                 )}
 
                 {/* Corretor */}
                 {showUserFilter && (
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-tight px-1">Corretor</label>
+                  <div className="space-y-1">
                     <UserFilter />
                   </div>
                 )}
 
                 {/* Origem */}
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-tight px-1">Origem</label>
+                <div className="space-y-1">
                   <SourceFilter />
                 </div>
 
                 {/* Campanhas Meta Ads */}
-                <div className="space-y-1.5 pt-2 border-t border-border/40">
-                  <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-tight px-1">Campanhas Meta</label>
+                <div className="space-y-2 pt-2 border-t border-border/40">
+                  <div className="flex items-center gap-1.5 px-1 mb-1">
+                    <Facebook className="h-3 w-3 text-[#1877F2]" />
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Campanhas Meta</span>
+                  </div>
                   <CampaignFilter 
                     campaignId={campaignId}
                     onCampaignChange={onCampaignChange}
@@ -467,7 +467,7 @@ export function DashboardFilters({
           </PopoverContent>
         </Popover>
 
-        {/* Botão rápido de limpar se houver filtros ativos (opcional, mantendo fora se quiser facilitar) */}
+        {/* Botão rápido de limpar se houver filtros ativos */}
         {hasActiveFilters && (
           <Button
             variant="ghost"

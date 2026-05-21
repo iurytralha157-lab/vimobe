@@ -138,18 +138,18 @@ export function CampaignFilter({
   const hasActiveFilters = activeCount > 0;
 
   const content = (
-    <div className="space-y-4">
+    <div className="space-y-2">
       {!hideTitles && (
         <div className="flex items-center justify-between">
-          <h4 className="font-medium text-sm flex items-center gap-2">
-            <Facebook className="h-4 w-4 text-[#1877F2]" />
-            Filtros Meta Ads
+          <h4 className="font-semibold text-[10px] uppercase tracking-widest flex items-center gap-1.5 text-muted-foreground">
+            <Facebook className="h-3 w-3 text-[#1877F2]" />
+            Campanhas Meta
           </h4>
           {hasActiveFilters && (
             <Button 
               variant="ghost" 
               size="sm" 
-              className="h-7 px-2 text-[11px] text-muted-foreground hover:text-destructive"
+              className="h-6 px-1.5 text-[9px] font-bold uppercase text-primary hover:bg-primary/10"
               onClick={() => {
                 onCampaignChange(null);
                 onAdSetChange(null);
@@ -162,8 +162,8 @@ export function CampaignFilter({
         </div>
       )}
 
-      <div className="space-y-3">
-        <div className="space-y-1.5">
+      <div className="space-y-2">
+        <div className="space-y-1">
           <Select
             value={campaignId || 'all'}
             onValueChange={(val) => {
@@ -172,7 +172,7 @@ export function CampaignFilter({
               onAdChange(null);
             }}
           >
-            <SelectTrigger className="h-9 text-xs">
+            <SelectTrigger className="h-8 text-xs bg-background/50 border-border/40">
               <SelectValue placeholder="Todas campanhas" />
             </SelectTrigger>
             <SelectContent>
@@ -186,46 +186,50 @@ export function CampaignFilter({
           </Select>
         </div>
 
-        <div className="space-y-1.5">
-          <Select
-            value={adSetId || 'all'}
-            onValueChange={(val) => {
-              onAdSetChange(val === 'all' ? null : val);
-              onAdChange(null);
-            }}
-          >
-            <SelectTrigger className="h-9 text-xs">
-              <SelectValue placeholder="Todos conjuntos" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos conjuntos</SelectItem>
-              {adSets.map((s) => (
-                <SelectItem key={s.id} value={s.id}>
-                  {s.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        {campaignId && (
+          <>
+            <div className="space-y-1">
+              <Select
+                value={adSetId || 'all'}
+                onValueChange={(val) => {
+                  onAdSetChange(val === 'all' ? null : val);
+                  onAdChange(null);
+                }}
+              >
+                <SelectTrigger className="h-8 text-xs bg-background/50 border-border/40 animate-in fade-in slide-in-from-top-1 duration-200">
+                  <SelectValue placeholder="Todos conjuntos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos conjuntos</SelectItem>
+                  {adSets.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-        <div className="space-y-1.5">
-          <Select
-            value={adId || 'all'}
-            onValueChange={(val) => onAdChange(val === 'all' ? null : val)}
-          >
-            <SelectTrigger className="h-9 text-xs">
-              <SelectValue placeholder="Todos criativos" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos criativos</SelectItem>
-              {ads.map((a) => (
-                <SelectItem key={a.id} value={a.id}>
-                  {a.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+            <div className="space-y-1">
+              <Select
+                value={adId || 'all'}
+                onValueChange={(val) => onAdChange(val === 'all' ? null : val)}
+              >
+                <SelectTrigger className="h-8 text-xs bg-background/50 border-border/40 animate-in fade-in slide-in-from-top-1 duration-200">
+                  <SelectValue placeholder="Todos criativos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos criativos</SelectItem>
+                  {ads.map((a) => (
+                    <SelectItem key={a.id} value={a.id}>
+                      {a.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
