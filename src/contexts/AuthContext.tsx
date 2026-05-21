@@ -84,6 +84,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [organization, setOrganization] = useState<Organization | null>(null);
   const [loading, setLoading] = useState(true);
+  const [authInitialized, setAuthInitialized] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [needsOrgSelection, setNeedsOrgSelection] = useState(false);
   const [impersonating, setImpersonating] = useState<ImpersonateSession | null>(() => {
@@ -245,8 +246,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     let isMounted = true;
+    console.log('AuthProvider mounted');
 
     const clearAllStates = () => {
+      console.log('Cleaning auth states');
       setSession(null);
       setUser(null);
       setProfile(null);
@@ -257,77 +260,88 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       sessionStorage.removeItem('org_selected');
     };
 
+    // Safety timeout: stop loading after 3 seconds no matter what
+    const safetyTimeout = setTimeout(() => {
+      if (isMounted && loading) {
+        console.warn('Auth safety timeout reached - forcing loading to false');
+        setLoading(false);
+        setAuthInitialized(true);
+      }
+    }, 3000);
+
+    console.log('getSession started');
     supabase.auth.getSession().then(async ({ data: { session }, error }) => {
       if (!isMounted) return;
+      console.log('getSession finished, session:', !!session, 'error:', error?.message);
 
-      // Se houve erro ou sessão inválida, limpar tudo
       if (error || !session) {
-        console.log('Sessão inválida na inicialização:', error?.message);
         clearAllStates();
         setLoading(false);
+        setAuthInitialized(true);
         return;
       }
 
       setSession(session);
       setUser(session.user);
 
-      await Promise.all([
-        fetchProfile(session.user.id),
-        checkMultiOrg(session.user.id)
-      ]);
-      setLoading(false);
+      try {
+        await Promise.all([
+          fetchProfile(session.user.id),
+          checkMultiOrg(session.user.id)
+        ]);
+      } catch (err) {
+        console.error('Error during initial auth data fetch:', err);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+          setAuthInitialized(true);
+          console.log('Auth initialization complete');
+        }
+      }
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
         if (!isMounted) return;
 
         console.log('Auth event:', event, 'Session:', !!session);
 
-        // Logout ou sessão expirada - limpar tudo e NÃO processar mais nada
         if (event === 'SIGNED_OUT') {
           clearAllStates();
-          // Perform full cache clear and redirect to login
           performFullCacheClear({ 
             clearAuth: true, 
             redirectTo: '/auth' 
           });
+          setLoading(false);
+          setAuthInitialized(true);
           return;
         }
 
-        // Se não tem sessão, limpar estados
-        if (!session) {
-          clearAllStates();
-          return;
-        }
-
-        // Ignorar TOKEN_REFRESHED se já fizemos logout manualmente
-        // Verificar se o storage foi limpo (indicativo de logout manual)
-        const storageKey = `sb-iemalzlfnbouobyjwlwi-auth-token`;
-        const hasToken = localStorage.getItem(storageKey) || sessionStorage.getItem(storageKey);
-        if (!hasToken && event === 'TOKEN_REFRESHED') {
-          console.log('Ignorando TOKEN_REFRESHED - logout foi realizado');
-          return;
-        }
-
-        // Sessão válida
-        setSession(session);
-        setUser(session.user);
-
-        // Use a small delay to ensure the session is fully propagated in Supabase
-        // and avoid RLS race conditions during immediate login
-        const timer = setTimeout(() => {
-          if (isMounted && session?.user?.id) {
-            fetchProfile(session.user.id);
+        if (event === 'SIGNED_IN' || event === 'USER_UPDATED' || event === 'TOKEN_REFRESHED') {
+          if (session) {
+            setSession(session);
+            setUser(session.user);
+            
+            // For these events, we might need to refresh the profile
+            if (session.user?.id) {
+              await fetchProfile(session.user.id);
+            }
           }
-        }, 150);
-        return () => clearTimeout(timer);
+          setLoading(false);
+          setAuthInitialized(true);
+        }
 
+        if (!session && event !== 'SIGNED_OUT') {
+          clearAllStates();
+          setLoading(false);
+          setAuthInitialized(true);
+        }
       }
     );
 
     return () => {
       isMounted = false;
+      clearTimeout(safetyTimeout);
       subscription.unsubscribe();
     };
   }, []);
