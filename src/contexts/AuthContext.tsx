@@ -349,19 +349,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return;
         }
 
+        if (authEvent === 'SIGNED_IN' || authEvent === 'USER_UPDATED' || authEvent === 'TOKEN_REFRESHED') {
           if (session) {
             setSession(session);
             setUser(session.user);
             userRef.current = session.user;
             
             if (session.user?.id) {
-
               await fetchProfile(session.user.id);
             }
           }
           setLoading(false);
           setAuthInitialized(true);
         }
+
 
         if (!session && authEvent !== 'INITIAL_SESSION') {
           clearAllStates();
