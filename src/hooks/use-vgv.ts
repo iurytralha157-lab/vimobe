@@ -1,5 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { useLeadVisibility, applyVisibilityFilter } from './use-lead-visibility';
 
 export interface VGVStats {
   totalVGV: number;
@@ -37,8 +39,12 @@ export function useVGVStats(filters?: {
   userId?: string;
   pipelineId?: string;
 }) {
+  const { user } = useAuth();
+  const { data: visibility } = useLeadVisibility(user?.id);
+
   return useQuery({
-    queryKey: ['vgv-stats', filters],
+    queryKey: ['vgv-stats', filters, user?.id, visibility],
+    enabled: !!user?.id && !!visibility,
     queryFn: async () => {
       let query = supabase
         .from('leads')
@@ -50,9 +56,12 @@ export function useVGVStats(filters?: {
       if (filters?.dateTo) {
         query = query.lte('created_at', filters.dateTo.toISOString());
       }
-      if (filters?.userId) {
-        query = query.eq('assigned_user_id', filters.userId);
+      
+      // Aplicar visibilidade e filtros de usuário/equipe
+      if (visibility) {
+        query = applyVisibilityFilter(query, visibility, 'assigned_user_id', filters?.userId);
       }
+      
       if (filters?.pipelineId) {
         query = query.eq('pipeline_id', filters.pipelineId);
       }
@@ -233,6 +242,5 @@ export function useStageVGV(pipelineId?: string) {
       
       return Array.from(stageMap.values());
     },
-    enabled: !!pipelineId,
   });
 }
