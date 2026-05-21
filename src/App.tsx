@@ -163,11 +163,19 @@ const PageLoader = () => (
 );
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading, profile, isSuperAdmin, impersonating, organization, needsOrgSelection } = useAuth();
+  const { user, loading, profile, isSuperAdmin, impersonating, organization, needsOrgSelection, authInitialized } = useAuth();
   
-  if (loading) return <PageLoader />;
+  console.log('ProtectedRoute check:', { user: !!user, loading, authInitialized, profile: !!profile, isSuperAdmin });
+
+  if (loading || !authInitialized) return <PageLoader />;
   if (!user) return <Navigate to="/auth" replace />;
-  if (!profile && !isSuperAdmin) return <PageLoader />;
+  
+  // Se tem usuário mas não tem perfil e não é super admin, pode ser que precise de onboarding
+  if (!profile && !isSuperAdmin) {
+    console.warn('Authenticated user without profile detected in ProtectedRoute');
+    return <Navigate to="/onboarding" replace />;
+  }
+  
   if (needsOrgSelection && !impersonating) return <Navigate to="/select-organization" replace />;
   if (isSuperAdmin && !impersonating && !organization) return <Navigate to="/admin" replace />;
   if (!isSuperAdmin && profile && !profile.organization_id) return <Navigate to="/onboarding" replace />;
@@ -176,7 +184,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 function AppRoutes() {
-  const { user, loading, profile, isSuperAdmin, impersonating, needsOrgSelection } = useAuth();
+  const { user, loading, profile, isSuperAdmin, impersonating, needsOrgSelection, authInitialized } = useAuth();
   
   useForceRefreshListener();
 
@@ -194,11 +202,20 @@ function AppRoutes() {
   };
 
   const renderAuthRoute = () => {
-    if (loading) return <PageLoader />;
+    console.log('renderAuthRoute state:', { loading, authInitialized, user: !!user, profile: !!profile });
+    
+    if (loading || !authInitialized) return <PageLoader />;
+    
     if (user) {
-      if (!profile && !isSuperAdmin) return <PageLoader />;
+      console.log('User already logged in, redirecting from /auth');
+      // If no profile, they should go to onboarding
+      if (!profile && !isSuperAdmin) {
+        return <Navigate to="/onboarding" replace />;
+      }
       return <Navigate to={getDefaultRedirect()} replace />;
     }
+    
+    console.log('Rendering Auth page');
     return <Auth />;
   };
 
