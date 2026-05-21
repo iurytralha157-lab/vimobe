@@ -71,7 +71,7 @@ export function WhatsAppTab() {
   const [accessDialogOpen, setAccessDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [instanceName, setInstanceName] = useState("");
-  const [newProvider, setNewProvider] = useState<"evolution" | "evolution_go">("evolution_go");
+  const [newProvider, setNewProvider] = useState<"evolution" | "evolution_go">(EVOLUTION_GO_CREATION_ENABLED ? "evolution_go" : "evolution");
   const [selectedSession, setSelectedSession] = useState<WhatsAppSession | null>(null);
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [isRefreshingQr, setIsRefreshingQr] = useState(false);
