@@ -165,20 +165,40 @@ const PageLoader = () => (
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading, profile, isSuperAdmin, impersonating, organization, needsOrgSelection, authInitialized } = useAuth();
   
-  console.log('ProtectedRoute check:', { user: !!user, loading, authInitialized, profile: !!profile, isSuperAdmin });
+  console.log('ProtectedRoute check:', { 
+    user: !!user, 
+    loading, 
+    authInitialized, 
+    profile: !!profile, 
+    isSuperAdmin,
+    organization: !!organization,
+    needsOrgSelection
+  });
 
   if (loading || !authInitialized) return <PageLoader />;
   if (!user) return <Navigate to="/auth" replace />;
   
-  // Se tem usuário mas não tem perfil e não é super admin, pode ser que precise de onboarding
+  // Se tem usuário mas não tem perfil e não é super admin, pode ser que precise de configuração,
+  // mas não vamos mandar para onboarding automaticamente.
   if (!profile && !isSuperAdmin) {
     console.warn('Authenticated user without profile detected in ProtectedRoute');
-    return <Navigate to="/onboarding" replace />;
   }
   
-  if (needsOrgSelection && !impersonating) return <Navigate to="/select-organization" replace />;
-  if (isSuperAdmin && !impersonating && !organization) return <Navigate to="/admin" replace />;
-  if (!isSuperAdmin && profile && !profile.organization_id) return <Navigate to="/onboarding" replace />;
+  if (needsOrgSelection && !impersonating) {
+    console.log('[ProtectedRoute] Redirecting to /select-organization');
+    return <Navigate to="/select-organization" replace />;
+  }
+  
+  if (isSuperAdmin && !impersonating && !organization) {
+    console.log('[ProtectedRoute] SuperAdmin without org, allowing access to admin area');
+    return <>{children}</>; // Allow super admin to access /admin
+  }
+
+  // Regular users MUST have an active organization to proceed
+  if (!organization && !isSuperAdmin) {
+    console.warn('[ProtectedRoute] Non-superadmin user without active organization, redirecting to /select-organization');
+    return <Navigate to="/select-organization" replace />;
+  }
   
   return <>{children}</>;
 }
@@ -197,7 +217,7 @@ function AppRoutes() {
 
   const getDefaultRedirect = () => {
     if (needsOrgSelection && !impersonating) return "/select-organization";
-    if (isSuperAdmin && !impersonating) return "/admin";
+    if (isSuperAdmin && !impersonating && !profile?.organization_id) return "/admin";
     return "/dashboard";
   };
 
@@ -207,11 +227,7 @@ function AppRoutes() {
     if (loading || !authInitialized) return <PageLoader />;
     
     if (user) {
-      console.log('User already logged in, redirecting from /auth');
-      // If no profile, they should go to onboarding
-      if (!profile && !isSuperAdmin) {
-        return <Navigate to="/onboarding" replace />;
-      }
+      console.log('User already logged in, redirecting from /auth to', getDefaultRedirect());
       return <Navigate to={getDefaultRedirect()} replace />;
     }
     
@@ -220,12 +236,7 @@ function AppRoutes() {
   };
 
   const renderOnboardingRoute = () => {
-    if (loading) return <PageLoader />;
-    // If user is logged in and already has an org, redirect
-    if (user && profile && profile.organization_id) {
-      return <Navigate to={getDefaultRedirect()} replace />;
-    }
-    // Otherwise show onboarding (works for both logged-in users without org AND public visitors)
+    // Onboarding is now a purely standalone page
     return <Suspense fallback={<PageLoader />}><Onboarding /></Suspense>;
   };
 
