@@ -157,7 +157,7 @@ export function useSetupGuide() {
         if (error) {
           // Check if it's a 404/missing table error and suppress from console if possible
           // In PostgREST, a missing table usually returns 404
-          if (error.code === 'PGRST204' || error.status === 404) {
+          if (error.code === 'PGRST204' || error.code === '42P01') {
             // Silently fallback to metadata
             setProgress(metaProgress);
             setSkipped(metaSkipped);

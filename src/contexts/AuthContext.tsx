@@ -509,7 +509,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           console.log('[AuthContext] redirect decision: /select-organization (multi-org)');
           setNeedsOrgSelection(true);
         } else if (!error && data && count === 1) {
-          const onlyOrgId = data[0].organization_id;
+          const onlyOrgId = (data as any[])[0].organization_id;
           console.log('[AuthContext] redirect decision: dashboard (single org:', onlyOrgId, ')');
           await switchOrganization(onlyOrgId);
           setNeedsOrgSelection(false);
