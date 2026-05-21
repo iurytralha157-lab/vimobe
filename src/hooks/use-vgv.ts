@@ -94,15 +94,19 @@ export function useVGVStats(filters?: {
 
 export function useVGVByBroker(filters?: { 
   dateFrom?: Date; 
-  dateTo?: Date;
+  dateTo?: Date; 
 }) {
+  const { user } = useAuth();
+  const { data: visibility } = useLeadVisibility(user?.id);
+
   return useQuery({
-    queryKey: ['vgv-by-broker', filters],
+    queryKey: ['vgv-by-broker', filters, user?.id, visibility],
+    enabled: !!user?.id && !!visibility,
     queryFn: async () => {
       let query = supabase
         .from('leads')
         .select(`
-          id, deal_status, valor_interesse, assigned_user_id, won_at,
+          id, deal_status, valor_interesse, assigned_user_id, won_at, created_at,
           assignee:users!leads_assigned_user_id_fkey(id, name, avatar_url)
         `)
         .not('assigned_user_id', 'is', null);
@@ -112,6 +116,11 @@ export function useVGVByBroker(filters?: {
       }
       if (filters?.dateTo) {
         query = query.lte('created_at', filters.dateTo.toISOString());
+      }
+
+      // Aplicar visibilidade
+      if (visibility) {
+        query = applyVisibilityFilter(query, visibility);
       }
       
       const { data, error } = await query;
@@ -170,15 +179,26 @@ export function useVGVByBroker(filters?: {
 }
 
 export function useStageVGV(pipelineId?: string) {
+  const { user } = useAuth();
+  const { data: visibility } = useLeadVisibility(user?.id);
+
   return useQuery({
-    queryKey: ['stage-vgv', pipelineId],
+    queryKey: ['stage-vgv', pipelineId, user?.id, visibility],
+    enabled: !!pipelineId && !!user?.id && !!visibility,
     queryFn: async () => {
       if (!pipelineId) return [];
       
-      const { data, error } = await supabase
+      let query = supabase
         .from('leads')
-        .select('id, stage_id, deal_status, valor_interesse')
+        .select('id, stage_id, deal_status, valor_interesse, assigned_user_id')
         .eq('pipeline_id', pipelineId);
+
+      // Aplicar visibilidade
+      if (visibility) {
+        query = applyVisibilityFilter(query, visibility);
+      }
+
+      const { data, error } = await query;
       
       if (error) throw error;
       
