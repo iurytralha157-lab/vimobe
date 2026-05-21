@@ -43,11 +43,11 @@ export function DashboardChartTooltip({
                 className="w-2 h-2 rounded-full" 
                 style={{ backgroundColor: entry.color || entry.fill }}
               />
-              <span className="text-xs text-muted-foreground">
+              <span className="text-xs text-muted-foreground font-extralight py-0 pb-0 pt-[2px]">
                 {nameFormatter ? nameFormatter(entry.name, entry) : entry.name}
               </span>
             </div>
-            <span className="text-xs font-bold text-foreground tabular-nums">
+            <span className="text-xs font-bold text-foreground tabular-nums pt-[2px] font-extralight">
               {valueFormatter ? valueFormatter(entry.value, entry) : entry.value}
             </span>
           </div>
