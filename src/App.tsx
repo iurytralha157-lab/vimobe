@@ -164,14 +164,16 @@ const PageLoader = () => (
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading, profile, isSuperAdmin, impersonating, organization, needsOrgSelection, authInitialized, organizationsLoaded } = useAuth();
+  const location = useLocation();
   
-  console.log('ProtectedRoute check:', { 
-    user: !!user, 
-    loading, 
+  console.log('[Routing Debug]', { 
+    path: location.pathname,
+    isPublic: false,
     authInitialized, 
     organizationsLoaded,
+    loading,
+    user: !!user, 
     profile: !!profile, 
-    isSuperAdmin,
     organization: !!organization,
     needsOrgSelection
   });
@@ -226,7 +228,16 @@ function AppRoutes() {
   };
 
   const renderAuthRoute = () => {
-    console.log('renderAuthRoute state:', { loading, authInitialized, organizationsLoaded, user: !!user, profile: !!profile });
+    const isPublic = true;
+    console.log('[Routing Debug]', { 
+      path: '/auth',
+      isPublic,
+      authInitialized, 
+      organizationsLoaded,
+      loading,
+      user: !!user, 
+      profile: !!profile 
+    });
     
     // Rota pública: espera apenas inicialização básica do Auth
     if (loading || !authInitialized) return <PageLoader />;
