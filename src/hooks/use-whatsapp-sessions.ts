@@ -4,6 +4,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import { useState, useEffect, useCallback } from "react";
 
+/**
+ * Feature flag to enable/disable creation of new Evolution Go instances.
+ * When false, all new connections will use the standard Evolution provider.
+ */
+export const EVOLUTION_GO_CREATION_ENABLED = false;
+
 export type WhatsAppProvider = "evolution" | "evolution_go";
 
 export interface WhatsAppSession {
