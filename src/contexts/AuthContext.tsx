@@ -514,6 +514,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       isSuperAdmin,
       impersonating,
       needsOrgSelection,
+      authInitialized,
       signIn,
       signUp,
       signOut,
