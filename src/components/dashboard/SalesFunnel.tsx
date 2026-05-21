@@ -170,15 +170,22 @@ export function SalesFunnel({ data, isLoading }: SalesFunnelProps) {
                       )}
                     </div>
                   </TooltipTrigger>
-                  <TooltipContent side="right" className="bg-popover/95 backdrop-blur-sm">
-                    <div className="text-xs space-y-1">
-                      <p className="font-semibold text-foreground">{item.name}</p>
-                      <p className="text-muted-foreground">
-                        <span className="text-foreground font-medium">{item.value}</span> leads
-                      </p>
-                      <p className="text-muted-foreground">
-                        <span className="text-foreground font-medium">{item.percentage}%</span> do total
-                      </p>
+                  <TooltipContent 
+                    side="right" 
+                    className="bg-popover/95 backdrop-blur-md border border-border p-3 shadow-xl rounded-xl animate-in fade-in zoom-in duration-200 min-w-[160px]"
+                  >
+                    <div className="space-y-2">
+                      <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{item.name}</p>
+                      <div className="space-y-1.5 border-t border-border pt-2">
+                        <div className="flex justify-between items-center gap-4">
+                          <span className="text-xs text-muted-foreground font-medium">Leads:</span>
+                          <span className="text-xs font-bold text-foreground tabular-nums">{item.value}</span>
+                        </div>
+                        <div className="flex justify-between items-center gap-4">
+                          <span className="text-xs text-muted-foreground font-medium">Percentual:</span>
+                          <span className="text-xs font-bold text-foreground tabular-nums">{item.percentage}%</span>
+                        </div>
+                      </div>
                     </div>
                   </TooltipContent>
                 </Tooltip>

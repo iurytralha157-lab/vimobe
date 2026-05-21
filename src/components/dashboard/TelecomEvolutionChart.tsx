@@ -9,8 +9,8 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  TooltipProps,
 } from 'recharts';
+import { DashboardChartTooltip } from './DashboardChartTooltip';
 import { TelecomEvolutionPoint } from '@/hooks/use-telecom-dashboard-stats';
 
 interface TelecomEvolutionChartProps {
@@ -30,36 +30,20 @@ const STATUS_CONFIG = {
 
 type StatusKey = keyof typeof STATUS_CONFIG;
 
-function CustomTooltip({ active, payload, label }: TooltipProps<number, string>) {
-  if (!active || !payload || !payload.length) return null;
-
-  const hasData = payload.some(p => (p.value ?? 0) > 0);
+function CustomTooltip(props: any) {
+  const { payload } = props;
+  const hasData = payload?.some((p: any) => (p.value ?? 0) > 0);
   if (!hasData) return null;
 
   return (
-    <div className="bg-popover/95 backdrop-blur-sm border border-border rounded-xl p-3 shadow-xl">
-      <p className="text-sm font-medium text-foreground mb-2">{label}</p>
-      <div className="space-y-1">
-        {payload
-          .filter(entry => (entry.value ?? 0) > 0)
-          .map((entry, index) => (
-            <div key={index} className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-2">
-                <div 
-                  className="w-2.5 h-2.5 rounded-full" 
-                  style={{ backgroundColor: entry.color }}
-                />
-                <span className="text-xs text-muted-foreground">
-                  {STATUS_CONFIG[entry.dataKey as StatusKey]?.label || entry.dataKey}
-                </span>
-              </div>
-              <span className="text-xs font-semibold text-foreground">
-                {entry.value}
-              </span>
-            </div>
-          ))}
-      </div>
-    </div>
+    <DashboardChartTooltip 
+      {...props}
+      payload={payload?.filter((entry: any) => (entry.value ?? 0) > 0)}
+      nameFormatter={(name, entry) => {
+        const key = entry.dataKey as StatusKey;
+        return STATUS_CONFIG[key]?.label || name;
+      }}
+    />
   );
 }
 

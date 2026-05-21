@@ -3,6 +3,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { PieChart as PieChartIcon, TrendingUp, Users } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { cn } from '@/lib/utils';
+import { DashboardChartTooltip } from './DashboardChartTooltip';
 
 interface SourceDataPoint {
   name: string;
@@ -41,47 +42,16 @@ function ChartSkeleton() {
   );
 }
 
-interface CustomTooltipProps {
-  active?: boolean;
-  payload?: Array<{
-    name: string;
-    value: number;
-    payload: SourceDataPoint & { percentage: number };
-    fill: string;
-  }>;
-}
-
-function CustomTooltip({ active, payload }: CustomTooltipProps) {
-  if (!active || !payload || payload.length === 0) return null;
-  const data = payload[0];
+function CustomTooltip(props: any) {
   return (
-    <div className="bg-background/95 backdrop-blur-md border border-border shadow-[0_8px_30px_rgb(0,0,0,0.12)] rounded-xl px-4 py-3 min-w-[180px] z-[100] animate-in fade-in zoom-in duration-200">
-      <div className="flex items-center gap-2.5 mb-2.5">
-        <div 
-          className="w-3 h-3 rounded-full ring-2 ring-background shadow-sm" 
-          style={{ backgroundColor: data.fill }} 
-        />
-        <p className="font-bold text-foreground text-sm tracking-tight">{data.name}</p>
-      </div>
-      <div className="space-y-2 border-t border-border/50 pt-2.5">
-        <div className="flex justify-between items-center gap-4 text-xs">
-          <span className="text-muted-foreground font-medium">Total de Leads:</span>
-          <span className="text-foreground font-bold">{data.value}</span>
-        </div>
-        <div className="flex justify-between items-center gap-4 text-xs">
-          <span className="text-muted-foreground font-medium">Participação:</span>
-          <div className="flex items-center gap-1.5">
-            <div className="w-12 h-1.5 bg-muted rounded-full overflow-hidden hidden sm:block">
-              <div 
-                className="h-full rounded-full transition-all duration-500" 
-                style={{ backgroundColor: data.fill, width: `${data.payload.percentage}%` }}
-              />
-            </div>
-            <span className="text-foreground font-black">{data.payload.percentage}%</span>
-          </div>
-        </div>
-      </div>
-    </div>
+    <DashboardChartTooltip 
+      {...props}
+      className="min-w-[180px]"
+      valueFormatter={(value, entry) => {
+        const percentage = entry?.payload?.percentage;
+        return `${value} (${percentage}%)`;
+      }}
+    />
   );
 }
 

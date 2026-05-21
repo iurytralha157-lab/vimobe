@@ -10,6 +10,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
+import { DashboardChartTooltip } from './DashboardChartTooltip';
 
 interface ChartDataPoint {
   name: string;
@@ -112,14 +113,7 @@ export function LeadEvolutionChart({ data, isLoading }: LeadEvolutionChartProps)
                 tickLine={false}
                 axisLine={false}
               />
-              <Tooltip 
-                contentStyle={{ 
-                  backgroundColor: 'hsl(var(--card))',
-                  border: '1px solid hsl(var(--border))',
-                  borderRadius: '8px',
-                  fontSize: '12px',
-                }}
-              />
+              <Tooltip content={<DashboardChartTooltip />} />
               <Area 
                 type="monotone" 
                 dataKey="meta" 
