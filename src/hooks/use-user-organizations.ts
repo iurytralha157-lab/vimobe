@@ -66,20 +66,25 @@ export function useUserOrganizations(userId: string | undefined, activeOrgId?: s
         return [];
       }
 
-      const orgs = (data || []).map((item: any) => {
+      const orgsMap = new Map();
+      (data || []).forEach((item: any) => {
         // Handle potential array structure from Supabase join
         const orgData = Array.isArray(item.organizations) ? item.organizations[0] : item.organizations;
         
-        return {
-          organization_id: item.organization_id,
-          organization_name: orgData?.name || 'Organização',
-          organization_logo: orgData?.logo_url || null,
-          member_role: item.role,
-          is_active: item.is_active,
-          joined_at: item.joined_at,
-          last_accessed_at: item.updated_at || null,
-        };
-      }) as UserOrganization[];
+        if (orgData && !orgsMap.has(item.organization_id)) {
+          orgsMap.set(item.organization_id, {
+            organization_id: item.organization_id,
+            organization_name: orgData?.name || 'Organização',
+            organization_logo: orgData?.logo_url || null,
+            member_role: item.role,
+            is_active: item.is_active,
+            joined_at: item.joined_at,
+            last_accessed_at: item.updated_at || null,
+          });
+        }
+      });
+
+      const orgs = Array.from(orgsMap.values()) as UserOrganization[];
 
       // Sort: Active org first, then alphabetically
       return orgs.sort((a, b) => {
