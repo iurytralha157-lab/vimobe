@@ -449,8 +449,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const switchOrganization = async (orgId: string) => {
     if (!user) return;
 
+    // Persistir como a última organização ativa para este usuário
+    localStorage.setItem(`vimob_active_organization_${user.id}`, orgId);
+    
     // Marcar como selecionado na sessão para evitar re-redirecionamento
     sessionStorage.setItem('org_selected', 'true');
+
 
 
     // Update users.organization_id to reflect active org
