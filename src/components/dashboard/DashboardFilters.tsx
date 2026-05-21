@@ -483,4 +483,3 @@ export function DashboardFilters({
     </div>
   );
 }
-}
