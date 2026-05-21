@@ -163,19 +163,20 @@ const PageLoader = () => (
 );
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading, profile, isSuperAdmin, impersonating, organization, needsOrgSelection, authInitialized } = useAuth();
+  const { user, loading, profile, isSuperAdmin, impersonating, organization, needsOrgSelection, authInitialized, organizationsLoaded } = useAuth();
   
   console.log('ProtectedRoute check:', { 
     user: !!user, 
     loading, 
     authInitialized, 
+    organizationsLoaded,
     profile: !!profile, 
     isSuperAdmin,
     organization: !!organization,
     needsOrgSelection
   });
 
-  if (loading || !authInitialized) return <PageLoader />;
+  if (loading || !authInitialized || !organizationsLoaded) return <PageLoader />;
   if (!user) return <Navigate to="/auth" replace />;
   
   // Se tem usuário mas não tem perfil e não é super admin, pode ser que precise de configuração,
