@@ -262,6 +262,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const clearAllStates = () => {
       console.log('Cleaning auth states');
+      const userId = user?.id;
+      if (userId) {
+        localStorage.removeItem(`vimob_active_organization_${userId}`);
+      }
       setSession(null);
       setUser(null);
       setProfile(null);
@@ -270,6 +274,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setImpersonating(null);
       localStorage.removeItem('impersonating');
       sessionStorage.removeItem('org_selected');
+      setOrganizationsLoaded(false);
     };
 
     // Safety timeout: stop loading after 3 seconds no matter what
