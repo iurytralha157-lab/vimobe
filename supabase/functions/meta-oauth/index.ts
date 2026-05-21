@@ -603,7 +603,11 @@ serve(async (req) => {
           }
         }
 
-        return new Response(JSON.stringify({ success: true }), {
+        return new Response(JSON.stringify({ 
+          success: true,
+          messenger_active: messengerSuccess,
+          messenger_error: messengerError
+        }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
