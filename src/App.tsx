@@ -205,7 +205,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 function AppRoutes() {
-  const { user, loading, profile, isSuperAdmin, impersonating, needsOrgSelection, authInitialized } = useAuth();
+  const { user, loading, profile, isSuperAdmin, impersonating, needsOrgSelection, authInitialized, organizationsLoaded } = useAuth();
   
   useForceRefreshListener(!!user, user?.id);
 
