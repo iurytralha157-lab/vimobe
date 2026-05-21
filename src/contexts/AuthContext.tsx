@@ -264,10 +264,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const clearAllStates = () => {
       console.log('Cleaning auth states');
-      const currentUserId = user?.id || session?.user?.id;
+      const currentUserId = userRef.current?.id || user?.id || session?.user?.id;
       if (currentUserId) {
         localStorage.removeItem(`vimob_active_organization_${currentUserId}`);
       }
+
 
       setSession(null);
       setUser(null);
