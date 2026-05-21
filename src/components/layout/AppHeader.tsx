@@ -67,6 +67,9 @@ export const AppHeader = React.memo(function AppHeader({
     
     setIsSwitching(true);
     try {
+      // Limpar a marcação de sessão para forçar re-validação completa
+      sessionStorage.removeItem('org_selected');
+      
       await switchOrganization(orgId);
       
       // Invalidate all queries to refresh data for the new organization
@@ -77,6 +80,7 @@ export const AppHeader = React.memo(function AppHeader({
       // Navigate to dashboard to ensure we are on a clean state
       navigate('/dashboard', { replace: true });
     } catch (error) {
+
       console.error('Error switching organization:', error);
       toast.error("Erro ao trocar de organização");
     } finally {

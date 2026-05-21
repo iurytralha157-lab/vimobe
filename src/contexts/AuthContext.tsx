@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { logAuditAction } from '@/hooks/use-audit-logs';
@@ -75,12 +75,15 @@ interface AuthContextType {
   switchOrganization: (orgId: string) => Promise<void>;
   needsOrgSelection: boolean;
   authInitialized: boolean;
+  organizationsLoaded: boolean;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const userRef = useRef<User | null>(null);
+
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [organization, setOrganization] = useState<Organization | null>(null);
@@ -88,10 +91,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [authInitialized, setAuthInitialized] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [needsOrgSelection, setNeedsOrgSelection] = useState(false);
+  const [organizationsLoaded, setOrganizationsLoaded] = useState(false);
 
   useEffect(() => {
-    console.log('[AuthContext] active organization changed:', organization?.id || 'none');
-  }, [organization]);
+    if (organization) {
+      console.log('[AuthContext] active organization changed:', organization.id);
+      if (user) {
+        localStorage.setItem(`vimob_active_organization_${user.id}`, organization.id);
+      }
+    }
+  }, [organization, user]);
   const [impersonating, setImpersonating] = useState<ImpersonateSession | null>(() => {
     const stored = localStorage.getItem('impersonating');
     return stored ? JSON.parse(stored) : null;
@@ -255,6 +264,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const clearAllStates = () => {
       console.log('Cleaning auth states');
+      const currentUserId = userRef.current?.id || user?.id || session?.user?.id;
+      if (currentUserId) {
+        localStorage.removeItem(`vimob_active_organization_${currentUserId}`);
+      }
+
+
       setSession(null);
       setUser(null);
       setProfile(null);
@@ -263,6 +278,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setImpersonating(null);
       localStorage.removeItem('impersonating');
       sessionStorage.removeItem('org_selected');
+      setOrganizationsLoaded(false);
     };
 
     // Safety timeout: stop loading after 3 seconds no matter what
@@ -289,7 +305,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       setSession(session);
       setUser(session.user);
+      userRef.current = session.user;
       console.log('[AuthContext] login user loaded:', session.user.id);
+
 
       try {
         await Promise.all([
@@ -335,6 +353,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (session) {
             setSession(session);
             setUser(session.user);
+            userRef.current = session.user;
             
             if (session.user?.id) {
               await fetchProfile(session.user.id);
@@ -343,6 +362,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setLoading(false);
           setAuthInitialized(true);
         }
+
 
         if (!session && authEvent !== 'INITIAL_SESSION') {
           clearAllStates();
@@ -437,8 +457,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const switchOrganization = async (orgId: string) => {
     if (!user) return;
 
+    // Persistir como a última organização ativa para este usuário
+    localStorage.setItem(`vimob_active_organization_${user.id}`, orgId);
+    
     // Marcar como selecionado na sessão para evitar re-redirecionamento
     sessionStorage.setItem('org_selected', 'true');
+
 
 
     // Update users.organization_id to reflect active org
@@ -493,12 +517,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const checkMultiOrg = async (userId: string) => {
     return performanceTracker.trackTimed('checkMultiOrg', async () => {
       try {
-        // Se já selecionamos nesta sessão, não precisamos perguntar de novo
-        if (sessionStorage.getItem('org_selected') === 'true') {
-          console.log('[AuthContext] organization already selected in this session');
-          setNeedsOrgSelection(false);
-          return;
-        }
+        const savedOrgId = localStorage.getItem(`vimob_active_organization_${userId}`);
+        console.log('[AuthContext] userId:', userId);
+        console.log('[AuthContext] saved organization_id in storage:', savedOrgId || 'none');
 
         const { data, error } = await supabase
           .from('organization_members' as any)
@@ -506,24 +527,48 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .eq('user_id', userId)
           .eq('is_active', true);
 
-        const count = data?.length || 0;
-        console.log('[AuthContext] accessible organizations count:', count);
+        const availableOrgs = data || [];
+        const count = availableOrgs.length;
+        console.log('[AuthContext] accessible organizations found:', count);
 
-        if (!error && data && count > 1) {
-          console.log('[AuthContext] redirect decision: /select-organization (multi-org)');
-          setNeedsOrgSelection(true);
-        } else if (!error && data && count === 1) {
-          const onlyOrgId = (data as any[])[0].organization_id;
-          console.log('[AuthContext] redirect decision: dashboard (single org:', onlyOrgId, ')');
+        if (error) {
+          console.error('[AuthContext] Error fetching accessible organizations:', error);
+          setNeedsOrgSelection(false);
+          setOrganizationsLoaded(true);
+          return;
+        }
+
+        // 1. Validar se a organização salva ainda é acessível
+        const isSavedOrgValid = savedOrgId && availableOrgs.some((m: any) => m.organization_id === savedOrgId);
+
+        if (isSavedOrgValid && savedOrgId) {
+          console.log('[AuthContext] decision: dashboard (saved org is valid:', savedOrgId, ')');
+          await switchOrganization(savedOrgId);
+          setNeedsOrgSelection(false);
+        } 
+        // 2. Se for org única, definir automaticamente
+        else if (count === 1) {
+          const onlyOrgId = (availableOrgs as any[])[0].organization_id;
+          console.log('[AuthContext] decision: dashboard (single org:', onlyOrgId, ')');
           await switchOrganization(onlyOrgId);
           setNeedsOrgSelection(false);
-        } else {
-          console.log('[AuthContext] redirect decision: no active organizations found');
+        } 
+
+        // 3. Se tiver múltiplas orgs e nada válido salvo, pedir seleção
+        else if (count > 1) {
+          console.log('[AuthContext] decision: /select-organization (multi-org, no valid saved org)');
+          setNeedsOrgSelection(true);
+        } 
+        // 4. Sem orgs
+        else {
+          console.log('[AuthContext] decision: no active organizations found');
           setNeedsOrgSelection(false);
         }
       } catch (err) {
         console.error('[AuthContext] Error checking multi-org:', err);
         setNeedsOrgSelection(false);
+      } finally {
+        setOrganizationsLoaded(true);
       }
     });
   };
@@ -539,6 +584,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       impersonating,
       needsOrgSelection,
       authInitialized,
+      organizationsLoaded,
       signIn,
       signUp,
       signOut,
@@ -552,6 +598,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     </AuthContext.Provider>
   );
 };
+
 
 export const useAuth = () => {
   const context = useContext(AuthContext);

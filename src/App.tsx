@@ -163,19 +163,20 @@ const PageLoader = () => (
 );
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading, profile, isSuperAdmin, impersonating, organization, needsOrgSelection, authInitialized } = useAuth();
+  const { user, loading, profile, isSuperAdmin, impersonating, organization, needsOrgSelection, authInitialized, organizationsLoaded } = useAuth();
   
   console.log('ProtectedRoute check:', { 
     user: !!user, 
     loading, 
     authInitialized, 
+    organizationsLoaded,
     profile: !!profile, 
     isSuperAdmin,
     organization: !!organization,
     needsOrgSelection
   });
 
-  if (loading || !authInitialized) return <PageLoader />;
+  if (loading || !authInitialized || !organizationsLoaded) return <PageLoader />;
   if (!user) return <Navigate to="/auth" replace />;
   
   // Se tem usuário mas não tem perfil e não é super admin, pode ser que precise de configuração,
@@ -204,7 +205,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 function AppRoutes() {
-  const { user, loading, profile, isSuperAdmin, impersonating, needsOrgSelection, authInitialized } = useAuth();
+  const { user, loading, profile, isSuperAdmin, impersonating, needsOrgSelection, authInitialized, organizationsLoaded } = useAuth();
   
   useForceRefreshListener(!!user, user?.id);
 
@@ -222,9 +223,9 @@ function AppRoutes() {
   };
 
   const renderAuthRoute = () => {
-    console.log('renderAuthRoute state:', { loading, authInitialized, user: !!user, profile: !!profile });
+    console.log('renderAuthRoute state:', { loading, authInitialized, organizationsLoaded, user: !!user, profile: !!profile });
     
-    if (loading || !authInitialized) return <PageLoader />;
+    if (loading || !authInitialized || !organizationsLoaded) return <PageLoader />;
     
     if (user) {
       console.log('User already logged in, redirecting from /auth to', getDefaultRedirect());
@@ -261,7 +262,7 @@ function AppRoutes() {
             <Route path="/checkout/:token" element={<Suspense fallback={<PageLoader />}><Checkout /></Suspense>} />
             <Route path="/assinatura" element={<Navigate to="/settings?tab=subscription" replace />} />
             <Route path="/select-organization" element={
-              loading ? <PageLoader /> : !user ? <Navigate to="/auth" replace /> : 
+              loading || !organizationsLoaded ? <PageLoader /> : !user ? <Navigate to="/auth" replace /> : 
               <Suspense fallback={<PageLoader />}><SelectOrganization /></Suspense>
             } />
             
