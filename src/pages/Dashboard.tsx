@@ -78,7 +78,7 @@ export default function Dashboard() {
     queryKey: ['dashboard-site-visits', organization?.id, filters.dateRange.from.toISOString(), filters.dateRange.to.toISOString()],
     queryFn: async () => {
       if (!organization?.id) return 0;
-      const { data, error } = await supabase.rpc('count_unique_sessions', {
+      const { data, error } = await (supabase as any).rpc('count_unique_sessions', {
         p_organization_id: organization.id,
         p_date_from: filters.dateRange.from.toISOString(),
         p_date_to: filters.dateRange.to.toISOString()
