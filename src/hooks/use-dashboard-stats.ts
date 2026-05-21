@@ -265,6 +265,7 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
     },
     staleTime: 1000 * 60 * 5,
   });
+}
 
 // Dados do gráfico de leads por dia (otimizado)
 export function useLeadsChartData() {
