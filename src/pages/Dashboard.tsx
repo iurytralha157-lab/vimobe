@@ -78,16 +78,13 @@ export default function Dashboard() {
     queryKey: ['dashboard-site-visits', organization?.id, filters.dateRange.from.toISOString(), filters.dateRange.to.toISOString()],
     queryFn: async () => {
       if (!organization?.id) return 0;
-      const { data, error } = await supabase
-        .from('lead_events')
-        .select('session_id')
-        .eq('organization_id', organization.id)
-        .gte('created_at', filters.dateRange.from.toISOString())
-        .lte('created_at', filters.dateRange.to.toISOString())
-        .limit(5000);
+      const { data, error } = await (supabase as any).rpc('count_unique_sessions', {
+        p_organization_id: organization.id,
+        p_date_from: filters.dateRange.from.toISOString(),
+        p_date_to: filters.dateRange.to.toISOString()
+      });
       if (error) throw error;
-      const uniqueSessions = new Set((data || []).map(e => e.session_id));
-      return uniqueSessions.size;
+      return Number(data) || 0;
     },
     enabled: !!organization?.id,
     staleTime: 1000 * 60 * 5, // 5 minutes
