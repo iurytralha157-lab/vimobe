@@ -495,40 +495,71 @@ serve(async (req) => {
           }
         }
 
-        // Subscribe to leadgen webhook (FASE 1: bloquear conexão se a inscrição falhar)
+        // Subscribe to webhooks
+        // FASE 1: Leadgen (Obrigatório para Lead Ads)
         console.log("Subscribing to leadgen webhook for page:", page_id);
         const subscribeUrl = `https://graph.facebook.com/v19.0/${page_id}/subscribed_apps`;
-        let subscribeData: any = null;
+        
+        let leadgenSuccess = false;
+        let messengerSuccess = false;
+        let messengerError = null;
+
         try {
-          const subscribeResponse = await fetch(subscribeUrl, {
+          // Inscrição primária: leadgen + feed (campos básicos para leads)
+          const leadgenResponse = await fetch(subscribeUrl, {
             method: "POST",
             headers: { "Content-Type": "application/x-www-form-urlencoded" },
             body: new URLSearchParams({
               access_token: page.access_token,
-              subscribed_fields: "leadgen,messages,messaging_postbacks,feed"
+              subscribed_fields: "leadgen,feed"
             }).toString()
           });
-          subscribeData = await subscribeResponse.json();
+          const leadgenData = await leadgenResponse.json();
+          
+          if (leadgenData.success || !leadgenData.error) {
+            leadgenSuccess = true;
+            console.log("Leadgen subscription success");
+          } else {
+            console.error("Leadgen subscription failed:", leadgenData.error);
+            return new Response(JSON.stringify({
+              error: leadgenData.error?.message || "Não foi possível inscrever a página no webhook para leads.",
+              error_code: leadgenData.error?.code,
+            }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+          }
         } catch (subErr) {
-          console.error("Webhook subscription request failed:", subErr);
+          console.error("Leadgen subscription request failed:", subErr);
           return new Response(JSON.stringify({
-            error: "Falha ao inscrever a página no webhook do Meta. Verifique permissões da página e tente novamente.",
+            error: "Falha de rede ao inscrever a página no webhook do Meta.",
             details: (subErr as Error).message,
           }), { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } });
         }
 
-        console.log("Webhook subscription response:", JSON.stringify(subscribeData));
-
-        if (subscribeData?.error || subscribeData?.success === false) {
-          console.error("Webhook subscription error:", subscribeData?.error);
-          return new Response(JSON.stringify({
-            error: subscribeData?.error?.message
-              || "Não foi possível inscrever a página no webhook. Conexão não foi finalizada para evitar perda de leads.",
-            error_code: subscribeData?.error?.code,
-            error_subcode: subscribeData?.error?.error_subcode,
-          }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        // FASE 2: Messenger (Opcional - Não bloqueia a conexão de leads)
+        if (leadgenSuccess) {
+          try {
+            console.log("Attempting to subscribe to Messenger fields...");
+            const messengerResponse = await fetch(subscribeUrl, {
+              method: "POST",
+              headers: { "Content-Type": "application/x-www-form-urlencoded" },
+              body: new URLSearchParams({
+                access_token: page.access_token,
+                subscribed_fields: "leadgen,feed,messages,messaging_postbacks"
+              }).toString()
+            });
+            const messengerData = await messengerResponse.json();
+            
+            if (messengerData.success || !messengerData.error) {
+              messengerSuccess = true;
+              console.log("Messenger subscription success");
+            } else {
+              messengerError = messengerData.error?.message;
+              console.log("Messenger subscription skipped (missing permissions):", messengerError);
+            }
+          } catch (e) {
+            console.warn("Messenger subscription attempt failed (non-blocking):", e);
+          }
         }
-        console.log("Successfully subscribed to leadgen webhook");
+
 
         // Upsert integration (somente após webhook OK)
         const { error: upsertError } = await supabase
