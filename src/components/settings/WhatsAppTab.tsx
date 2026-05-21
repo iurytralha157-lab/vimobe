@@ -43,8 +43,9 @@ import {
   useGrantSessionAccess,
   useRevokeSessionAccess,
   useToggleNotificationSession,
-  WhatsAppSession } from
-"@/hooks/use-whatsapp-sessions";
+  WhatsAppSession,
+  EVOLUTION_GO_CREATION_ENABLED } from
+  "@/hooks/use-whatsapp-sessions";
 import { useOrganizationUsers } from "@/hooks/use-users";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
