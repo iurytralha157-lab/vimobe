@@ -74,6 +74,7 @@ interface AuthContextType {
   stopImpersonate: () => Promise<void>;
   switchOrganization: (orgId: string) => Promise<void>;
   needsOrgSelection: boolean;
+  authInitialized: boolean;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -331,7 +332,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setAuthInitialized(true);
         }
 
-        if (!session && event !== 'SIGNED_OUT') {
+        if (!session) {
           clearAllStates();
           setLoading(false);
           setAuthInitialized(true);
