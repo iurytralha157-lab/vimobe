@@ -414,9 +414,11 @@ const App = () => {
           {/* PWA features disabled */}
           <BrowserRouter>
             <AuthProvider>
-              <LanguageProvider>
-                <AppRoutes />
-              </LanguageProvider>
+              <FilterProvider>
+                <LanguageProvider>
+                  <AppRoutes />
+                </LanguageProvider>
+              </FilterProvider>
             </AuthProvider>
           </BrowserRouter>
         </TooltipProvider>
