@@ -1,4 +1,4 @@
-import { Users, User, Globe, X, SlidersHorizontal } from 'lucide-react';
+import { Users, User, Globe, X, SlidersHorizontal, Calendar as CalendarIcon, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -22,9 +22,14 @@ import { useUserPermissions } from '@/hooks/use-user-permissions';
 import { 
   DatePreset, 
   sourceOptions,
+  datePresetOptions,
 } from '@/hooks/use-dashboard-filters';
 import { DateFilterPopover } from '@/components/ui/date-filter-popover';
 import { CampaignFilter } from './CampaignFilter';
+import { Calendar } from '@/components/ui/calendar';
+import { format, startOfDay, endOfDay } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { useState } from 'react';
 
 interface DashboardFiltersProps {
   datePreset: DatePreset;
@@ -72,6 +77,8 @@ export function DashboardFilters({
   const { data: users = [] } = useOrganizationUsers();
   const isMobile = useIsMobile();
   const { hasPermission } = useUserPermissions();
+  const [tempDateRange, setTempDateRange] = useState<{ from?: Date; to?: Date }>({});
+  const [periodPopoverOpen, setPeriodPopoverOpen] = useState(false);
 
   // Filter teams based on user role
   const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin';
@@ -104,6 +111,29 @@ export function DashboardFilters({
 
   // Check if any extra filters are active (excluding date)
   const hasExtraFilters = teamId !== null || userId !== null || source !== null || campaignId !== null || adSetId !== null || adId !== null;
+
+  const handleApplyCustomDate = () => {
+    if (tempDateRange.from && tempDateRange.to) {
+      onDatePresetChange('custom');
+      onCustomDateRangeChange({
+        from: startOfDay(tempDateRange.from),
+        to: endOfDay(tempDateRange.to),
+      });
+      setPeriodPopoverOpen(false);
+      setTempDateRange({});
+    }
+  };
+
+  const handleClearCustomDate = () => {
+    setTempDateRange({});
+  };
+
+  const currentPeriodLabel = () => {
+    if (datePreset === 'custom' && customDateRange) {
+      return `${format(customDateRange.from, 'dd/MM/yy', { locale: ptBR })} - ${format(customDateRange.to, 'dd/MM/yy', { locale: ptBR })}`;
+    }
+    return datePresetOptions.find(o => o.value === datePreset)?.label || 'Período';
+  };
 
   // Shared filter components
   const TeamFilter = () => availableTeams.length > 0 ? (
@@ -276,171 +306,180 @@ export function DashboardFilters({
     );
   }
 
-  // Desktop layout - All filters inline, but hidden on smaller screens
+  // Desktop layout - Split into Period and Filters
   return (
-    <div className="flex flex-wrap items-center justify-end gap-2">
-      {/* Date Filter */}
-      <DateFilterPopover
-        datePreset={datePreset}
-        onDatePresetChange={onDatePresetChange}
-        customDateRange={customDateRange}
-        onCustomDateRangeChange={onCustomDateRangeChange}
-        triggerClassName="h-8 w-auto min-w-[120px] text-xs justify-start"
-      />
-
-      {/* Desktop Filters Popover for ALL filters when screen is not large enough */}
-      <div className="flex xl:hidden">
-        <Popover>
+    <div className="flex items-center justify-between w-full bg-background/50 backdrop-blur-sm border border-border/50 rounded-lg p-1.5 shadow-sm">
+      {/* Bloco 1: Período */}
+      <div className="flex items-center gap-2">
+        <Popover open={periodPopoverOpen} onOpenChange={setPeriodPopoverOpen}>
           <PopoverTrigger asChild>
             <Button 
               variant="outline" 
               size="sm" 
               className={cn(
-                "h-8 px-2.5 text-xs gap-1.5",
-                (hasExtraFilters) && "border-primary text-primary"
+                "h-8 gap-2 text-[11px] font-semibold uppercase tracking-wider px-3 border-border/60 hover:border-primary/50 transition-colors",
+                (datePreset !== 'last30days' || customDateRange) && "border-primary/50 bg-primary/5 text-primary"
               )}
             >
-              <SlidersHorizontal className="h-3.5 w-3.5" />
-              Filtros
+              <CalendarIcon className="h-3.5 w-3.5" />
+              <span>{currentPeriodLabel()}</span>
             </Button>
           </PopoverTrigger>
-          <PopoverContent align="end" className="w-64 p-3 max-h-[80vh] overflow-y-auto">
-            <div className="space-y-3">
-              <div className="pb-3 border-b border-border">
-                <CampaignFilter 
-                  campaignId={campaignId}
-                  onCampaignChange={onCampaignChange}
-                  adSetId={adSetId}
-                  onAdSetChange={onAdSetChange}
-                  adId={adId}
-                  onAdChange={onAdChange}
-                  fullWidth
-                  hideTitles
-                />
+          <PopoverContent align="start" className="w-auto p-0 border-border/40 shadow-xl overflow-hidden">
+            <div className="flex bg-background">
+              {/* Botões Rápidos (Esquerda) */}
+              <div className="w-[180px] p-2 bg-muted/30 border-r border-border/40 space-y-1">
+                <p className="px-2 py-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Atalhos</p>
+                {datePresetOptions.filter(o => o.value !== 'custom').map((option) => (
+                  <Button
+                    key={option.value}
+                    variant="ghost"
+                    size="sm"
+                    className={cn(
+                      "w-full justify-start text-xs h-8 font-medium hover:bg-primary/10 hover:text-primary transition-colors",
+                      datePreset === option.value && !customDateRange ? "bg-primary/10 text-primary" : "text-muted-foreground"
+                    )}
+                    onClick={() => {
+                      onDatePresetChange(option.value);
+                      onCustomDateRangeChange(null);
+                      setPeriodPopoverOpen(false);
+                    }}
+                  >
+                    {option.label}
+                    {datePreset === option.value && !customDateRange && <Check className="ml-auto h-3 w-3" />}
+                  </Button>
+                ))}
               </div>
-              <TeamFilter />
-              <UserFilter />
-              <SourceFilter />
+
+              {/* Seletor Personalizado (Direita) */}
+              <div className="p-3">
+                <p className="px-1 mb-2 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Personalizado</p>
+                <Calendar
+                  mode="range"
+                  selected={{ from: tempDateRange.from, to: tempDateRange.to }}
+                  onSelect={(range) => setTempDateRange({ from: range?.from, to: range?.to })}
+                  numberOfMonths={1}
+                  locale={ptBR}
+                  className="rounded-md border border-border/40 p-2"
+                />
+                
+                {/* Botões Limpar e Aplicar (Abaixo do calendário) */}
+                <div className="grid grid-cols-2 gap-2 mt-3">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="h-8 text-xs font-bold uppercase tracking-tight"
+                    onClick={handleClearCustomDate}
+                  >
+                    Limpar
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    className="h-8 text-xs font-bold uppercase tracking-tight bg-primary hover:bg-primary/90"
+                    disabled={!tempDateRange.from || !tempDateRange.to}
+                    onClick={handleApplyCustomDate}
+                  >
+                    Aplicar
+                  </Button>
+                </div>
+              </div>
             </div>
           </PopoverContent>
         </Popover>
       </div>
 
-      {/* Show individual filters only on extra large screens */}
-      <div className="hidden xl:flex items-center gap-2">
-        {/* Team Filter - Only for admin/team leader */}
-        {availableTeams.length > 0 && (
-          <Select
-            value={teamId || 'all'}
-            onValueChange={(value) => {
-              onTeamChange(value === 'all' ? null : value);
-              onUserChange(null);
-            }}
-          >
-            <SelectTrigger className={cn(
-              "h-8 w-auto min-w-[120px] text-xs",
-              teamId && "border-primary text-primary"
-            )}>
-              <Users className="h-3.5 w-3.5 mr-1.5 flex-shrink-0" />
-              <SelectValue placeholder="Equipe" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas equipes</SelectItem>
-              {availableTeams.map((team) => (
-                <SelectItem key={team.id} value={team.id}>
-                  {team.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
-
-        {/* User Filter */}
-        {showUserFilter && (
-          <Select
-            value={userId || 'all'}
-            onValueChange={(value) => onUserChange(value === 'all' ? null : value)}
-          >
-            <SelectTrigger className={cn(
-              "h-8 w-auto min-w-[110px] text-xs",
-              userId && "border-primary text-primary"
-            )}>
-              <User className="h-3.5 w-3.5 mr-1.5 flex-shrink-0" />
-              <SelectValue placeholder="Corretor" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos</SelectItem>
-              {availableUsers.map((user) => (
-                <SelectItem key={user.id} value={user.id}>
-                  {user.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
-
-        {/* Source Filter */}
-        <Select
-          value={source || 'all'}
-          onValueChange={(value) => onSourceChange(value === 'all' ? null : value)}
-        >
-          <SelectTrigger className={cn(
-            "h-8 w-auto min-w-[110px] text-xs",
-            source && "border-primary text-primary"
-          )}>
-            <Globe className="h-3.5 w-3.5 mr-1.5 flex-shrink-0" />
-            <SelectValue placeholder="Origem" />
-          </SelectTrigger>
-          <SelectContent>
-            {sourceOptions.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        
-        {/* Desktop Filters Popover for Meta Ads */}
+      {/* Bloco 2: Filtros */}
+      <div className="flex items-center gap-2">
         <Popover>
           <PopoverTrigger asChild>
             <Button 
               variant="outline" 
               size="sm" 
               className={cn(
-                "h-8 px-2.5 text-xs gap-1.5",
-                (campaignId || adSetId || adId) && "border-[#1877F2] text-[#1877F2] hover:text-[#1877F2] hover:bg-[#1877F2]/10"
+                "h-8 gap-2 text-[11px] font-semibold uppercase tracking-wider px-3 border-border/60 hover:border-primary/50 transition-colors",
+                hasExtraFilters && "border-primary/50 bg-primary/5 text-primary"
               )}
             >
               <SlidersHorizontal className="h-3.5 w-3.5" />
-              Campanhas
+              <span>Filtros</span>
+              {hasExtraFilters && (
+                <Badge variant="default" className="ml-1 h-4 min-w-[16px] px-1 text-[9px] bg-primary flex items-center justify-center">
+                  !
+                </Badge>
+              )}
             </Button>
           </PopoverTrigger>
-          <PopoverContent align="end" className="w-80 p-3">
-            <CampaignFilter 
-              campaignId={campaignId}
-              onCampaignChange={onCampaignChange}
-              adSetId={adSetId}
-              onAdSetChange={onAdSetChange}
-              adId={adId}
-              onAdChange={onAdChange}
-              fullWidth
-            />
+          <PopoverContent align="end" className="w-80 p-4 border-border/40 shadow-2xl">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between border-b border-border/40 pb-2">
+                <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Filtros Avançados</span>
+                {hasActiveFilters && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={onClear} 
+                    className="h-6 px-2 text-[9px] uppercase font-bold text-primary hover:bg-primary/10"
+                  >
+                    Limpar tudo
+                  </Button>
+                )}
+              </div>
+
+              <div className="grid gap-3">
+                {/* Equipe */}
+                {availableTeams.length > 0 && (
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-tight px-1">Equipe</label>
+                    <TeamFilter />
+                  </div>
+                )}
+
+                {/* Corretor */}
+                {showUserFilter && (
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-tight px-1">Corretor</label>
+                    <UserFilter />
+                  </div>
+                )}
+
+                {/* Origem */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-tight px-1">Origem</label>
+                  <SourceFilter />
+                </div>
+
+                {/* Campanhas Meta Ads */}
+                <div className="space-y-1.5 pt-2 border-t border-border/40">
+                  <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-tight px-1">Campanhas Meta</label>
+                  <CampaignFilter 
+                    campaignId={campaignId}
+                    onCampaignChange={onCampaignChange}
+                    adSetId={adSetId}
+                    onAdSetChange={onAdSetChange}
+                    adId={adId}
+                    onAdChange={onAdChange}
+                    fullWidth
+                    hideTitles
+                  />
+                </div>
+              </div>
+            </div>
           </PopoverContent>
         </Popover>
-      </div>
 
-      {/* Clear Filters */}
-      {hasActiveFilters && (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 px-2 text-muted-foreground hover:text-foreground text-xs"
-          onClick={onClear}
-        >
-          <X className="h-3.5 w-3.5 mr-1" />
-          Limpar
-        </Button>
-      )}
+        {/* Botão rápido de limpar se houver filtros ativos (opcional, mantendo fora se quiser facilitar) */}
+        {hasActiveFilters && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 px-2 text-muted-foreground hover:text-destructive transition-colors"
+            onClick={onClear}
+            title="Limpar todos os filtros"
+          >
+            <X className="h-3.5 w-3.5" />
+          </Button>
+        )}
+      </div>
     </div>
   );
 }
