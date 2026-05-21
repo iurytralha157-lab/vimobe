@@ -527,7 +527,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         // 1. Validar se a organização salva ainda é acessível
-        const isSavedOrgValid = savedOrgId && availableOrgs.some(m => m.organization_id === savedOrgId);
+        const isSavedOrgValid = savedOrgId && availableOrgs.some((m: any) => m.organization_id === savedOrgId);
 
         if (isSavedOrgValid && savedOrgId) {
           console.log('[AuthContext] decision: dashboard (saved org is valid:', savedOrgId, ')');
@@ -536,11 +536,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } 
         // 2. Se for org única, definir automaticamente
         else if (count === 1) {
-          const onlyOrgId = availableOrgs[0].organization_id;
+          const onlyOrgId = (availableOrgs as any[])[0].organization_id;
           console.log('[AuthContext] decision: dashboard (single org:', onlyOrgId, ')');
           await switchOrganization(onlyOrgId);
           setNeedsOrgSelection(false);
         } 
+
         // 3. Se tiver múltiplas orgs e nada válido salvo, pedir seleção
         else if (count > 1) {
           console.log('[AuthContext] decision: /select-organization (multi-org, no valid saved org)');
