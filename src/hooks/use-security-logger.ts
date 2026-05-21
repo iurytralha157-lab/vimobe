@@ -59,12 +59,19 @@ export function useSecurityLogger() {
     // Em produção ou se quisermos persistência, enviar para tabela audit_logs
     const syncWithServer = async () => {
       try {
-        const { data: userData } = await supabase.auth.getUser();
+        const { data: { session } } = await supabase.auth.getSession();
+        const user = session?.user;
+
+        // Skip server sync if no authenticated user or on public pages
+        const isAuthPage = window.location.pathname === '/auth' || window.location.pathname === '/login';
+        if (!session || !user?.id || isAuthPage) {
+          return;
+        }
 
         await supabase.from('audit_logs').insert([{
           action: event.type,
           entity_type: 'security_event',
-          user_id: userData.user?.id || null,
+          user_id: user.id,
           new_data: {
             email: event.email,
             details: event.details,

@@ -76,10 +76,18 @@ export function useCreateAuditLog() {
       new_data?: Record<string, unknown>;
       organization_id?: string;
     }) => {
-      const { data: user } = await supabase.auth.getUser();
+      const { data: { session } } = await supabase.auth.getSession();
+      const user = session?.user;
+      
+      if (!session || !user?.id) {
+        if (import.meta.env.DEV) {
+          console.warn('Audit log blocked: No authenticated session found.');
+        }
+        return;
+      }
       
       const { error } = await supabase.from('audit_logs').insert([{
-        user_id: user.user?.id,
+        user_id: user.id,
         organization_id: log.organization_id,
         action: log.action,
         entity_type: log.entity_type,
@@ -107,10 +115,18 @@ export async function logAuditAction(
   organizationId?: string
 ) {
   try {
-    const { data: user } = await supabase.auth.getUser();
+    const { data: { session } } = await supabase.auth.getSession();
+    const user = session?.user;
+
+    // Don't log if no session or user, or if on auth page
+    const isAuthPage = window.location.pathname === '/auth' || window.location.pathname === '/login';
+    
+    if (!session || !user?.id || isAuthPage) {
+      return;
+    }
     
     await supabase.from('audit_logs').insert([{
-      user_id: user.user?.id,
+      user_id: user.id,
       organization_id: organizationId,
       action,
       entity_type: entityType,

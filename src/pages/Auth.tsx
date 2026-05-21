@@ -62,13 +62,6 @@ export default function Auth() {
     return systemSettings.login_bg_url || null;
   }, [systemSettings]);
 
-  const logPageAccess = useCallback(() => {
-    securityLogger.logPageAccess();
-  }, [securityLogger]);
-
-  useEffect(() => {
-    logPageAccess();
-  }, [logPageAccess]);
 
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
