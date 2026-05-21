@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-route
 import { ThemeProvider } from "next-themes";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
+import { FilterProvider } from "@/contexts/FilterContext";
 import { SuperAdminRoute } from "@/components/guards/SuperAdminRoute";
 import { AdminRoute } from "@/components/guards/AdminRoute";
 import { PermissionGuard } from "@/components/guards/PermissionGuard";
@@ -413,9 +414,11 @@ const App = () => {
           {/* PWA features disabled */}
           <BrowserRouter>
             <AuthProvider>
-              <LanguageProvider>
-                <AppRoutes />
-              </LanguageProvider>
+              <FilterProvider>
+                <LanguageProvider>
+                  <AppRoutes />
+                </LanguageProvider>
+              </FilterProvider>
             </AuthProvider>
           </BrowserRouter>
         </TooltipProvider>

@@ -32,9 +32,13 @@ import { StageSettingsDialog } from '@/components/pipelines/StageSettingsDialog'
 import { PipelineSlaSettings } from '@/components/pipelines/PipelineSlaSettings';
 import { StagesEditorDialog } from '@/components/pipelines/StagesEditorDialog';
 import { DateFilterPopover } from '@/components/ui/date-filter-popover';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
+import { startOfDay, endOfDay, format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { LeadCard } from '@/components/leads/LeadCard';
 import { LeadDetailDialog } from '@/components/leads/LeadDetailDialog';
-import { DatePreset, getDateRangeFromPreset } from '@/hooks/use-dashboard-filters';
+import { DatePreset, getDateRangeFromPreset, datePresetOptions } from '@/hooks/use-dashboard-filters';
+import { useFilters } from '@/contexts/FilterContext';
 
 import {
   DropdownMenu,
@@ -134,8 +138,7 @@ export default function Pipelines() {
   const [newStageColor, setNewStageColor] = useState('#6b7280');
   const [slaSettingsOpen, setSlaSettingsOpen] = useState(false);
   const [stagesEditorOpen, setStagesEditorOpen] = useState(false);
-  const [datePreset, setDatePreset] = useState<DatePreset>('last7days');
-  const [customDateRange, setCustomDateRange] = useState<{ from: Date; to: Date } | null>(null);
+  const { datePreset, setDatePreset, customDateRange, setCustomDateRange, activeDateRange: dateRange } = useFilters();
   const [isRefreshing, setIsRefreshing] = useState(false);
   
   // Ref para bloquear refetch durante drag-and-drop (evita race condition)
@@ -185,11 +188,8 @@ export default function Pipelines() {
     }
   }, [profile, isAdmin, filterUser, hasLeadViewAll, permissionLoading, isTeamLeader]);
   
-  // Get date range for filtering (must be before useStagesWithLeads)
-  const dateRange = useMemo(() => {
-    if (customDateRange) return customDateRange;
-    return getDateRangeFromPreset(datePreset);
-  }, [datePreset, customDateRange]);
+  // Date range is now handled by FilterContext
+
 
   const { data: baseStages = [], isLoading: baseStagesLoading } = useStages(selectedPipelineId || undefined);
 
@@ -950,13 +950,68 @@ export default function Pipelines() {
             <div className="w-px h-5 bg-border flex-shrink-0 mx-0.5" />
 
             {/* Date Filter */}
-            <DateFilterPopover
-              datePreset={datePreset}
-              onDatePresetChange={setDatePreset}
-              customDateRange={customDateRange}
-              onCustomDateRangeChange={setCustomDateRange}
-              triggerClassName="h-8 px-2 text-[11px] justify-center min-w-[100px] flex-shrink-0"
-            />
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className={cn(
+                    "h-8 gap-2 text-[11px] font-semibold uppercase tracking-wider px-3 border-border/60 hover:border-primary/50 transition-colors flex-shrink-0",
+                    (datePreset !== 'last30days' || customDateRange) && "border-primary/50 bg-primary/5 text-primary"
+                  )}
+                >
+                  <Calendar className="h-3.5 w-3.5" />
+                  <span>
+                    {datePreset === 'custom' && customDateRange
+                      ? `${format(customDateRange.from, 'dd/MM/yy', { locale: ptBR })} - ${format(customDateRange.to, 'dd/MM/yy', { locale: ptBR })}`
+                      : datePresetOptions.find(o => o.value === datePreset)?.label || 'Período'}
+                  </span>
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-auto p-0 border-border/40 shadow-xl overflow-hidden z-[100]">
+                <div className="flex bg-background">
+                  {/* Atalhos */}
+                  <div className="w-[180px] p-2 bg-muted/30 border-r border-border/40 space-y-1">
+                    <p className="px-2 py-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Atalhos</p>
+                    {datePresetOptions.filter(o => o.value !== 'custom').map((option) => (
+                      <Button
+                        key={option.value}
+                        variant="ghost"
+                        size="sm"
+                        className={cn(
+                          "w-full justify-start text-xs h-8 font-medium hover:bg-primary/10 hover:text-primary transition-colors",
+                          datePreset === option.value && !customDateRange ? "bg-primary/10 text-primary" : "text-muted-foreground"
+                        )}
+                        onClick={() => {
+                          setDatePreset(option.value);
+                          setCustomDateRange(null);
+                        }}
+                      >
+                        {option.label}
+                        {datePreset === option.value && !customDateRange && <Check className="ml-auto h-3 w-3" />}
+                      </Button>
+                    ))}
+                  </div>
+
+                  {/* Calendário */}
+                  <div className="p-3">
+                    <p className="px-1 mb-2 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Personalizado</p>
+                    <CalendarComponent
+                      mode="range"
+                      selected={{ from: customDateRange?.from, to: customDateRange?.to }}
+                      onSelect={(range) => {
+                        if (range?.from && range?.to) {
+                          setCustomDateRange({ from: startOfDay(range.from), to: endOfDay(range.to) });
+                        }
+                      }}
+                      numberOfMonths={1}
+                      locale={ptBR}
+                      className="rounded-md border border-border/40 p-2"
+                    />
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
 
             {/* Filters Popover */}
             <Popover>
