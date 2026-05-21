@@ -572,6 +572,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       impersonating,
       needsOrgSelection,
       authInitialized,
+      organizationsLoaded,
       signIn,
       signUp,
       signOut,
@@ -581,6 +582,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       stopImpersonate,
       switchOrganization,
     }}>
+
       {children}
     </AuthContext.Provider>
   );
