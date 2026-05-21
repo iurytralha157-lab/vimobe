@@ -305,7 +305,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       setSession(session);
       setUser(session.user);
+      userRef.current = session.user;
       console.log('[AuthContext] login user loaded:', session.user.id);
+
 
       try {
         await Promise.all([
