@@ -328,13 +328,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
         if (!isMounted) return;
 
         const authEvent = event as string;
         console.log('Auth event:', authEvent, 'Session:', !!session);
 
-        // Se for o evento inicial, não fazemos nada aqui pois o getSession já tratou
+        // CRITICAL: Never use async/await with Supabase calls inside this callback.
+        // Doing so deadlocks getSession() and other queries. Only update local state
+        // synchronously here, and defer any Supabase calls via setTimeout(..., 0).
+
+        // Initial session is handled by the getSession() block above
         if (authEvent === 'INITIAL_SESSION') {
           console.log('Ignoring INITIAL_SESSION event');
           return;
@@ -342,32 +346,52 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (authEvent === 'SIGNED_OUT') {
           clearAllStates();
-          performFullCacheClear({ 
-            clearAuth: true, 
-            redirectTo: '/auth' 
-          });
           setLoading(false);
           setAuthInitialized(true);
           setOrganizationsLoaded(true);
+          setTimeout(() => {
+            performFullCacheClear({ clearAuth: true, redirectTo: '/auth' });
+          }, 0);
           return;
         }
 
-        if (authEvent === 'SIGNED_IN' || authEvent === 'USER_UPDATED' || authEvent === 'TOKEN_REFRESHED') {
+        if (authEvent === 'SIGNED_IN' || authEvent === 'USER_UPDATED') {
           if (session) {
             setSession(session);
             setUser(session.user);
             userRef.current = session.user;
-            
-            if (session.user?.id) {
-              await fetchProfile(session.user.id);
-            }
+
+            // Defer Supabase calls to avoid deadlock with the auth listener
+            setTimeout(() => {
+              if (!isMounted) return;
+              Promise.all([
+                fetchProfile(session.user.id),
+                checkMultiOrg(session.user.id),
+              ]).finally(() => {
+                if (!isMounted) return;
+                setLoading(false);
+                setAuthInitialized(true);
+              });
+            }, 0);
+          } else {
+            setLoading(false);
+            setAuthInitialized(true);
+            setOrganizationsLoaded(true);
           }
-          setLoading(false);
-          setAuthInitialized(true);
+          return;
         }
 
+        if (authEvent === 'TOKEN_REFRESHED') {
+          // Just update session/user, never refetch profile here
+          if (session) {
+            setSession(session);
+            setUser(session.user);
+            userRef.current = session.user;
+          }
+          return;
+        }
 
-        if (!session && authEvent !== 'INITIAL_SESSION') {
+        if (!session) {
           clearAllStates();
           setLoading(false);
           setAuthInitialized(true);
