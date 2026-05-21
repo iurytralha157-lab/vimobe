@@ -306,15 +306,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       async (event, session) => {
         if (!isMounted) return;
 
-        console.log('Auth event:', event, 'Session:', !!session);
+        const authEvent = event as string;
+        console.log('Auth event:', authEvent, 'Session:', !!session);
 
         // Se for o evento inicial, não fazemos nada aqui pois o getSession já tratou
-        if (event === 'INITIAL_SESSION') {
+        if (authEvent === 'INITIAL_SESSION') {
           console.log('Ignoring INITIAL_SESSION event');
           return;
         }
 
-        if (event === 'SIGNED_OUT') {
+        if (authEvent === 'SIGNED_OUT') {
           clearAllStates();
           performFullCacheClear({ 
             clearAuth: true, 
@@ -325,7 +326,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return;
         }
 
-        if (event === 'SIGNED_IN' || event === 'USER_UPDATED' || event === 'TOKEN_REFRESHED') {
+        if (authEvent === 'SIGNED_IN' || authEvent === 'USER_UPDATED' || authEvent === 'TOKEN_REFRESHED') {
           if (session) {
             setSession(session);
             setUser(session.user);
@@ -338,7 +339,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setAuthInitialized(true);
         }
 
-        if (!session && event !== 'INITIAL_SESSION') {
+        if (!session && authEvent !== 'INITIAL_SESSION') {
           clearAllStates();
           setLoading(false);
           setAuthInitialized(true);
