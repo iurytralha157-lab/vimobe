@@ -9,21 +9,36 @@ const CHANNEL_NAME = 'system-updates-v4'; // Bumped version to v4
  * Hook that listens for force refresh broadcasts and reloads the page
  * when received. Used by all users.
  */
-export function useForceRefreshListener(enabled: boolean = true) {
+export function useForceRefreshListener(enabled: boolean = true, userId?: string) {
   useEffect(() => {
-    if (!enabled) return;
-    const channel = supabase.channel(CHANNEL_NAME);
+    // Só habilita se estiver explicitamente enabled, tiver um userId E não estiver em rota pública
+    const isPublicRoute = [
+      '/auth', 
+      '/login', 
+      '/forgot-password', 
+      '/reset-password',
+      '/signup',
+      '/onboarding'
+    ].includes(window.location.pathname);
+
+    if (!enabled || !userId || isPublicRoute) {
+      if (userId) {
+        console.log('[ForceRefresh] Skipping subscription for public route or disabled state');
+      }
+      return;
+    }
+
+    console.log('[ForceRefresh] Initializing for user:', userId);
+    const channel = supabase.channel(`${CHANNEL_NAME}-${userId.substring(0, 8)}`);
 
     channel
       .on('broadcast', { event: 'force-refresh' }, async (payload) => {
         console.log('[ForceRefresh] Received refresh signal:', payload);
         
-        // Show a toast before refreshing
         toast.info('Atualizando sistema... Por favor aguarde.', {
           duration: 3000,
         });
 
-        // Perform full cache clear without removing auth, then reload
         await performFullCacheClear({ 
           clearAuth: false, 
           reload: true 
@@ -34,9 +49,10 @@ export function useForceRefreshListener(enabled: boolean = true) {
       });
 
     return () => {
+      console.log('[ForceRefresh] Removing channel');
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [enabled, userId, window.location.pathname]);
 }
 
 

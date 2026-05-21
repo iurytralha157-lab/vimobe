@@ -263,7 +263,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Safety timeout: stop loading after 3 seconds no matter what
     const safetyTimeout = setTimeout(() => {
-      if (isMounted && loading) {
+      if (isMounted && !authInitialized) {
         console.warn('Auth safety timeout reached - forcing loading to false');
         setLoading(false);
         setAuthInitialized(true);
@@ -279,6 +279,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         clearAllStates();
         setLoading(false);
         setAuthInitialized(true);
+        console.log('Auth initialization complete naturally (no session)');
         return;
       }
 
@@ -296,7 +297,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (isMounted) {
           setLoading(false);
           setAuthInitialized(true);
-          console.log('Auth initialization complete');
+          console.log('Auth initialization complete naturally');
         }
       }
     });
@@ -305,15 +306,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       async (event, session) => {
         if (!isMounted) return;
 
-        console.log('Auth event:', event, 'Session:', !!session);
+        const authEvent = event as string;
+        console.log('Auth event:', authEvent, 'Session:', !!session);
 
         // Se for o evento inicial, não fazemos nada aqui pois o getSession já tratou
-        if (event === 'INITIAL_SESSION') {
-          console.log('Ignoring INITIAL_SESSION event (handled by getSession)');
+        if (authEvent === 'INITIAL_SESSION') {
+          console.log('Ignoring INITIAL_SESSION event');
           return;
         }
 
-        if (event === 'SIGNED_OUT') {
+        if (authEvent === 'SIGNED_OUT') {
           clearAllStates();
           performFullCacheClear({ 
             clearAuth: true, 
@@ -324,12 +326,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return;
         }
 
-        if (event === 'SIGNED_IN' || event === 'USER_UPDATED' || event === 'TOKEN_REFRESHED') {
+        if (authEvent === 'SIGNED_IN' || authEvent === 'USER_UPDATED' || authEvent === 'TOKEN_REFRESHED') {
           if (session) {
             setSession(session);
             setUser(session.user);
             
-            // For these events, we might need to refresh the profile
             if (session.user?.id) {
               await fetchProfile(session.user.id);
             }
@@ -338,7 +339,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setAuthInitialized(true);
         }
 
-        if (!session) {
+        if (!session && authEvent !== 'INITIAL_SESSION') {
           clearAllStates();
           setLoading(false);
           setAuthInitialized(true);

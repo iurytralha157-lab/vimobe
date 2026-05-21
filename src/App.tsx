@@ -186,7 +186,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 function AppRoutes() {
   const { user, loading, profile, isSuperAdmin, impersonating, needsOrgSelection, authInitialized } = useAuth();
   
-  useForceRefreshListener(!!user);
+  useForceRefreshListener(!!user, user?.id);
 
   useEffect(() => {
     if (user && !loading) {
