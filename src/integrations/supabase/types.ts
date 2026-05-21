@@ -8820,6 +8820,14 @@ export type Database = {
       }
       cleanup_orphan_members: { Args: never; Returns: Json }
       cleanup_whatsapp_retention: { Args: never; Returns: undefined }
+      count_unique_sessions: {
+        Args: {
+          p_date_from: string
+          p_date_to: string
+          p_organization_id: string
+        }
+        Returns: number
+      }
       create_default_stages_for_pipeline: {
         Args: { p_org_id: string; p_pipeline_id: string }
         Returns: undefined
