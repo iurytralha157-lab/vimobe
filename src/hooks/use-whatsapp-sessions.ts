@@ -169,8 +169,14 @@ export function useCreateWhatsAppSession() {
         throw new Error("User not authenticated");
       }
       const displayName = typeof input === "string" ? input : input.displayName;
-      const provider: WhatsAppProvider =
+      let provider: WhatsAppProvider =
         typeof input === "string" ? "evolution" : input.provider || "evolution";
+      
+      // Security: Force 'evolution' if Evolution Go creation is disabled
+      if (!EVOLUTION_GO_CREATION_ENABLED && provider === "evolution_go") {
+        console.warn("Evolution Go creation is disabled. Defaulting to standard Evolution.");
+        provider = "evolution";
+      }
 
       // Generate unique instance name: {sanitized_name}_{org_prefix}_{random_suffix}
       const orgPrefix = profile.organization_id.substring(0, 5);
