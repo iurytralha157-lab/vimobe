@@ -223,9 +223,9 @@ function AppRoutes() {
   };
 
   const renderAuthRoute = () => {
-    console.log('renderAuthRoute state:', { loading, authInitialized, user: !!user, profile: !!profile });
+    console.log('renderAuthRoute state:', { loading, authInitialized, organizationsLoaded, user: !!user, profile: !!profile });
     
-    if (loading || !authInitialized) return <PageLoader />;
+    if (loading || !authInitialized || !organizationsLoaded) return <PageLoader />;
     
     if (user) {
       console.log('User already logged in, redirecting from /auth to', getDefaultRedirect());
