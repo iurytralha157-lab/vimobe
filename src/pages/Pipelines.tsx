@@ -35,8 +35,9 @@ import { DateFilterPopover } from '@/components/ui/date-filter-popover';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { startOfDay, endOfDay, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { LeadCard } from '@/components/leads/LeadCard';
+import { LeadDetailDialog } from '@/components/leads/LeadDetailDialog';
 import { DatePreset, getDateRangeFromPreset, datePresetOptions } from '@/hooks/use-dashboard-filters';
-import { useFilters } from '@/contexts/FilterContext';
 import { useFilters } from '@/contexts/FilterContext';
 
 import {
