@@ -83,16 +83,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [organization, setOrganizationState] = useState<Organization | null>(null);
-
-  const setOrganization = (org: Organization | null) => {
-    console.log('[AuthContext] active organization:', org?.id || 'none');
-    setOrganizationState(org);
-  };
+  const [organization, setOrganization] = useState<Organization | null>(null);
   const [loading, setLoading] = useState(true);
   const [authInitialized, setAuthInitialized] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [needsOrgSelection, setNeedsOrgSelection] = useState(false);
+
+  useEffect(() => {
+    console.log('[AuthContext] active organization changed:', organization?.id || 'none');
+  }, [organization]);
   const [impersonating, setImpersonating] = useState<ImpersonateSession | null>(() => {
     const stored = localStorage.getItem('impersonating');
     return stored ? JSON.parse(stored) : null;
