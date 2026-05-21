@@ -11,8 +11,8 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  TooltipProps,
 } from 'recharts';
+import { DashboardChartTooltip } from './DashboardChartTooltip';
 
 export interface DealsEvolutionPoint {
   date: string;
@@ -48,31 +48,16 @@ function ChartSkeleton() {
   );
 }
 
-function CustomTooltip({ active, payload, label }: TooltipProps<number, string>) {
-  if (!active || !payload || !payload.length) return null;
-
+function CustomTooltip(props: any) {
   return (
-    <div className="bg-popover/95 backdrop-blur-sm border border-border rounded-lg p-3 shadow-xl">
-      <p className="text-sm font-medium text-foreground mb-2">{label}</p>
-      <div className="space-y-1">
-        {payload.map((entry, index) => (
-          <div key={index} className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <div 
-                className="w-2.5 h-2.5 rounded-full" 
-                style={{ backgroundColor: entry.color }}
-              />
-              <span className="text-xs text-muted-foreground">
-                {entry.name === 'ganhos' ? 'Ganhos' : entry.name === 'perdas' ? 'Perdas' : 'Em Aberto'}
-              </span>
-            </div>
-            <span className="text-xs font-semibold text-foreground">
-              {entry.value}
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
+    <DashboardChartTooltip 
+      {...props}
+      nameFormatter={(name) => {
+        if (name === 'ganhos') return 'Ganhos';
+        if (name === 'perdas') return 'Perdas';
+        return 'Em Aberto';
+      }}
+    />
   );
 }
 
