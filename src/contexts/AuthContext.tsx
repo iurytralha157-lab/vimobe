@@ -299,6 +299,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         clearAllStates();
         setLoading(false);
         setAuthInitialized(true);
+        setOrganizationsLoaded(true); // Must set this even without session
         console.log('Auth initialization complete naturally (no session)');
         return;
       }
@@ -346,6 +347,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           });
           setLoading(false);
           setAuthInitialized(true);
+          setOrganizationsLoaded(true);
           return;
         }
 
@@ -368,6 +370,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           clearAllStates();
           setLoading(false);
           setAuthInitialized(true);
+          setOrganizationsLoaded(true);
         }
       }
     );

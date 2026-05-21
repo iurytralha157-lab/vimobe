@@ -176,8 +176,11 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     needsOrgSelection
   });
 
-  if (loading || !authInitialized || !organizationsLoaded) return <PageLoader />;
+  if (loading || !authInitialized) return <PageLoader />;
   if (!user) return <Navigate to="/auth" replace />;
+  
+  // Apenas rotas protegidas e autenticadas esperam organizações
+  if (!organizationsLoaded) return <PageLoader />;
   
   // Se tem usuário mas não tem perfil e não é super admin, pode ser que precise de configuração,
   // mas não vamos mandar para onboarding automaticamente.
@@ -225,9 +228,13 @@ function AppRoutes() {
   const renderAuthRoute = () => {
     console.log('renderAuthRoute state:', { loading, authInitialized, organizationsLoaded, user: !!user, profile: !!profile });
     
-    if (loading || !authInitialized || !organizationsLoaded) return <PageLoader />;
+    // Rota pública: espera apenas inicialização básica do Auth
+    if (loading || !authInitialized) return <PageLoader />;
     
     if (user) {
+      // Se estiver logado, aí sim precisamos esperar carregar organizações antes de redirecionar
+      if (!organizationsLoaded) return <PageLoader />;
+      
       console.log('User already logged in, redirecting from /auth to', getDefaultRedirect());
       return <Navigate to={getDefaultRedirect()} replace />;
     }
@@ -258,7 +265,7 @@ function AppRoutes() {
             <Route path="/auth" element={renderAuthRoute()} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/signup" element={<Suspense fallback={<PageLoader />}><Signup /></Suspense>} />
-            <Route path="/onboarding" element={renderOnboardingRoute()} />
+            <Route path="/onboarding" element={<Suspense fallback={<PageLoader />}><Onboarding /></Suspense>} />
             <Route path="/checkout/:token" element={<Suspense fallback={<PageLoader />}><Checkout /></Suspense>} />
             <Route path="/assinatura" element={<Navigate to="/settings?tab=subscription" replace />} />
             <Route path="/select-organization" element={
