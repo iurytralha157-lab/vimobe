@@ -281,14 +281,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setOrganizationsLoaded(false);
     };
 
-    // Safety timeout: stop loading after 3 seconds no matter what
+    // Safety timeout: stop loading after 5 seconds no matter what
     const safetyTimeout = setTimeout(() => {
-      if (isMounted && !authInitialized) {
-        console.warn('Auth safety timeout reached - forcing loading to false');
+      if (isMounted && (!authInitialized || !organizationsLoaded)) {
+        console.warn('Auth safety timeout reached - forcing all loading states to complete');
         setLoading(false);
         setAuthInitialized(true);
+        setOrganizationsLoaded(true);
       }
-    }, 3000);
+    }, 5000);
 
     console.log('getSession started');
     supabase.auth.getSession().then(async ({ data: { session }, error }) => {
@@ -299,6 +300,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         clearAllStates();
         setLoading(false);
         setAuthInitialized(true);
+        setOrganizationsLoaded(true); // Must set this even without session
         console.log('Auth initialization complete naturally (no session)');
         return;
       }
@@ -346,6 +348,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           });
           setLoading(false);
           setAuthInitialized(true);
+          setOrganizationsLoaded(true);
           return;
         }
 
@@ -368,6 +371,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           clearAllStates();
           setLoading(false);
           setAuthInitialized(true);
+          setOrganizationsLoaded(true);
         }
       }
     );

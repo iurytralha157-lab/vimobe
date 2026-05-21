@@ -81,14 +81,31 @@ export default function SelectOrganization() {
             Você não possui acesso a nenhuma organização ativa no momento.
           </p>
         </div>
-        {isSuperAdmin && (
+        
+        <div className="flex flex-col gap-2">
           <button
-            onClick={() => navigate('/admin')}
-            className="text-primary hover:underline font-medium"
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:opacity-90 transition-opacity"
           >
-            Acessar Painel Super Admin
+            Tentar novamente
           </button>
-        )}
+          
+          {isSuperAdmin && (
+            <button
+              onClick={() => navigate('/admin')}
+              className="text-primary hover:underline font-medium"
+            >
+              Acessar Painel Super Admin
+            </button>
+          )}
+          
+          <button
+            onClick={signOut}
+            className="text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Sair
+          </button>
+        </div>
       </div>
     );
   }

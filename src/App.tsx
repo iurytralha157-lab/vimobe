@@ -164,20 +164,25 @@ const PageLoader = () => (
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading, profile, isSuperAdmin, impersonating, organization, needsOrgSelection, authInitialized, organizationsLoaded } = useAuth();
+  const location = useLocation();
   
-  console.log('ProtectedRoute check:', { 
-    user: !!user, 
-    loading, 
+  console.log('[Routing Debug]', { 
+    path: location.pathname,
+    isPublic: false,
     authInitialized, 
     organizationsLoaded,
+    loading,
+    user: !!user, 
     profile: !!profile, 
-    isSuperAdmin,
     organization: !!organization,
     needsOrgSelection
   });
 
-  if (loading || !authInitialized || !organizationsLoaded) return <PageLoader />;
+  if (loading || !authInitialized) return <PageLoader />;
   if (!user) return <Navigate to="/auth" replace />;
+  
+  // Apenas rotas protegidas e autenticadas esperam organizações
+  if (!organizationsLoaded) return <PageLoader />;
   
   // Se tem usuário mas não tem perfil e não é super admin, pode ser que precise de configuração,
   // mas não vamos mandar para onboarding automaticamente.
@@ -223,11 +228,24 @@ function AppRoutes() {
   };
 
   const renderAuthRoute = () => {
-    console.log('renderAuthRoute state:', { loading, authInitialized, organizationsLoaded, user: !!user, profile: !!profile });
+    const isPublic = true;
+    console.log('[Routing Debug]', { 
+      path: '/auth',
+      isPublic,
+      authInitialized, 
+      organizationsLoaded,
+      loading,
+      user: !!user, 
+      profile: !!profile 
+    });
     
-    if (loading || !authInitialized || !organizationsLoaded) return <PageLoader />;
+    // Rota pública: espera apenas inicialização básica do Auth
+    if (loading || !authInitialized) return <PageLoader />;
     
     if (user) {
+      // Se estiver logado, aí sim precisamos esperar carregar organizações antes de redirecionar
+      if (!organizationsLoaded) return <PageLoader />;
+      
       console.log('User already logged in, redirecting from /auth to', getDefaultRedirect());
       return <Navigate to={getDefaultRedirect()} replace />;
     }
@@ -236,10 +254,6 @@ function AppRoutes() {
     return <Auth />;
   };
 
-  const renderOnboardingRoute = () => {
-    // Onboarding is now a purely standalone page
-    return <Suspense fallback={<PageLoader />}><Onboarding /></Suspense>;
-  };
 
   const location = useLocation();
   const isResetPasswordRoute = location.pathname === '/reset-password';
@@ -256,9 +270,9 @@ function AppRoutes() {
         <Suspense fallback={<PageLoader />}>
           <Routes>
             <Route path="/auth" element={renderAuthRoute()} />
-            <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/reset-password" element={<Suspense fallback={<PageLoader />}><ResetPassword /></Suspense>} />
             <Route path="/signup" element={<Suspense fallback={<PageLoader />}><Signup /></Suspense>} />
-            <Route path="/onboarding" element={renderOnboardingRoute()} />
+            <Route path="/onboarding" element={<Suspense fallback={<PageLoader />}><Onboarding /></Suspense>} />
             <Route path="/checkout/:token" element={<Suspense fallback={<PageLoader />}><Checkout /></Suspense>} />
             <Route path="/assinatura" element={<Navigate to="/settings?tab=subscription" replace />} />
             <Route path="/select-organization" element={
