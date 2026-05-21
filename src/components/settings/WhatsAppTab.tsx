@@ -588,21 +588,23 @@ export function WhatsAppTab() {
               </SheetDescription>
             </SheetHeader>
             <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label>Provedor</Label>
-                <Select value={newProvider} onValueChange={(v) => setNewProvider(v as any)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="evolution_go">Evolution Go (Novo, recomendado)</SelectItem>
-                    <SelectItem value="evolution">Evolution (Legado)</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">
-                  Evolution Go é a nova versão em Go, mais rápida e estável. Use para conexões novas.
-                </p>
-              </div>
+              {EVOLUTION_GO_CREATION_ENABLED && (
+                <div className="space-y-2">
+                  <Label>Provedor</Label>
+                  <Select value={newProvider} onValueChange={(v) => setNewProvider(v as any)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="evolution_go">Evolution Go (Novo, recomendado)</SelectItem>
+                      <SelectItem value="evolution">Evolution (Legado)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Evolution Go é a nova versão em Go, mais rápida e estável. Use para conexões novas.
+                  </p>
+                </div>
+              )}
               <div className="space-y-2">
                 <Label>Nome da Instância</Label>
                 <Input
