@@ -75,6 +75,7 @@ interface AuthContextType {
   switchOrganization: (orgId: string) => Promise<void>;
   needsOrgSelection: boolean;
   authInitialized: boolean;
+  organizationsLoaded: boolean;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
