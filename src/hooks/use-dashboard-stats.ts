@@ -262,36 +262,10 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
           paidCommissions: 0,
         };
       });
-
-        const formatAvgTime = (seconds: number | null) => {
-          if (seconds === null) return '--';
-          if (seconds < 60) return `${Math.round(seconds)}s`;
-          if (seconds < 3600) return `${Math.round(seconds / 60)}m`;
-          return `${Math.round(seconds / 3600)}h`;
-        };
-
-        const conversionRate = totalLeads > 0 ? (closedLeads / totalLeads) * 100 : 0;
-        const leadsTrend = prevTotal && prevTotal > 0 
-          ? Math.round(((totalLeads - prevTotal) / prevTotal) * 100) 
-          : 0;
-
-        return {
-          totalLeads,
-          conversionRate,
-          closedLeads,
-          avgResponseTime: formatAvgTime(avgRespSec),
-          totalSalesValue,
-          pendingCommissions: 0,
-          leadsTrend,
-          conversionTrend: 0,
-          closedTrend: 0,
-          totalReceivables: 0,
-          totalPayables: 0,
-          overdueReceivables: 0,
-          overduePayables: 0,
-          paidCommissions: 0,
-        };
-      });
+    },
+    staleTime: 1000 * 60 * 5,
+  });
+}
     },
     staleTime: 1000 * 60 * 5,
   });
