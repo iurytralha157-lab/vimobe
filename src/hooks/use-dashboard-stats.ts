@@ -801,15 +801,13 @@ export function useDealsEvolutionData(filters?: DashboardFilters) {
       // Determine grouping strategy based on date range
       let intervals: Date[];
       let formatLabel: (date: Date) => string;
+      let shouldLimitPoints = true;
 
-      if (daysDiff <= 7) {
-        // Group by day
-        intervals = eachDayOfInterval({ start: dateFrom, end: dateTo });
-        formatLabel = (date) => format(date, 'EEE', { locale: ptBR });
-      } else if (daysDiff <= 31) {
-        // Group by day with short date
+      if (daysDiff <= 31) {
+        // Group by day - ALWAYS show all days for up to 31 days
         intervals = eachDayOfInterval({ start: dateFrom, end: dateTo });
         formatLabel = (date) => format(date, 'dd/MM', { locale: ptBR });
+        shouldLimitPoints = false; // Do not skip days for short ranges
       } else if (daysDiff <= 90) {
         // Group by week
         intervals = eachWeekOfInterval({ start: dateFrom, end: dateTo }, { weekStartsOn: 1 });
@@ -820,8 +818,8 @@ export function useDealsEvolutionData(filters?: DashboardFilters) {
         formatLabel = (date) => format(date, 'MMM', { locale: ptBR });
       }
 
-      // Limit intervals to prevent too many points
-      if (intervals.length > 12) {
+      // Limit intervals to prevent too many points ONLY for long ranges
+      if (shouldLimitPoints && intervals.length > 12) {
         const step = Math.ceil(intervals.length / 12);
         intervals = intervals.filter((_, i) => i % step === 0);
       }
