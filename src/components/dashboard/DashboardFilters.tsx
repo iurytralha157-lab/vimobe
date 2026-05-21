@@ -1,4 +1,4 @@
-import { Users, User, Globe, X, SlidersHorizontal } from 'lucide-react';
+import { Users, User, Globe, X, SlidersHorizontal, Calendar as CalendarIcon, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -22,9 +22,14 @@ import { useUserPermissions } from '@/hooks/use-user-permissions';
 import { 
   DatePreset, 
   sourceOptions,
+  datePresetOptions,
 } from '@/hooks/use-dashboard-filters';
 import { DateFilterPopover } from '@/components/ui/date-filter-popover';
 import { CampaignFilter } from './CampaignFilter';
+import { Calendar } from '@/components/ui/calendar';
+import { format, startOfDay, endOfDay } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { useState } from 'react';
 
 interface DashboardFiltersProps {
   datePreset: DatePreset;
