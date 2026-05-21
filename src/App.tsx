@@ -254,10 +254,6 @@ function AppRoutes() {
     return <Auth />;
   };
 
-  const renderOnboardingRoute = () => {
-    // Onboarding is now a purely standalone page
-    return <Suspense fallback={<PageLoader />}><Onboarding /></Suspense>;
-  };
 
   const location = useLocation();
   const isResetPasswordRoute = location.pathname === '/reset-password';
@@ -274,7 +270,7 @@ function AppRoutes() {
         <Suspense fallback={<PageLoader />}>
           <Routes>
             <Route path="/auth" element={renderAuthRoute()} />
-            <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/reset-password" element={<Suspense fallback={<PageLoader />}><ResetPassword /></Suspense>} />
             <Route path="/signup" element={<Suspense fallback={<PageLoader />}><Signup /></Suspense>} />
             <Route path="/onboarding" element={<Suspense fallback={<PageLoader />}><Onboarding /></Suspense>} />
             <Route path="/checkout/:token" element={<Suspense fallback={<PageLoader />}><Checkout /></Suspense>} />
