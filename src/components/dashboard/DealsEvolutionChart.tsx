@@ -87,7 +87,11 @@ function getYTickCount(chartHeight: number, maxValue: number) {
 
 /** Compute X-axis interval so labels don't overlap. ~45px per label. */
 function getXInterval(chartWidth: number, totalPoints: number) {
-  const maxLabels = Math.max(2, Math.floor(chartWidth / 45));
+  // We want to show as many labels as possible without overlap
+  // For ~30 points (one month), we can show every 3rd or 4th label on small screens
+  // and more on large screens.
+  const labelWidth = 45; 
+  const maxLabels = Math.max(2, Math.floor(chartWidth / labelWidth));
   if (totalPoints <= maxLabels) return 0; // show all
   return Math.ceil(totalPoints / maxLabels) - 1;
 }
