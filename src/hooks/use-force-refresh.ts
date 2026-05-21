@@ -9,8 +9,9 @@ const CHANNEL_NAME = 'system-updates-v4'; // Bumped version to v4
  * Hook that listens for force refresh broadcasts and reloads the page
  * when received. Used by all users.
  */
-export function useForceRefreshListener() {
+export function useForceRefreshListener(enabled: boolean = true) {
   useEffect(() => {
+    if (!enabled) return;
     const channel = supabase.channel(CHANNEL_NAME);
 
     channel

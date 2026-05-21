@@ -307,6 +307,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         console.log('Auth event:', event, 'Session:', !!session);
 
+        // Se for o evento inicial, não fazemos nada aqui pois o getSession já tratou
+        if (event === 'INITIAL_SESSION') {
+          console.log('Ignoring INITIAL_SESSION event (handled by getSession)');
+          return;
+        }
+
         if (event === 'SIGNED_OUT') {
           clearAllStates();
           performFullCacheClear({ 
