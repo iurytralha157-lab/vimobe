@@ -308,7 +308,7 @@ export function DashboardFilters({
 
   // Desktop layout - Split into Period and Filters
   return (
-    <div className="flex items-center justify-end gap-2 w-full bg-background/50 backdrop-blur-sm border border-border/50 rounded-lg p-1.5 shadow-sm">
+    <div className="flex items-center justify-end gap-2 w-full">
       {/* Bloco 1: Período */}
       <div className="flex items-center">
         <Popover open={periodPopoverOpen} onOpenChange={setPeriodPopoverOpen}>
