@@ -35,9 +35,20 @@ const formatLastAccess = (iso: string | null) => {
 export default function SelectOrganization() {
   const { user, loading, isSuperAdmin, switchOrganization, organization, signOut } = useAuth();
   const navigate = useNavigate();
-  const { data: organizations = [], isLoading: orgsLoading } = useUserOrganizations(user?.id, organization?.id);
+  const { data: rawOrganizations = [], isLoading: orgsLoading } = useUserOrganizations(user?.id, organization?.id);
   const { data: systemSettings } = useSystemSettings();
   const { resolvedTheme } = useTheme();
+
+  // Filtrar organizações duplicadas
+  const organizations = useMemo(() => {
+    const map = new Map();
+    rawOrganizations.forEach(org => {
+      if (!map.has(org.organization_id)) {
+        map.set(org.organization_id, org);
+      }
+    });
+    return Array.from(map.values());
+  }, [rawOrganizations]);
 
   const logoUrl = useMemo(() => {
     if (!systemSettings) return null;
@@ -53,8 +64,12 @@ export default function SelectOrganization() {
   }, [loading, user, navigate]);
 
   useEffect(() => {
-    if (!loading && !orgsLoading && isSuperAdmin && organizations.length === 0) {
-      navigate('/admin', { replace: true });
+    if (!loading && !orgsLoading) {
+      if (organizations.length === 1) {
+        handleSelectOrg(organizations[0].organization_id);
+      } else if (isSuperAdmin && organizations.length === 0) {
+        navigate('/admin', { replace: true });
+      }
     }
   }, [loading, orgsLoading, isSuperAdmin, organizations, navigate]);
 
