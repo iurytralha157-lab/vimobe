@@ -175,7 +175,7 @@ export function CampaignFilter({
             <SelectTrigger className="h-8 text-xs bg-background/50 border-border/40">
               <SelectValue placeholder="Todas campanhas" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="z-[120]">
               <SelectItem value="all">Todas campanhas</SelectItem>
               {campaigns.map((c) => (
                 <SelectItem key={c.id} value={c.id}>
@@ -199,7 +199,7 @@ export function CampaignFilter({
                 <SelectTrigger className="h-8 text-xs bg-background/50 border-border/40 animate-in fade-in slide-in-from-top-1 duration-200">
                   <SelectValue placeholder="Todos conjuntos" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="z-[120]">
                   <SelectItem value="all">Todos conjuntos</SelectItem>
                   {adSets.map((s) => (
                     <SelectItem key={s.id} value={s.id}>
@@ -218,7 +218,7 @@ export function CampaignFilter({
                 <SelectTrigger className="h-8 text-xs bg-background/50 border-border/40 animate-in fade-in slide-in-from-top-1 duration-200">
                   <SelectValue placeholder="Todos criativos" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="z-[120]">
                   <SelectItem value="all">Todos criativos</SelectItem>
                   {ads.map((a) => (
                     <SelectItem key={a.id} value={a.id}>
