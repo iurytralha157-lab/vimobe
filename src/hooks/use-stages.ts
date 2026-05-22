@@ -129,16 +129,71 @@ export function useStagesWithLeads(
       if (stagesResult.error) throw stagesResult.error;
       const stages = stagesResult.data || [];
 
-      // Pre-fetch tagged lead IDs if tag filter is active
-      let taggedLeadIds: string[] | null = null;
-      if (filters?.filterTag && filters.filterTag !== 'all') {
-        const { data: taggedLeads } = await supabase
-          .from('lead_tags')
-          .select('lead_id')
-          .eq('tag_id', filters.filterTag);
-        taggedLeadIds = [...new Set((taggedLeads || []).map(item => item.lead_id).filter(Boolean))];
-        if (taggedLeadIds.length === 0) {
-          // No leads match this tag, return empty stages
+      // Pre-fetch lead IDs from filters that involve joins (Tags and Meta Ads)
+      let filteredLeadIds: string[] | null = null;
+      
+      const hasTagFilter = filters?.filterTag && filters.filterTag !== 'all';
+      const hasMetaFilter = (filters?.filterCampaign && filters.filterCampaign !== 'all') || 
+                            (filters?.filterAdSet && filters.filterAdSet !== 'all') || 
+                            (filters?.filterAd && filters.filterAd !== 'all');
+
+      console.log('Pipeline Filter Audit:', {
+        filterCampaign: filters?.filterCampaign,
+        filterAdSet: filters?.filterAdSet,
+        filterAd: filters?.filterAd,
+        hasTagFilter,
+        hasMetaFilter
+      });
+
+      if (hasTagFilter || hasMetaFilter) {
+        const filterStartTime = performance.now();
+        let currentFilteredIds: string[] | null = null;
+
+        // 1. Tag filtering
+        if (hasTagFilter) {
+          const { data: taggedLeads } = await supabase
+            .from('lead_tags')
+            .select('lead_id')
+            .eq('tag_id', filters!.filterTag);
+          
+          const tagIds = (taggedLeads || []).map(item => item.lead_id).filter(Boolean);
+          currentFilteredIds = tagIds;
+        }
+
+        // 2. Meta Ads filtering
+        if (hasMetaFilter) {
+          let metaQuery = supabase
+            .from('lead_meta')
+            .select('lead_id');
+          
+          if (filters?.filterCampaign && filters.filterCampaign !== 'all') {
+            metaQuery = metaQuery.eq('campaign_id', filters.filterCampaign);
+          }
+          if (filters?.filterAdSet && filters.filterAdSet !== 'all') {
+            metaQuery = metaQuery.eq('adset_id', filters.filterAdSet);
+          }
+          if (filters?.filterAd && filters.filterAd !== 'all') {
+            metaQuery = metaQuery.eq('ad_id', filters.filterAd);
+          }
+
+          const { data: metaLeads } = await metaQuery;
+          const metaIds = (metaLeads || []).map(item => item.lead_id).filter(Boolean);
+
+          if (currentFilteredIds === null) {
+            currentFilteredIds = metaIds;
+          } else {
+            // Intersection if both filters are present
+            const metaSet = new Set(metaIds);
+            currentFilteredIds = currentFilteredIds.filter(id => metaSet.has(id));
+          }
+        }
+
+        filteredLeadIds = currentFilteredIds || [];
+        const filterEndTime = performance.now();
+        console.log(`Filter IDs fetch took ${Math.round(filterEndTime - filterStartTime)}ms. Found ${filteredLeadIds.length} lead IDs.`);
+
+        if (filteredLeadIds.length === 0) {
+          // No leads match these filters, return empty stages
           return stages.map(stage => ({
             ...stage,
             leads: [],
@@ -168,17 +223,8 @@ export function useStagesWithLeads(
             .gte('created_at', filters.dateRange.from.toISOString())
             .lte('created_at', filters.dateRange.to.toISOString());
         }
-        if (taggedLeadIds) {
-          query = query.in('id', taggedLeadIds);
-        }
-        if (filters?.filterCampaign && filters.filterCampaign !== 'all') {
-          query = query.eq('lead_meta.campaign_id', filters.filterCampaign);
-        }
-        if (filters?.filterAdSet && filters.filterAdSet !== 'all') {
-          query = query.eq('lead_meta.adset_id', filters.filterAdSet);
-        }
-        if (filters?.filterAd && filters.filterAd !== 'all') {
-          query = query.eq('lead_meta.ad_id', filters.filterAd);
+        if (filteredLeadIds) {
+          query = query.in('id', filteredLeadIds);
         }
         if (filters?.filterSource && filters.filterSource !== 'all') {
           query = query.eq('source', filters.filterSource);
