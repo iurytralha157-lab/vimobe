@@ -57,10 +57,10 @@ export default function SelectOrganization() {
   }, [systemSettings, resolvedTheme]);
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (!loading && authInitialized && !user) {
       navigate('/auth', { replace: true });
     }
-  }, [loading, user, navigate]);
+  }, [loading, authInitialized, user, navigate]);
 
   const handleSelectOrg = async (orgId: string) => {
     await switchOrganization(orgId);
