@@ -13,11 +13,6 @@ import {
   Plus, 
   MoreHorizontal, 
   Loader2,
-  Filter,
-  Search,
-  Settings,
-  ChevronDown,
-  Trash2,
   Clock,
   Calendar,
   Tags,
@@ -32,8 +27,6 @@ import { StageSettingsDialog } from '@/components/pipelines/StageSettingsDialog'
 import { PipelineSlaSettings } from '@/components/pipelines/PipelineSlaSettings';
 import { StagesEditorDialog } from '@/components/pipelines/StagesEditorDialog';
 import { PipelineFilters } from '@/components/pipelines/PipelineFilters';
-import { DateFilterPopover } from '@/components/ui/date-filter-popover';
-import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { startOfDay, endOfDay, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { LeadCard } from '@/components/leads/LeadCard';
