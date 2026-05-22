@@ -66,22 +66,46 @@ export function CampaignFilter({
 
   // Filter adSets and ads if campaignId or adSetId is selected
   const filteredAdSets = useMemo(() => {
-    if (!campaignId) return adSets;
-    return adSets;
+    if (!campaignId || campaignId === 'all') return [];
+    const filtered = adSets.filter(s => s.campaignId === campaignId);
+    
+    // Log requested by audit
+    console.log('[CampaignFilter] Campaign selected:', {
+      selectedCampaign: campaignId,
+      totalAdSetsForCampaign: filtered.length,
+      first10AdSets: filtered.slice(0, 10)
+    });
+    
+    return filtered;
   }, [adSets, campaignId]);
 
   const filteredAds = useMemo(() => {
-    if (adSetId) return ads;
-    return ads;
-  }, [ads, adSetId]);
+    if (!campaignId || campaignId === 'all') return [];
+    
+    // Filter by campaign and optionally by adset
+    let filtered = ads.filter(a => a.campaignId === campaignId);
+    if (adSetId && adSetId !== 'all') {
+      filtered = filtered.filter(a => a.adsetId === adSetId);
+    }
+    
+    // Log requested by audit
+    if (campaignId) {
+      console.log('[CampaignFilter] Filtered creatives:', {
+        selectedCampaign: campaignId,
+        selectedAdSet: adSetId,
+        totalCreatives: filtered.length,
+        first10Creatives: filtered.slice(0, 10)
+      });
+    }
+    
+    return filtered;
+  }, [ads, campaignId, adSetId]);
 
   useEffect(() => {
     console.log('Campaign dropdown debug:', {
       period: dateRange ? { from: dateRange.from.toISOString(), to: dateRange.to.toISOString() } : 'All time',
       totalCampaignsFromHook: campaigns.length,
-      totalCampaignsRendered: campaigns.length,
       selectedCampaign: campaignId,
-      firstCampaigns: campaigns.slice(0, 5),
       isLoading
     });
   }, [campaigns, isLoading, dateRange, campaignId]);
