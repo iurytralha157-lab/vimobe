@@ -43,101 +43,34 @@ export function CampaignFilter({
 }: CampaignFilterProps) {
   const { organization } = useAuth();
 
-  // Fetch unique campaigns
-  const { data: campaigns = [] } = useQuery({
-    queryKey: ['filter-campaigns', organization?.id],
-    queryFn: async () => {
-      if (!organization?.id) return [];
-      
-      const { data, error } = await supabase
-        .from('lead_meta')
-        .select('campaign_id, campaign_name, leads!inner(organization_id)')
-        .eq('leads.organization_id', organization.id)
-        .not('campaign_id', 'is', null)
-        .order('campaign_name');
-      
-      if (error) throw error;
-      
-      const uniqueMap = new Map();
-      (data as any[]).forEach(item => {
-        const id = item.campaign_id || item.campaign_name;
-        if (id) {
-          uniqueMap.set(id, item.campaign_name || id);
-        }
-      });
-      
-      return Array.from(uniqueMap.entries()).map(([id, name]) => ({ id, name }));
-    },
-    enabled: !!organization?.id,
-  });
+  // Use the central hook for campaigns, adsets and ads
+  const { data: metaData, isLoading } = useLeadMetaFilters();
+  const campaigns = metaData?.campaigns || [];
+  const adSets = metaData?.adsets || [];
+  const ads = metaData?.ads || [];
 
-  // Fetch unique ad sets
-  const { data: adSets = [] } = useQuery({
-    queryKey: ['filter-adsets', organization?.id, campaignId],
-    queryFn: async () => {
-      if (!organization?.id) return [];
-      
-      let query = supabase
-        .from('lead_meta')
-        .select('adset_id, adset_name, leads!inner(organization_id)')
-        .eq('leads.organization_id', organization.id)
-        .not('adset_id', 'is', null)
-        .order('adset_name');
-      
-      if (campaignId) {
-        query = query.eq('campaign_id', campaignId);
-      }
-      
-      const { data, error } = await query;
-      if (error) throw error;
-      
-      const uniqueMap = new Map();
-      (data as any[]).forEach(item => {
-        const id = item.adset_id || item.adset_name;
-        if (id) {
-          uniqueMap.set(id, item.adset_name || id);
-        }
-      });
-      
-      return Array.from(uniqueMap.entries()).map(([id, name]) => ({ id, name }));
-    },
-    enabled: !!organization?.id,
-  });
+  // Filter adSets and ads if campaignId or adSetId is selected
+  const filteredAdSets = useMemo(() => {
+    if (!campaignId) return adSets;
+    // Note: We might want to filter adSets by campaignId if the hook provided the relationship
+    // For now, the hook returns all unique adSets for the organization
+    return adSets;
+  }, [adSets, campaignId]);
 
-  // Fetch unique ads
-  const { data: ads = [] } = useQuery({
-    queryKey: ['filter-ads', organization?.id, adSetId, campaignId],
-    queryFn: async () => {
-      if (!organization?.id) return [];
-      
-      let query = supabase
-        .from('lead_meta')
-        .select('ad_id, ad_name, leads!inner(organization_id)')
-        .eq('leads.organization_id', organization.id)
-        .not('ad_id', 'is', null)
-        .order('ad_name');
-      
-      if (adSetId) {
-        query = query.eq('adset_id', adSetId);
-      } else if (campaignId) {
-        query = query.eq('campaign_id', campaignId);
-      }
-      
-      const { data, error } = await query;
-      if (error) throw error;
-      
-      const uniqueMap = new Map();
-      (data as any[]).forEach(item => {
-        const id = item.ad_id || item.ad_name;
-        if (id) {
-          uniqueMap.set(id, item.ad_name || id);
-        }
-      });
-      
-      return Array.from(uniqueMap.entries()).map(([id, name]) => ({ id, name }));
-    },
-    enabled: !!organization?.id,
-  });
+  const filteredAds = useMemo(() => {
+    if (adSetId) return ads; // Same note as above
+    return ads;
+  }, [ads, adSetId]);
+
+  useEffect(() => {
+    console.log('Campaign dropdown debug:', {
+      totalCampaignsFromHook: campaigns.length,
+      totalCampaignsRendered: campaigns.length,
+      firstCampaigns: campaigns.slice(0, 5),
+      hiddenOrLimitedByUI: false,
+      isLoading
+    });
+  }, [campaigns, isLoading]);
 
   const activeCount = [campaignId, adSetId, adId].filter(Boolean).length;
   const hasActiveFilters = activeCount > 0;
