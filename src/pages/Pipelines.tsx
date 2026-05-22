@@ -769,7 +769,8 @@ export default function Pipelines() {
 
     for (const stage of filteredStages) {
       const visible = stage.leads?.length || 0;
-      const total = filteredStageCounts[stage.id] ?? stage.total_lead_count ?? visible;
+      // Use total_lead_count returned from useStagesWithLeads instead of redundant queries
+      const total = stage.total_lead_count ?? visible;
       const remaining = Math.max(total - visible, 0);
 
       map.set(stage.id, {
@@ -781,7 +782,7 @@ export default function Pipelines() {
     }
 
     return map;
-  }, [filteredStages, filteredStageCounts]);
+  }, [filteredStages]);
 
   if (isLoading) {
     return (
