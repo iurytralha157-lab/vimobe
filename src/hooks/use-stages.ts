@@ -84,7 +84,7 @@ async function getFilteredLeadIds(filters: {
     }
 
     const { data: metaLeads } = await metaQuery;
-    const metaIds = [...new Set((metaLeads || []).map(item => item.lead_id).filter(Boolean))];
+    const metaIds = Array.from(new Set((metaLeads || []).map(item => item.lead_id).filter(Boolean)));
 
     if (currentFilteredIds === null) {
       currentFilteredIds = metaIds;
