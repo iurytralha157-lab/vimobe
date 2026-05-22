@@ -73,7 +73,7 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { DragDropContext, Droppable, DropResult } from '@hello-pangea/dnd';
-import { useStages, useStagesWithLeads, usePipelines, useCreatePipeline, useUpdatePipeline, useDeletePipeline, useCreateStage, useFilteredStageCounts, useLeadMetaFilters } from '@/hooks/use-stages';
+import { useStages, useStagesWithLeads, usePipelines, useCreatePipeline, useUpdatePipeline, useDeletePipeline, useCreateStage, useLeadMetaFilters } from '@/hooks/use-stages';
 import { useLoadMoreLeads } from '@/hooks/use-stages';
 import { CreateLeadDialog } from '@/components/leads/CreateLeadDialog';
 import { useOrganizationUsers } from '@/hooks/use-users';
@@ -716,18 +716,6 @@ export default function Pipelines() {
   }, [deferredSearch, hasMoreLeads, selectedPipelineId]);
   
 
-  const stageIds = useMemo(() => stages.map((stage: any) => stage.id), [stages]);
-
-  const { data: filteredStageCounts = {} } = useFilteredStageCounts({
-    pipelineId: selectedPipelineId || undefined,
-    stageIds,
-    filterUser,
-    filterTag,
-    filterDealStatus,
-    searchQuery: deferredSearch,
-    dateRange,
-    filterSource,
-  });
   
   // Filters are now applied server-side; we merge server results AND apply a local filter for instant feedback
   const filteredStages = useMemo(() => {
@@ -781,7 +769,8 @@ export default function Pipelines() {
 
     for (const stage of filteredStages) {
       const visible = stage.leads?.length || 0;
-      const total = filteredStageCounts[stage.id] ?? stage.total_lead_count ?? visible;
+      // Use total_lead_count returned from useStagesWithLeads instead of redundant queries
+      const total = stage.total_lead_count ?? visible;
       const remaining = Math.max(total - visible, 0);
 
       map.set(stage.id, {
@@ -793,7 +782,7 @@ export default function Pipelines() {
     }
 
     return map;
-  }, [filteredStages, filteredStageCounts]);
+  }, [filteredStages]);
 
   if (isLoading) {
     return (
