@@ -62,7 +62,7 @@ async function getFilteredLeadIds(filters: {
       .select('lead_id')
       .eq('tag_id', filters.filterTag!);
     
-    currentFilteredIds = [...new Set((taggedLeads || []).map(item => item.lead_id).filter(Boolean))];
+    currentFilteredIds = Array.from(new Set((taggedLeads || []).map(item => item.lead_id).filter(Boolean)));
     
     if (currentFilteredIds.length === 0) return [];
   }
