@@ -31,6 +31,7 @@ import {
 import { StageSettingsDialog } from '@/components/pipelines/StageSettingsDialog';
 import { PipelineSlaSettings } from '@/components/pipelines/PipelineSlaSettings';
 import { StagesEditorDialog } from '@/components/pipelines/StagesEditorDialog';
+import { PipelineFilters } from '@/components/pipelines/PipelineFilters';
 import { DateFilterPopover } from '@/components/ui/date-filter-popover';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { startOfDay, endOfDay, format } from 'date-fns';
