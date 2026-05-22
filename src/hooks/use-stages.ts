@@ -172,13 +172,13 @@ export function useStagesWithLeads(
           query = query.in('id', taggedLeadIds);
         }
         if (filters?.filterCampaign && filters.filterCampaign !== 'all') {
-          query = query.eq('lead_meta.campaign_name', filters.filterCampaign);
+          query = query.eq('lead_meta.campaign_id', filters.filterCampaign);
         }
         if (filters?.filterAdSet && filters.filterAdSet !== 'all') {
-          query = query.eq('lead_meta.adset_name', filters.filterAdSet);
+          query = query.eq('lead_meta.adset_id', filters.filterAdSet);
         }
         if (filters?.filterAd && filters.filterAd !== 'all') {
-          query = query.eq('lead_meta.ad_name', filters.filterAd);
+          query = query.eq('lead_meta.ad_id', filters.filterAd);
         }
         if (filters?.filterSource && filters.filterSource !== 'all') {
           query = query.eq('source', filters.filterSource);
@@ -401,15 +401,15 @@ export function useFilteredStageCounts({
             }
 
             if (filterCampaign && filterCampaign !== 'all') {
-              query = query.eq('lead_meta.campaign_name', filterCampaign);
+              query = query.eq('lead_meta.campaign_id', filterCampaign);
             }
 
             if (filterAdSet && filterAdSet !== 'all') {
-              query = query.eq('lead_meta.adset_name', filterAdSet);
+              query = query.eq('lead_meta.adset_id', filterAdSet);
             }
 
             if (filterAd && filterAd !== 'all') {
-              query = query.eq('lead_meta.ad_name', filterAd);
+              query = query.eq('lead_meta.ad_id', filterAd);
             }
 
             if (filterSource && filterSource !== 'all') {
@@ -659,13 +659,13 @@ export function useLoadMoreLeads() {
           query = query.in('id', taggedLeadIds);
         }
         if (filters?.filterCampaign && filters.filterCampaign !== 'all') {
-          query = query.eq('lead_meta.campaign_name', filters.filterCampaign);
+          query = query.eq('lead_meta.campaign_id', filters.filterCampaign);
         }
         if (filters?.filterAdSet && filters.filterAdSet !== 'all') {
-          query = query.eq('lead_meta.adset_name', filters.filterAdSet);
+          query = query.eq('lead_meta.adset_id', filters.filterAdSet);
         }
         if (filters?.filterAd && filters.filterAd !== 'all') {
-          query = query.eq('lead_meta.ad_name', filters.filterAd);
+          query = query.eq('lead_meta.ad_id', filters.filterAd);
         }
         if (filters?.filterSource && filters.filterSource !== 'all') {
           query = query.eq('source', filters.filterSource);
