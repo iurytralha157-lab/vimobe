@@ -114,13 +114,13 @@ export default function Pipelines() {
   const [newLeadDialogOpen, setNewLeadDialogOpen] = useState(false);
   const [newLeadStageId, setNewLeadStageId] = useState<string | null>(null);
   // newLeadForm agora é gerenciado pelo CreateLeadDialog
-  const [filterUser, setFilterUser] = useState<string | undefined>(undefined);
-  const [filterTag, setFilterTag] = useState<string>('all');
-  const [filterDealStatus, setFilterDealStatus] = useState<string>('all');
-  const [filterCampaign, setFilterCampaign] = useState<string>('all');
-  const [filterAdSet, setFilterAdSet] = useState<string>('all');
-  const [filterAd, setFilterAd] = useState<string>('all');
-  const [filterSource, setFilterSource] = useState<string>('all');
+  const [filterUser, setFilterUser] = useState<string | null>(null);
+  const [filterTag, setFilterTag] = useState<string | null>(null);
+  const [filterDealStatus, setFilterDealStatus] = useState<string | null>(null);
+  const [filterCampaign, setFilterCampaign] = useState<string | null>(null);
+  const [filterAdSet, setFilterAdSet] = useState<string | null>(null);
+  const [filterAd, setFilterAd] = useState<string | null>(null);
+  const [filterSource, setFilterSource] = useState<string | null>(null);
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [editingStageId, setEditingStageId] = useState<string | null>(null);
@@ -175,7 +175,7 @@ export default function Pipelines() {
   // Set initial filter based on user role, permissions, AND team leadership
   // Wait for permission to load before deciding the filter
   useEffect(() => {
-    if (filterUser === undefined && profile?.id && !permissionLoading) {
+    if (filterUser === null && profile?.id && !permissionLoading) {
       // For admin, super_admin, users with lead_view_all permission, OR team leaders: show all
       if (isAdmin || hasLeadViewAll || isTeamLeader) {
         setFilterUser('all');
@@ -193,16 +193,16 @@ export default function Pipelines() {
 
   const { data: stagesWithLeads = [], isLoading: leadsLoading, refetch } = useStagesWithLeads(
     selectedPipelineId || undefined, 
-    filterUser,
+    filterUser === 'all' ? undefined : (filterUser || undefined),
     {
       dateRange,
-      filterTag: filterTag !== 'all' ? filterTag : undefined,
-      filterDealStatus: filterDealStatus !== 'all' ? filterDealStatus : undefined,
+      filterTag: filterTag && filterTag !== 'all' ? filterTag : undefined,
+      filterDealStatus: filterDealStatus && filterDealStatus !== 'all' ? filterDealStatus : undefined,
       searchQuery: searchQuery || undefined,
-      filterCampaign: filterCampaign !== 'all' ? filterCampaign : undefined,
-      filterAdSet: filterAdSet !== 'all' ? filterAdSet : undefined,
-      filterAd: filterAd !== 'all' ? filterAd : undefined,
-      filterSource: filterSource !== 'all' ? filterSource : undefined,
+      filterCampaign: filterCampaign && filterCampaign !== 'all' ? filterCampaign : undefined,
+      filterAdSet: filterAdSet && filterAdSet !== 'all' ? filterAdSet : undefined,
+      filterAd: filterAd && filterAd !== 'all' ? filterAd : undefined,
+      filterSource: filterSource && filterSource !== 'all' ? filterSource : undefined,
     }
   );
 
@@ -245,16 +245,16 @@ export default function Pipelines() {
       pipelineId: selectedPipelineId,
       stageId,
       offset: currentCount,
-      filterUserId: filterUser,
+      filterUserId: filterUser === 'all' ? undefined : (filterUser || undefined),
       filters: {
         dateRange,
-        filterTag: filterTag !== 'all' ? filterTag : undefined,
-        filterDealStatus: filterDealStatus !== 'all' ? filterDealStatus : undefined,
+        filterTag: filterTag && filterTag !== 'all' ? filterTag : undefined,
+        filterDealStatus: filterDealStatus && filterDealStatus !== 'all' ? filterDealStatus : undefined,
         searchQuery: searchQuery || undefined,
-        filterCampaign: filterCampaign !== 'all' ? filterCampaign : undefined,
-        filterAdSet: filterAdSet !== 'all' ? filterAdSet : undefined,
-        filterAd: filterAd !== 'all' ? filterAd : undefined,
-        filterSource: filterSource !== 'all' ? filterSource : undefined,
+        filterCampaign: filterCampaign && filterCampaign !== 'all' ? filterCampaign : undefined,
+        filterAdSet: filterAdSet && filterAdSet !== 'all' ? filterAdSet : undefined,
+        filterAd: filterAd && filterAd !== 'all' ? filterAd : undefined,
+        filterSource: filterSource && filterSource !== 'all' ? filterSource : undefined,
       },
     });
   }, [selectedPipelineId, stages, loadMoreLeads, filterUser, dateRange, filterTag, filterDealStatus, searchQuery]);
