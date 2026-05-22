@@ -707,53 +707,34 @@ export function useLoadMoreLeads() {
         filterSource?: string;
       };
     }) => {
-      const filteredLeadIds = await getFilteredLeadIds({
-        filterTag: filters?.filterTag,
-        filterCampaign: filters?.filterCampaign,
-        filterAdSet: filters?.filterAdSet,
-        filterAd: filters?.filterAd,
-      });
+      try {
+        const { isEmpty, apply } = await buildPipelineLeadQueryFilters({
+          filterUserId,
+          filters,
+        });
 
-      if (filteredLeadIds !== null && filteredLeadIds.length === 0) {
+        if (isEmpty) {
+          return { stageId, leads: [] };
+        }
+
+        const query = apply(
+          (supabase as any)
+            .from('leads')
+            .select(LEAD_PIPELINE_FIELDS)
+            .eq('pipeline_id', pipelineId)
+            .eq('stage_id', stageId)
+            .order('stage_entered_at', { ascending: false })
+            .range(offset, offset + LEADS_PER_STAGE - 1)
+        );
+
+        const { data, error } = await query;
+        if (error) throw error;
+        const enrichedLeads = await getEnrichedLeadsBatch(data || []);
+        return { stageId, leads: enrichedLeads };
+      } catch (err) {
+        console.error('[Pipeline filters] useLoadMoreLeads error:', err);
         return { stageId, leads: [] };
       }
-
-      const normalizedSearch = filters?.searchQuery?.trim();
-
-      let query = (supabase as any)
-        .from('leads')
-        .select(LEAD_PIPELINE_FIELDS)
-        .eq('pipeline_id', pipelineId)
-        .eq('stage_id', stageId)
-        .order('stage_entered_at', { ascending: false })
-        .range(offset, offset + LEADS_PER_STAGE - 1);
-      
-      if (normalizedSearch) {
-        query = query.or(`name.ilike.%${normalizedSearch}%,phone.ilike.%${normalizedSearch}%`);
-      } else {
-        if (filterUserId && filterUserId !== 'all') {
-          query = query.eq('assigned_user_id', filterUserId);
-        }
-        if (filters?.filterDealStatus && filters.filterDealStatus !== 'all') {
-          query = query.eq('deal_status', filters.filterDealStatus);
-        }
-        if (filters?.dateRange) {
-          query = query
-            .gte('created_at', filters.dateRange.from.toISOString())
-            .lte('created_at', filters.dateRange.to.toISOString());
-        }
-        if (filteredLeadIds) {
-          query = query.in('id', filteredLeadIds);
-        }
-        if (filters?.filterSource && filters.filterSource !== 'all') {
-          query = query.eq('source', filters.filterSource);
-        }
-      }
-      
-      const { data, error } = await query;
-      if (error) throw error;
-      const enrichedLeads = await getEnrichedLeadsBatch(data || []);
-      return { stageId, leads: enrichedLeads };
     },
     onSuccess: ({ stageId, leads }, { pipelineId, filterUserId, filters }) => {
       const dateFromISO = filters?.dateRange?.from?.toISOString();
