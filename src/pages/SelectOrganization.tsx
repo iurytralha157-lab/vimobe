@@ -2,7 +2,7 @@ import { useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from 'next-themes';
 import { useAuth } from '@/contexts/AuthContext';
-import { useUserOrganizations } from '@/hooks/use-user-organizations';
+// removed useUserOrganizations import
 import { useSystemSettings } from '@/hooks/use-system-settings';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card } from '@/components/ui/card';
