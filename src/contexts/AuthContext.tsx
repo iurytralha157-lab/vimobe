@@ -639,7 +639,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       loading,
       isSuperAdmin,
       impersonating,
-      needsOrgSelection,
       authInitialized,
       organizationsLoaded,
       userOrganizations,
