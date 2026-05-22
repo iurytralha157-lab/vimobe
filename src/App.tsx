@@ -164,10 +164,24 @@ const PageLoader = () => (
 );
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading, authInitialized } = useAuth();
+  const { user, loading, authInitialized, organizationsLoaded, organization, userOrganizations, isSuperAdmin, impersonating } = useAuth();
   
   if (loading || !authInitialized) return <PageLoader />;
   if (!user) return <Navigate to="/auth" replace />;
+  if (!organizationsLoaded) return <PageLoader />;
+
+  const orgCount = userOrganizations?.length ?? 0;
+
+  // Se for multi-org e não tiver org selecionada na sessão, manda para seleção
+  const hasSelectedOrg = sessionStorage.getItem('org_selected') === 'true';
+  if (orgCount > 1 && !hasSelectedOrg && !impersonating && !isSuperAdmin) {
+    return <Navigate to="/select-organization" replace />;
+  }
+
+  // Se não tiver org e não for super admin (que pode acessar sem org), manda para seleção para ver o erro
+  if (!organization && !isSuperAdmin && !impersonating) {
+    return <Navigate to="/select-organization" replace />;
+  }
 
   return <>{children}</>;
 }
