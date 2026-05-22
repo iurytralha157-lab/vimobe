@@ -226,6 +226,16 @@ export function FloatingChat() {
 
   const handleStartConversationWithSession = async (phone: string, sessionId?: string, leadName?: string, leadId?: string) => {
     try {
+      // 1) Se temos leadId, sempre tentar primeiro abrir conversa existente desse lead (qualquer sessão acessível)
+      if (leadId) {
+        const anyExisting = await findConversation.mutateAsync({ phone, leadId });
+        if (anyExisting) {
+          openConversation(anyExisting);
+          return;
+        }
+      }
+
+      // 2) Se temos sessionId, tentar conversa existente na sessão específica
       if (sessionId) {
         const existing = await findConversation.mutateAsync({ phone, leadId, sessionId });
         if (existing) {
@@ -240,13 +250,8 @@ export function FloatingChat() {
         }
       }
 
+      // 3) Fallback: tentar histórico via edge function (acesso restrito)
       if (leadId) {
-        const anyExisting = await findConversation.mutateAsync({ phone, leadId });
-        if (anyExisting) {
-          openConversation(anyExisting);
-          return;
-        }
-
         const { data: restrictedData, error: restrictedError } = await supabase.functions.invoke("whatsapp-history-access", {
           body: { leadId },
         });
@@ -277,6 +282,7 @@ export function FloatingChat() {
       console.error("Error starting conversation:", error);
     }
   };
+
   // Memoize filtered conversations to prevent re-renders that cause input focus loss
   const filteredConversations = useMemo(() => {
     return conversations?.filter(conv => {
