@@ -206,6 +206,26 @@ export default function Pipelines() {
     }
   );
 
+  // Log de auditoria de filtros ativos
+  useEffect(() => {
+    const activeFilters = {
+      period: datePreset,
+      search: searchQuery,
+      tag: filterTag,
+      status: filterDealStatus,
+      source: filterSource,
+      campaign: filterCampaign,
+      adset: filterAdSet,
+      ad: filterAd,
+      responsible: filterUser
+    };
+    
+    const count = Object.values(activeFilters).filter(v => v && v !== 'all' && v !== '').length;
+    if (count > 0) {
+      console.log('Pipeline active filters:', activeFilters);
+    }
+  }, [datePreset, searchQuery, filterTag, filterDealStatus, filterSource, filterCampaign, filterAdSet, filterAd, filterUser]);
+
   // Combine base stages with leads data when available
   const stages = useMemo(() => {
     if (stagesWithLeads.length > 0) return stagesWithLeads;
