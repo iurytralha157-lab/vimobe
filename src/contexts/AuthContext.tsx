@@ -85,6 +85,7 @@ interface AuthContextType {
   switchOrganization: (orgId: string) => Promise<void>;
   authInitialized: boolean;
   organizationsLoaded: boolean;
+  isInitializingOrg: boolean;
   userOrganizations: UserOrganization[];
 }
 
@@ -101,6 +102,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [authInitialized, setAuthInitialized] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [organizationsLoaded, setOrganizationsLoaded] = useState(false);
+  const [isInitializingOrg, setIsInitializingOrg] = useState(false);
   const [userOrganizations, setUserOrganizations] = useState<UserOrganization[]>([]);
 
   useEffect(() => {
@@ -290,6 +292,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       sessionStorage.removeItem('org_selected');
       setOrganizationsLoaded(false);
       setUserOrganizations([]);
+      setIsInitializingOrg(false);
     };
 
     // Safety timeout: stop loading after 5 seconds no matter what
@@ -299,6 +302,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setLoading(false);
         setAuthInitialized(true);
         setOrganizationsLoaded(true);
+        setIsInitializingOrg(false);
       }
     }, 5000);
 
@@ -323,10 +327,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 
       try {
-        await Promise.all([
-          fetchProfile(session.user.id),
-          checkMultiOrg(session.user.id)
-        ]);
+        // Sequencial to ensure organizations are loaded before setting initialized
+        await fetchProfile(session.user.id);
+        await checkMultiOrg(session.user.id);
       } catch (err) {
         console.error('[AuthContext] Error during initial auth data fetch:', err);
       } finally {
@@ -604,16 +607,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Se tiver apenas 1 organização, já deixa ela selecionada por padrão
         if (count === 1) {
           const onlyOrgId = uniqueOrgs[0].organization_id;
-          console.log('[AuthContext] auto-selecting single org:', onlyOrgId);
-          await switchOrganization(onlyOrgId);
+          
+          // Only switch if not already set to avoid loops or unnecessary loads
+          if (!organization || organization.id !== onlyOrgId) {
+            console.log('[AuthContext] auto-selecting single org:', onlyOrgId);
+            setIsInitializingOrg(true);
+            try {
+              await switchOrganization(onlyOrgId);
+            } finally {
+              setIsInitializingOrg(false);
+            }
+          }
         } else if (count > 1) {
           // Se tiver múltiplas, tenta carregar a última usada se houver flag de sessão
           const savedOrgId = localStorage.getItem(`vimob_active_organization_${userId}`);
           const isSessionSelected = sessionStorage.getItem('org_selected') === 'true';
           
-          if (isSessionSelected && savedOrgId) {
+          if (isSessionSelected && savedOrgId && (!organization || organization.id !== savedOrgId)) {
             console.log('[AuthContext] loading last used org for multi-org user:', savedOrgId);
-            await switchOrganization(savedOrgId);
+            setIsInitializingOrg(true);
+            try {
+              await switchOrganization(savedOrgId);
+            } finally {
+              setIsInitializingOrg(false);
+            }
           }
         }
       } catch (err) {
@@ -635,6 +652,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       impersonating,
       authInitialized,
       organizationsLoaded,
+      isInitializingOrg,
       userOrganizations,
       signIn,
       signUp,
