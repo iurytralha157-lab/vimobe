@@ -60,6 +60,7 @@ async function getFilteredLeadIds(filters: {
   if (!hasTagFilter && !hasMetaFilter) return null;
 
   let currentFilteredIds: string[] | null = null;
+  const t0 = performance.now();
 
   try {
     if (hasTagFilter) {
@@ -67,24 +68,50 @@ async function getFilteredLeadIds(filters: {
         .from('lead_tags')
         .select('lead_id')
         .eq('tag_id', filters.filterTag!);
+      
       if (error) throw error;
 
       currentFilteredIds = Array.from(
         new Set((taggedLeads || []).map((item) => item.lead_id).filter(Boolean))
       );
+      
+      console.log('[Pipeline filters] Tag filter result:', {
+        tagId: filters.filterTag,
+        count: currentFilteredIds.length
+      });
+
       if (currentFilteredIds.length === 0) return [];
     }
 
     if (hasMetaFilter) {
-      let metaQuery = supabase.from('lead_meta').select('lead_id');
+      let metaQuery = supabase.from('lead_meta').select('lead_id, campaign_id, campaign_name');
+      
       if (filters.filterCampaign && filters.filterCampaign !== 'all') {
-        metaQuery = metaQuery.eq('campaign_id', filters.filterCampaign);
+        // Se o valor parece um ID (numérico longo), filtramos por ID, senão por nome
+        const isId = /^\d+$/.test(filters.filterCampaign);
+        if (isId) {
+          metaQuery = metaQuery.eq('campaign_id', filters.filterCampaign);
+        } else {
+          metaQuery = metaQuery.eq('campaign_name', filters.filterCampaign);
+        }
       }
+      
       if (filters.filterAdSet && filters.filterAdSet !== 'all') {
-        metaQuery = metaQuery.eq('adset_id', filters.filterAdSet);
+        const isId = /^\d+$/.test(filters.filterAdSet);
+        if (isId) {
+          metaQuery = metaQuery.eq('adset_id', filters.filterAdSet);
+        } else {
+          metaQuery = metaQuery.eq('adset_name', filters.filterAdSet);
+        }
       }
+      
       if (filters.filterAd && filters.filterAd !== 'all') {
-        metaQuery = metaQuery.eq('ad_id', filters.filterAd);
+        const isId = /^\d+$/.test(filters.filterAd);
+        if (isId) {
+          metaQuery = metaQuery.eq('ad_id', filters.filterAd);
+        } else {
+          metaQuery = metaQuery.eq('ad_name', filters.filterAd);
+        }
       }
 
       const { data: metaLeads, error } = await metaQuery;
@@ -93,6 +120,17 @@ async function getFilteredLeadIds(filters: {
       const metaIds = Array.from(
         new Set((metaLeads || []).map((item) => item.lead_id).filter(Boolean))
       );
+
+      // Log para auditoria de campanhas
+      if (metaLeads && metaLeads.length > 0) {
+        const sampleCampaigns = metaLeads.slice(0, 10).map(m => m.campaign_name || m.campaign_id);
+        console.log('[Pipeline filters] Meta filter audit:', {
+          selected: filters.filterCampaign,
+          foundIds: metaIds.length,
+          sampleFound: sampleCampaigns,
+          elapsedMs: Math.round(performance.now() - t0)
+        });
+      }
 
       if (currentFilteredIds === null) {
         currentFilteredIds = metaIds;
@@ -105,7 +143,6 @@ async function getFilteredLeadIds(filters: {
     return currentFilteredIds || [];
   } catch (err) {
     console.error('[Pipeline filters] getFilteredLeadIds error:', err);
-    // Em caso de erro, retornar [] curto-circuita para vazio em vez de travar a Pipeline
     return [];
   }
 }
