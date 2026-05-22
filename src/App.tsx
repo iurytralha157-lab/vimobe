@@ -168,15 +168,15 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const hasSelectedOrg = sessionStorage.getItem('org_selected') === 'true';
 
-  console.log('[ProtectedRoute Debug]', {
-    path: location.pathname,
-    authInitialized,
+  // LOGS DE VALIDAÇÃO (Remover após validar)
+  console.log('[Routing Decision]', {
+    pathname: location.pathname,
+    userId: user?.id,
     organizationsLoaded,
-    loading,
-    user: !!user,
-    organization: !!organization,
     orgsCount: userOrganizations?.length,
-    hasSelectedOrg
+    currentOrgId: organization?.id,
+    hasSelectedOrg,
+    isSuperAdmin
   });
 
   if (loading || !authInitialized) return <PageLoader />;
