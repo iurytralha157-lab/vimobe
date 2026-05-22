@@ -53,6 +53,16 @@ export function useStartConversation() {
       }
 
       // Criar nova conversa
+      console.log("[useStartConversation] Pre-insert log:", {
+        auth_uid: (await supabase.auth.getUser()).data.user?.id,
+        org_context_id: organization.id,
+        sessionId,
+        remoteJid,
+        cleanPhone,
+        leadId,
+        leadName
+      });
+
       const { data: newConversation, error: insertError } = await supabase
         .from("whatsapp_conversations")
         .insert({
