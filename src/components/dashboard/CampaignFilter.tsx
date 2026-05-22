@@ -126,8 +126,9 @@ export function CampaignFilter({
       
       const uniqueMap = new Map();
       (data as any[]).forEach(item => {
-        if (item.ad_id) {
-          uniqueMap.set(item.ad_id, item.ad_name || 'Sem nome');
+        const id = item.ad_id || item.ad_name;
+        if (id) {
+          uniqueMap.set(id, item.ad_name || id);
         }
       });
       
