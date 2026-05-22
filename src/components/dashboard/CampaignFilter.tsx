@@ -43,35 +43,48 @@ export function CampaignFilter({
   hideTitles = false,
 }: CampaignFilterProps) {
   const { organization } = useAuth();
+  const { activeDateRange: dateRange } = useFilters();
 
   // Use the central hook for campaigns, adsets and ads
-  const { data: metaData, isLoading } = useLeadMetaFilters();
+  const { data: metaData, isLoading } = useLeadMetaFilters(dateRange);
   const campaigns = metaData?.campaigns || [];
   const adSets = metaData?.adsets || [];
   const ads = metaData?.ads || [];
 
+  // Limpeza automática se a campanha selecionada não existir no novo período
+  useEffect(() => {
+    if (!isLoading && campaignId && campaigns.length > 0) {
+      const campaignExists = campaigns.some(c => c.id === campaignId);
+      if (!campaignExists) {
+        console.log('[CampaignFilter] Campaign not in current period, clearing filters:', campaignId);
+        onCampaignChange(null);
+        onAdSetChange(null);
+        onAdChange(null);
+      }
+    }
+  }, [campaigns, isLoading, campaignId, onCampaignChange, onAdSetChange, onAdChange]);
+
   // Filter adSets and ads if campaignId or adSetId is selected
   const filteredAdSets = useMemo(() => {
     if (!campaignId) return adSets;
-    // Note: We might want to filter adSets by campaignId if the hook provided the relationship
-    // For now, the hook returns all unique adSets for the organization
     return adSets;
   }, [adSets, campaignId]);
 
   const filteredAds = useMemo(() => {
-    if (adSetId) return ads; // Same note as above
+    if (adSetId) return ads;
     return ads;
   }, [ads, adSetId]);
 
   useEffect(() => {
     console.log('Campaign dropdown debug:', {
+      period: dateRange ? { from: dateRange.from.toISOString(), to: dateRange.to.toISOString() } : 'All time',
       totalCampaignsFromHook: campaigns.length,
       totalCampaignsRendered: campaigns.length,
+      selectedCampaign: campaignId,
       firstCampaigns: campaigns.slice(0, 5),
-      hiddenOrLimitedByUI: false,
       isLoading
     });
-  }, [campaigns, isLoading]);
+  }, [campaigns, isLoading, dateRange, campaignId]);
 
   const activeCount = [campaignId, adSetId, adId].filter(Boolean).length;
   const hasActiveFilters = activeCount > 0;
