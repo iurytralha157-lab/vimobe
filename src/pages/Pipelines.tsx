@@ -21,7 +21,11 @@ import {
   CircleDot,
   RefreshCw,
   Check,
-  Pencil
+  Pencil,
+  ChevronDown,
+  Settings,
+  Filter,
+  Search
 } from 'lucide-react';
 import { StageSettingsDialog } from '@/components/pipelines/StageSettingsDialog';
 import { PipelineSlaSettings } from '@/components/pipelines/PipelineSlaSettings';
