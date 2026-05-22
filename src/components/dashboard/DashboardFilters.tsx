@@ -26,9 +26,6 @@ import {
 } from '@/hooks/use-dashboard-filters';
 import { DateFilterPopover } from '@/components/ui/date-filter-popover';
 import { CampaignFilter } from './CampaignFilter';
-import { Calendar } from '@/components/ui/calendar';
-import { format, startOfDay, endOfDay } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
 import { useState } from 'react';
 
 interface DashboardFiltersProps {
