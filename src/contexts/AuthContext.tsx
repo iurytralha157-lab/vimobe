@@ -612,11 +612,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           // Única org: auto-selecionar silenciosamente
           const onlyOrgId = uniqueOrgs[0].organization_id;
           console.log('[AuthContext] decision: auto-select single org:', onlyOrgId);
+          // IMPORTANTE: esperamos o switch terminar para que 'organization' não seja null ao marcar como carregado
           await switchOrganization(onlyOrgId);
         } 
         else if (count > 1) {
-          // Multi-org: app routes irá redirecionar para /select-organization quando apropriado
-          console.log('[AuthContext] decision: multi-org user (count:', count, '), app will show selection page');
+          // Multi-org: verificar se já temos algo salvo e se devemos carregar
+          // Se for um refresh de página, o localStorage/savedOrgId pode ser usado
+          // Se for um login novo, a flag org_selected (sessionStorage) estará vazia
+          const isSessionSelected = sessionStorage.getItem('org_selected') === 'true';
+          
+          if (isSessionSelected && savedOrgId) {
+             console.log('[AuthContext] decision: multi-org user, already selected in session:', savedOrgId);
+             await switchOrganization(savedOrgId);
+          } else {
+             console.log('[AuthContext] decision: multi-org user (count:', count, '), needs selection');
+          }
         } 
         else {
           // Sem orgs
