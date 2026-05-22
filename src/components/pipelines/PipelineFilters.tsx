@@ -360,6 +360,7 @@ export const PipelineFilters: React.FC<PipelineFiltersProps> = ({
           />
 
           <AdvancedFiltersPopover
+            showSearch={isMobile}
             showResponsible={showResponsibleFilter}
             responsibleId={filterUser}
             onResponsibleChange={setFilterUser}
