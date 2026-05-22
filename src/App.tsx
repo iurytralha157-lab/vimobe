@@ -183,8 +183,6 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   }
 
   return <>{children}</>;
-
-  return <>{children}</>;
 }
 
 function AppRoutes() {
