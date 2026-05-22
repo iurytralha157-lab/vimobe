@@ -3,7 +3,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { WhatsAppConversation } from "@/hooks/use-whatsapp-conversations";
 import { formatPhoneForWhatsApp } from "@/lib/phone-utils";
-import { useAuth } from "@/contexts/AuthContext";
 
 interface StartConversationParams {
   phone: string;
@@ -14,19 +13,27 @@ interface StartConversationParams {
 
 export function useStartConversation() {
   const queryClient = useQueryClient();
-  const { organization } = useAuth();
 
   return useMutation({
     mutationFn: async ({ phone, sessionId, leadId, leadName }: StartConversationParams): Promise<WhatsAppConversation> => {
-      if (!organization?.id) {
-        throw new Error("Organização não encontrada");
+      // Always derive organization_id from the WhatsApp session itself (source of truth for RLS)
+      const { data: sessionRow, error: sessionError } = await supabase
+        .from("whatsapp_sessions")
+        .select("id, organization_id")
+        .eq("id", sessionId)
+        .single();
+
+      if (sessionError || !sessionRow) {
+        throw new Error("Sessão WhatsApp não encontrada ou sem acesso");
       }
+
+      const orgId = sessionRow.organization_id;
 
       // Formatar o telefone com código do Brasil (+55)
       const cleanPhone = formatPhoneForWhatsApp(phone);
       const remoteJid = cleanPhone.includes("@") ? cleanPhone : `${cleanPhone}@c.us`;
 
-      // Verificar se já existe conversa com esse telefone
+      // Verificar se já existe conversa com esse telefone na sessão
       const { data: existingConversation, error: searchError } = await supabase
         .from("whatsapp_conversations")
         .select(`
@@ -42,7 +49,6 @@ export function useStartConversation() {
       if (searchError) throw searchError;
 
       if (existingConversation) {
-        // Se existe e tem lead_id diferente, atualizar
         if (leadId && existingConversation.lead_id !== leadId) {
           await supabase
             .from("whatsapp_conversations")
@@ -51,17 +57,6 @@ export function useStartConversation() {
         }
         return existingConversation as WhatsAppConversation;
       }
-
-      // Criar nova conversa
-      console.log("[useStartConversation] Pre-insert log:", {
-        auth_uid: (await supabase.auth.getUser()).data.user?.id,
-        org_context_id: organization.id,
-        sessionId,
-        remoteJid,
-        cleanPhone,
-        leadId,
-        leadName
-      });
 
       const { data: newConversation, error: insertError } = await supabase
         .from("whatsapp_conversations")
@@ -73,7 +68,7 @@ export function useStartConversation() {
           lead_id: leadId || null,
           unread_count: 0,
           is_group: false,
-          organization_id: organization.id,
+          organization_id: orgId,
         })
         .select(`
           *,
@@ -98,6 +93,7 @@ export function useStartConversation() {
     },
   });
 }
+
 
 export function useFindConversationByPhone() {
   return useMutation({
