@@ -39,6 +39,64 @@ const LEAD_PIPELINE_FIELDS = `
   stage:stages(id, name, color, stage_key)
 `;
 
+// Helper para buscar IDs de leads filtrados por tags ou Meta Ads (joins complexos)
+async function getFilteredLeadIds(filters: {
+  filterTag?: string;
+  filterCampaign?: string;
+  filterAdSet?: string;
+  filterAd?: string;
+}) {
+  const hasTagFilter = filters.filterTag && filters.filterTag !== 'all';
+  const hasMetaFilter = (filters.filterCampaign && filters.filterCampaign !== 'all') || 
+                        (filters.filterAdSet && filters.filterAdSet !== 'all') || 
+                        (filters.filterAd && filters.filterAd !== 'all');
+
+  if (!hasTagFilter && !hasMetaFilter) return null;
+
+  let currentFilteredIds: string[] | null = null;
+
+  // 1. Tag filtering
+  if (hasTagFilter) {
+    const { data: taggedLeads } = await supabase
+      .from('lead_tags')
+      .select('lead_id')
+      .eq('tag_id', filters.filterTag!);
+    
+    currentFilteredIds = [...new Set((taggedLeads || []).map(item => item.lead_id).filter(Boolean))];
+    
+    if (currentFilteredIds.length === 0) return [];
+  }
+
+  // 2. Meta Ads filtering
+  if (hasMetaFilter) {
+    let metaQuery = supabase
+      .from('lead_meta')
+      .select('lead_id');
+    
+    if (filters.filterCampaign && filters.filterCampaign !== 'all') {
+      metaQuery = metaQuery.eq('campaign_id', filters.filterCampaign);
+    }
+    if (filters.filterAdSet && filters.filterAdSet !== 'all') {
+      metaQuery = metaQuery.eq('adset_id', filters.filterAdSet);
+    }
+    if (filters.filterAd && filters.filterAd !== 'all') {
+      metaQuery = metaQuery.eq('ad_id', filters.filterAd);
+    }
+
+    const { data: metaLeads } = await metaQuery;
+    const metaIds = [...new Set((metaLeads || []).map(item => item.lead_id).filter(Boolean))];
+
+    if (currentFilteredIds === null) {
+      currentFilteredIds = metaIds;
+    } else {
+      const metaSet = new Set(metaIds);
+      currentFilteredIds = currentFilteredIds.filter(id => metaSet.has(id));
+    }
+  }
+
+  return currentFilteredIds || [];
+}
+
 export function useStages(pipelineId?: string) {
   return useQuery({
     queryKey: ['stages', pipelineId],
@@ -57,14 +115,12 @@ export function useStages(pipelineId?: string) {
       
       const stages = data || [];
       
-      // Count leads per stage is now faster because we don't do it here if we use useStagesWithLeads
-      // but keeping it for compatibility with other components
       return stages.map(stage => ({
         ...stage,
-        lead_count: 0, // Placeholder, counts are now handled better in stages-with-leads
+        lead_count: 0,
       })) as Stage[];
     },
-    staleTime: 1000 * 60 * 10, // Stages don't change often
+    staleTime: 1000 * 60 * 10,
   });
 }
 
@@ -103,7 +159,6 @@ export function useStagesWithLeads(
     staleTime: 30000,
     gcTime: 1000 * 60 * 15,
     queryFn: async () => {
-      // ... keep existing code
       let targetPipelineId = pipelineId;
       if (!targetPipelineId) {
         const { data: pipeline } = await supabase
@@ -115,11 +170,8 @@ export function useStagesWithLeads(
         targetPipelineId = pipeline?.id;
       }
       
-      if (!targetPipelineId) {
-        return [];
-      }
+      if (!targetPipelineId) return [];
       
-      // Primeiro buscar stages para saber quantos temos
       const stagesResult = await supabase
         .from('stages')
         .select('id, name, color, stage_key, position, pipeline_id')
@@ -129,83 +181,25 @@ export function useStagesWithLeads(
       if (stagesResult.error) throw stagesResult.error;
       const stages = stagesResult.data || [];
 
-      // Pre-fetch lead IDs from filters that involve joins (Tags and Meta Ads)
-      let filteredLeadIds: string[] | null = null;
-      
-      const hasTagFilter = filters?.filterTag && filters.filterTag !== 'all';
-      const hasMetaFilter = (filters?.filterCampaign && filters.filterCampaign !== 'all') || 
-                            (filters?.filterAdSet && filters.filterAdSet !== 'all') || 
-                            (filters?.filterAd && filters.filterAd !== 'all');
-
-      console.log('Pipeline Filter Audit:', {
+      // Fetch filtered lead IDs from joins
+      const filteredLeadIds = await getFilteredLeadIds({
+        filterTag: filters?.filterTag,
         filterCampaign: filters?.filterCampaign,
         filterAdSet: filters?.filterAdSet,
         filterAd: filters?.filterAd,
-        hasTagFilter,
-        hasMetaFilter
       });
 
-      if (hasTagFilter || hasMetaFilter) {
-        const filterStartTime = performance.now();
-        let currentFilteredIds: string[] | null = null;
-
-        // 1. Tag filtering
-        if (hasTagFilter) {
-          const { data: taggedLeads } = await supabase
-            .from('lead_tags')
-            .select('lead_id')
-            .eq('tag_id', filters!.filterTag);
-          
-          const tagIds = (taggedLeads || []).map(item => item.lead_id).filter(Boolean);
-          currentFilteredIds = tagIds;
-        }
-
-        // 2. Meta Ads filtering
-        if (hasMetaFilter) {
-          let metaQuery = supabase
-            .from('lead_meta')
-            .select('lead_id');
-          
-          if (filters?.filterCampaign && filters.filterCampaign !== 'all') {
-            metaQuery = metaQuery.eq('campaign_id', filters.filterCampaign);
-          }
-          if (filters?.filterAdSet && filters.filterAdSet !== 'all') {
-            metaQuery = metaQuery.eq('adset_id', filters.filterAdSet);
-          }
-          if (filters?.filterAd && filters.filterAd !== 'all') {
-            metaQuery = metaQuery.eq('ad_id', filters.filterAd);
-          }
-
-          const { data: metaLeads } = await metaQuery;
-          const metaIds = (metaLeads || []).map(item => item.lead_id).filter(Boolean);
-
-          if (currentFilteredIds === null) {
-            currentFilteredIds = metaIds;
-          } else {
-            // Intersection if both filters are present
-            const metaSet = new Set(metaIds);
-            currentFilteredIds = currentFilteredIds.filter(id => metaSet.has(id));
-          }
-        }
-
-        filteredLeadIds = currentFilteredIds || [];
-        const filterEndTime = performance.now();
-        console.log(`Filter IDs fetch took ${Math.round(filterEndTime - filterStartTime)}ms. Found ${filteredLeadIds.length} lead IDs.`);
-
-        if (filteredLeadIds.length === 0) {
-          // No leads match these filters, return empty stages
-          return stages.map(stage => ({
-            ...stage,
-            leads: [],
-            total_lead_count: 0,
-            has_more: false,
-          }));
-        }
+      if (filteredLeadIds !== null && filteredLeadIds.length === 0) {
+        return stages.map(stage => ({
+          ...stage,
+          leads: [],
+          total_lead_count: 0,
+          has_more: false,
+        }));
       }
 
       const normalizedSearch = filters?.searchQuery?.trim();
 
-      // Helper to apply shared filters to a query
       const applyFilters = (query: any) => {
         if (normalizedSearch) {
           query = query.or(`name.ilike.%${normalizedSearch}%,phone.ilike.%${normalizedSearch}%`);
@@ -232,7 +226,6 @@ export function useStagesWithLeads(
         return query;
       };
       
-      // Buscar leads paginados por estágio E contagens em paralelo
       const stageLeadsPromises = stages.map(stage => {
         let query = (supabase as any)
           .from('leads')
@@ -245,7 +238,6 @@ export function useStagesWithLeads(
         return applyFilters(query);
       });
       
-      // Contagem total por estágio usando head:true (sem transferência de dados)
       const stageCountPromises = stages.map(stage => {
         let query = supabase
           .from('leads')
@@ -256,32 +248,24 @@ export function useStagesWithLeads(
         return applyFilters(query);
       });
       
-      // Execute leads + counts in parallel
       const [stageLeadsResults, stageCountResults] = await Promise.all([
         Promise.all(stageLeadsPromises),
         Promise.all(stageCountPromises),
       ]);
       
-      // Build total counts map
       const totalCountsByStage: Record<string, number> = {};
       stages.forEach((stage, index) => {
         totalCountsByStage[stage.id] = stageCountResults[index]?.count || 0;
       });
       
-      // Combinar leads de todos os estágios em um array plano
       const leads: any[] = [];
-      const leadsByStageRaw: Record<string, any[]> = {};
-      
       stages.forEach((stage, index) => {
         const stageLeads = stageLeadsResults[index]?.data || [];
-        leadsByStageRaw[stage.id] = stageLeads;
         leads.push(...stageLeads);
       });
       
-      // Enriquecer leads com tags e tarefas em lote
       const enrichedLeads = await getEnrichedLeadsBatch(leads);
       
-      // Mapear leads enriquecidos de volta para os seus estágios
       const enrichedLeadsByStage: Record<string, any[]> = {};
       enrichedLeads.forEach(lead => {
         if (!enrichedLeadsByStage[lead.stage_id]) {
@@ -290,7 +274,6 @@ export function useStagesWithLeads(
         enrichedLeadsByStage[lead.stage_id].push(lead);
       });
       
-      // Build final stages list
       return stages.map(stage => ({
         ...stage,
         leads: enrichedLeadsByStage[stage.id] || [],
