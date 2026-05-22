@@ -272,7 +272,7 @@ function AppRoutes() {
               loading || !authInitialized ? <PageLoader /> :
               !user ? <Navigate to="/auth" replace /> :
               !organizationsLoaded ? <PageLoader /> :
-              (userOrganizations?.length ?? 0) !== 2 && (userOrganizations?.length ?? 0) !== 1 && (userOrganizations?.length ?? 0) > 1 ? <Suspense fallback={<PageLoader />}><SelectOrganization /></Suspense> :
+              (userOrganizations?.length ?? 0) > 1 ? <Suspense fallback={<PageLoader />}><SelectOrganization /></Suspense> :
               <Navigate to="/dashboard" replace />
             } />
             
