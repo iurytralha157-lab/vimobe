@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Facebook } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
