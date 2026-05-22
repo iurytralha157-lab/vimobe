@@ -892,19 +892,17 @@ export default function Pipelines() {
           profile={profile}
         />
 
-        {/* Desktop New Button */}
-        {!isMobile && (
-          <div className="fixed bottom-8 right-8 z-50">
-            <Button 
-              size="lg" 
-              className="rounded-full shadow-2xl h-14 px-6 gap-2 bg-primary hover:bg-primary/90 text-primary-foreground border-none transition-all hover:scale-105 active:scale-95"
-              onClick={() => openNewLeadDialog()}
-            >
-              <Plus className="h-5 w-5" />
-              <span className="font-bold tracking-tight uppercase text-xs">{newButtonLabel}</span>
-            </Button>
-          </div>
-        )}
+        {/* Floating Action Button (FAB) - Always present, but logic is handled via isMobile if needed */}
+        <div className="fixed bottom-8 right-8 z-50">
+          <Button 
+            size="lg" 
+            className="rounded-full shadow-2xl h-14 px-6 gap-2 bg-primary hover:bg-primary/90 text-primary-foreground border-none transition-all hover:scale-105 active:scale-95"
+            onClick={() => openNewLeadDialog()}
+          >
+            <Plus className="h-5 w-5" />
+            <span className="font-bold tracking-tight uppercase text-xs">{newButtonLabel}</span>
+          </Button>
+        </div>
 
         {/* Empty State */}
         {stages.length === 0 && (
