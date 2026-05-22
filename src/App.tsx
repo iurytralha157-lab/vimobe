@@ -282,7 +282,8 @@ function AppRoutes() {
               !user ? <Navigate to="/auth" replace /> :
               !organizationsLoaded ? <PageLoader /> :
               (userOrganizations?.length ?? 0) > 1 ? <Suspense fallback={<PageLoader />}><SelectOrganization /></Suspense> :
-              <Navigate to="/dashboard" replace />
+              (userOrganizations?.length ?? 0) === 1 ? <Navigate to="/dashboard" replace /> :
+              <Suspense fallback={<PageLoader />}><SelectOrganization /></Suspense> 
             } />
             
             {/* Super Admin Routes */}
