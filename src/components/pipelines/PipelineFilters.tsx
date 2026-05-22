@@ -168,6 +168,8 @@ export const PipelineFilters: React.FC<PipelineFiltersProps> = ({
     setFilterSource('all');
   };
 
+  const showResponsibleFilter = isAdmin || hasLeadViewAll;
+
   const PipelineSelector = () => (
     <div className="flex items-center gap-1">
       <DropdownMenu>
@@ -278,7 +280,7 @@ export const PipelineFilters: React.FC<PipelineFiltersProps> = ({
                   )}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent align="end" className="w-[300px] p-4 max-h-[80vh] overflow-y-auto z-[100] shadow-xl">
+              <PopoverContent align="end" className="w-[300px] p-4 max-h-[80vh] overflow-y-auto z-[100] shadow-xl border-border/40">
                 <div className="space-y-4">
                   <div className="flex items-center justify-between border-b pb-2">
                     <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Filtros</span>
@@ -291,41 +293,40 @@ export const PipelineFilters: React.FC<PipelineFiltersProps> = ({
 
                   {/* Mobile Search inside Popover */}
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-bold uppercase text-muted-foreground/70">Buscar</Label>
                     <div className="relative">
                       <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                       <Input
                         placeholder="Nome, telefone ou email..."
                         value={searchInput}
                         onChange={(e) => setSearchInput(e.target.value)}
-                        className="h-9 pl-9 text-xs"
+                        className="h-9 pl-9 text-xs bg-muted/30 border-border/40"
                       />
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label className="text-[10px] font-bold uppercase text-muted-foreground/70">Responsável</Label>
-                    <Select value={filterUser || 'all'} onValueChange={setFilterUser}>
-                      <SelectTrigger className="h-9 text-xs">
-                        <SelectValue placeholder="Responsável" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todos responsáveis</SelectItem>
-                        {users.map(user => (
-                          <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  {showResponsibleFilter && (
+                    <div className="space-y-2">
+                      <Select value={filterUser || 'all'} onValueChange={setFilterUser}>
+                        <SelectTrigger className="h-9 text-xs bg-muted/30 border-border/40">
+                          <SelectValue placeholder="Responsável" />
+                        </SelectTrigger>
+                        <SelectContent className="z-[110]">
+                          <SelectItem value="all">Todos responsáveis</SelectItem>
+                          {users.map(user => (
+                            <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
 
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-bold uppercase text-muted-foreground/70">Etiquetas</Label>
                     <Select value={filterTag} onValueChange={setFilterTag}>
-                      <SelectTrigger className="h-9 text-xs">
-                        <SelectValue placeholder="Todas as tags" />
+                      <SelectTrigger className="h-9 text-xs bg-muted/30 border-border/40">
+                        <SelectValue placeholder="Todas as etiquetas" />
                       </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todas as tags</SelectItem>
+                      <SelectContent className="z-[110]">
+                        <SelectItem value="all">Todas as etiquetas</SelectItem>
                         {allTags.map(tag => (
                           <SelectItem key={tag.id} value={tag.id}>
                             <div className="flex items-center gap-2">
@@ -339,13 +340,12 @@ export const PipelineFilters: React.FC<PipelineFiltersProps> = ({
                   </div>
 
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-bold uppercase text-muted-foreground/70">Status</Label>
                     <Select value={filterDealStatus} onValueChange={setFilterDealStatus}>
-                      <SelectTrigger className="h-9 text-xs">
-                        <SelectValue placeholder="Todos os status" />
+                      <SelectTrigger className="h-9 text-xs bg-muted/30 border-border/40">
+                        <SelectValue placeholder="Status negócio" />
                       </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todos os status</SelectItem>
+                      <SelectContent className="z-[110]">
+                        <SelectItem value="all">Status negócio (Todos)</SelectItem>
                         <SelectItem value="open">Aberto</SelectItem>
                         <SelectItem value="won">Ganho</SelectItem>
                         <SelectItem value="lost">Perdido</SelectItem>
@@ -353,14 +353,13 @@ export const PipelineFilters: React.FC<PipelineFiltersProps> = ({
                     </Select>
                   </div>
 
-                  <div className="space-y-2 pt-2 border-t">
-                    <Label className="text-[10px] font-bold uppercase text-muted-foreground/70">Origem</Label>
+                  <div className="space-y-2 pt-2 border-t border-border/40">
                     <Select value={filterSource} onValueChange={setFilterSource}>
-                      <SelectTrigger className="h-9 text-xs">
-                        <SelectValue placeholder="Todas Origens" />
+                      <SelectTrigger className="h-9 text-xs bg-muted/30 border-border/40">
+                        <SelectValue placeholder="Origem" />
                       </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todas Origens</SelectItem>
+                      <SelectContent className="z-[110]">
+                        <SelectItem value="all">Origem (Todas)</SelectItem>
                         {allSources.map(s => (
                           <SelectItem key={s} value={s}>{s}</SelectItem>
                         ))}
@@ -368,24 +367,23 @@ export const PipelineFilters: React.FC<PipelineFiltersProps> = ({
                     </Select>
                   </div>
 
-                  <div className="space-y-2 pt-2 border-t">
-                    <Label className="text-[10px] font-bold uppercase text-muted-foreground/70">Meta Ads</Label>
+                  <div className="space-y-2 pt-2 border-t border-border/40">
                     <div className="grid gap-2 p-2 bg-muted/30 rounded-md">
                       <Select value={filterCampaign} onValueChange={setFilterCampaign}>
-                        <SelectTrigger className="h-8 text-[11px] bg-background">
+                        <SelectTrigger className="h-8 text-[11px] bg-background border-border/40">
                           <SelectValue placeholder="Campanha" />
                         </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Todas Campanhas</SelectItem>
+                        <SelectContent className="z-[110]">
+                          <SelectItem value="all">Campanha (Todas)</SelectItem>
                           {metaFilters?.campaigns.map((c: string) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                         </SelectContent>
                       </Select>
                       <Select value={filterAdSet} onValueChange={setFilterAdSet}>
-                        <SelectTrigger className="h-8 text-[11px] bg-background">
-                          <SelectValue placeholder="Conjunto" />
+                        <SelectTrigger className="h-8 text-[11px] bg-background border-border/40">
+                          <SelectValue placeholder="Conjunto de anúncio" />
                         </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Todos Conjuntos</SelectItem>
+                        <SelectContent className="z-[110]">
+                          <SelectItem value="all">Conjunto (Todos)</SelectItem>
                           {metaFilters?.adsets.map((a: string) => <SelectItem key={a} value={a}>{a}</SelectItem>)}
                         </SelectContent>
                       </Select>
@@ -489,29 +487,29 @@ export const PipelineFilters: React.FC<PipelineFiltersProps> = ({
                 </div>
 
                 <div className="grid gap-3">
-                  <div className="space-y-1.5">
-                    <Label className="text-[10px] font-bold uppercase text-muted-foreground/70">Responsável</Label>
-                    <Select value={filterUser || 'all'} onValueChange={setFilterUser}>
-                      <SelectTrigger className="h-8 text-xs">
-                        <SelectValue placeholder="Todos" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todos responsáveis</SelectItem>
-                        {users.map(user => (
-                          <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  {showResponsibleFilter && (
+                    <div className="space-y-1">
+                      <Select value={filterUser || 'all'} onValueChange={setFilterUser}>
+                        <SelectTrigger className="h-8 text-xs bg-muted/20 border-border/40">
+                          <SelectValue placeholder="Responsável" />
+                        </SelectTrigger>
+                        <SelectContent className="z-[110]">
+                          <SelectItem value="all">Todos responsáveis</SelectItem>
+                          {users.map(user => (
+                            <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
 
-                  <div className="space-y-1.5">
-                    <Label className="text-[10px] font-bold uppercase text-muted-foreground/70">Etiquetas</Label>
+                  <div className="space-y-1">
                     <Select value={filterTag} onValueChange={setFilterTag}>
-                      <SelectTrigger className="h-8 text-xs">
-                        <SelectValue placeholder="Todas" />
+                      <SelectTrigger className="h-8 text-xs bg-muted/20 border-border/40">
+                        <SelectValue placeholder="Etiquetas" />
                       </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todas as tags</SelectItem>
+                      <SelectContent className="z-[110]">
+                        <SelectItem value="all">Todas as etiquetas</SelectItem>
                         {allTags.map(tag => (
                           <SelectItem key={tag.id} value={tag.id}>
                             <div className="flex items-center gap-2">
@@ -524,14 +522,13 @@ export const PipelineFilters: React.FC<PipelineFiltersProps> = ({
                     </Select>
                   </div>
 
-                  <div className="space-y-1.5">
-                    <Label className="text-[10px] font-bold uppercase text-muted-foreground/70">Status Negócio</Label>
+                  <div className="space-y-1">
                     <Select value={filterDealStatus} onValueChange={setFilterDealStatus}>
-                      <SelectTrigger className="h-8 text-xs">
-                        <SelectValue placeholder="Todos" />
+                      <SelectTrigger className="h-8 text-xs bg-muted/20 border-border/40">
+                        <SelectValue placeholder="Status negócio" />
                       </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todos os status</SelectItem>
+                      <SelectContent className="z-[110]">
+                        <SelectItem value="all">Status negócio (Todos)</SelectItem>
                         <SelectItem value="open">Aberto</SelectItem>
                         <SelectItem value="won">Ganho</SelectItem>
                         <SelectItem value="lost">Perdido</SelectItem>
@@ -539,24 +536,37 @@ export const PipelineFilters: React.FC<PipelineFiltersProps> = ({
                     </Select>
                   </div>
 
+                  <div className="space-y-1 pt-1 border-t border-border/40">
+                    <Select value={filterSource} onValueChange={setFilterSource}>
+                      <SelectTrigger className="h-8 text-xs bg-muted/20 border-border/40">
+                        <SelectValue placeholder="Origem" />
+                      </SelectTrigger>
+                      <SelectContent className="z-[110]">
+                        <SelectItem value="all">Origem (Todas)</SelectItem>
+                        {allSources.map(s => (
+                          <SelectItem key={s} value={s}>{s}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
                   <div className="space-y-2 pt-2 border-t border-border/40">
-                    <Label className="text-[10px] font-bold uppercase text-muted-foreground/70">Meta Ads</Label>
                     <div className="grid gap-2 p-2 bg-muted/30 rounded-md">
                       <Select value={filterCampaign} onValueChange={setFilterCampaign}>
-                        <SelectTrigger className="h-7 text-[11px] bg-background">
+                        <SelectTrigger className="h-7 text-[11px] bg-background border-border/40">
                           <SelectValue placeholder="Campanha" />
                         </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Todas Campanhas</SelectItem>
+                        <SelectContent className="z-[110]">
+                          <SelectItem value="all">Campanha (Todas)</SelectItem>
                           {metaFilters?.campaigns.map((c: string) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                         </SelectContent>
                       </Select>
                       <Select value={filterAdSet} onValueChange={setFilterAdSet}>
-                        <SelectTrigger className="h-7 text-[11px] bg-background">
-                          <SelectValue placeholder="Conjunto" />
+                        <SelectTrigger className="h-7 text-[11px] bg-background border-border/40">
+                          <SelectValue placeholder="Conjunto de anúncio" />
                         </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Todos Conjuntos</SelectItem>
+                        <SelectContent className="z-[110]">
+                          <SelectItem value="all">Conjunto (Todos)</SelectItem>
                           {metaFilters?.adsets.map((a: string) => <SelectItem key={a} value={a}>{a}</SelectItem>)}
                         </SelectContent>
                       </Select>
