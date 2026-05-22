@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Tables } from '@/integrations/supabase/types';
 import { normalizePhone } from '@/lib/phone-utils';
+import { useAuth } from '@/contexts/AuthContext';
 
 export type Stage = Tables<'stages'> & {
   lead_count?: number;
