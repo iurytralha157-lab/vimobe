@@ -192,7 +192,8 @@ export function useStagesWithLeads(
       console.log('Pipeline filter audit:', {
         hasFilteredIds: filteredLeadIds !== null,
         count: filteredLeadIds?.length,
-        filters
+        filters,
+        pipelineId: targetPipelineId
       });
 
       if (filteredLeadIds !== null && filteredLeadIds.length === 0) {
