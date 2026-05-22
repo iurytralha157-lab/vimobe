@@ -91,8 +91,9 @@ export function CampaignFilter({
       
       const uniqueMap = new Map();
       (data as any[]).forEach(item => {
-        if (item.adset_id) {
-          uniqueMap.set(item.adset_id, item.adset_name || 'Sem nome');
+        const id = item.adset_id || item.adset_name;
+        if (id) {
+          uniqueMap.set(id, item.adset_name || id);
         }
       });
       
