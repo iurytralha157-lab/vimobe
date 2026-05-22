@@ -164,30 +164,31 @@ const PageLoader = () => (
 );
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading, authInitialized, organizationsLoaded, organization, userOrganizations, isSuperAdmin, impersonating } = useAuth();
+  const { user, loading, authInitialized, organizationsLoaded, organization, userOrganizations, isSuperAdmin, impersonating, isInitializingOrg } = useAuth();
   
-  if (loading || !authInitialized) return <PageLoader />;
+  if (loading || !authInitialized || !organizationsLoaded || isInitializingOrg) return <PageLoader />;
   if (!user) return <Navigate to="/auth" replace />;
-  if (!organizationsLoaded) return <PageLoader />;
 
   const orgCount = userOrganizations?.length ?? 0;
-
-  // Se for multi-org e não tiver org selecionada na sessão, manda para seleção
   const hasSelectedOrg = sessionStorage.getItem('org_selected') === 'true';
+
+  // Regra: se multi-org e não selecionou nesta sessão, vai para seleção
   if (orgCount > 1 && !hasSelectedOrg && !impersonating && !isSuperAdmin) {
     return <Navigate to="/select-organization" replace />;
   }
 
-  // Se não tiver org e não for super admin (que pode acessar sem org), manda para seleção para ver o erro
-  if (!organization && !isSuperAdmin && !impersonating) {
+  // Se tem organizações mas nenhuma selecionada ainda (e não estamos carregando)
+  if (orgCount > 0 && !organization && !isSuperAdmin && !impersonating) {
     return <Navigate to="/select-organization" replace />;
   }
+
+  return <>{children}</>;
 
   return <>{children}</>;
 }
 
 function AppRoutes() {
-  const { user, loading, profile, isSuperAdmin, impersonating, authInitialized, organizationsLoaded, userOrganizations, organization } = useAuth();
+  const { user, loading, profile, isSuperAdmin, impersonating, authInitialized, organizationsLoaded, userOrganizations, organization, isInitializingOrg } = useAuth();
   
   useForceRefreshListener(!!user, user?.id);
 
@@ -230,11 +231,12 @@ function AppRoutes() {
     if (loading || !authInitialized) return <PageLoader />;
     
     if (user) {
-      // Se estiver logado, aí sim precisamos esperar carregar organizações antes de redirecionar
-      if (!organizationsLoaded) return <PageLoader />;
+      // Se estiver logado, aí sim precisamos esperar carregar organizações E a organização ativa antes de redirecionar
+      if (!organizationsLoaded || isInitializingOrg) return <PageLoader />;
       
-      console.log('User already logged in, redirecting from /auth to', getDefaultRedirect());
-      return <Navigate to={getDefaultRedirect()} replace />;
+      const destination = getDefaultRedirect();
+      console.log('[Routing] User logged in, redirecting from /auth to', destination);
+      return <Navigate to={destination} replace />;
     }
     
     console.log('Rendering Auth page');
@@ -263,10 +265,9 @@ function AppRoutes() {
             <Route path="/checkout/:token" element={<Suspense fallback={<PageLoader />}><Checkout /></Suspense>} />
             <Route path="/assinatura" element={<Navigate to="/settings?tab=subscription" replace />} />
             <Route path="/select-organization" element={
-              loading || !authInitialized ? <PageLoader /> :
+              loading || !authInitialized || !organizationsLoaded || isInitializingOrg ? <PageLoader /> :
               !user ? <Navigate to="/auth" replace /> :
-              !organizationsLoaded ? <PageLoader /> :
-              (userOrganizations?.length ?? 0) === 1 ? <Navigate to="/dashboard" replace /> :
+              (userOrganizations?.length ?? 0) === 1 && organization ? <Navigate to="/dashboard" replace /> :
               <Suspense fallback={<PageLoader />}><SelectOrganization /></Suspense>
             } />
             
