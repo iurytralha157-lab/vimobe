@@ -77,8 +77,6 @@ export function DashboardFilters({
   const { data: users = [] } = useOrganizationUsers();
   const isMobile = useIsMobile();
   const { hasPermission } = useUserPermissions();
-  const [tempDateRange, setTempDateRange] = useState<{ from?: Date; to?: Date }>({});
-  const [periodPopoverOpen, setPeriodPopoverOpen] = useState(false);
 
   // Filter teams based on user role
   const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin';
@@ -112,28 +110,6 @@ export function DashboardFilters({
   // Check if any extra filters are active (excluding date)
   const hasExtraFilters = teamId !== null || userId !== null || source !== null || campaignId !== null || adSetId !== null || adId !== null;
 
-  const handleApplyCustomDate = () => {
-    if (tempDateRange.from && tempDateRange.to) {
-      onDatePresetChange('custom');
-      onCustomDateRangeChange({
-        from: startOfDay(tempDateRange.from),
-        to: endOfDay(tempDateRange.to),
-      });
-      setPeriodPopoverOpen(false);
-      setTempDateRange({});
-    }
-  };
-
-  const handleClearCustomDate = () => {
-    setTempDateRange({});
-  };
-
-  const currentPeriodLabel = () => {
-    if (datePreset === 'custom' && customDateRange) {
-      return `${format(customDateRange.from, 'dd/MM/yy', { locale: ptBR })} - ${format(customDateRange.to, 'dd/MM/yy', { locale: ptBR })}`;
-    }
-    return datePresetOptions.find(o => o.value === datePreset)?.label || 'Período';
-  };
 
   // Shared filter components
   const TeamFilter = () => availableTeams.length > 0 ? (
