@@ -84,7 +84,7 @@ export default function Onboarding() {
 
   useEffect(() => {
     if (profile?.organization_id) {
-      navigate('/dashboard');
+      navigate('/');
     }
   }, [profile, navigate]);
 

@@ -129,7 +129,7 @@ export const AppHeader = React.memo(function AppHeader({
               <Button
                 variant="ghost"
                 disabled={isSwitching}
-                className="h-10 gap-2 px-3 rounded-full bg-card dark:bg-[#111] transition-all duration-300"
+                className={`h-10 gap-2 px-3 rounded-full bg-card dark:bg-[#111] transition-all duration-300 ${!hasMultipleOrgs ? 'cursor-default hover:bg-card' : ''}`}
               >
                 {isSwitching ? (
                   <Loader2 className="h-4 w-4 animate-spin text-primary" />

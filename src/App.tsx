@@ -164,41 +164,22 @@ const PageLoader = () => (
 );
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading, profile, isSuperAdmin, impersonating, organization, authInitialized, organizationsLoaded, userOrganizations } = useAuth();
-  const location = useLocation();
-  const hasSelectedOrg = sessionStorage.getItem('org_selected') === 'true';
-
-  // LOGS DE VALIDAÇÃO (Remover após validar)
-  console.log('[Routing Decision]', {
-    pathname: location.pathname,
-    userId: user?.id,
-    organizationsLoaded,
-    orgsCount: userOrganizations?.length,
-    currentOrgId: organization?.id,
-    hasSelectedOrg,
-    isSuperAdmin
-  });
-
+  const { user, loading, authInitialized, organizationsLoaded, organization, userOrganizations, isSuperAdmin, impersonating } = useAuth();
+  
   if (loading || !authInitialized) return <PageLoader />;
   if (!user) return <Navigate to="/auth" replace />;
   if (!organizationsLoaded) return <PageLoader />;
 
   const orgCount = userOrganizations?.length ?? 0;
 
-  // Super admin sem org: permite acesso (área admin)
-  if (isSuperAdmin && !impersonating && !organization) {
-    return <>{children}</>;
-  }
-
-  // Múltiplas orgs e nenhuma selecionada nesta sessão: mandar para seleção
-  if (orgCount > 1 && !hasSelectedOrg && !impersonating) {
-    console.log('[ProtectedRoute] Multi-org user has not selected org in this session, redirecting to /select-organization');
+  // Se for multi-org e não tiver org selecionada na sessão, manda para seleção
+  const hasSelectedOrg = sessionStorage.getItem('org_selected') === 'true';
+  if (orgCount > 1 && !hasSelectedOrg && !impersonating && !isSuperAdmin) {
     return <Navigate to="/select-organization" replace />;
   }
 
-  // Se não houver organização e não for super admin, o usuário não tem acesso
-  if (!organization && !isSuperAdmin) {
-    console.log('[ProtectedRoute] No organization found and not super admin, redirecting to /select-organization');
+  // Se não tiver org e não for super admin (que pode acessar sem org), manda para seleção para ver o erro
+  if (!organization && !isSuperAdmin && !impersonating) {
     return <Navigate to="/select-organization" replace />;
   }
 
@@ -221,11 +202,15 @@ function AppRoutes() {
     const orgCount = userOrganizations?.length ?? 0;
     const hasSelectedOrg = sessionStorage.getItem('org_selected') === 'true';
 
-    if (isSuperAdmin && !impersonating && !profile?.organization_id && !organization) return "/admin";
+    if (isSuperAdmin && !impersonating && !organization) return "/admin";
     
-    // Se for multi-org e ainda não selecionou nesta sessão, vai para seleção
+    // Se não tem nenhuma org, manda para a tela de seleção que mostrará o erro de sem acesso
+    if (orgCount === 0 && !isSuperAdmin) return "/select-organization";
+
+    // Regra: se multi-org e não selecionou nesta sessão, vai para seleção
     if (orgCount > 1 && !hasSelectedOrg && !impersonating) return "/select-organization";
     
+    // Caso contrário (1 org ou já selecionou), vai para dashboard
     return "/dashboard";
   };
 
@@ -281,9 +266,8 @@ function AppRoutes() {
               loading || !authInitialized ? <PageLoader /> :
               !user ? <Navigate to="/auth" replace /> :
               !organizationsLoaded ? <PageLoader /> :
-              (userOrganizations?.length ?? 0) > 1 ? <Suspense fallback={<PageLoader />}><SelectOrganization /></Suspense> :
               (userOrganizations?.length ?? 0) === 1 ? <Navigate to="/dashboard" replace /> :
-              <Suspense fallback={<PageLoader />}><SelectOrganization /></Suspense> 
+              <Suspense fallback={<PageLoader />}><SelectOrganization /></Suspense>
             } />
             
             {/* Super Admin Routes */}

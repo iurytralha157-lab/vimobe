@@ -33,7 +33,7 @@ const formatLastAccess = (iso: string | null) => {
 };
 
 export default function SelectOrganization() {
-  const { user, loading, isSuperAdmin, switchOrganization, organization, signOut, userOrganizations: rawOrganizations = [], organizationsLoaded } = useAuth();
+  const { user, loading, authInitialized, isSuperAdmin, switchOrganization, organization, signOut, userOrganizations: rawOrganizations = [], organizationsLoaded } = useAuth();
   const navigate = useNavigate();
   const { data: systemSettings } = useSystemSettings();
   const { resolvedTheme } = useTheme();
@@ -57,10 +57,10 @@ export default function SelectOrganization() {
   }, [systemSettings, resolvedTheme]);
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (!loading && authInitialized && !user) {
       navigate('/auth', { replace: true });
     }
-  }, [loading, user, navigate]);
+  }, [loading, authInitialized, user, navigate]);
 
   const handleSelectOrg = async (orgId: string) => {
     await switchOrganization(orgId);

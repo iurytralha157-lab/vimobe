@@ -554,9 +554,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const checkMultiOrg = async (userId: string) => {
     return performanceTracker.trackTimed('checkMultiOrg', async () => {
       try {
-        const savedOrgId = localStorage.getItem(`vimob_active_organization_${userId}`);
-        console.log('[AuthContext] userId:', userId);
-        console.log('[AuthContext] saved organization_id in storage:', savedOrgId || 'none');
+        console.log('[AuthContext] checking organizations for userId:', userId);
 
         const { data, error } = await supabase
           .from('organization_members' as any)
@@ -601,39 +599,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const uniqueOrgs = Array.from(orgsMap.values()) as UserOrganization[];
         setUserOrganizations(uniqueOrgs);
         const count = uniqueOrgs.length;
-        console.log('[AuthContext] unique active organizations found:', count);
+        console.log('[AuthContext] found', count, 'active organizations');
 
-        // DECISÃO SIMPLES:
-        // - 1 organização: selecionar automaticamente (app irá redirecionar para /dashboard)
-        // - 2+ organizações: NÃO fazer nada aqui, deixar app decidir se mostra /select-organization
-        // - 0 organizações: NÃO fazer nada aqui
-        
+        // Se tiver apenas 1 organização, já deixa ela selecionada por padrão
         if (count === 1) {
-          // Única org: auto-selecionar silenciosamente
           const onlyOrgId = uniqueOrgs[0].organization_id;
-          console.log('[AuthContext] decision: auto-select single org:', onlyOrgId);
-          // IMPORTANTE: esperamos o switch terminar para que 'organization' não seja null ao marcar como carregado
+          console.log('[AuthContext] auto-selecting single org:', onlyOrgId);
           await switchOrganization(onlyOrgId);
-        } 
-        else if (count > 1) {
-          // Multi-org: verificar se já temos algo salvo e se devemos carregar
-          // Se for um refresh de página, o localStorage/savedOrgId pode ser usado
-          // Se for um login novo, a flag org_selected (sessionStorage) estará vazia
+        } else if (count > 1) {
+          // Se tiver múltiplas, tenta carregar a última usada se houver flag de sessão
+          const savedOrgId = localStorage.getItem(`vimob_active_organization_${userId}`);
           const isSessionSelected = sessionStorage.getItem('org_selected') === 'true';
           
           if (isSessionSelected && savedOrgId) {
-             console.log('[AuthContext] decision: multi-org user, already selected in session:', savedOrgId);
-             await switchOrganization(savedOrgId);
-          } else {
-             console.log('[AuthContext] decision: multi-org user (count:', count, '), needs selection');
+            console.log('[AuthContext] loading last used org for multi-org user:', savedOrgId);
+            await switchOrganization(savedOrgId);
           }
-        } 
-        else {
-          // Sem orgs
-          console.log('[AuthContext] decision: no active organizations found');
         }
       } catch (err) {
-        console.error('[AuthContext] Error checking multi-org:', err);
+        console.error('[AuthContext] Error in checkMultiOrg:', err);
       } finally {
         setOrganizationsLoaded(true);
       }
