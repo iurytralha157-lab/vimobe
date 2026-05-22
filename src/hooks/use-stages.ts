@@ -478,56 +478,45 @@ export function useFilteredStageCounts({
     queryFn: async () => {
       if (!pipelineId || stageIds.length === 0) return {} as Record<string, number>;
 
-      const filteredLeadIds = await getFilteredLeadIds({
-        filterTag,
-        filterCampaign,
-        filterAdSet,
-        filterAd,
-      });
+      try {
+        const { isEmpty, apply } = await buildPipelineLeadQueryFilters({
+          filterUserId: filterUser,
+          filters: {
+            dateRange,
+            filterTag,
+            filterDealStatus,
+            searchQuery,
+            filterCampaign,
+            filterAdSet,
+            filterAd,
+            filterSource,
+          },
+        });
 
-      if (filteredLeadIds !== null && filteredLeadIds.length === 0) {
+        if (isEmpty) {
+          return Object.fromEntries(stageIds.map((stageId) => [stageId, 0]));
+        }
+
+        const counts = await Promise.all(
+          stageIds.map(async (stageId) => {
+            const query = apply(
+              supabase
+                .from('leads')
+                .select('id', { count: 'exact', head: true })
+                .eq('pipeline_id', pipelineId)
+                .eq('stage_id', stageId)
+            );
+            const { count, error } = await query;
+            if (error) throw error;
+            return [stageId, count || 0] as const;
+          })
+        );
+
+        return Object.fromEntries(counts);
+      } catch (err) {
+        console.error('[Pipeline filters] useFilteredStageCounts error:', err);
         return Object.fromEntries(stageIds.map((stageId) => [stageId, 0]));
       }
-
-      const normalizedSearch = searchQuery?.trim();
-
-      const counts = await Promise.all(
-        stageIds.map(async (stageId) => {
-          let query: any = supabase
-            .from('leads')
-            .select('id', { count: 'exact', head: true })
-            .eq('pipeline_id', pipelineId)
-            .eq('stage_id', stageId);
-
-          if (normalizedSearch) {
-            query = query.or(`name.ilike.%${normalizedSearch}%,phone.ilike.%${normalizedSearch}%`);
-          } else {
-            if (filterUser && filterUser !== 'all') {
-              query = query.eq('assigned_user_id', filterUser);
-            }
-            if (filterDealStatus && filterDealStatus !== 'all') {
-              query = query.eq('deal_status', filterDealStatus);
-            }
-            if (dateRange) {
-              query = query
-                .gte('created_at', dateRange.from.toISOString())
-                .lte('created_at', dateRange.to.toISOString());
-            }
-            if (filteredLeadIds) {
-              query = query.in('id', filteredLeadIds);
-            }
-            if (filterSource && filterSource !== 'all') {
-              query = query.eq('source', filterSource);
-            }
-          }
-
-          const { count, error } = await query;
-          if (error) throw error;
-          return [stageId, count || 0] as const;
-        })
-      );
-
-      return Object.fromEntries(counts);
     },
   });
 }
