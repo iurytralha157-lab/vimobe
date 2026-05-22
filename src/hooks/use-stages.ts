@@ -40,61 +40,158 @@ const LEAD_PIPELINE_FIELDS = `
 `;
 
 // Helper para buscar IDs de leads filtrados por tags ou Meta Ads (joins complexos)
+// Retorna:
+//   null  → não há filtro de tag/meta ativo (não aplicar .in('id', ...))
+//   []    → filtro ativo mas não há leads correspondentes (curto-circuito → 0 resultados)
+//   [ids] → leads que casam com TODOS os filtros de join ativos
 async function getFilteredLeadIds(filters: {
   filterTag?: string;
   filterCampaign?: string;
   filterAdSet?: string;
   filterAd?: string;
-}) {
-  const hasTagFilter = filters.filterTag && filters.filterTag !== 'all';
-  const hasMetaFilter = (filters.filterCampaign && filters.filterCampaign !== 'all') || 
-                        (filters.filterAdSet && filters.filterAdSet !== 'all') || 
-                        (filters.filterAd && filters.filterAd !== 'all');
+}): Promise<string[] | null> {
+  const hasTagFilter = !!(filters.filterTag && filters.filterTag !== 'all');
+  const hasMetaFilter = !!(
+    (filters.filterCampaign && filters.filterCampaign !== 'all') ||
+    (filters.filterAdSet && filters.filterAdSet !== 'all') ||
+    (filters.filterAd && filters.filterAd !== 'all')
+  );
 
   if (!hasTagFilter && !hasMetaFilter) return null;
 
   let currentFilteredIds: string[] | null = null;
 
-  // 1. Tag filtering
-  if (hasTagFilter) {
-    const { data: taggedLeads } = await supabase
-      .from('lead_tags')
-      .select('lead_id')
-      .eq('tag_id', filters.filterTag!);
-    
-    currentFilteredIds = Array.from(new Set((taggedLeads || []).map(item => item.lead_id).filter(Boolean)));
-    
-    if (currentFilteredIds.length === 0) return [];
+  try {
+    if (hasTagFilter) {
+      const { data: taggedLeads, error } = await supabase
+        .from('lead_tags')
+        .select('lead_id')
+        .eq('tag_id', filters.filterTag!);
+      if (error) throw error;
+
+      currentFilteredIds = Array.from(
+        new Set((taggedLeads || []).map((item) => item.lead_id).filter(Boolean))
+      );
+      if (currentFilteredIds.length === 0) return [];
+    }
+
+    if (hasMetaFilter) {
+      let metaQuery = supabase.from('lead_meta').select('lead_id');
+      if (filters.filterCampaign && filters.filterCampaign !== 'all') {
+        metaQuery = metaQuery.eq('campaign_id', filters.filterCampaign);
+      }
+      if (filters.filterAdSet && filters.filterAdSet !== 'all') {
+        metaQuery = metaQuery.eq('adset_id', filters.filterAdSet);
+      }
+      if (filters.filterAd && filters.filterAd !== 'all') {
+        metaQuery = metaQuery.eq('ad_id', filters.filterAd);
+      }
+
+      const { data: metaLeads, error } = await metaQuery;
+      if (error) throw error;
+
+      const metaIds = Array.from(
+        new Set((metaLeads || []).map((item) => item.lead_id).filter(Boolean))
+      );
+
+      if (currentFilteredIds === null) {
+        currentFilteredIds = metaIds;
+      } else {
+        const metaSet = new Set(metaIds);
+        currentFilteredIds = currentFilteredIds.filter((id) => metaSet.has(id));
+      }
+    }
+
+    return currentFilteredIds || [];
+  } catch (err) {
+    console.error('[Pipeline filters] getFilteredLeadIds error:', err);
+    // Em caso de erro, retornar [] curto-circuita para vazio em vez de travar a Pipeline
+    return [];
   }
+}
 
-  // 2. Meta Ads filtering
-  if (hasMetaFilter) {
-    let metaQuery = supabase
-      .from('lead_meta')
-      .select('lead_id');
-    
-    if (filters.filterCampaign && filters.filterCampaign !== 'all') {
-      metaQuery = metaQuery.eq('campaign_id', filters.filterCampaign);
-    }
-    if (filters.filterAdSet && filters.filterAdSet !== 'all') {
-      metaQuery = metaQuery.eq('adset_id', filters.filterAdSet);
-    }
-    if (filters.filterAd && filters.filterAd !== 'all') {
-      metaQuery = metaQuery.eq('ad_id', filters.filterAd);
-    }
+// =====================================================================
+// FUNÇÃO ÚNICA de aplicação de filtros da Pipeline.
+// Usada por: useStagesWithLeads, useLoadMoreLeads, useFilteredStageCounts.
+// Garante que TODOS os filtros ativos são aplicados em conjunto (AND).
+// =====================================================================
+export interface PipelineQueryFilters {
+  dateRange?: { from: Date; to: Date } | null;
+  filterTag?: string;
+  filterDealStatus?: string;
+  searchQuery?: string;
+  filterCampaign?: string;
+  filterAdSet?: string;
+  filterAd?: string;
+  filterSource?: string;
+}
 
-    const { data: metaLeads } = await metaQuery;
-    const metaIds = Array.from(new Set((metaLeads || []).map(item => item.lead_id).filter(Boolean)));
+export async function buildPipelineLeadQueryFilters(params: {
+  filterUserId?: string;
+  filters?: PipelineQueryFilters;
+}): Promise<{
+  filteredLeadIds: string[] | null;
+  isEmpty: boolean;
+  apply: (query: any) => any;
+}> {
+  const { filterUserId, filters = {} } = params;
+  const t0 = performance.now();
 
-    if (currentFilteredIds === null) {
-      currentFilteredIds = metaIds;
-    } else {
-      const metaSet = new Set(metaIds);
-      currentFilteredIds = currentFilteredIds.filter(id => metaSet.has(id));
+  const filteredLeadIds = await getFilteredLeadIds({
+    filterTag: filters.filterTag,
+    filterCampaign: filters.filterCampaign,
+    filterAdSet: filters.filterAdSet,
+    filterAd: filters.filterAd,
+  });
+
+  const isEmpty = filteredLeadIds !== null && filteredLeadIds.length === 0;
+
+  console.log('[Pipeline filters] build', {
+    filterUserId,
+    dateRange: filters.dateRange
+      ? { from: filters.dateRange.from.toISOString(), to: filters.dateRange.to.toISOString() }
+      : null,
+    filterTag: filters.filterTag,
+    filterDealStatus: filters.filterDealStatus,
+    filterSource: filters.filterSource,
+    filterCampaign: filters.filterCampaign,
+    filterAdSet: filters.filterAdSet,
+    filterAd: filters.filterAd,
+    searchQuery: filters.searchQuery,
+    joinFilteredIds: filteredLeadIds?.length ?? null,
+    isEmpty,
+    buildMs: Math.round(performance.now() - t0),
+  });
+
+  const apply = (query: any) => {
+    const normalizedSearch = filters.searchQuery?.trim();
+
+    if (filterUserId && filterUserId !== 'all') {
+      query = query.eq('assigned_user_id', filterUserId);
     }
-  }
+    if (filters.filterDealStatus && filters.filterDealStatus !== 'all') {
+      query = query.eq('deal_status', filters.filterDealStatus);
+    }
+    if (filters.dateRange) {
+      query = query
+        .gte('created_at', filters.dateRange.from.toISOString())
+        .lte('created_at', filters.dateRange.to.toISOString());
+    }
+    if (filteredLeadIds) {
+      query = query.in('id', filteredLeadIds);
+    }
+    if (filters.filterSource && filters.filterSource !== 'all') {
+      query = query.eq('source', filters.filterSource);
+    }
+    if (normalizedSearch) {
+      query = query.or(
+        `name.ilike.%${normalizedSearch}%,phone.ilike.%${normalizedSearch}%,email.ilike.%${normalizedSearch}%`
+      );
+    }
+    return query;
+  };
 
-  return currentFilteredIds || [];
+  return { filteredLeadIds, isEmpty, apply };
 }
 
 export function useStages(pipelineId?: string) {
