@@ -301,6 +301,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setLoading(false);
         setAuthInitialized(true);
         setOrganizationsLoaded(true);
+        setIsInitializingOrg(false);
       }
     }, 5000);
 
