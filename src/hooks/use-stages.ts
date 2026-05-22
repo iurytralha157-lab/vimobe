@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Tables } from '@/integrations/supabase/types';
 import { normalizePhone } from '@/lib/phone-utils';
+import { useAuth } from '@/contexts/AuthContext';
 
 export type Stage = Tables<'stages'> & {
   lead_count?: number;
@@ -439,25 +440,17 @@ async function getEnrichedLeadsBatch(leads: any[]) {
 }
 
 export function useLeadMetaFilters() {
+  const { organization } = useAuth();
+  
   return useQuery({
-    queryKey: ['lead-meta-filters'],
+    queryKey: ['lead-meta-filters', organization?.id],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return { campaigns: [], adsets: [], ads: [] };
-      
-      const { data: userData } = await supabase
-        .from('users')
-        .select('organization_id')
-        .eq('id', user.id)
-        .maybeSingle();
-      
-      const orgId = userData?.organization_id;
-      if (!orgId) return { campaigns: [], adsets: [], ads: [] };
+      if (!organization?.id) return { campaigns: [], adsets: [], ads: [] };
 
       const { data, error } = await supabase
         .from('lead_meta')
         .select('campaign_name, campaign_id, adset_name, adset_id, ad_name, ad_id, platform, leads!inner(organization_id)')
-        .eq('leads.organization_id', orgId);
+        .eq('leads.organization_id', organization.id);
       
       if (error) throw error;
       
@@ -466,17 +459,43 @@ export function useLeadMetaFilters() {
       const uniqueAds = new Map();
 
       (data || []).forEach((item: any) => {
-        if (item.campaign_id) uniqueCampaigns.set(item.campaign_id, item.campaign_name);
-        if (item.adset_id) uniqueAdSets.set(item.adset_id, item.adset_name);
-        if (item.ad_id) uniqueAds.set(item.ad_id, item.ad_name);
+        // Use ID se existir, senão use o nome como chave
+        const campaignKey = item.campaign_id || item.campaign_name;
+        if (campaignKey) {
+          uniqueCampaigns.set(campaignKey, item.campaign_name || campaignKey);
+        }
+        
+        const adsetKey = item.adset_id || item.adset_name;
+        if (adsetKey) {
+          uniqueAdSets.set(adsetKey, item.adset_name || adsetKey);
+        }
+        
+        const adKey = item.ad_id || item.ad_name;
+        if (adKey) {
+          uniqueAds.set(adKey, item.ad_name || adKey);
+        }
+      });
+      
+      const campaigns = Array.from(uniqueCampaigns.entries())
+        .map(([id, name]) => ({ id, name }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+        
+      console.log('[LeadMetaFilters] Loaded:', {
+        campaignsCount: campaigns.length,
+        campaigns: campaigns.slice(0, 10)
       });
       
       return { 
-        campaigns: Array.from(uniqueCampaigns.entries()).map(([id, name]) => ({ id, name })),
-        adsets: Array.from(uniqueAdSets.entries()).map(([id, name]) => ({ id, name })),
-        ads: Array.from(uniqueAds.entries()).map(([id, name]) => ({ id, name }))
+        campaigns,
+        adsets: Array.from(uniqueAdSets.entries())
+          .map(([id, name]) => ({ id, name }))
+          .sort((a, b) => a.name.localeCompare(b.name)),
+        ads: Array.from(uniqueAds.entries())
+          .map(([id, name]) => ({ id, name }))
+          .sort((a, b) => a.name.localeCompare(b.name))
       };
     },
+    enabled: !!organization?.id,
     staleTime: 1000 * 60 * 10,
   });
 }
