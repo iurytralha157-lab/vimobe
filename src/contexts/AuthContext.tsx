@@ -558,6 +558,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const checkMultiOrg = async (userId: string) => {
     return performanceTracker.trackTimed('checkMultiOrg', async () => {
       try {
+        setNeedsOrgSelection(false); // Reset at start to avoid stale true state
         const savedOrgId = localStorage.getItem(`vimob_active_organization_${userId}`);
         console.log('[AuthContext] userId:', userId);
         console.log('[AuthContext] saved organization_id in storage:', savedOrgId || 'none');
