@@ -112,6 +112,7 @@ export function AdvancedFiltersPopover({
   isMobile = false,
 }: AdvancedFiltersPopoverProps) {
   const hasExtraFilters = useMemo(() => {
+    const hasSearch = !!(showSearch && search && search.trim() !== '');
     return (responsibleId && responsibleId !== 'all') || 
            (tagId && tagId !== 'all') || 
            (status && status !== 'all') || 
@@ -119,8 +120,8 @@ export function AdvancedFiltersPopover({
            (campaignId && campaignId !== 'all') || 
            (adSetId && adSetId !== 'all') || 
            (adId && adId !== 'all') || 
-           search;
-  }, [responsibleId, tagId, status, source, campaignId, adSetId, adId, search]);
+           hasSearch;
+  }, [responsibleId, tagId, status, source, campaignId, adSetId, adId, search, showSearch]);
 
   const activeCount = useMemo(() => {
     let count = 0;
@@ -131,8 +132,10 @@ export function AdvancedFiltersPopover({
     if (campaignId && campaignId !== 'all') count++;
     if (adSetId && adSetId !== 'all') count++;
     if (adId && adId !== 'all') count++;
+    // Só conta busca no contador se ela for o filtro principal do popover (mobile)
+    if (showSearch && isMobile && search && search.trim() !== '') count++;
     return count;
-  }, [responsibleId, tagId, status, source, campaignId, adSetId, adId]);
+  }, [responsibleId, tagId, status, source, campaignId, adSetId, adId, search, showSearch, isMobile]);
 
   const filterContent = (
     <div className="space-y-4">
