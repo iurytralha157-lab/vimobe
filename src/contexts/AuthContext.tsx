@@ -548,8 +548,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } else {
       setProfile(prev => prev ? { ...prev, organization_id: orgId } : prev);
     }
-
-    setNeedsOrgSelection(false);
   };
 
   // Check if user has multiple orgs after profile is loaded
