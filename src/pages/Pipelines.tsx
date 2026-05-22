@@ -716,18 +716,6 @@ export default function Pipelines() {
   }, [deferredSearch, hasMoreLeads, selectedPipelineId]);
   
 
-  const stageIds = useMemo(() => stages.map((stage: any) => stage.id), [stages]);
-
-  const { data: filteredStageCounts = {} } = useFilteredStageCounts({
-    pipelineId: selectedPipelineId || undefined,
-    stageIds,
-    filterUser,
-    filterTag,
-    filterDealStatus,
-    searchQuery: deferredSearch,
-    dateRange,
-    filterSource,
-  });
   
   // Filters are now applied server-side; we merge server results AND apply a local filter for instant feedback
   const filteredStages = useMemo(() => {
