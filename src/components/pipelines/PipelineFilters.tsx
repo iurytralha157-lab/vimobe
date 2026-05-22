@@ -454,7 +454,10 @@ export const PipelineFilters: React.FC<PipelineFiltersProps> = ({
             onDatePresetChange={setDatePreset}
             customDateRange={customDateRange}
             onCustomDateRangeChange={setCustomDateRange}
-            triggerClassName="h-8 border-border/60 font-semibold uppercase text-[10px] tracking-wider"
+            triggerClassName={cn(
+              "h-8 gap-2 text-[11px] font-semibold uppercase tracking-wider px-3 border-border/60 hover:border-primary/50 transition-colors",
+              (datePreset !== 'last30days' || customDateRange) && "border-primary/50 bg-primary/5 text-primary"
+            )}
             align="end"
           />
 

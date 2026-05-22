@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Calendar as CalendarIcon } from 'lucide-react';
+import { Calendar as CalendarIcon, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Popover,
@@ -107,77 +107,138 @@ export function DateFilterPopover({
           <span className="truncate">{getDateLabel()}</span>
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align={align}>
-        <div className="p-4 space-y-4">
-          {/* Preset buttons in 2-column grid matching the design */}
-          <div className="grid grid-cols-2 gap-2">
-            {filteredPresets.map(option => (
-              <Button
-                key={option.value}
-                variant={datePreset === option.value && !customDateRange ? "default" : "outline"}
-                size="sm"
-                className={cn(
-                  "h-10 text-sm font-medium rounded-full transition-all",
-                  datePreset === option.value && !customDateRange 
-                    ? "bg-primary text-primary-foreground hover:bg-primary/90" 
-                    : "hover:bg-muted"
+      <PopoverContent className={cn("w-auto p-0 border-border/40 shadow-xl overflow-hidden", !isMobile && "w-auto")} align={align}>
+        {isMobile ? (
+          <div className="p-4 space-y-4">
+            {/* Preset buttons in 2-column grid matching the design */}
+            <div className="grid grid-cols-2 gap-2">
+              {filteredPresets.map(option => (
+                <Button
+                  key={option.value}
+                  variant={datePreset === option.value && !customDateRange ? "default" : "outline"}
+                  size="sm"
+                  className={cn(
+                    "h-10 text-sm font-medium rounded-full transition-all",
+                    datePreset === option.value && !customDateRange 
+                      ? "bg-primary text-primary-foreground hover:bg-primary/90" 
+                      : "hover:bg-muted"
+                  )}
+                  onClick={() => handleDatePresetChange(option.value)}
+                >
+                  {option.label}
+                </Button>
+              ))}
+            </div>
+
+            {showCalendar && (
+              <>
+                {/* Divider with text */}
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t" />
+                  </div>
+                  <div className="relative flex justify-start">
+                    <span className="bg-popover pr-2 text-xs text-muted-foreground">
+                      Ou selecione um período:
+                    </span>
+                  </div>
+                </div>
+
+                {/* Calendar for custom range */}
+                <Calendar
+                  mode="range"
+                  selected={{ from: tempDateRange.from, to: tempDateRange.to }}
+                  onSelect={(range) => {
+                    setTempDateRange({ from: range?.from, to: range?.to });
+                  }}
+                  numberOfMonths={1}
+                  locale={ptBR}
+                  className="pointer-events-auto rounded-md"
+                />
+
+                {/* Apply button */}
+                <Button 
+                  size="sm" 
+                  className="w-full h-10 rounded-full font-medium"
+                  disabled={!tempDateRange.from || !tempDateRange.to}
+                  onClick={handleApplyCustomDate}
+                >
+                  Aplicar
+                </Button>
+
+                {(datePreset !== null || customDateRange) && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full h-9 text-muted-foreground"
+                    onClick={handleClearDate}
+                  >
+                    Limpar período
+                  </Button>
                 )}
-                onClick={() => handleDatePresetChange(option.value)}
-              >
-                {option.label}
-              </Button>
-            ))}
+              </>
+            )}
           </div>
+        ) : (
+          <div className="flex bg-background">
+            {/* Botões Rápidos (Esquerda) */}
+            <div className="w-[180px] p-2 bg-muted/30 border-r border-border/40 space-y-1">
+              <p className="px-2 py-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Atalhos</p>
+              {datePresetOptions.filter(o => o.value !== 'custom').map((option) => (
+                <Button
+                  key={option.value}
+                  variant="ghost"
+                  size="sm"
+                  className={cn(
+                    "w-full justify-start text-xs h-8 font-medium hover:bg-primary/10 hover:text-primary transition-colors",
+                    datePreset === option.value && !customDateRange ? "bg-primary/10 text-primary" : "text-muted-foreground"
+                  )}
+                  onClick={() => {
+                    onDatePresetChange(option.value as DatePreset);
+                    onCustomDateRangeChange?.(null);
+                    setDatePickerOpen(false);
+                  }}
+                >
+                  {option.label}
+                  {datePreset === option.value && !customDateRange && <Check className="ml-auto h-3 w-3" />}
+                </Button>
+              ))}
+            </div>
 
-          {showCalendar && (
-            <>
-              {/* Divider with text */}
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t" />
-                </div>
-                <div className="relative flex justify-start">
-                  <span className="bg-popover pr-2 text-xs text-muted-foreground">
-                    Ou selecione um período:
-                  </span>
-                </div>
-              </div>
-
-              {/* Calendar for custom range */}
+            {/* Seletor Personalizado (Direita) */}
+            <div className="p-3">
+              <p className="px-1 mb-2 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Personalizado</p>
               <Calendar
                 mode="range"
                 selected={{ from: tempDateRange.from, to: tempDateRange.to }}
-                onSelect={(range) => {
-                  setTempDateRange({ from: range?.from, to: range?.to });
-                }}
+                onSelect={(range) => setTempDateRange({ from: range?.from, to: range?.to })}
                 numberOfMonths={1}
                 locale={ptBR}
-                className="pointer-events-auto rounded-md"
+                className="rounded-md border border-border/40 p-2"
               />
-
-              {/* Apply button */}
-              <Button 
-                size="sm" 
-                className="w-full h-10 rounded-full font-medium"
-                disabled={!tempDateRange.from || !tempDateRange.to}
-                onClick={handleApplyCustomDate}
-              >
-                Aplicar
-              </Button>
-
-              {(datePreset !== null || customDateRange) && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-full h-9 text-muted-foreground"
-                  onClick={handleClearDate}
+              
+              {/* Botões Limpar e Aplicar (Abaixo do calendário) */}
+              <div className="grid grid-cols-2 gap-2 mt-3">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="h-8 text-xs font-bold uppercase tracking-tight"
+                  onClick={() => setTempDateRange({})}
                 >
-                  Limpar período
+                  Limpar
                 </Button>
-              )}
-            </>
-          )}
-        </div>
+                <Button 
+                  size="sm" 
+                  className="h-8 text-xs font-bold uppercase tracking-tight bg-primary hover:bg-primary/90"
+                  disabled={!tempDateRange.from || !tempDateRange.to}
+                  onClick={handleApplyCustomDate}
+                >
+                  Aplicar
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </PopoverContent>
     </Popover>
   );
