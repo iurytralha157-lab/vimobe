@@ -35,7 +35,7 @@ const LEAD_PIPELINE_FIELDS = `
   assignee:users!leads_assigned_user_id_fkey(id, name, avatar_url),
   interest_property:properties!leads_interest_property_id_fkey(id, code, title, preco),
   interest_plan:service_plans!leads_interest_plan_id_fkey(id, code, name, price),
-  lead_meta(campaign_name, adset_name, ad_name, platform),
+  lead_meta(campaign_name, campaign_id, adset_name, adset_id, ad_name, ad_id, platform),
   stage:stages(id, name, color, stage_key)
 `;
 
@@ -181,12 +181,18 @@ export function useStagesWithLeads(
       if (stagesResult.error) throw stagesResult.error;
       const stages = stagesResult.data || [];
 
-      // Fetch filtered lead IDs from joins
+      // Fetch filtered lead IDs from joins (Meta Ads, Tags)
       const filteredLeadIds = await getFilteredLeadIds({
         filterTag: filters?.filterTag,
         filterCampaign: filters?.filterCampaign,
         filterAdSet: filters?.filterAdSet,
         filterAd: filters?.filterAd,
+      });
+
+      console.log('Pipeline filter audit:', {
+        hasFilteredIds: filteredLeadIds !== null,
+        count: filteredLeadIds?.length,
+        filters
       });
 
       if (filteredLeadIds !== null && filteredLeadIds.length === 0) {
@@ -284,7 +290,6 @@ export function useStagesWithLeads(
   });
 }
 
-// Separate function for enrichment if needed later
 async function getEnrichedLeadsBatch(leads: any[]) {
   const leadIds = leads.map(l => l.id);
   if (leadIds.length === 0) return [];
@@ -332,16 +337,26 @@ export function useLeadMetaFilters() {
 
       const { data, error } = await supabase
         .from('lead_meta')
-        .select('campaign_name, adset_name, ad_name, leads!inner(organization_id)')
+        .select('campaign_name, campaign_id, adset_name, adset_id, ad_name, ad_id, platform, leads!inner(organization_id)')
         .eq('leads.organization_id', orgId);
       
       if (error) throw error;
       
-      const campaigns = [...new Set((data || []).map((item: any) => item.campaign_name).filter(Boolean))].sort() as string[];
-      const adsets = [...new Set((data || []).map((item: any) => item.adset_name).filter(Boolean))].sort() as string[];
-      const ads = [...new Set((data || []).map((item: any) => item.ad_name).filter(Boolean))].sort() as string[];
+      const uniqueCampaigns = new Map();
+      const uniqueAdSets = new Map();
+      const uniqueAds = new Map();
+
+      (data || []).forEach((item: any) => {
+        if (item.campaign_id) uniqueCampaigns.set(item.campaign_id, item.campaign_name);
+        if (item.adset_id) uniqueAdSets.set(item.adset_id, item.adset_name);
+        if (item.ad_id) uniqueAds.set(item.ad_id, item.ad_name);
+      });
       
-      return { campaigns, adsets, ads };
+      return { 
+        campaigns: Array.from(uniqueCampaigns.entries()).map(([id, name]) => ({ id, name })),
+        adsets: Array.from(uniqueAdSets.entries()).map(([id, name]) => ({ id, name })),
+        ads: Array.from(uniqueAds.entries()).map(([id, name]) => ({ id, name }))
+      };
     },
     staleTime: 1000 * 60 * 10,
   });
@@ -381,59 +396,15 @@ export function useFilteredStageCounts({
     queryFn: async () => {
       if (!pipelineId || stageIds.length === 0) return {} as Record<string, number>;
 
-      // Pre-fetch lead IDs from filters that involve joins (Tags and Meta Ads)
-      let filteredLeadIds: string[] | null = null;
-      
-      const hasTagFilter = filterTag && filterTag !== 'all';
-      const hasMetaFilter = (filterCampaign && filterCampaign !== 'all') || 
-                            (filterAdSet && filterAdSet !== 'all') || 
-                            (filterAd && filterAd !== 'all');
+      const filteredLeadIds = await getFilteredLeadIds({
+        filterTag,
+        filterCampaign,
+        filterAdSet,
+        filterAd,
+      });
 
-      if (hasTagFilter || hasMetaFilter) {
-        let currentFilteredIds: string[] | null = null;
-
-        // 1. Tag filtering
-        if (hasTagFilter) {
-          const { data: taggedLeads } = await supabase
-            .from('lead_tags')
-            .select('lead_id')
-            .eq('tag_id', filterTag);
-          
-          currentFilteredIds = (taggedLeads || []).map(item => item.lead_id).filter(Boolean);
-        }
-
-        // 2. Meta Ads filtering
-        if (hasMetaFilter) {
-          let metaQuery = supabase
-            .from('lead_meta')
-            .select('lead_id');
-          
-          if (filterCampaign && filterCampaign !== 'all') {
-            metaQuery = metaQuery.eq('campaign_id', filterCampaign);
-          }
-          if (filterAdSet && filterAdSet !== 'all') {
-            metaQuery = metaQuery.eq('adset_id', filterAdSet);
-          }
-          if (filterAd && filterAd !== 'all') {
-            metaQuery = metaQuery.eq('ad_id', filterAd);
-          }
-
-          const { data: metaLeads } = await metaQuery;
-          const metaIds = (metaLeads || []).map(item => item.lead_id).filter(Boolean);
-
-          if (currentFilteredIds === null) {
-            currentFilteredIds = metaIds;
-          } else {
-            const metaSet = new Set(metaIds);
-            currentFilteredIds = currentFilteredIds.filter(id => metaSet.has(id));
-          }
-        }
-
-        filteredLeadIds = currentFilteredIds || [];
-
-        if (filteredLeadIds.length === 0) {
-          return Object.fromEntries(stageIds.map((stageId) => [stageId, 0]));
-        }
+      if (filteredLeadIds !== null && filteredLeadIds.length === 0) {
+        return Object.fromEntries(stageIds.map((stageId) => [stageId, 0]));
       }
 
       const normalizedSearch = searchQuery?.trim();
@@ -452,30 +423,24 @@ export function useFilteredStageCounts({
             if (filterUser && filterUser !== 'all') {
               query = query.eq('assigned_user_id', filterUser);
             }
-
             if (filterDealStatus && filterDealStatus !== 'all') {
               query = query.eq('deal_status', filterDealStatus);
             }
-
             if (dateRange) {
               query = query
                 .gte('created_at', dateRange.from.toISOString())
                 .lte('created_at', dateRange.to.toISOString());
             }
-
             if (filteredLeadIds) {
               query = query.in('id', filteredLeadIds);
             }
-
             if (filterSource && filterSource !== 'all') {
               query = query.eq('source', filterSource);
             }
           }
 
           const { count, error } = await query;
-
           if (error) throw error;
-
           return [stageId, count || 0] as const;
         })
       );
@@ -528,7 +493,6 @@ export function useCreatePipeline() {
       
       if (pipelineError) throw pipelineError;
       
-      // Usar função do banco para criar stages e cadências padrão
       const { error: stagesError } = await (supabase as any).rpc('create_default_stages_for_pipeline', {
         p_pipeline_id: pipeline.id,
         p_org_id: userData.organization_id,
@@ -544,7 +508,6 @@ export function useCreatePipeline() {
       queryClient.invalidateQueries({ queryKey: ['pipelines'] });
       queryClient.invalidateQueries({ queryKey: ['stages'] });
       queryClient.invalidateQueries({ queryKey: ['stages-with-leads'] });
-      queryClient.invalidateQueries({ queryKey: ['cadence-templates'] });
     },
   });
 }
@@ -579,7 +542,6 @@ export function useDeletePipeline() {
   
   return useMutation({
     mutationFn: async (id: string) => {
-      // Check if any stages have leads before deleting
       const { data: stageIds } = await supabase
         .from('stages')
         .select('id')
@@ -596,7 +558,6 @@ export function useDeletePipeline() {
         }
       }
       
-      // CASCADE will handle deleting stages automatically
       const { error } = await supabase
         .from('pipelines')
         .delete()
@@ -649,7 +610,6 @@ export function useCreateStage() {
   });
 }
 
-// Hook para carregar mais leads de um estágio específico
 export function useLoadMoreLeads() {
   const queryClient = useQueryClient();
   
@@ -676,14 +636,15 @@ export function useLoadMoreLeads() {
         filterSource?: string;
       };
     }) => {
-      // Pre-fetch tagged lead IDs if tag filter is active
-      let taggedLeadIds: string[] | null = null;
-      if (filters?.filterTag && filters.filterTag !== 'all') {
-        const { data: taggedLeads } = await supabase
-          .from('lead_tags')
-          .select('lead_id')
-          .eq('tag_id', filters.filterTag);
-        taggedLeadIds = [...new Set((taggedLeads || []).map(item => item.lead_id).filter(Boolean))];
+      const filteredLeadIds = await getFilteredLeadIds({
+        filterTag: filters?.filterTag,
+        filterCampaign: filters?.filterCampaign,
+        filterAdSet: filters?.filterAdSet,
+        filterAd: filters?.filterAd,
+      });
+
+      if (filteredLeadIds !== null && filteredLeadIds.length === 0) {
+        return { stageId, leads: [] };
       }
 
       const normalizedSearch = filters?.searchQuery?.trim();
@@ -710,17 +671,8 @@ export function useLoadMoreLeads() {
             .gte('created_at', filters.dateRange.from.toISOString())
             .lte('created_at', filters.dateRange.to.toISOString());
         }
-        if (taggedLeadIds) {
-          query = query.in('id', taggedLeadIds);
-        }
-        if (filters?.filterCampaign && filters.filterCampaign !== 'all') {
-          query = query.eq('lead_meta.campaign_id', filters.filterCampaign);
-        }
-        if (filters?.filterAdSet && filters.filterAdSet !== 'all') {
-          query = query.eq('lead_meta.adset_id', filters.filterAdSet);
-        }
-        if (filters?.filterAd && filters.filterAd !== 'all') {
-          query = query.eq('lead_meta.ad_id', filters.filterAd);
+        if (filteredLeadIds) {
+          query = query.in('id', filteredLeadIds);
         }
         if (filters?.filterSource && filters.filterSource !== 'all') {
           query = query.eq('source', filters.filterSource);
@@ -728,12 +680,8 @@ export function useLoadMoreLeads() {
       }
       
       const { data, error } = await query;
-      
       if (error) throw error;
-      
-      // Buscar tags e tarefas dos novos leads
       const enrichedLeads = await getEnrichedLeadsBatch(data || []);
-      
       return { stageId, leads: enrichedLeads };
     },
     onSuccess: ({ stageId, leads }, { pipelineId, filterUserId, filters }) => {
@@ -743,13 +691,10 @@ export function useLoadMoreLeads() {
       
       queryClient.setQueryData(cacheKey, (old: any[] | undefined) => {
         if (!old) return old;
-        
         return old.map(stage => {
           if (stage.id !== stageId) return stage;
-          
           const existingIds = new Set((stage.leads || []).map((l: any) => l.id));
           const newLeads = leads.filter((l: any) => !existingIds.has(l.id));
-          
           return {
             ...stage,
             leads: [...(stage.leads || []), ...newLeads],
