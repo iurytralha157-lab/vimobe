@@ -311,81 +311,17 @@ export function DashboardFilters({
     <div className="flex items-center justify-end gap-2 w-full">
       {/* Bloco 1: Período */}
       <div className="flex items-center">
-        <Popover open={periodPopoverOpen} onOpenChange={setPeriodPopoverOpen}>
-          <PopoverTrigger asChild>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className={cn(
-                "h-8 gap-2 text-[11px] font-semibold uppercase tracking-wider px-3 border-border/60 hover:border-primary/50 transition-colors",
-                (datePreset !== 'last30days' || customDateRange) && "border-primary/50 bg-primary/5 text-primary"
-              )}
-            >
-              <CalendarIcon className="h-3.5 w-3.5" />
-              <span>{currentPeriodLabel()}</span>
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent align="end" className="w-auto p-0 border-border/40 shadow-xl overflow-hidden">
-            <div className="flex bg-background">
-              {/* Botões Rápidos (Esquerda) */}
-              <div className="w-[180px] p-2 bg-muted/30 border-r border-border/40 space-y-1">
-                <p className="px-2 py-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Atalhos</p>
-                {datePresetOptions.filter(o => o.value !== 'custom').map((option) => (
-                  <Button
-                    key={option.value}
-                    variant="ghost"
-                    size="sm"
-                    className={cn(
-                      "w-full justify-start text-xs h-8 font-medium hover:bg-primary/10 hover:text-primary transition-colors",
-                      datePreset === option.value && !customDateRange ? "bg-primary/10 text-primary" : "text-muted-foreground"
-                    )}
-                    onClick={() => {
-                      onDatePresetChange(option.value);
-                      onCustomDateRangeChange(null);
-                      setPeriodPopoverOpen(false);
-                    }}
-                  >
-                    {option.label}
-                    {datePreset === option.value && !customDateRange && <Check className="ml-auto h-3 w-3" />}
-                  </Button>
-                ))}
-              </div>
-
-              {/* Seletor Personalizado (Direita) */}
-              <div className="p-3">
-                <p className="px-1 mb-2 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Personalizado</p>
-                <Calendar
-                  mode="range"
-                  selected={{ from: tempDateRange.from, to: tempDateRange.to }}
-                  onSelect={(range) => setTempDateRange({ from: range?.from, to: range?.to })}
-                  numberOfMonths={1}
-                  locale={ptBR}
-                  className="rounded-md border border-border/40 p-2"
-                />
-                
-                {/* Botões Limpar e Aplicar (Abaixo do calendário) */}
-                <div className="grid grid-cols-2 gap-2 mt-3">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="h-8 text-xs font-bold uppercase tracking-tight"
-                    onClick={handleClearCustomDate}
-                  >
-                    Limpar
-                  </Button>
-                  <Button 
-                    size="sm" 
-                    className="h-8 text-xs font-bold uppercase tracking-tight bg-primary hover:bg-primary/90"
-                    disabled={!tempDateRange.from || !tempDateRange.to}
-                    onClick={handleApplyCustomDate}
-                  >
-                    Aplicar
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </PopoverContent>
-        </Popover>
+        <DateFilterPopover
+          datePreset={datePreset}
+          onDatePresetChange={onDatePresetChange}
+          customDateRange={customDateRange}
+          onCustomDateRangeChange={onCustomDateRangeChange}
+          triggerClassName={cn(
+            "h-8 gap-2 text-[11px] font-semibold uppercase tracking-wider px-3 border-border/60 hover:border-primary/50 transition-colors",
+            (datePreset !== 'last30days' || customDateRange) && "border-primary/50 bg-primary/5 text-primary"
+          )}
+          align="end"
+        />
       </div>
 
       {/* Bloco 2: Filtros */}
