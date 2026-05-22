@@ -164,50 +164,40 @@ const PageLoader = () => (
 );
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading, profile, isSuperAdmin, impersonating, organization, needsOrgSelection, authInitialized, organizationsLoaded, userOrganizations } = useAuth();
+  const { user, loading, profile, isSuperAdmin, impersonating, organization, authInitialized, organizationsLoaded, userOrganizations } = useAuth();
   const location = useLocation();
-  
-  console.log('[Routing Debug]', { 
+
+  console.log('[Routing Debug]', {
     path: location.pathname,
-    isPublic: false,
-    authInitialized, 
+    authInitialized,
     organizationsLoaded,
     loading,
-    user: !!user, 
-    profile: !!profile, 
+    user: !!user,
     organization: !!organization,
-    needsOrgSelection,
     orgsCount: userOrganizations?.length
   });
 
   if (loading || !authInitialized) return <PageLoader />;
   if (!user) return <Navigate to="/auth" replace />;
-  
-  // Apenas rotas protegidas e autenticadas esperam organizações
   if (!organizationsLoaded) return <PageLoader />;
-  
-  // Se tem usuário mas não tem perfil e não é super admin, pode ser que precise de configuração,
-  // mas não vamos mandar para onboarding automaticamente.
-  if (!profile && !isSuperAdmin) {
-    console.warn('Authenticated user without profile detected in ProtectedRoute');
-  }
-  
-  if (needsOrgSelection && !impersonating) {
-    console.log('[ProtectedRoute] Redirecting to /select-organization');
-    return <Navigate to="/select-organization" replace />;
-  }
-  
+
+  const orgCount = userOrganizations?.length ?? 0;
+
+  // Super admin sem org: permite acesso (área admin)
   if (isSuperAdmin && !impersonating && !organization) {
-    console.log('[ProtectedRoute] SuperAdmin without org, allowing access to admin area');
-    return <>{children}</>; // Allow super admin to access /admin
+    return <>{children}</>;
   }
 
-  // Regular users MUST have an active organization to proceed
-  if (!organization && !isSuperAdmin) {
-    console.warn('[ProtectedRoute] Non-superadmin user without active organization, redirecting to /select-organization');
+  // Múltiplas orgs e nenhuma selecionada ainda: pedir seleção
+  if (orgCount > 1 && !organization && !impersonating) {
     return <Navigate to="/select-organization" replace />;
   }
-  
+
+  // Sem organização disponível e não é super admin: mostra select (tela "sem acesso")
+  if (!organization && !isSuperAdmin) {
+    return <Navigate to="/select-organization" replace />;
+  }
+
   return <>{children}</>;
 }
 
@@ -224,8 +214,9 @@ function AppRoutes() {
   }, [user, loading, organizationsLoaded]);
 
   const getDefaultRedirect = () => {
-    if (needsOrgSelection && !impersonating) return "/select-organization";
+    const orgCount = userOrganizations?.length ?? 0;
     if (isSuperAdmin && !impersonating && !profile?.organization_id) return "/admin";
+    if (orgCount > 1 && !impersonating) return "/select-organization";
     return "/dashboard";
   };
 
