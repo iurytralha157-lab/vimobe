@@ -33,9 +33,8 @@ const formatLastAccess = (iso: string | null) => {
 };
 
 export default function SelectOrganization() {
-  const { user, loading, isSuperAdmin, switchOrganization, organization, signOut } = useAuth();
+  const { user, loading, isSuperAdmin, switchOrganization, organization, signOut, userOrganizations: rawOrganizations = [], organizationsLoaded } = useAuth();
   const navigate = useNavigate();
-  const { data: rawOrganizations = [], isLoading: orgsLoading } = useUserOrganizations(user?.id, organization?.id);
   const { data: systemSettings } = useSystemSettings();
   const { resolvedTheme } = useTheme();
 
@@ -47,7 +46,7 @@ export default function SelectOrganization() {
         map.set(org.organization_id, org);
       }
     });
-    return Array.from(map.values());
+    return Array.from(map.values()) as typeof rawOrganizations;
   }, [rawOrganizations]);
 
   const logoUrl = useMemo(() => {
@@ -64,21 +63,21 @@ export default function SelectOrganization() {
   }, [loading, user, navigate]);
 
   useEffect(() => {
-    if (!loading && !orgsLoading) {
+    if (!loading && organizationsLoaded) {
       if (organizations.length === 1) {
         handleSelectOrg(organizations[0].organization_id);
       } else if (isSuperAdmin && organizations.length === 0) {
         navigate('/admin', { replace: true });
       }
     }
-  }, [loading, orgsLoading, isSuperAdmin, organizations, navigate]);
+  }, [loading, organizationsLoaded, isSuperAdmin, organizations, navigate]);
 
   const handleSelectOrg = async (orgId: string) => {
     await switchOrganization(orgId);
     navigate('/dashboard', { replace: true });
   };
 
-  if (loading || orgsLoading) {
+  if (loading || !organizationsLoaded) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
