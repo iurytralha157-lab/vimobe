@@ -269,10 +269,11 @@ function AppRoutes() {
             <Route path="/checkout/:token" element={<Suspense fallback={<PageLoader />}><Checkout /></Suspense>} />
             <Route path="/assinatura" element={<Navigate to="/settings?tab=subscription" replace />} />
             <Route path="/select-organization" element={
-              loading || !authInitialized || !organizationsLoaded ? <PageLoader /> :
+              loading || !authInitialized ? <PageLoader /> :
               !user ? <Navigate to="/auth" replace /> :
-              (userOrganizations?.length ?? 0) <= 1 ? <Navigate to="/dashboard" replace /> :
-              <Suspense fallback={<PageLoader />}><SelectOrganization /></Suspense>
+              !organizationsLoaded ? <PageLoader /> :
+              (userOrganizations?.length ?? 0) > 1 ? <Suspense fallback={<PageLoader />}><SelectOrganization /></Suspense> :
+              <Navigate to="/dashboard" replace />
             } />
             
             {/* Super Admin Routes */}

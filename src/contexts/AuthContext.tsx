@@ -83,7 +83,6 @@ interface AuthContextType {
   startImpersonate: (orgId: string, orgName: string) => Promise<void>;
   stopImpersonate: () => Promise<void>;
   switchOrganization: (orgId: string) => Promise<void>;
-  needsOrgSelection: boolean;
   authInitialized: boolean;
   organizationsLoaded: boolean;
   userOrganizations: UserOrganization[];
@@ -101,7 +100,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const [authInitialized, setAuthInitialized] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
-  const [needsOrgSelection, setNeedsOrgSelection] = useState(false);
   const [organizationsLoaded, setOrganizationsLoaded] = useState(false);
   const [userOrganizations, setUserOrganizations] = useState<UserOrganization[]>([]);
 
@@ -550,15 +548,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } else {
       setProfile(prev => prev ? { ...prev, organization_id: orgId } : prev);
     }
-
-    setNeedsOrgSelection(false);
   };
 
   // Check if user has multiple orgs after profile is loaded
   const checkMultiOrg = async (userId: string) => {
     return performanceTracker.trackTimed('checkMultiOrg', async () => {
       try {
-        setNeedsOrgSelection(false); // Reset at start to avoid stale true state
         const savedOrgId = localStorage.getItem(`vimob_active_organization_${userId}`);
         console.log('[AuthContext] userId:', userId);
         console.log('[AuthContext] saved organization_id in storage:', savedOrgId || 'none');
@@ -582,7 +577,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (error) {
           console.error('[AuthContext] Error fetching accessible organizations:', error);
-          setNeedsOrgSelection(false);
           setOrganizationsLoaded(true);
           return;
         }
@@ -609,35 +603,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const count = uniqueOrgs.length;
         console.log('[AuthContext] unique active organizations found:', count);
 
-        // 1. Validar se a organização salva ainda é acessível
-        const isSavedOrgValid = savedOrgId && uniqueOrgs.some((m: any) => m.organization_id === savedOrgId);
-
-        if (isSavedOrgValid && savedOrgId) {
-          console.log('[AuthContext] decision: dashboard (saved org is valid:', savedOrgId, ')');
-          await switchOrganization(savedOrgId);
-          setNeedsOrgSelection(false);
-        } 
-        // 2. Se for org única, definir automaticamente
-        else if (count === 1) {
+        // DECISÃO SIMPLES:
+        // - 1 organização: selecionar automaticamente (app irá redirecionar para /dashboard)
+        // - 2+ organizações: NÃO fazer nada aqui, deixar app decidir se mostra /select-organization
+        // - 0 organizações: NÃO fazer nada aqui
+        
+        if (count === 1) {
+          // Única org: auto-selecionar silenciosamente
           const onlyOrgId = uniqueOrgs[0].organization_id;
-          console.log('[AuthContext] decision: dashboard (single org:', onlyOrgId, ')');
+          console.log('[AuthContext] decision: auto-select single org:', onlyOrgId);
           await switchOrganization(onlyOrgId);
-          setNeedsOrgSelection(false);
         } 
-        // 3. Se tiver múltiplas orgs e nada válido salvo, pedir seleção
         else if (count > 1) {
-          console.log('[AuthContext] decision: /select-organization (multi-org, no valid saved org)');
-          // Garante que só mostramos a tela se realmente precisar
-          setNeedsOrgSelection(true);
+          // Multi-org: app routes irá redirecionar para /select-organization quando apropriado
+          console.log('[AuthContext] decision: multi-org user (count:', count, '), app will show selection page');
         } 
-        // 4. Sem orgs
         else {
+          // Sem orgs
           console.log('[AuthContext] decision: no active organizations found');
-          setNeedsOrgSelection(false);
         }
       } catch (err) {
         console.error('[AuthContext] Error checking multi-org:', err);
-        setNeedsOrgSelection(false);
       } finally {
         setOrganizationsLoaded(true);
       }
@@ -653,7 +639,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       loading,
       isSuperAdmin,
       impersonating,
-      needsOrgSelection,
       authInitialized,
       organizationsLoaded,
       userOrganizations,
