@@ -67,16 +67,7 @@ export function CampaignFilter({
   // Filter adSets and ads if campaignId or adSetId is selected
   const filteredAdSets = useMemo(() => {
     if (!campaignId || campaignId === 'all') return [];
-    const filtered = adSets.filter(s => s.campaignId === campaignId);
-    
-    // Log requested by audit
-    console.log('[CampaignFilter] Campaign selected:', {
-      selectedCampaign: campaignId,
-      totalAdSetsForCampaign: filtered.length,
-      first10AdSets: filtered.slice(0, 10)
-    });
-    
-    return filtered;
+    return adSets.filter(s => s.campaignId === campaignId);
   }, [adSets, campaignId]);
 
   const filteredAds = useMemo(() => {
@@ -88,18 +79,30 @@ export function CampaignFilter({
       filtered = filtered.filter(a => a.adsetId === adSetId);
     }
     
-    // Log requested by audit
-    if (campaignId) {
-      console.log('[CampaignFilter] Filtered creatives:', {
-        selectedCampaign: campaignId,
-        selectedAdSet: adSetId,
-        totalCreatives: filtered.length,
-        first10Creatives: filtered.slice(0, 10)
-      });
-    }
-    
     return filtered;
   }, [ads, campaignId, adSetId]);
+
+  // Specific audit logs requested
+  useEffect(() => {
+    if (campaignId && campaignId !== 'all') {
+      console.log('[Campaign Audit] Selected Campaign:', {
+        selectedCampaign: campaignId,
+        totalAdSetsForCampaign: filteredAdSets.length,
+        totalCreativesForCampaign: filteredAds.length,
+        first10AdSets: filteredAdSets.slice(0, 10),
+        first10Creatives: filteredAds.slice(0, 10)
+      });
+    }
+  }, [campaignId, filteredAdSets, filteredAds]);
+
+  useEffect(() => {
+    if (adSetId && adSetId !== 'all') {
+      console.log('[Campaign Audit] Selected AdSet:', {
+        selectedAdSet: adSetId,
+        totalCreativesForAdSet: filteredAds.length
+      });
+    }
+  }, [adSetId, filteredAds]);
 
   useEffect(() => {
     console.log('Campaign dropdown debug:', {
