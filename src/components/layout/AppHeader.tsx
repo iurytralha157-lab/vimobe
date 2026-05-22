@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from 'next-themes';
 import { useNotifications, useUnreadNotificationsCount, useMarkNotificationRead, useMarkAllNotificationsRead } from '@/hooks/use-notifications';
-import { useUserOrganizations } from '@/hooks/use-user-organizations';
+// removed useUserOrganizations import
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -38,6 +38,7 @@ export const AppHeader = React.memo(function AppHeader({
     organization,
     switchOrganization,
     user,
+    userOrganizations: rawUserOrganizations = [],
   } = useAuth();
   const [isSwitching, setIsSwitching] = useState(false);
   const queryClient = useQueryClient();
@@ -58,7 +59,7 @@ export const AppHeader = React.memo(function AppHeader({
   } = useUnreadNotificationsCount();
   const markRead = useMarkNotificationRead();
   const markAllRead = useMarkAllNotificationsRead();
-  const { data: rawUserOrganizations = [] } = useUserOrganizations(user?.id, organization?.id);
+  // removed duplicate useUserOrganizations fetch
   
   const userOrganizations = React.useMemo(() => {
     const map = new Map();

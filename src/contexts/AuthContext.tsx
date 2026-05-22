@@ -52,6 +52,16 @@ interface Organization {
   default_commission_percentage?: number | null;
 }
 
+export interface UserOrganization {
+  organization_id: string;
+  organization_name: string;
+  organization_logo: string | null;
+  member_role: string;
+  is_active: boolean;
+  joined_at: string;
+  last_accessed_at: string | null;
+}
+
 interface ImpersonateSession {
   orgId: string;
   orgName: string;
@@ -76,6 +86,7 @@ interface AuthContextType {
   needsOrgSelection: boolean;
   authInitialized: boolean;
   organizationsLoaded: boolean;
+  userOrganizations: UserOrganization[];
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -92,6 +103,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [needsOrgSelection, setNeedsOrgSelection] = useState(false);
   const [organizationsLoaded, setOrganizationsLoaded] = useState(false);
+  const [userOrganizations, setUserOrganizations] = useState<UserOrganization[]>([]);
 
   useEffect(() => {
     if (organization) {
@@ -279,6 +291,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.removeItem('impersonating');
       sessionStorage.removeItem('org_selected');
       setOrganizationsLoaded(false);
+      setUserOrganizations([]);
     };
 
     // Safety timeout: stop loading after 5 seconds no matter what
@@ -545,20 +558,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const checkMultiOrg = async (userId: string) => {
     return performanceTracker.trackTimed('checkMultiOrg', async () => {
       try {
+        setNeedsOrgSelection(false); // Reset at start to avoid stale true state
         const savedOrgId = localStorage.getItem(`vimob_active_organization_${userId}`);
         console.log('[AuthContext] userId:', userId);
         console.log('[AuthContext] saved organization_id in storage:', savedOrgId || 'none');
 
         const { data, error } = await supabase
           .from('organization_members' as any)
-          .select('organization_id')
+          .select(`
+            organization_id,
+            role,
+            is_active,
+            joined_at,
+            updated_at,
+            organizations:organization_id (
+              id,
+              name,
+              logo_url
+            )
+          `)
           .eq('user_id', userId)
           .eq('is_active', true);
-
-        // Remover duplicidade por organization_id e garantir que sejam únicas e ativas
-        const uniqueOrgs = Array.from(new Map((data || []).map((m: any) => [m.organization_id, m])).values());
-        const count = uniqueOrgs.length;
-        console.log('[AuthContext] unique active organizations found:', count);
 
         if (error) {
           console.error('[AuthContext] Error fetching accessible organizations:', error);
@@ -566,6 +586,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setOrganizationsLoaded(true);
           return;
         }
+
+        // Map and deduplicate organizations
+        const orgsMap = new Map();
+        (data || []).forEach((item: any) => {
+          const orgData = Array.isArray(item.organizations) ? item.organizations[0] : item.organizations;
+          if (orgData && !orgsMap.has(item.organization_id)) {
+            orgsMap.set(item.organization_id, {
+              organization_id: item.organization_id,
+              organization_name: orgData?.name || 'Organização',
+              organization_logo: orgData?.logo_url || null,
+              member_role: item.role,
+              is_active: item.is_active,
+              joined_at: item.joined_at,
+              last_accessed_at: item.updated_at || null,
+            });
+          }
+        });
+
+        const uniqueOrgs = Array.from(orgsMap.values()) as UserOrganization[];
+        setUserOrganizations(uniqueOrgs);
+        const count = uniqueOrgs.length;
+        console.log('[AuthContext] unique active organizations found:', count);
 
         // 1. Validar se a organização salva ainda é acessível
         const isSavedOrgValid = savedOrgId && uniqueOrgs.some((m: any) => m.organization_id === savedOrgId);
@@ -577,15 +619,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } 
         // 2. Se for org única, definir automaticamente
         else if (count === 1) {
-          const onlyOrgId = (uniqueOrgs as any[])[0].organization_id;
+          const onlyOrgId = uniqueOrgs[0].organization_id;
           console.log('[AuthContext] decision: dashboard (single org:', onlyOrgId, ')');
           await switchOrganization(onlyOrgId);
           setNeedsOrgSelection(false);
         } 
-
         // 3. Se tiver múltiplas orgs e nada válido salvo, pedir seleção
         else if (count > 1) {
           console.log('[AuthContext] decision: /select-organization (multi-org, no valid saved org)');
+          // Garante que só mostramos a tela se realmente precisar
           setNeedsOrgSelection(true);
         } 
         // 4. Sem orgs
@@ -614,6 +656,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       needsOrgSelection,
       authInitialized,
       organizationsLoaded,
+      userOrganizations,
       signIn,
       signUp,
       signOut,

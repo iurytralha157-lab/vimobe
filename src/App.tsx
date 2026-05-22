@@ -164,7 +164,7 @@ const PageLoader = () => (
 );
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading, profile, isSuperAdmin, impersonating, organization, needsOrgSelection, authInitialized, organizationsLoaded } = useAuth();
+  const { user, loading, profile, isSuperAdmin, impersonating, organization, needsOrgSelection, authInitialized, organizationsLoaded, userOrganizations } = useAuth();
   const location = useLocation();
   
   console.log('[Routing Debug]', { 
@@ -176,7 +176,8 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     user: !!user, 
     profile: !!profile, 
     organization: !!organization,
-    needsOrgSelection
+    needsOrgSelection,
+    orgsCount: userOrganizations?.length
   });
 
   if (loading || !authInitialized) return <PageLoader />;
@@ -211,16 +212,16 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 function AppRoutes() {
-  const { user, loading, profile, isSuperAdmin, impersonating, needsOrgSelection, authInitialized, organizationsLoaded } = useAuth();
+  const { user, loading, profile, isSuperAdmin, impersonating, needsOrgSelection, authInitialized, organizationsLoaded, userOrganizations } = useAuth();
   
   useForceRefreshListener(!!user, user?.id);
 
   useEffect(() => {
-    if (user && !loading) {
+    if (user && !loading && organizationsLoaded) {
       const timer = setTimeout(preloadCoreCrmPages, 3000);
       return () => clearTimeout(timer);
     }
-  }, [user, loading]);
+  }, [user, loading, organizationsLoaded]);
 
   const getDefaultRedirect = () => {
     if (needsOrgSelection && !impersonating) return "/select-organization";
@@ -277,7 +278,9 @@ function AppRoutes() {
             <Route path="/checkout/:token" element={<Suspense fallback={<PageLoader />}><Checkout /></Suspense>} />
             <Route path="/assinatura" element={<Navigate to="/settings?tab=subscription" replace />} />
             <Route path="/select-organization" element={
-              loading || !organizationsLoaded ? <PageLoader /> : !user ? <Navigate to="/auth" replace /> : 
+              loading || !authInitialized || !organizationsLoaded ? <PageLoader /> : 
+              !user ? <Navigate to="/auth" replace /> : 
+              !needsOrgSelection && (userOrganizations.length <= 1) ? <Navigate to="/dashboard" replace /> :
               <Suspense fallback={<PageLoader />}><SelectOrganization /></Suspense>
             } />
             
