@@ -292,6 +292,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       sessionStorage.removeItem('org_selected');
       setOrganizationsLoaded(false);
       setUserOrganizations([]);
+      setIsInitializingOrg(false);
     };
 
     // Safety timeout: stop loading after 5 seconds no matter what
