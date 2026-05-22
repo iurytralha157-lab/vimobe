@@ -19,6 +19,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useLeadMetaFilters } from '@/hooks/use-stages';
+import { useFilters } from '@/contexts/FilterContext';
 
 interface CampaignFilterProps {
   campaignId: string | null;
