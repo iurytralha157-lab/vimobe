@@ -439,18 +439,32 @@ async function getEnrichedLeadsBatch(leads: any[]) {
   }));
 }
 
-export function useLeadMetaFilters() {
+export function useLeadMetaFilters(dateRange?: { from: Date; to: Date } | null) {
   const { organization } = useAuth();
   
   return useQuery({
-    queryKey: ['lead-meta-filters', organization?.id],
+    queryKey: ['lead-meta-filters', organization?.id, dateRange?.from?.toISOString(), dateRange?.to?.toISOString()],
     queryFn: async () => {
       if (!organization?.id) return { campaigns: [], adsets: [], ads: [] };
 
-      const { data, error } = await supabase
+      let query = supabase
         .from('lead_meta')
-        .select('campaign_name, campaign_id, adset_name, adset_id, ad_name, ad_id, platform, leads!inner(organization_id)')
+        .select(`
+          campaign_name, campaign_id, 
+          adset_name, adset_id, 
+          ad_name, ad_id, 
+          platform, 
+          leads!inner(organization_id, created_at)
+        `)
         .eq('leads.organization_id', organization.id);
+      
+      if (dateRange) {
+        query = query
+          .gte('leads.created_at', dateRange.from.toISOString())
+          .lte('leads.created_at', dateRange.to.toISOString());
+      }
+      
+      const { data, error } = await query;
       
       if (error) throw error;
       
@@ -459,20 +473,19 @@ export function useLeadMetaFilters() {
       const uniqueAds = new Map();
 
       (data || []).forEach((item: any) => {
-        // Use ID se existir, senão use o nome como chave
         const campaignKey = item.campaign_id || item.campaign_name;
-        if (campaignKey) {
-          uniqueCampaigns.set(campaignKey, item.campaign_name || campaignKey);
+        if (campaignKey && item.campaign_name) {
+          uniqueCampaigns.set(campaignKey, item.campaign_name);
         }
         
         const adsetKey = item.adset_id || item.adset_name;
-        if (adsetKey) {
-          uniqueAdSets.set(adsetKey, item.adset_name || adsetKey);
+        if (adsetKey && item.adset_name) {
+          uniqueAdSets.set(adsetKey, item.adset_name);
         }
         
         const adKey = item.ad_id || item.ad_name;
-        if (adKey) {
-          uniqueAds.set(adKey, item.ad_name || adKey);
+        if (adKey && item.ad_name) {
+          uniqueAds.set(adKey, item.ad_name);
         }
       });
       
@@ -480,7 +493,8 @@ export function useLeadMetaFilters() {
         .map(([id, name]) => ({ id, name }))
         .sort((a, b) => a.name.localeCompare(b.name));
         
-      console.log('[LeadMetaFilters] Loaded:', {
+      console.log('[LeadMetaFilters] Loaded for period:', {
+        period: dateRange ? { from: dateRange.from.toISOString(), to: dateRange.to.toISOString() } : 'All time',
         campaignsCount: campaigns.length,
         campaigns: campaigns.slice(0, 10)
       });
@@ -496,7 +510,7 @@ export function useLeadMetaFilters() {
       };
     },
     enabled: !!organization?.id,
-    staleTime: 1000 * 60 * 10,
+    staleTime: 1000 * 60 * 5, // 5 minutes cache
   });
 }
 
