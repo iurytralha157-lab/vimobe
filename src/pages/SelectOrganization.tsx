@@ -33,7 +33,7 @@ const formatLastAccess = (iso: string | null) => {
 };
 
 export default function SelectOrganization() {
-  const { user, loading, isSuperAdmin, switchOrganization, organization, signOut, userOrganizations: rawOrganizations = [], organizationsLoaded } = useAuth();
+  const { user, loading, authInitialized, isSuperAdmin, switchOrganization, organization, signOut, userOrganizations: rawOrganizations = [], organizationsLoaded } = useAuth();
   const navigate = useNavigate();
   const { data: systemSettings } = useSystemSettings();
   const { resolvedTheme } = useTheme();
