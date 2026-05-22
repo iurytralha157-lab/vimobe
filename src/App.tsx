@@ -269,9 +269,9 @@ function AppRoutes() {
             <Route path="/checkout/:token" element={<Suspense fallback={<PageLoader />}><Checkout /></Suspense>} />
             <Route path="/assinatura" element={<Navigate to="/settings?tab=subscription" replace />} />
             <Route path="/select-organization" element={
-              loading || !authInitialized || !organizationsLoaded ? <PageLoader /> : 
-              !user ? <Navigate to="/auth" replace /> : 
-              !needsOrgSelection && (userOrganizations.length <= 1) ? <Navigate to="/dashboard" replace /> :
+              loading || !authInitialized || !organizationsLoaded ? <PageLoader /> :
+              !user ? <Navigate to="/auth" replace /> :
+              (userOrganizations?.length ?? 0) <= 1 ? <Navigate to="/dashboard" replace /> :
               <Suspense fallback={<PageLoader />}><SelectOrganization /></Suspense>
             } />
             
