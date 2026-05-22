@@ -100,7 +100,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const [authInitialized, setAuthInitialized] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
-  const [needsOrgSelection, setNeedsOrgSelection] = useState(false);
   const [organizationsLoaded, setOrganizationsLoaded] = useState(false);
   const [userOrganizations, setUserOrganizations] = useState<UserOrganization[]>([]);
 
