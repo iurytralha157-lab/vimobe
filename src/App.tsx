@@ -190,7 +190,10 @@ function AppRoutes() {
 
     if (isSuperAdmin && !impersonating && !organization) return "/admin";
     
-    // Regra: se multi-org e não selecionou, vai para seleção
+    // Se não tem nenhuma org, manda para a tela de seleção que mostrará o erro de sem acesso
+    if (orgCount === 0 && !isSuperAdmin) return "/select-organization";
+
+    // Regra: se multi-org e não selecionou nesta sessão, vai para seleção
     if (orgCount > 1 && !hasSelectedOrg && !impersonating) return "/select-organization";
     
     // Caso contrário (1 org ou já selecionou), vai para dashboard
