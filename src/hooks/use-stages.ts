@@ -468,49 +468,58 @@ export function useLeadMetaFilters(dateRange?: { from: Date; to: Date } | null) 
       
       if (error) throw error;
       
-      const uniqueCampaigns = new Map();
-      const uniqueAdSets = new Map();
-      const uniqueAds = new Map();
+      const uniqueCampaigns = new Map<string, { id: string, name: string }>();
+      const uniqueAdSets = new Map<string, { id: string, name: string, campaignId: string }>();
+      const uniqueAds = new Map<string, { id: string, name: string, adsetId: string, campaignId: string }>();
 
       (data || []).forEach((item: any) => {
         const campaignKey = item.campaign_id || item.campaign_name;
         if (campaignKey && item.campaign_name) {
-          uniqueCampaigns.set(campaignKey, item.campaign_name);
+          uniqueCampaigns.set(campaignKey, { 
+            id: campaignKey, 
+            name: item.campaign_name 
+          });
         }
         
         const adsetKey = item.adset_id || item.adset_name;
         if (adsetKey && item.adset_name) {
-          uniqueAdSets.set(adsetKey, item.adset_name);
+          uniqueAdSets.set(`${campaignKey}-${adsetKey}`, { 
+            id: adsetKey, 
+            name: item.adset_name,
+            campaignId: campaignKey
+          });
         }
         
         const adKey = item.ad_id || item.ad_name;
         if (adKey && item.ad_name) {
-          uniqueAds.set(adKey, item.ad_name);
+          uniqueAds.set(`${campaignKey}-${adsetKey}-${adKey}`, { 
+            id: adKey, 
+            name: item.ad_name,
+            adsetId: adsetKey,
+            campaignId: campaignKey
+          });
         }
       });
       
-      const campaigns = Array.from(uniqueCampaigns.entries())
-        .map(([id, name]) => ({ id, name }))
-        .sort((a, b) => a.name.localeCompare(b.name));
+      const campaigns = Array.from(uniqueCampaigns.values())
+        .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+        
+      const adsets = Array.from(uniqueAdSets.values())
+        .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+
+      const ads = Array.from(uniqueAds.values())
+        .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
         
       console.log('[LeadMetaFilters] Loaded for period:', {
         period: dateRange ? { from: dateRange.from.toISOString(), to: dateRange.to.toISOString() } : 'All time',
         campaignsCount: campaigns.length,
-        campaigns: campaigns.slice(0, 10)
+        adsetsCount: adsets.length,
+        adsCount: ads.length
       });
-      
-      return { 
-        campaigns,
-        adsets: Array.from(uniqueAdSets.entries())
-          .map(([id, name]) => ({ id, name }))
-          .sort((a, b) => a.name.localeCompare(b.name)),
-        ads: Array.from(uniqueAds.entries())
-          .map(([id, name]) => ({ id, name }))
-          .sort((a, b) => a.name.localeCompare(b.name))
-      };
+
+      return { campaigns, adsets, ads };
     },
-    enabled: !!organization?.id,
-    staleTime: 1000 * 60 * 5, // 5 minutes cache
+    staleTime: 1000 * 60 * 5,
   });
 }
 
@@ -827,4 +836,3 @@ export function useLoadMoreLeads() {
     },
   });
 }
-
