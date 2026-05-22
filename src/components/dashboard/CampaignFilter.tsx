@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Facebook } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -17,6 +18,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { useLeadMetaFilters } from '@/hooks/use-stages';
 
 interface CampaignFilterProps {
   campaignId: string | null;
