@@ -139,7 +139,7 @@ export function CampaignFilter({
                 </SelectTrigger>
                 <SelectContent className="z-[120]">
                   <SelectItem value="all">Todos conjuntos</SelectItem>
-                  {adSets.map((s) => (
+                  {filteredAdSets.map((s) => (
                     <SelectItem key={s.id} value={s.id}>
                       {s.name}
                     </SelectItem>
@@ -158,7 +158,7 @@ export function CampaignFilter({
                 </SelectTrigger>
                 <SelectContent className="z-[120]">
                   <SelectItem value="all">Todos criativos</SelectItem>
-                  {ads.map((a) => (
+                  {filteredAds.map((a) => (
                     <SelectItem key={a.id} value={a.id}>
                       {a.name}
                     </SelectItem>
