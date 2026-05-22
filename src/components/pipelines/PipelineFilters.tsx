@@ -399,9 +399,9 @@ export const PipelineFilters: React.FC<PipelineFiltersProps> = ({
   }
 
   return (
-    <div className="flex flex-col gap-4 mb-6">
-      <div className="flex items-center justify-between bg-background/50 backdrop-blur-sm p-1 rounded-lg border border-border/40">
-        <div className="flex items-center gap-4">
+    <div className="flex flex-col gap-2 mb-4">
+      <div className="flex items-center justify-between p-0">
+        <div className="flex items-center gap-2">
           <PipelineSelector />
           
           <div className="h-6 w-px bg-border/60" />
