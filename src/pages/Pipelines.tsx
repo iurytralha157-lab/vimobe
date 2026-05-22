@@ -257,7 +257,7 @@ export default function Pipelines() {
         filterSource: filterSource && filterSource !== 'all' ? filterSource : undefined,
       },
     });
-  }, [selectedPipelineId, stages, loadMoreLeads, filterUser, dateRange, filterTag, filterDealStatus, searchQuery]);
+  }, [selectedPipelineId, stages, loadMoreLeads, filterUser, dateRange, filterTag, filterDealStatus, searchQuery, filterCampaign, filterAdSet, filterAd, filterSource]);
 
   // Real-time subscription for leads and tags updates
   useEffect(() => {
