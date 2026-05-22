@@ -62,16 +62,6 @@ export default function SelectOrganization() {
     }
   }, [loading, user, navigate]);
 
-  useEffect(() => {
-    if (!loading && organizationsLoaded) {
-      if (organizations.length === 1) {
-        handleSelectOrg(organizations[0].organization_id);
-      } else if (isSuperAdmin && organizations.length === 0) {
-        navigate('/admin', { replace: true });
-      }
-    }
-  }, [loading, organizationsLoaded, isSuperAdmin, organizations, navigate]);
-
   const handleSelectOrg = async (orgId: string) => {
     await switchOrganization(orgId);
     navigate('/dashboard', { replace: true });
