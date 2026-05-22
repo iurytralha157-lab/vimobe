@@ -19,6 +19,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { AdvancedFiltersPopover } from '@/components/filters/AdvancedFiltersPopover';
+import { Badge } from '@/components/ui/badge';
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -264,134 +266,31 @@ export const PipelineFilters: React.FC<PipelineFiltersProps> = ({
               align="end"
             />
 
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button 
-                  variant="outline" 
-                  size="icon" 
-                  className={cn(
-                    "h-9 w-9 border-border/60 relative",
-                    hasExtraFilters && "border-primary/50 bg-primary/5 text-primary"
-                  )}
-                >
-                  <SlidersHorizontal className="h-4 w-4" />
-                  {hasExtraFilters && (
-                    <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-primary" />
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent align="end" className="w-[300px] p-4 max-h-[80vh] overflow-y-auto z-[100] shadow-xl border-border/40">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between border-b pb-2">
-                    <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Filtros</span>
-                    {hasExtraFilters && (
-                      <Button variant="ghost" size="sm" onClick={handleClearFilters} className="h-6 px-2 text-[10px] font-bold text-primary">
-                        Limpar
-                      </Button>
-                    )}
-                  </div>
-
-                  {/* Mobile Search inside Popover */}
-                  <div className="space-y-2">
-                    <div className="relative">
-                      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                      <Input
-                        placeholder="Nome, telefone ou email..."
-                        value={searchInput}
-                        onChange={(e) => setSearchInput(e.target.value)}
-                        className="h-9 pl-9 text-xs bg-muted/30 border-border/40"
-                      />
-                    </div>
-                  </div>
-
-                  {showResponsibleFilter && (
-                    <div className="space-y-2">
-                      <Select value={filterUser || 'all'} onValueChange={setFilterUser}>
-                        <SelectTrigger className="h-9 text-xs bg-muted/30 border-border/40">
-                          <SelectValue placeholder="Responsável" />
-                        </SelectTrigger>
-                        <SelectContent className="z-[110]">
-                          <SelectItem value="all">Todos responsáveis</SelectItem>
-                          {users.map(user => (
-                            <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-
-                  <div className="space-y-2">
-                    <Select value={filterTag} onValueChange={setFilterTag}>
-                      <SelectTrigger className="h-9 text-xs bg-muted/30 border-border/40">
-                        <SelectValue placeholder="Todas as etiquetas" />
-                      </SelectTrigger>
-                      <SelectContent className="z-[110]">
-                        <SelectItem value="all">Todas as etiquetas</SelectItem>
-                        {allTags.map(tag => (
-                          <SelectItem key={tag.id} value={tag.id}>
-                            <div className="flex items-center gap-2">
-                              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: tag.color }} />
-                              {tag.name}
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Select value={filterDealStatus} onValueChange={setFilterDealStatus}>
-                      <SelectTrigger className="h-9 text-xs bg-muted/30 border-border/40">
-                        <SelectValue placeholder="Status negócio" />
-                      </SelectTrigger>
-                      <SelectContent className="z-[110]">
-                        <SelectItem value="all">Status negócio (Todos)</SelectItem>
-                        <SelectItem value="open">Aberto</SelectItem>
-                        <SelectItem value="won">Ganho</SelectItem>
-                        <SelectItem value="lost">Perdido</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2 pt-2 border-t border-border/40">
-                    <Select value={filterSource} onValueChange={setFilterSource}>
-                      <SelectTrigger className="h-9 text-xs bg-muted/30 border-border/40">
-                        <SelectValue placeholder="Origem" />
-                      </SelectTrigger>
-                      <SelectContent className="z-[110]">
-                        <SelectItem value="all">Origem (Todas)</SelectItem>
-                        {allSources.map(s => (
-                          <SelectItem key={s} value={s}>{s}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2 pt-2 border-t border-border/40">
-                    <div className="grid gap-2 p-2 bg-muted/30 rounded-md">
-                      <Select value={filterCampaign} onValueChange={setFilterCampaign}>
-                        <SelectTrigger className="h-8 text-[11px] bg-background border-border/40">
-                          <SelectValue placeholder="Campanha" />
-                        </SelectTrigger>
-                        <SelectContent className="z-[110]">
-                          <SelectItem value="all">Campanha (Todas)</SelectItem>
-                          {metaFilters?.campaigns.map((c: string) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                      <Select value={filterAdSet} onValueChange={setFilterAdSet}>
-                        <SelectTrigger className="h-8 text-[11px] bg-background border-border/40">
-                          <SelectValue placeholder="Conjunto de anúncio" />
-                        </SelectTrigger>
-                        <SelectContent className="z-[110]">
-                          <SelectItem value="all">Conjunto (Todos)</SelectItem>
-                          {metaFilters?.adsets.map((a: string) => <SelectItem key={a} value={a}>{a}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </div>
-              </PopoverContent>
-            </Popover>
+            <AdvancedFiltersPopover
+              isMobile={true}
+              showResponsible={showResponsibleFilter}
+              search={searchInput}
+              onSearchChange={setSearchInput}
+              responsibleId={filterUser}
+              onResponsibleChange={setFilterUser}
+              tagId={filterTag}
+              onTagChange={setFilterTag}
+              status={filterDealStatus}
+              onStatusChange={setFilterDealStatus}
+              source={filterSource}
+              onSourceChange={setFilterSource}
+              campaignId={filterCampaign}
+              onCampaignChange={setFilterCampaign}
+              adSetId={filterAdSet}
+              onAdSetChange={setFilterAdSet}
+              adId={filterAd}
+              onAdChange={setFilterAd}
+              users={users}
+              allTags={allTags}
+              allSources={allSources}
+              onClear={handleClearFilters}
+              align="end"
+            />
           </div>
         </div>
       </div>
