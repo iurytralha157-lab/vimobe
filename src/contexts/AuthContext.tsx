@@ -110,6 +110,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('[AuthContext] active organization changed:', organization.id);
       if (user) {
         localStorage.setItem(`vimob_active_organization_${user.id}`, organization.id);
+        console.log('[AuthContext] saved active organization to localStorage:', organization.id);
       }
     }
   }, [organization, user]);
@@ -289,7 +290,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsSuperAdmin(false);
       setImpersonating(null);
       localStorage.removeItem('impersonating');
-      sessionStorage.removeItem('org_selected');
       setOrganizationsLoaded(false);
       setUserOrganizations([]);
       setIsInitializingOrg(false);
@@ -414,10 +414,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     );
 
+    // Listen for storage changes (multi-tab sync)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (!isMounted || !userRef.current) return;
+      
+      const key = `vimob_active_organization_${userRef.current.id}`;
+      if (e.key === key && e.newValue) {
+        console.log('[AuthContext] organization changed in another tab:', e.newValue);
+        // Only if different from current
+        if (!organization || organization.id !== e.newValue) {
+          // Trigger a refresh/switch logic if needed, but for now we just log
+          // because switchOrganization handles its own state updates
+          switchOrganization(e.newValue);
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+
     return () => {
       isMounted = false;
       clearTimeout(safetyTimeout);
       subscription.unsubscribe();
+      window.removeEventListener('storage', handleStorageChange);
     };
   }, []);
 
@@ -502,8 +521,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Persistir como a última organização ativa para este usuário
     localStorage.setItem(`vimob_active_organization_${user.id}`, orgId);
     
-    // Marcar como selecionado na sessão para evitar re-redirecionamento
-    sessionStorage.setItem('org_selected', 'true');
+    // sessionStorage org_selected removido - não dependemos mais dele
+    console.log('[AuthContext] switching organization to:', orgId);
 
 
 
@@ -621,16 +640,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } else if (count > 1) {
           // Se tiver múltiplas, tenta carregar a última usada se houver flag de sessão
           const savedOrgId = localStorage.getItem(`vimob_active_organization_${userId}`);
-          const isSessionSelected = sessionStorage.getItem('org_selected') === 'true';
           
-          if (isSessionSelected && savedOrgId && (!organization || organization.id !== savedOrgId)) {
-            console.log('[AuthContext] loading last used org for multi-org user:', savedOrgId);
-            setIsInitializingOrg(true);
-            try {
-              await switchOrganization(savedOrgId);
-            } finally {
-              setIsInitializingOrg(false);
+          if (savedOrgId && (!organization || organization.id !== savedOrgId)) {
+            // Validar se a org salva ainda está na lista de orgs acessíveis
+            const isValid = uniqueOrgs.some(o => o.organization_id === savedOrgId);
+            
+            if (isValid) {
+              console.log('[AuthContext] loading last used org for multi-org user:', savedOrgId);
+              setIsInitializingOrg(true);
+              try {
+                await switchOrganization(savedOrgId);
+              } finally {
+                setIsInitializingOrg(false);
+              }
+            } else {
+              console.warn('[AuthContext] saved organization no longer valid:', savedOrgId);
+              localStorage.removeItem(`vimob_active_organization_${userId}`);
             }
+          } else if (!savedOrgId) {
+            console.log('[AuthContext] multiple organizations found but none active/saved');
           }
         }
       } catch (err) {
