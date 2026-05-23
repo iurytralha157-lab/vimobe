@@ -8729,29 +8729,17 @@ export type Database = {
         Args: { p_org_id: string; p_pipeline_id: string }
         Returns: undefined
       }
-      create_notification:
-        | {
-            Args: {
-              p_content: string
-              p_lead_id?: string
-              p_organization_id: string
-              p_title: string
-              p_type?: string
-              p_user_id: string
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              p_content: string
-              p_reference_id?: string
-              p_reference_type?: string
-              p_title: string
-              p_type?: string
-              p_user_id: string
-            }
-            Returns: string
-          }
+      create_notification: {
+        Args: {
+          p_content: string
+          p_lead_id?: string
+          p_organization_id: string
+          p_title: string
+          p_type?: string
+          p_user_id: string
+        }
+        Returns: string
+      }
       find_orphan_rr_members: {
         Args: never
         Returns: {
