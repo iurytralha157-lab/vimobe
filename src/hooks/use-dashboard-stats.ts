@@ -111,9 +111,9 @@ export function useDashboardStats() {
 
 // Enhanced dashboard stats with filters
 export function useEnhancedDashboardStats(filters?: DashboardFilters) {
-  const { profile } = useAuth();
-  const currentUserId = profile?.id;
-  const organizationId = profile?.organization_id;
+  const { user, organization } = useAuth();
+  const currentUserId = user?.id;
+  const organizationId = organization?.id;
 
   return useQuery({
     queryKey: ['enhanced-dashboard-stats', currentUserId, organizationId, filters?.dateRange?.from?.toISOString(), filters?.dateRange?.to?.toISOString(), filters?.teamId, filters?.userId, filters?.source, filters?.campaignId, filters?.adSetId, filters?.adId],
@@ -270,8 +270,8 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
 
 // Dados do gráfico de leads por dia (otimizado)
 export function useLeadsChartData() {
-  const { profile } = useAuth();
-  const currentUserId = profile?.id;
+  const { user } = useAuth();
+  const currentUserId = user?.id;
 
   return useQuery({
     queryKey: ['leads-chart-data', currentUserId],
@@ -445,9 +445,9 @@ export function useLeadSourcesData(filters?: DashboardFilters, pipelineId?: stri
 
 // Top Brokers (ranking de corretores) - com fallback para leads totais
 export function useTopBrokers(filters?: DashboardFilters) {
-  const { profile } = useAuth();
-  const currentUserId = profile?.id;
-  const organizationId = profile?.organization_id;
+  const { user, organization } = useAuth();
+  const currentUserId = user?.id;
+  const organizationId = organization?.id;
 
   return useQuery({
     queryKey: ['top-brokers', currentUserId, organizationId, filters?.dateRange?.from?.toISOString(), filters?.dateRange?.to?.toISOString(), filters?.teamId, filters?.userId, filters?.source, filters?.campaignId, filters?.adSetId, filters?.adId],
@@ -646,8 +646,8 @@ export function useTopBrokers(filters?: DashboardFilters) {
 
 // Upcoming tasks
 export function useUpcomingTasks() {
-  const { profile } = useAuth();
-  const currentUserId = profile?.id;
+  const { user } = useAuth();
+  const currentUserId = user?.id;
 
   return useQuery({
     queryKey: ['upcoming-tasks', currentUserId],
@@ -720,9 +720,9 @@ export function useUpcomingTasks() {
 
 // Deals evolution (ganhos, perdas, em aberto) grouped by time
 export function useDealsEvolutionData(filters?: DashboardFilters) {
-  const { profile } = useAuth();
-  const currentUserId = profile?.id;
-  const organizationId = profile?.organization_id;
+  const { user, organization } = useAuth();
+  const currentUserId = user?.id;
+  const organizationId = organization?.id;
 
   return useQuery({
     queryKey: ['deals-evolution', currentUserId, organizationId, filters?.dateRange?.from?.toISOString(), filters?.dateRange?.to?.toISOString(), filters?.teamId, filters?.userId, filters?.source, filters?.campaignId, filters?.adSetId, filters?.adId],

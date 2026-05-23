@@ -65,6 +65,14 @@ export default function Dashboard() {
     setAdId,
     clearFilters,
     hasActiveFilters,
+    dynamicSources,
+    campaigns,
+    adSets,
+    ads,
+    isLoadingSources,
+    isLoadingCampaigns,
+    isLoadingAdSets,
+    isLoadingAds
   } = useDashboardFilters();
 
   // Data hooks - Imobiliário
@@ -168,6 +176,14 @@ export default function Dashboard() {
           onAdChange={setAdId}
           onClear={clearFilters}
           hasActiveFilters={hasActiveFilters}
+          dynamicSources={dynamicSources}
+          campaigns={campaigns}
+          adSets={adSets}
+          ads={ads}
+          isLoadingSources={isLoadingSources}
+          isLoadingCampaigns={isLoadingCampaigns}
+          isLoadingAdSets={isLoadingAdSets}
+          isLoadingAds={isLoadingAds}
         />
 
         {/* ===== DESKTOP LAYOUT ===== */}
