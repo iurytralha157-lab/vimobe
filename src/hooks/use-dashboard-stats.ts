@@ -57,6 +57,7 @@ export interface FunnelDataPoint {
 export interface SourceDataPoint {
   name: string;
   value: number;
+  rawSource?: string;
 }
 
 export interface TopBroker {
