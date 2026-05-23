@@ -47,6 +47,15 @@ interface DashboardFiltersProps {
   onAdChange: (id: string | null) => void;
   onClear: () => void;
   hasActiveFilters: boolean;
+  // Dynamic data props
+  dynamicSources?: { value: string, label: string }[];
+  campaigns?: { id: string, name: string }[];
+  adSets?: { id: string, name: string }[];
+  ads?: { id: string, name: string }[];
+  isLoadingSources?: boolean;
+  isLoadingCampaigns?: boolean;
+  isLoadingAdSets?: boolean;
+  isLoadingAds?: boolean;
 }
 
 export function DashboardFilters({
@@ -68,6 +77,14 @@ export function DashboardFilters({
   onAdChange,
   onClear,
   hasActiveFilters,
+  dynamicSources = [],
+  campaigns = [],
+  adSets = [],
+  ads = [],
+  isLoadingSources = false,
+  isLoadingCampaigns = false,
+  isLoadingAdSets = false,
+  isLoadingAds = false,
 }: DashboardFiltersProps) {
   const { profile } = useAuth();
   const { data: teams = [] } = useTeams();
@@ -168,16 +185,89 @@ export function DashboardFilters({
         source && "border-primary text-primary"
       )}>
         <Globe className="h-3.5 w-3.5 mr-1.5 flex-shrink-0" />
-        <SelectValue placeholder="Origem" />
+        <SelectValue placeholder={isLoadingSources ? "Carregando..." : "Origem"} />
       </SelectTrigger>
       <SelectContent>
-        {sourceOptions.map((option) => (
+        <SelectItem value="all">Todas origens</SelectItem>
+        {dynamicSources.map((option) => (
           <SelectItem key={option.value} value={option.value}>
             {option.label}
           </SelectItem>
         ))}
       </SelectContent>
     </Select>
+  );
+
+  const MetaFilters = () => (
+    <div className="space-y-2">
+      <div className="space-y-1">
+        <Select
+          value={campaignId || 'all'}
+          onValueChange={(val) => {
+            onCampaignChange(val === 'all' ? null : val);
+          }}
+        >
+          <SelectTrigger className="h-8 text-xs bg-background/50 border-border/40">
+            <SelectValue placeholder={isLoadingCampaigns ? "Carregando..." : "Todas campanhas"} />
+          </SelectTrigger>
+          <SelectContent className="z-[120]">
+            <SelectItem value="all">Todas campanhas</SelectItem>
+            {campaigns.map((c) => (
+              <SelectItem key={c.id} value={c.id}>
+                {c.name}
+              </SelectItem>
+            ))}
+            {!isLoadingCampaigns && campaigns.length === 0 && (
+              <div className="p-2 text-[10px] text-center text-muted-foreground">Nenhuma campanha no período</div>
+            )}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {campaignId && (
+        <div className="space-y-1">
+          <Select
+            value={adSetId || 'all'}
+            onValueChange={(val) => {
+              onAdSetChange(val === 'all' ? null : val);
+            }}
+          >
+            <SelectTrigger className="h-8 text-xs bg-background/50 border-border/40 animate-in fade-in slide-in-from-top-1">
+              <SelectValue placeholder={isLoadingAdSets ? "Carregando..." : "Todos conjuntos"} />
+            </SelectTrigger>
+            <SelectContent className="z-[120]">
+              <SelectItem value="all">Todos conjuntos</SelectItem>
+              {adSets.map((s) => (
+                <SelectItem key={s.id} value={s.id}>
+                  {s.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      {adSetId && (
+        <div className="space-y-1">
+          <Select
+            value={adId || 'all'}
+            onValueChange={(val) => onAdChange(val === 'all' ? null : val)}
+          >
+            <SelectTrigger className="h-8 text-xs bg-background/50 border-border/40 animate-in fade-in slide-in-from-top-1">
+              <SelectValue placeholder={isLoadingAds ? "Carregando..." : "Todos criativos"} />
+            </SelectTrigger>
+            <SelectContent className="z-[120]">
+              <SelectItem value="all">Todos criativos</SelectItem>
+              {ads.map((a) => (
+                <SelectItem key={a.id} value={a.id}>
+                  {a.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+    </div>
   );
 
   // Consolidate filters for smaller screens (mobile and small desktops/tablets)
@@ -227,18 +317,12 @@ export function DashboardFilters({
                 )}
               </div>
 
-              {/* Meta Campaign Filter */}
               <div className="pb-3 border-b border-border">
-                <CampaignFilter 
-                  campaignId={campaignId}
-                  onCampaignChange={onCampaignChange}
-                  adSetId={adSetId}
-                  onAdSetChange={onAdSetChange}
-                  adId={adId}
-                  onAdChange={onAdChange}
-                  fullWidth
-                  hideTitles // New prop to hide internal labels
-                />
+                <div className="flex items-center gap-1.5 px-1 mb-2">
+                  <Facebook className="h-3 w-3 text-[#1877F2]" />
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Campanhas Meta</span>
+                </div>
+                <MetaFilters />
               </div>
 
               {/* Team */}
@@ -360,16 +444,7 @@ export function DashboardFilters({
                     <Facebook className="h-3 w-3 text-[#1877F2]" />
                     <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Campanhas Meta</span>
                   </div>
-                  <CampaignFilter 
-                    campaignId={campaignId}
-                    onCampaignChange={onCampaignChange}
-                    adSetId={adSetId}
-                    onAdSetChange={onAdSetChange}
-                    adId={adId}
-                    onAdChange={onAdChange}
-                    fullWidth
-                    hideTitles
-                  />
+                  <MetaFilters />
                 </div>
               </div>
             </div>
