@@ -59,7 +59,7 @@ function CustomTooltip(props: any) {
   );
 }
 
-export function LeadSourcesChart({ data, isLoading }: LeadSourcesChartProps) {
+export function LeadSourcesChart({ data, isLoading, selectedSource, onSourceChange }: LeadSourcesChartProps) {
   if (isLoading) {
     return (
       <Card className="overflow-hidden h-full flex flex-col shadow-sm border-border/50">
@@ -85,6 +85,20 @@ export function LeadSourcesChart({ data, isLoading }: LeadSourcesChartProps) {
     .sort((a, b) => b.value - a.value);
 
   const bestSource = chartData[0] || { name: 'N/A', value: 0, percentage: 0 };
+
+  const handleSourceClick = (entry: any) => {
+    if (!onSourceChange) return;
+    
+    const clickedSource = entry.rawSource;
+    const clickedLabel = entry.name;
+    const currentSelectedLabel = selectedSource ? (sourceLabels[selectedSource] || selectedSource) : null;
+    
+    if (clickedLabel === currentSelectedLabel) {
+      onSourceChange(null);
+    } else {
+      onSourceChange(clickedSource);
+    }
+  };
 
   if (total === 0) {
     return (
@@ -115,6 +129,15 @@ export function LeadSourcesChart({ data, isLoading }: LeadSourcesChartProps) {
             <PieChartIcon className="h-3.5 w-3.5 text-primary" />
             Origem dos Leads
           </CardTitle>
+          {selectedSource && (
+            <button 
+              onClick={() => onSourceChange?.(null)}
+              className="text-[10px] font-bold text-primary hover:underline flex items-center gap-1"
+            >
+              <MousePointer2 className="h-2.5 w-2.5" />
+              Limpar Filtro
+            </button>
+          )}
         </div>
       </CardHeader>
       
@@ -137,13 +160,25 @@ export function LeadSourcesChart({ data, isLoading }: LeadSourcesChartProps) {
                 strokeWidth={0}
                 className="outline-none"
               >
-                {chartData.map((_, index) => (
-                  <Cell
-                    key={`cell-${index}`}
-                    fill={COLORS[index % COLORS.length]}
-                    className="transition-all duration-500 hover:opacity-90 hover:scale-[1.02] origin-center outline-none cursor-pointer"
-                  />
-                ))}
+                {chartData.map((entry, index) => {
+                  const isSelected = selectedSource ? (sourceLabels[selectedSource] || selectedSource) === entry.name : false;
+                  const hasSelection = !!selectedSource;
+                  
+                  return (
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={COLORS[index % COLORS.length]}
+                      opacity={hasSelection && !isSelected ? 0.35 : 1}
+                      stroke={isSelected ? "white" : "transparent"}
+                      strokeWidth={isSelected ? 2 : 0}
+                      className={cn(
+                        "transition-all duration-300 hover:opacity-90 origin-center outline-none cursor-pointer",
+                        isSelected && "drop-shadow-md scale-[1.02]"
+                      )}
+                      onClick={() => handleSourceClick(entry)}
+                    />
+                  );
+                })}
               </Pie>
               <Tooltip 
                 content={<CustomTooltip />} 
