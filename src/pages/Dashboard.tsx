@@ -216,7 +216,12 @@ export default function Dashboard() {
               {funnelComponent}
             </div>
             <div className="h-[52%] min-h-0">
-              <LeadSourcesChart data={sourcesData} isLoading={sourcesLoading} />
+              <LeadSourcesChart 
+                data={sourcesData} 
+                isLoading={sourcesLoading} 
+                selectedSource={source}
+                onSourceChange={setSource}
+              />
             </div>
           </div>
         </div>
