@@ -411,33 +411,27 @@ export function useLeadSourcesData(filters?: DashboardFilters, pipelineId?: stri
         return [] as SourceDataPoint[];
       }
       
-      // Map source names to friendly labels
-      const sourceLabels: Record<string, string> = {
-        'meta': 'Meta Ads',
-        'facebook': 'Meta Ads',
-        'instagram': 'Meta Ads',
-        'google': 'Google Ads',
-        'google_ads': 'Google Ads',
-        'site': 'Site',
-        'website': 'Site',
-        'landing_page': 'Landing Page',
-        'whatsapp': 'WhatsApp',
-        'manual': 'Manual',
-        'webhook': 'API / Integração',
-        'api': 'API',
-        'indicacao': 'Indicação',
-        'import': 'Importação',
-      };
+      // Map source names to friendly labels using the exported mapping
+      const labels = sourceLabels;
       
-      const aggregatedData: Record<string, number> = {};
+      const aggregatedData: Record<string, { count: number; rawSource: string }> = {};
       
       (data || []).forEach((item: any) => {
-        const label = sourceLabels[item.source_name] || item.source_name || 'Outros';
-        aggregatedData[label] = (aggregatedData[label] || 0) + (Number(item.lead_count) || 0);
+        const rawSource = item.source_name;
+        const label = labels[rawSource] || rawSource || 'Outros';
+        
+        if (!aggregatedData[label]) {
+          aggregatedData[label] = { count: 0, rawSource: rawSource };
+        }
+        aggregatedData[label].count += (Number(item.lead_count) || 0);
       });
       
       return Object.entries(aggregatedData)
-        .map(([name, value]) => ({ name, value }))
+        .map(([name, data]) => ({ 
+          name, 
+          value: data.count, 
+          rawSource: data.rawSource 
+        }))
         .sort((a, b) => b.value - a.value) as SourceDataPoint[];
     },
     staleTime: 1000 * 60 * 5, // 5 minutos
