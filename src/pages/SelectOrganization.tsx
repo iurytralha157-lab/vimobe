@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from 'next-themes';
 import { useAuth } from '@/contexts/AuthContext';
@@ -33,7 +33,7 @@ const formatLastAccess = (iso: string | null) => {
 };
 
 export default function SelectOrganization() {
-  const { user, loading, authInitialized, isSuperAdmin, switchOrganization, organization, signOut, userOrganizations: rawOrganizations = [], organizationsLoaded } = useAuth();
+  const { user, loading, authInitialized, isSuperAdmin, switchOrganization, organization, signOut, userOrganizations: rawOrganizations = [], organizationsLoaded, isInitializingOrg } = useAuth();
   const navigate = useNavigate();
   const { data: systemSettings } = useSystemSettings();
   const { resolvedTheme } = useTheme();
@@ -67,15 +67,30 @@ export default function SelectOrganization() {
     navigate('/dashboard', { replace: true });
   };
 
-  if (loading || !organizationsLoaded) {
+  if (loading || !organizationsLoaded || isInitializingOrg) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-sm text-muted-foreground animate-pulse">Carregando seu ambiente...</p>
+        </div>
       </div>
     );
   }
 
-  if (organizations.length === 0) {
+  const [showEmptyState, setShowEmptyState] = useState(false);
+
+  useEffect(() => {
+    if (organizationsLoaded && organizations.length === 0) {
+      // Pequeno delay para evitar flash se houver um redirecionamento de última hora
+      const timer = setTimeout(() => setShowEmptyState(true), 500);
+      return () => clearTimeout(timer);
+    } else {
+      setShowEmptyState(false);
+    }
+  }, [organizationsLoaded, organizations.length]);
+
+  if (showEmptyState && organizations.length === 0) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4 text-center space-y-4">
         <Building2 className="h-12 w-12 text-muted-foreground" />
@@ -109,6 +124,17 @@ export default function SelectOrganization() {
           >
             Sair
           </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (organizations.length === 0) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-sm text-muted-foreground animate-pulse">Verificando acessos...</p>
         </div>
       </div>
     );
