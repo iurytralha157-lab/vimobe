@@ -29,7 +29,7 @@ interface DashboardFiltersProps {
   onAdChange: (id: string | null) => void;
   onClear: () => void;
   hasActiveFilters: boolean;
-  dynamicSources: string[];
+  dynamicSources: Array<string | { value: string; label: string }>;
   campaigns: any[];
   adSets: any[];
   ads: any[];
