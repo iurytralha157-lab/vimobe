@@ -1,6 +1,10 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useFilters } from '@/contexts/FilterContext';
 import { subDays, startOfDay, endOfDay, startOfMonth, endOfMonth, startOfQuarter, startOfYear, subMonths } from 'date-fns';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { useLeadVisibility, applyVisibilityFilter } from './use-lead-visibility';
 
 export type DatePreset = 
   | 'today' 
