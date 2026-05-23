@@ -1,18 +1,22 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PieChart as PieChartIcon, TrendingUp, Users } from 'lucide-react';
+import { PieChart as PieChartIcon, TrendingUp, Users, MousePointer2 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { cn } from '@/lib/utils';
 import { DashboardChartTooltip } from './DashboardChartTooltip';
+import { sourceLabels } from '@/hooks/use-dashboard-filters';
 
 interface SourceDataPoint {
   name: string;
   value: number;
+  rawSource?: string;
 }
 
 interface LeadSourcesChartProps {
   data: SourceDataPoint[];
   isLoading?: boolean;
+  selectedSource?: string | null;
+  onSourceChange?: (source: string | null) => void;
 }
 
 const COLORS = [
