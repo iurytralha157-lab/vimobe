@@ -138,28 +138,43 @@ Deno.serve(async (req) => {
         break;
 
       case 'update':
-        // Update user in public.users
-        // Fields allowed: name, email, phone, whatsapp, role, is_active, organization_id
+        if (!userId) {
+          throw new Error('User ID is required for update action');
+        }
+
+        // If email is provided, validate and update Auth first
+        if (data.email) {
+          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+          if (!emailRegex.test(data.email)) {
+            throw new Error('Formato de e-mail inválido');
+          }
+
+          // 1. Update Supabase Auth first
+          const { error: authEmailError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+            email: data.email,
+            email_confirm: true
+          });
+
+          if (authEmailError) {
+            if (authEmailError.message.toLowerCase().includes('already registered') || 
+                authEmailError.message.toLowerCase().includes('already exists')) {
+              throw new Error('Este e-mail já está em uso por outro usuário');
+            }
+            throw new Error(`Erro ao atualizar e-mail no Auth: ${authEmailError.message}`);
+          }
+        }
+
+        // 2. Only if Auth is successful (or not being updated), update public.users
         const { error: updateError } = await supabaseAdmin
           .from('users')
           .update(data)
           .eq('id', userId);
         
         if (updateError) {
-          throw new Error(`Failed to update user: ${updateError.message}`);
+          throw new Error(`Falha ao atualizar dados do usuário: ${updateError.message}`);
         }
 
-        // If email changed, also update auth.users
-        if (data.email) {
-          const { error: authEmailError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
-            email: data.email
-          });
-          if (authEmailError) {
-            console.error('[manage-user] Error updating auth email:', authEmailError);
-          }
-        }
-
-        result = { success: true, message: 'User updated successfully' };
+        result = { success: true, message: 'Usuário atualizado com sucesso' };
         break;
 
       case 'reset_password':
