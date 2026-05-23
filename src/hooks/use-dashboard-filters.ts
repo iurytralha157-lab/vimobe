@@ -142,20 +142,8 @@ export function useDashboardFilters() {
       const { data } = await query;
       const distinctSources = [...new Set(data?.map(l => l.source))].filter(Boolean);
       
-      const sourceLabels: Record<string, string> = {
-        'meta': 'Meta Ads',
-        'facebook': 'Meta Ads',
-        'instagram': 'Meta Ads',
-        'google': 'Google Ads',
-        'google_ads': 'Google Ads',
-        'site': 'Site',
-        'website': 'Site',
-        'landing_page': 'Landing Page',
-        'whatsapp': 'WhatsApp',
-        'manual': 'Manual',
-        'webhook': 'API / Integração',
-        'indicacao': 'Indicação',
-      };
+      // Usar mapeamento exportado
+      const labels = sourceLabels;
 
       return distinctSources.map(s => ({
         value: s as string,
