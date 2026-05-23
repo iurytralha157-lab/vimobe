@@ -65,6 +65,14 @@ export default function Dashboard() {
     setAdId,
     clearFilters,
     hasActiveFilters,
+    dynamicSources,
+    campaigns,
+    adSets,
+    ads,
+    isLoadingSources,
+    isLoadingCampaigns,
+    isLoadingAdSets,
+    isLoadingAds
   } = useDashboardFilters();
 
   // Data hooks - Imobiliário
