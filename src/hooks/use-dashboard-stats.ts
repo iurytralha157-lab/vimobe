@@ -161,26 +161,15 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
         // 2. Query de Vendas Ganhas
         let wonQuery = supabase
           .from('leads')
-          .select('id, valor_interesse, assigned_user_id, source', { count: 'exact' })
+          .select('id, valor_interesse, assigned_user_id, source, lead_meta!left(campaign_id, adset_id, ad_id)')
           .eq('organization_id', organizationId)
           .eq('deal_status', 'won')
           .gte('won_at', currentFrom.toISOString())
           .lte('won_at', currentTo.toISOString());
 
-        if (filters?.campaignId || filters?.adSetId || filters?.adId) {
-          wonQuery = supabase
-            .from('leads')
-            .select('id, valor_interesse, assigned_user_id, source, lead_meta!inner(campaign_id, adset_id, ad_id)', { count: 'exact' })
-            .eq('organization_id', organizationId)
-            .eq('deal_status', 'won')
-            .gte('won_at', currentFrom.toISOString())
-            .lte('won_at', currentTo.toISOString());
-
-          if (filters.campaignId) wonQuery = wonQuery.eq('lead_meta.campaign_id', filters.campaignId);
-          if (filters.adSetId) wonQuery = wonQuery.eq('lead_meta.adset_id', filters.adSetId);
-          if (filters.adId) wonQuery = wonQuery.eq('lead_meta.ad_id', filters.adId);
-        }
-
+        if (filters?.campaignId) wonQuery = wonQuery.eq('lead_meta.campaign_id', filters.campaignId);
+        if (filters?.adSetId) wonQuery = wonQuery.eq('lead_meta.adset_id', filters.adSetId);
+        if (filters?.adId) wonQuery = wonQuery.eq('lead_meta.ad_id', filters.adId);
         if (filters?.source) wonQuery = wonQuery.eq('source', filters.source);
         wonQuery = applyVisibilityFilter(wonQuery, visibility, 'assigned_user_id', filters?.userId);
 
@@ -363,9 +352,6 @@ export function useFunnelData(filters?: DashboardFilters, pipelineId?: string | 
         p_user_id: effectiveUserId || null,
         p_source: filters?.source || null,
         p_pipeline_id: pipelineId || null,
-        p_campaign_id: filters?.campaignId || null,
-        p_adset_id: filters?.adSetId || null,
-        p_ad_id: filters?.adId || null,
       });
       
       if (error) {
@@ -418,9 +404,6 @@ export function useLeadSourcesData(filters?: DashboardFilters, pipelineId?: stri
         p_user_id: effectiveUserId || null,
         p_source: filters?.source || null,
         p_pipeline_id: pipelineId || null,
-        p_campaign_id: filters?.campaignId || null,
-        p_adset_id: filters?.adSetId || null,
-        p_ad_id: filters?.adId || null,
       });
       
       if (error) {
