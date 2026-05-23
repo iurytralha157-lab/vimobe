@@ -260,7 +260,12 @@ export default function Dashboard() {
             </TabsContent>
             <TabsContent value="sources" className={cn("mt-3", !isMobile ? "flex-1 min-h-0" : "")}>
               <div className="h-[450px]">
-                <LeadSourcesChart data={sourcesData} isLoading={sourcesLoading} />
+                <LeadSourcesChart 
+                  data={sourcesData} 
+                  isLoading={sourcesLoading} 
+                  selectedSource={source}
+                  onSourceChange={setSource}
+                />
               </div>
             </TabsContent>
           </Tabs>
