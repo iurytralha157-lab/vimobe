@@ -29,7 +29,7 @@ interface DashboardFiltersProps {
   onAdChange: (id: string | null) => void;
   onClear: () => void;
   hasActiveFilters: boolean;
-  dynamicSources: string[];
+  dynamicSources: Array<string | { value: string; label: string }>;
   campaigns: any[];
   adSets: any[];
   ads: any[];
@@ -172,11 +172,15 @@ export function DashboardFilters({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas origens</SelectItem>
-                  {dynamicSources.map((src) => (
-                    <SelectItem key={src} value={src}>
-                      {src}
-                    </SelectItem>
-                  ))}
+                  {dynamicSources.map((src: any) => {
+                    const value = typeof src === "string" ? src : src.value;
+                    const label = typeof src === "string" ? src : src.label;
+                    return (
+                      <SelectItem key={value} value={value}>
+                        {label}
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             </div>
