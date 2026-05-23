@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { performanceTracker } from '@/lib/performance';
 import { subDays, format, eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, differenceInDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { DashboardFilters } from './use-dashboard-filters';
+import { DashboardFilters, sourceLabels } from './use-dashboard-filters';
 import { useAuth } from '@/contexts/AuthContext';
 import { checkLeadVisibility, applyVisibilityFilter, LeadVisibility } from './use-lead-visibility';
 
