@@ -712,54 +712,6 @@ export type Database = {
           },
         ]
       }
-      automation_runs: {
-        Row: {
-          automation_id: string | null
-          completed_at: string | null
-          error_message: string | null
-          execution_log: Json | null
-          id: string
-          lead_id: string | null
-          started_at: string | null
-          status: string | null
-        }
-        Insert: {
-          automation_id?: string | null
-          completed_at?: string | null
-          error_message?: string | null
-          execution_log?: Json | null
-          id?: string
-          lead_id?: string | null
-          started_at?: string | null
-          status?: string | null
-        }
-        Update: {
-          automation_id?: string | null
-          completed_at?: string | null
-          error_message?: string | null
-          execution_log?: Json | null
-          id?: string
-          lead_id?: string | null
-          started_at?: string | null
-          status?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "automation_runs_automation_id_fkey"
-            columns: ["automation_id"]
-            isOneToOne: false
-            referencedRelation: "automations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "automation_runs_lead_id_fkey"
-            columns: ["lead_id"]
-            isOneToOne: false
-            referencedRelation: "leads"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       automation_templates: {
         Row: {
           content: string
@@ -4979,56 +4931,6 @@ export type Database = {
           },
         ]
       }
-      organization_payments: {
-        Row: {
-          amount: number
-          asaas_id: string | null
-          created_at: string | null
-          due_date: string
-          id: string
-          invoice_url: string | null
-          organization_id: string | null
-          payment_date: string | null
-          payment_method: string | null
-          status: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          amount: number
-          asaas_id?: string | null
-          created_at?: string | null
-          due_date: string
-          id?: string
-          invoice_url?: string | null
-          organization_id?: string | null
-          payment_date?: string | null
-          payment_method?: string | null
-          status?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          amount?: number
-          asaas_id?: string | null
-          created_at?: string | null
-          due_date?: string
-          id?: string
-          invoice_url?: string | null
-          organization_id?: string | null
-          payment_date?: string | null
-          payment_method?: string | null
-          status?: string | null
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "organization_payments_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       organization_role_permissions: {
         Row: {
           created_at: string
@@ -5282,53 +5184,6 @@ export type Database = {
             foreignKeyName: "organization_sites_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: true
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      organization_subscriptions: {
-        Row: {
-          amount: number
-          created_at: string | null
-          due_date: string
-          id: string
-          invoice_url: string | null
-          organization_id: string | null
-          paid_at: string | null
-          payment_method: string | null
-          status: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          amount: number
-          created_at?: string | null
-          due_date: string
-          id?: string
-          invoice_url?: string | null
-          organization_id?: string | null
-          paid_at?: string | null
-          payment_method?: string | null
-          status?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          amount?: number
-          created_at?: string | null
-          due_date?: string
-          id?: string
-          invoice_url?: string | null
-          organization_id?: string | null
-          paid_at?: string | null
-          payment_method?: string | null
-          status?: string | null
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "organization_subscriptions_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
