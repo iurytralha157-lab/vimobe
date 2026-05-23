@@ -82,7 +82,6 @@ export default function Auth() {
   });
   const [isTransitioning, setIsTransitioning] = useState(false);
 
-  const { user, authInitialized, signIn, resetPassword } = useAuth();
   
   // Redirect if already logged in
   useEffect(() => {
