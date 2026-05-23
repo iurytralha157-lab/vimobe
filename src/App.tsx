@@ -170,17 +170,43 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   if (!user) return <Navigate to="/auth" replace />;
 
   const orgCount = userOrganizations?.length ?? 0;
-  const hasSelectedOrg = sessionStorage.getItem('org_selected') === 'true';
+  const currentPath = useLocation().pathname;
+  
+  // Decisão de redirecionamento (Etapa 1 & 2)
+  const isOrgResolutionReady = authInitialized && organizationsLoaded && !isInitializingOrg;
+  const savedOrgId = user ? localStorage.getItem(`vimob_active_organization_${user.id}`) : null;
+  const hasValidActiveOrg = !!organization || !!impersonating || (isSuperAdmin && !organization);
 
-  // Regra: se multi-org e não selecionou nesta sessão, vai para seleção
-  if (orgCount > 1 && !hasSelectedOrg && !impersonating && !isSuperAdmin) {
+  console.log('[ProtectedRoute Debug]', {
+    currentPath,
+    userId: user?.id,
+    loading,
+    authInitialized,
+    organizationsLoaded,
+    isInitializingOrg,
+    orgCount,
+    savedOrgId,
+    activeOrgId: organization?.id,
+    hasValidActiveOrg,
+    isSuperAdmin
+  });
+
+  if (loading || !isOrgResolutionReady) return <PageLoader />;
+  if (!user) return <Navigate to="/auth" replace />;
+
+  // Se tem organizações mas nenhuma ativa válida E não é super admin acessando painel admin
+  if (orgCount > 0 && !hasValidActiveOrg) {
+    console.log('[ProtectedRoute] Redirecting to /select-organization - no active org');
     return <Navigate to="/select-organization" replace />;
   }
 
-  // Se tem organizações mas nenhuma selecionada ainda (e não estamos carregando)
-  if (orgCount > 0 && !organization && !isSuperAdmin && !impersonating) {
+  // Se não tem organizações e não é super admin
+  if (orgCount === 0 && !isSuperAdmin) {
+    console.warn('[ProtectedRoute] User has no organizations');
     return <Navigate to="/select-organization" replace />;
   }
+
+  return <>{children}</>;
 
   return <>{children}</>;
 }
@@ -199,17 +225,21 @@ function AppRoutes() {
 
   const getDefaultRedirect = () => {
     const orgCount = userOrganizations?.length ?? 0;
-    const hasSelectedOrg = sessionStorage.getItem('org_selected') === 'true';
+    const savedOrgId = user ? localStorage.getItem(`vimob_active_organization_${user.id}`) : null;
+    const hasActiveOrg = !!organization || !!impersonating;
 
     if (isSuperAdmin && !impersonating && !organization) return "/admin";
     
     // Se não tem nenhuma org, manda para a tela de seleção que mostrará o erro de sem acesso
     if (orgCount === 0 && !isSuperAdmin) return "/select-organization";
 
-    // Regra: se multi-org e não selecionou nesta sessão, vai para seleção
-    if (orgCount > 1 && !hasSelectedOrg && !impersonating) return "/select-organization";
+    // Se já tem uma org ativa (carregada via localStorage ou switch), vai para dashboard
+    if (hasActiveOrg) return "/dashboard";
     
-    // Caso contrário (1 org ou já selecionou), vai para dashboard
+    // Se tem múltiplas e nada ativo ainda, vai para seleção
+    if (orgCount > 1 && !savedOrgId) return "/select-organization";
+    
+    // Caso padrão (1 org ou multi com org salva que será carregada pelo AuthContext)
     return "/dashboard";
   };
 
@@ -265,7 +295,7 @@ function AppRoutes() {
             <Route path="/select-organization" element={
               loading || !authInitialized || !organizationsLoaded || isInitializingOrg ? <PageLoader /> :
               !user ? <Navigate to="/auth" replace /> :
-              (userOrganizations?.length ?? 0) === 1 && organization ? <Navigate to="/dashboard" replace /> :
+              (userOrganizations?.length ?? 0) === 1 && (organization || isInitializingOrg) ? <Navigate to="/dashboard" replace /> :
               <Suspense fallback={<PageLoader />}><SelectOrganization /></Suspense>
             } />
             
