@@ -414,29 +414,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     );
 
-    // Listen for storage changes (multi-tab sync)
-    const handleStorageChange = (e: StorageEvent) => {
-      if (!isMounted || !userRef.current) return;
-      
-      const key = `vimob_active_organization_${userRef.current.id}`;
-      if (e.key === key && e.newValue) {
-        console.log('[AuthContext] organization changed in another tab:', e.newValue);
-        // Only if different from current
-        if (!organization || organization.id !== e.newValue) {
-          // Trigger a refresh/switch logic if needed, but for now we just log
-          // because switchOrganization handles its own state updates
-          switchOrganization(e.newValue);
-        }
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-
     return () => {
       isMounted = false;
       clearTimeout(safetyTimeout);
       subscription.unsubscribe();
-      window.removeEventListener('storage', handleStorageChange);
     };
   }, []);
 

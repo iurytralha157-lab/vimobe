@@ -37,6 +37,7 @@ export default function SelectOrganization() {
   const navigate = useNavigate();
   const { data: systemSettings } = useSystemSettings();
   const { resolvedTheme } = useTheme();
+  const [showEmptyState, setShowEmptyState] = useState(false);
 
   // Filtrar organizações duplicadas
   const organizations = useMemo(() => {
@@ -62,6 +63,15 @@ export default function SelectOrganization() {
     }
   }, [loading, authInitialized, user, navigate]);
 
+  useEffect(() => {
+    if (organizationsLoaded && organizations.length === 0) {
+      const timer = setTimeout(() => setShowEmptyState(true), 500);
+      return () => clearTimeout(timer);
+    } else {
+      setShowEmptyState(false);
+    }
+  }, [organizationsLoaded, organizations.length]);
+
   const handleSelectOrg = async (orgId: string) => {
     await switchOrganization(orgId);
     navigate('/dashboard', { replace: true });
@@ -77,18 +87,6 @@ export default function SelectOrganization() {
       </div>
     );
   }
-
-  const [showEmptyState, setShowEmptyState] = useState(false);
-
-  useEffect(() => {
-    if (organizationsLoaded && organizations.length === 0) {
-      // Pequeno delay para evitar flash se houver um redirecionamento de última hora
-      const timer = setTimeout(() => setShowEmptyState(true), 500);
-      return () => clearTimeout(timer);
-    } else {
-      setShowEmptyState(false);
-    }
-  }, [organizationsLoaded, organizations.length]);
 
   if (showEmptyState && organizations.length === 0) {
     return (

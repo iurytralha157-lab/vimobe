@@ -165,48 +165,21 @@ const PageLoader = () => (
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading, authInitialized, organizationsLoaded, organization, userOrganizations, isSuperAdmin, impersonating, isInitializingOrg } = useAuth();
-  
+  const currentPath = useLocation().pathname;
+
   if (loading || !authInitialized || !organizationsLoaded || isInitializingOrg) return <PageLoader />;
   if (!user) return <Navigate to="/auth" replace />;
 
   const orgCount = userOrganizations?.length ?? 0;
-  const currentPath = useLocation().pathname;
-  
-  // Decisão de redirecionamento (Etapa 1 & 2)
-  const isOrgResolutionReady = authInitialized && organizationsLoaded && !isInitializingOrg;
-  const savedOrgId = user ? localStorage.getItem(`vimob_active_organization_${user.id}`) : null;
   const hasValidActiveOrg = !!organization || !!impersonating || (isSuperAdmin && !organization);
 
-  console.log('[ProtectedRoute Debug]', {
-    currentPath,
-    userId: user?.id,
-    loading,
-    authInitialized,
-    organizationsLoaded,
-    isInitializingOrg,
-    orgCount,
-    savedOrgId,
-    activeOrgId: organization?.id,
-    hasValidActiveOrg,
-    isSuperAdmin
-  });
-
-  if (loading || !isOrgResolutionReady) return <PageLoader />;
-  if (!user) return <Navigate to="/auth" replace />;
-
-  // Se tem organizações mas nenhuma ativa válida E não é super admin acessando painel admin
   if (orgCount > 0 && !hasValidActiveOrg) {
-    console.log('[ProtectedRoute] Redirecting to /select-organization - no active org');
     return <Navigate to="/select-organization" replace />;
   }
 
-  // Se não tem organizações e não é super admin
   if (orgCount === 0 && !isSuperAdmin) {
-    console.warn('[ProtectedRoute] User has no organizations');
-    return <Navigate to="/select-organization" replace />;
+    return <Navigate to="/onboarding" replace />;
   }
-
-  return <>{children}</>;
 
   return <>{children}</>;
 }
