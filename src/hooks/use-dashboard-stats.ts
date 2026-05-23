@@ -240,7 +240,8 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
           return `${Math.round(seconds / 3600)}h`;
         };
 
-        const conversionRate = totalLeads > 0 ? (closedLeads / totalLeads) * 100 : 0;
+        const wonFromPeriod = leads.filter(l => l.deal_status === 'won').length;
+        const conversionRate = totalLeads > 0 ? (wonFromPeriod / totalLeads) * 100 : 0;
         const leadsTrend = prevTotal && prevTotal > 0 
           ? Math.round(((totalLeads - prevTotal) / prevTotal) * 100) 
           : 0;
