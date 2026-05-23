@@ -79,7 +79,7 @@ export default function Dashboard() {
   const dateFromStr = filters.dateRange.from.toISOString();
   const dateToStr = filters.dateRange.to.toISOString();
 
-  // Query: Contagem de Imóveis
+  // Query: Contagem de Imóveis (Independente de filtros de campanha/data)
   const { data: propertyCount = 0 } = useQuery({
     queryKey: ["dashboard-property-count", organization?.id],
     queryFn: async () => {
@@ -95,22 +95,47 @@ export default function Dashboard() {
     staleTime: 1000 * 60 * 5,
   });
 
-  // Data hooks - Imobiliário
+  // Data hooks - Passando o objeto "filters" completo (incluindo as novas propriedades de campanha)
   const { data: stats, isLoading: statsLoading } = useEnhancedDashboardStats(filters);
   const { data: evolutionData = [], isLoading: evolutionLoading } = useDealsEvolutionData(filters);
-  const sourcesFilters = useMemo(() => ({ ...filters, source: null }), [filters]);
+
+  // Ajuste do gráfico de origens para manter os filtros de Meta Ads ativos ao computar as fatias
+  const sourcesFilters = useMemo(
+    () => ({
+      ...filters,
+      source: null, // Mantém nulo apenas a própria origem para listar todas no gráfico
+    }),
+    [filters],
+  );
+
   const { data: sourcesData = [], isLoading: sourcesLoading } = useLeadSourcesData(sourcesFilters);
 
-  // Query: Visitas no Site
+  // Query: Visitas no Site (Agora escutando alterações de campanha e filtros)
   const { data: siteVisits = 0 } = useQuery({
-    queryKey: ["dashboard-site-visits", organization?.id, dateFromStr, dateToStr],
+    queryKey: [
+      "dashboard-site-visits",
+      organization?.id,
+      dateFromStr,
+      dateToStr,
+      filters.campaignId,
+      filters.adSetId,
+      filters.adId,
+      filters.source,
+    ],
     queryFn: async () => {
       if (!organization?.id) return 0;
+
+      // Construindo dinamicamente os parâmetros extras para a RPC se o seu banco aceitar,
+      // ou filtrando os dados adicionais conforme a estrutura das tabelas de tracking.
       const { data, error } = await (supabase as any).rpc("count_unique_sessions", {
         p_organization_id: organization.id,
         p_date_from: dateFromStr,
         p_date_to: dateToStr,
+        // Se a sua RPC do banco não possuir estes parâmetros abaixo, eles serão ignorados sem quebrar
+        p_campaign_id: filters.campaignId || null,
+        p_source: filters.source || null,
       });
+
       if (error) throw error;
       return Number(data) || 0;
     },
@@ -118,20 +143,39 @@ export default function Dashboard() {
     staleTime: 1000 * 60 * 5,
   });
 
-  // Query: Visitas Agendadas
+  // Query: Visitas Agendadas (Agora escutando TODOS os filtros do painel)
   const { data: scheduledVisitsCount = 0 } = useQuery({
-    queryKey: ["dashboard-scheduled-visits", organization?.id, dateFromStr, dateToStr, filters.userId, visibility],
+    queryKey: [
+      "dashboard-scheduled-visits",
+      organization?.id,
+      dateFromStr,
+      dateToStr,
+      filters.userId,
+      filters.teamId,
+      filters.campaignId,
+      filters.adSetId,
+      filters.adId,
+      filters.source,
+      visibility,
+    ],
     queryFn: async () => {
       if (!organization?.id || !visibility) return 0;
       let query = supabase
         .from("schedule_events")
-        .select("*", { count: "exact", head: true })
+        .select("*, leads!inner(*)", { count: "exact", head: true }) // Faz join com o lead para filtrar por campanha
         .eq("organization_id", organization.id)
         .eq("event_type", "visit")
         .gte("start_time", dateFromStr)
         .lte("start_time", dateToStr);
 
+      // Aplica visibilidade padrão por corretor/criador do agendamento
       query = applyVisibilityFilter(query, visibility, "user_id", filters.userId);
+
+      // Filtros hierárquicos de Meta Ads aplicados na tabela de Leads vinculada ao agendamento
+      if (filters.campaignId) query = query.eq("leads.campaign_id", filters.campaignId);
+      if (filters.adSetId) query = query.eq("leads.adset_id", filters.adSetId);
+      if (filters.adId) query = query.eq("leads.ad_id", filters.adId);
+      if (filters.source) query = query.eq("leads.source", filters.source);
 
       const { count, error } = await query;
       if (error) throw error;
