@@ -80,6 +80,16 @@ export default function Auth() {
   });
   const [isTransitioning, setIsTransitioning] = useState(false);
 
+  const { user, authInitialized, signIn, resetPassword } = useAuth();
+  
+  // Redirect if already logged in
+  useEffect(() => {
+    if (authInitialized && user) {
+      console.log('[Auth] User already logged in, redirecting to dashboard');
+      navigate('/dashboard', { replace: true });
+    }
+  }, [authInitialized, user, navigate]);
+
   // Optimized background image loading
   useEffect(() => {
     if (!loginBgUrl) return;
@@ -92,11 +102,9 @@ export default function Auth() {
     const optimizedUrl = loginBgUrl.includes('supabase.co') 
       ? `${loginBgUrl}?width=800&quality=60&format=webp`
       : loginBgUrl;
-        
+         
     img.src = optimizedUrl;
     img.onload = () => setBgLoaded(true);
-
-    // Also preload the higher quality version if needed, but the 800px webp is usually enough
   }, [loginBgUrl]);
 
   const setFieldErrorFromZod = (zodError: z.ZodError) => {
