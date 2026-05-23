@@ -106,10 +106,15 @@ function AppLayoutContent({ children, title, disableMainScroll = false }: AppLay
 }
 
 export function AppLayout({ children, title, disableMainScroll = false }: AppLayoutProps) {
-  const { organization, isSuperAdmin, impersonating } = useAuth();
+  const { organization, isSuperAdmin, impersonating, loading, authInitialized, organizationsLoaded, isInitializingOrg } = useAuth();
   const allowRender = !!organization || isSuperAdmin || !!impersonating;
 
-  console.log('[AppLayout] render allowed:', allowRender, { 
+  console.log('[AppLayout] render status:', { 
+    allowRender,
+    loading,
+    authInitialized,
+    organizationsLoaded,
+    isInitializingOrg,
     hasOrg: !!organization, 
     isSuperAdmin, 
     impersonating: !!impersonating 
