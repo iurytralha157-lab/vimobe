@@ -78,7 +78,8 @@ export default function Dashboard() {
   // Data hooks - Imobiliário
   const { data: stats, isLoading: statsLoading } = useEnhancedDashboardStats(filters);
   const { data: evolutionData = [], isLoading: evolutionLoading } = useDealsEvolutionData(filters);
-  const { data: sourcesData = [], isLoading: sourcesLoading } = useLeadSourcesData(filters);
+  const sourcesFilters = useMemo(() => ({ ...filters, source: null }), [filters]);
+  const { data: sourcesData = [], isLoading: sourcesLoading } = useLeadSourcesData(sourcesFilters);
 
 
   // Site visits count - unique sessions (respects date filters)
