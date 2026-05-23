@@ -9011,7 +9011,7 @@ export type Database = {
         }[]
       }
       get_user_team_ids: { Args: never; Returns: string[] }
-      handle_lead_intake: { Args: { p_lead_id: string }; Returns: undefined }
+      handle_lead_intake: { Args: { p_lead_id: string }; Returns: Json }
       has_whatsapp_session_ownership: {
         Args: { p_session_id: string; p_user_id: string }
         Returns: boolean
