@@ -43,7 +43,8 @@ const forgotPasswordSchema = z.object({
 });
 
 export default function Auth() {
-  const { signIn, resetPassword } = useAuth();
+  const navigate = useNavigate();
+  const { user, authInitialized, signIn, resetPassword } = useAuth();
   const { toast } = useToast();
   const { resolvedTheme } = useTheme();
   const { data: systemSettings, isLoading: settingsLoading } = useSystemSettings();
