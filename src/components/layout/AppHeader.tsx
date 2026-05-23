@@ -78,8 +78,8 @@ export const AppHeader = React.memo(function AppHeader({
     
     setIsSwitching(true);
     try {
-      // Limpar a marcação de sessão para forçar re-validação completa
-      sessionStorage.removeItem('org_selected');
+      // Iniciar a troca de organização
+
       
       await switchOrganization(orgId);
       

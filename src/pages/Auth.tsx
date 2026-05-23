@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect, useCallback } from "react";
 import { z } from "zod";
 import { Loader2, Eye, EyeOff, ArrowLeft, Mail, AlertCircle, Check, ShieldAlert } from "lucide-react";
 import { useTheme } from "next-themes";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useSystemSettings } from "@/hooks/use-system-settings";
@@ -43,7 +44,8 @@ const forgotPasswordSchema = z.object({
 });
 
 export default function Auth() {
-  const { signIn, resetPassword } = useAuth();
+  const navigate = useNavigate();
+  const { user, authInitialized, signIn, resetPassword } = useAuth();
   const { toast } = useToast();
   const { resolvedTheme } = useTheme();
   const { data: systemSettings, isLoading: settingsLoading } = useSystemSettings();
@@ -80,6 +82,15 @@ export default function Auth() {
   });
   const [isTransitioning, setIsTransitioning] = useState(false);
 
+  
+  // Redirect if already logged in
+  useEffect(() => {
+    if (authInitialized && user) {
+      console.log('[Auth] User already logged in, redirecting to dashboard');
+      navigate('/dashboard', { replace: true });
+    }
+  }, [authInitialized, user, navigate]);
+
   // Optimized background image loading
   useEffect(() => {
     if (!loginBgUrl) return;
@@ -92,11 +103,9 @@ export default function Auth() {
     const optimizedUrl = loginBgUrl.includes('supabase.co') 
       ? `${loginBgUrl}?width=800&quality=60&format=webp`
       : loginBgUrl;
-        
+         
     img.src = optimizedUrl;
     img.onload = () => setBgLoaded(true);
-
-    // Also preload the higher quality version if needed, but the 800px webp is usually enough
   }, [loginBgUrl]);
 
   const setFieldErrorFromZod = (zodError: z.ZodError) => {
