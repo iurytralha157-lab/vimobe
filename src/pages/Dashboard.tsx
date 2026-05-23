@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { performanceTracker } from '@/lib/performance';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { DashboardFilters } from '@/components/dashboard/DashboardFilters';
@@ -78,7 +78,8 @@ export default function Dashboard() {
   // Data hooks - Imobiliário
   const { data: stats, isLoading: statsLoading } = useEnhancedDashboardStats(filters);
   const { data: evolutionData = [], isLoading: evolutionLoading } = useDealsEvolutionData(filters);
-  const { data: sourcesData = [], isLoading: sourcesLoading } = useLeadSourcesData(filters);
+  const sourcesFilters = useMemo(() => ({ ...filters, source: null }), [filters]);
+  const { data: sourcesData = [], isLoading: sourcesLoading } = useLeadSourcesData(sourcesFilters);
 
 
   // Site visits count - unique sessions (respects date filters)
@@ -215,7 +216,12 @@ export default function Dashboard() {
               {funnelComponent}
             </div>
             <div className="h-[52%] min-h-0">
-              <LeadSourcesChart data={sourcesData} isLoading={sourcesLoading} />
+              <LeadSourcesChart 
+                data={sourcesData} 
+                isLoading={sourcesLoading} 
+                selectedSource={source}
+                onSourceChange={setSource}
+              />
             </div>
           </div>
         </div>
@@ -254,7 +260,12 @@ export default function Dashboard() {
             </TabsContent>
             <TabsContent value="sources" className={cn("mt-3", !isMobile ? "flex-1 min-h-0" : "")}>
               <div className="h-[450px]">
-                <LeadSourcesChart data={sourcesData} isLoading={sourcesLoading} />
+                <LeadSourcesChart 
+                  data={sourcesData} 
+                  isLoading={sourcesLoading} 
+                  selectedSource={source}
+                  onSourceChange={setSource}
+                />
               </div>
             </TabsContent>
           </Tabs>
