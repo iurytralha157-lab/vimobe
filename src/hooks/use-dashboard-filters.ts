@@ -45,6 +45,23 @@ export const datePresetOptions: DatePresetOption[] = [
   { value: 'custom', label: 'Personalizado' },
 ];
 
+export const sourceLabels: Record<string, string> = {
+  'meta': 'Meta Ads',
+  'facebook': 'Meta Ads',
+  'instagram': 'Meta Ads',
+  'google': 'Google Ads',
+  'google_ads': 'Google Ads',
+  'site': 'Site',
+  'website': 'Site',
+  'landing_page': 'Landing Page',
+  'whatsapp': 'WhatsApp',
+  'manual': 'Manual',
+  'webhook': 'API / Integração',
+  'api': 'API',
+  'indicacao': 'Indicação',
+  'import': 'Importação',
+};
+
 export const sourceOptions = [
   { value: 'all', label: 'Todas origens' },
   { value: 'meta', label: 'Meta Ads' },
