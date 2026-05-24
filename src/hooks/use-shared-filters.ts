@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLeadVisibility, applyVisibilityFilter } from './use-lead-visibility';
-import { DatePreset, sourceLabels } from './use-dashboard-filters';
+import { DatePreset } from './use-dashboard-filters';
 import { useTags } from './use-tags';
 
 export interface SharedFilters {
@@ -71,7 +71,7 @@ export function useSharedFilters() {
       
       return distinctSources.map(s => ({
         value: s as string,
-        label: sourceLabels[s as string] || (s as string).charAt(0).toUpperCase() + (s as string).slice(1)
+        label: (s as string).charAt(0).toUpperCase() + (s as string).slice(1)
       }));
     }
   });
