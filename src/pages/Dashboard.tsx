@@ -33,7 +33,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { useSharedFilters } from "@/hooks/use-shared-filters";
 import { useEnhancedDashboardStats, useDealsEvolutionData, useLeadSourcesData } from "@/hooks/use-dashboard-stats";
 import { useAuth } from "@/contexts/AuthContext";
-import { useLeadVisibility } from "@/hooks/use-lead-visibility";
+import { useLeadVisibility, applyVisibilityFilter } from "@/hooks/use-lead-visibility";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { SharedFilters } from "@/components/shared/SharedFilters";
 import { datePresetOptions } from "@/hooks/use-dashboard-filters";

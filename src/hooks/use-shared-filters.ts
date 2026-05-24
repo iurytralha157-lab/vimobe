@@ -8,6 +8,7 @@ import { DatePreset, sourceLabels } from './use-dashboard-filters';
 import { useTags } from './use-tags';
 
 export interface SharedFilters {
+  datePreset: DatePreset;
   dateRange: { from: Date; to: Date };
   teamId: string | null;
   userId: string | null;
@@ -19,6 +20,7 @@ export interface SharedFilters {
   dealStatus: string | null;
   searchQuery: string;
 }
+
 
 export function useSharedFilters() {
   const { user, organization } = useAuth();
@@ -214,6 +216,7 @@ export function useSharedFilters() {
   }, [ads, isLoadingAds, adSetId]);
 
   const filters: SharedFilters = useMemo(() => ({
+    datePreset,
     dateRange,
     teamId,
     userId,
@@ -224,7 +227,8 @@ export function useSharedFilters() {
     tagId,
     dealStatus,
     searchQuery,
-  }), [dateRange, teamId, userId, source, campaignId, adSetId, adId, tagId, dealStatus, searchQuery]);
+  }), [datePreset, dateRange, teamId, userId, source, campaignId, adSetId, adId, tagId, dealStatus, searchQuery]);
+
 
   const clearFilters = () => {
     setDatePreset('last30days');
