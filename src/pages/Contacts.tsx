@@ -489,29 +489,42 @@ export default function Contacts() {
 
               {/* Advanced Filters & Date - Always grouped on desktop */}
               <div className="flex items-center gap-1.5 ml-auto">
-                <AdvancedFilters
-                  selectedAssignee={selectedAssignee}
-                  setSelectedAssignee={handleFilterChange(setSelectedAssignee)}
-                  users={users}
-                  selectedTag={selectedTag}
-                  setSelectedTag={handleFilterChange(setSelectedTag)}
-                  tags={tags}
-                  selectedSource={selectedSource}
-                  setSelectedSource={handleFilterChange(setSelectedSource)}
-                  selectedDealStatus={selectedDealStatus}
-                  setSelectedDealStatus={handleFilterChange(setSelectedDealStatus)}
-                    activeCount={activeAdvancedCount}
-                    availableSources={uniqueSources}
-                  />
-
-                <DateFilterPopover
-                  datePreset={datePreset}
+                <SharedFilters
+                  datePreset={datePreset || 'last30days'}
                   onDatePresetChange={handleFilterChange(setDatePreset)}
                   customDateRange={customDateRange}
                   onCustomDateRangeChange={handleFilterChange(setCustomDateRange)}
-                  defaultPreset="last30days"
-                  triggerClassName="h-9 min-w-[130px]"
+                  teamId={sharedFilters.teamId}
+                  onTeamChange={() => {}}
+                  userId={selectedAssignee}
+                  onUserChange={handleFilterChange(setSelectedAssignee)}
+                  source={selectedSource}
+                  onSourceChange={handleFilterChange(setSelectedSource)}
+                  campaignId={sharedFilters.campaignId}
+                  onCampaignChange={() => {}}
+                  adSetId={sharedFilters.adSetId}
+                  onAdSetChange={() => {}}
+                  adId={sharedFilters.adId}
+                  onAdChange={() => {}}
+                  tagId={selectedTag}
+                  onTagChange={handleFilterChange(setSelectedTag)}
+                  dealStatus={selectedDealStatus}
+                  onDealStatusChange={handleFilterChange(setSelectedDealStatus)}
+                  searchQuery={search}
+                  onSearchChange={(v) => { setSearch(v); setPage(1); }}
+                  onClear={handleClearFilters}
+                  hasActiveFilters={hasSharedActiveFilters || selectedPipeline !== 'all' || selectedStage !== 'all'}
+                  dynamicSources={dynamicSources}
+                  campaigns={campaigns}
+                  adSets={adSets}
+                  ads={ads}
+                  tags={allTagsFromHook}
+                  isLoadingSources={isLoadingSources}
+                  isLoadingCampaigns={isLoadingCampaigns}
+                  isLoadingAdSets={isLoadingAdSets}
+                  isLoadingAds={isLoadingAds}
                 />
+
               </div>
 
               {hasActiveFilters && (
