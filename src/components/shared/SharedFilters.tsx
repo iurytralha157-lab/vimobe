@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { Users, User, Globe, X, SlidersHorizontal, Check, Facebook, Search, Tag as TagIcon, CircleDot } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -114,6 +115,20 @@ export function SharedFilters({
   const { data: users = [] } = useOrganizationUsers();
   const isMobile = useIsMobile();
   const { hasPermission } = useUserPermissions();
+
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [localSearch, setLocalSearch] = useState(searchQuery);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      onSearchChange(localSearch);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [localSearch]);
+
+  useEffect(() => {
+    setLocalSearch(searchQuery);
+  }, [searchQuery]);
 
   const isAdmin = (user as any)?.role === 'admin' || (user as any)?.role === 'super_admin';
   const canViewAllLeads = isAdmin || hasPermission('lead_view_all');
@@ -351,8 +366,8 @@ export function SharedFilters({
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground group-focus-within:text-primary" />
           <Input
             placeholder="Buscar..."
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
+            value={localSearch}
+            onChange={(e) => setLocalSearch(e.target.value)}
             className="h-9 pl-8 text-xs bg-muted/30 border-border/50 focus:bg-background"
           />
         </div>
@@ -404,7 +419,7 @@ export function SharedFilters({
 
       {/* Filters Popover */}
       <div className="flex items-center gap-1">
-        <Popover>
+        <Popover open={filtersOpen} onOpenChange={setFiltersOpen} modal={true}>
           <PopoverTrigger asChild>
             <Button 
               variant="outline" 
