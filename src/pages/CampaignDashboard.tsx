@@ -1,7 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { DashboardFilters } from '@/components/dashboard/DashboardFilters';
-import { useDashboardFilters, datePresetOptions } from '@/hooks/use-dashboard-filters';
+import { SharedFilters } from '@/components/shared/SharedFilters';
+import { useSharedFilters } from '@/hooks/use-shared-filters';
+import { datePresetOptions } from '@/hooks/use-dashboard-filters';
+
 import { useCampaignInsights, useSyncCampaignInsights } from '@/hooks/use-campaign-insights';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -47,9 +49,25 @@ export default function CampaignDashboard() {
     setAdSetId,
     adId,
     setAdId,
+    tagId,
+    setTagId,
+    dealStatus,
+    setDealStatus,
+    searchQuery,
+    setSearchQuery,
     clearFilters,
     hasActiveFilters,
-  } = useDashboardFilters();
+    dynamicSources,
+    campaigns,
+    adSets,
+    ads,
+    tags,
+    isLoadingSources,
+    isLoadingCampaigns,
+    isLoadingAdSets,
+    isLoadingAds,
+  } = useSharedFilters();
+
 
   const { data: insightData, isLoading } = useCampaignInsights(filters);
   const syncMutation = useSyncCampaignInsights();
@@ -163,7 +181,7 @@ export default function CampaignDashboard() {
             )}
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <DashboardFilters
+            <SharedFilters
               datePreset={datePreset}
               onDatePresetChange={setDatePreset}
               customDateRange={customDateRange}
@@ -180,9 +198,25 @@ export default function CampaignDashboard() {
               onAdSetChange={setAdSetId}
               adId={adId}
               onAdChange={setAdId}
+              tagId={tagId}
+              onTagChange={setTagId}
+              dealStatus={dealStatus}
+              onDealStatusChange={setDealStatus}
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
               onClear={clearFilters}
               hasActiveFilters={hasActiveFilters}
+              dynamicSources={dynamicSources}
+              campaigns={campaigns}
+              adSets={adSets}
+              ads={ads}
+              tags={tags}
+              isLoadingSources={isLoadingSources}
+              isLoadingCampaigns={isLoadingCampaigns}
+              isLoadingAdSets={isLoadingAdSets}
+              isLoadingAds={isLoadingAds}
             />
+
           </div>
         </div>
 
