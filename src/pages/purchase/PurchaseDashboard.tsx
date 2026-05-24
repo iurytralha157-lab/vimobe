@@ -31,12 +31,49 @@ import {
 } from 'recharts';
 import { format, isAfter, addDays, isBefore } from "date-fns";
 
-import { DashboardFilters } from "@/components/dashboard/DashboardFilters";
-import { useDashboardFilters } from "@/hooks/use-dashboard-filters";
+import { SharedFilters } from "@/components/shared/SharedFilters";
+import { useSharedFilters } from "@/hooks/use-shared-filters";
+
 import { DashboardAlertBar } from "@/components/dashboard/DashboardAlertBar";
 
 export default function PurchaseDashboard() {
-  const { filters, ...filterHelpers } = useDashboardFilters();
+  const {
+    filters,
+    datePreset,
+    setDatePreset,
+    customDateRange,
+    setCustomDateRange,
+    teamId,
+    setTeamId,
+    userId,
+    setUserId,
+    source,
+    setSource,
+    campaignId,
+    setCampaignId,
+    adSetId,
+    setAdSetId,
+    adId,
+    setAdId,
+    tagId,
+    setTagId,
+    dealStatus,
+    setDealStatus,
+    searchQuery,
+    setSearchQuery,
+    clearFilters,
+    hasActiveFilters,
+    dynamicSources,
+    campaigns,
+    adSets,
+    ads,
+    tags,
+    isLoadingSources,
+    isLoadingCampaigns,
+    isLoadingAdSets,
+    isLoadingAds,
+  } = useSharedFilters();
+
   const { data: orders, isLoading: ordersLoading } = useAllPurchaseOrders(filters.dateRange);
   const { data: milestones, isLoading: milestonesLoading } = useAllMilestones(filters.dateRange);
 
@@ -116,27 +153,42 @@ export default function PurchaseDashboard() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <DashboardAlertBar />
           <div className="flex-1" />
-          <DashboardFilters 
-            {...filterHelpers}
-            datePreset={filterHelpers.datePreset}
-            onDatePresetChange={filterHelpers.setDatePreset}
-            customDateRange={filterHelpers.customDateRange}
-            onCustomDateRangeChange={filterHelpers.setCustomDateRange}
-            teamId={filterHelpers.teamId}
-            onTeamChange={filterHelpers.setTeamId}
-            userId={filterHelpers.userId}
-            onUserChange={filterHelpers.setUserId}
-            source={filterHelpers.source}
-            onSourceChange={filterHelpers.setSource}
-            campaignId={filterHelpers.campaignId}
-            onCampaignChange={filterHelpers.setCampaignId}
-            adSetId={filterHelpers.adSetId}
-            onAdSetChange={filterHelpers.setAdSetId}
-            adId={filterHelpers.adId}
-            onAdChange={filterHelpers.setAdId}
-            hasActiveFilters={filterHelpers.hasActiveFilters}
-            onClear={filterHelpers.clearFilters}
+          <SharedFilters 
+            datePreset={datePreset}
+            onDatePresetChange={setDatePreset}
+            customDateRange={customDateRange}
+            onCustomDateRangeChange={setCustomDateRange}
+            teamId={teamId}
+            onTeamChange={setTeamId}
+            userId={userId}
+            onUserChange={setUserId}
+            source={source}
+            onSourceChange={setSource}
+            campaignId={campaignId}
+            onCampaignChange={setCampaignId}
+            adSetId={adSetId}
+            onAdSetChange={setAdSetId}
+            adId={adId}
+            onAdChange={setAdId}
+            tagId={tagId}
+            onTagChange={setTagId}
+            dealStatus={dealStatus}
+            onDealStatusChange={setDealStatus}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            onClear={clearFilters}
+            hasActiveFilters={hasActiveFilters}
+            dynamicSources={dynamicSources}
+            campaigns={campaigns}
+            adSets={adSets}
+            ads={ads}
+            tags={tags}
+            isLoadingSources={isLoadingSources}
+            isLoadingCampaigns={isLoadingCampaigns}
+            isLoadingAdSets={isLoadingAdSets}
+            isLoadingAds={isLoadingAds}
           />
+
         </div>
         <div className="flex justify-between items-center">
           <h2 className="text-xl font-bold">Visão Geral de Suprimentos</h2>

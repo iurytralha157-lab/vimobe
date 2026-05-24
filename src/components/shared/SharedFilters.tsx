@@ -1,4 +1,4 @@
-import { Users, User, Globe, X, SlidersHorizontal, Calendar as CalendarIcon, Check, Facebook } from 'lucide-react';
+import { Users, User, Globe, X, SlidersHorizontal, Check, Facebook, Search, Tag as TagIcon, CircleDot } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -13,52 +13,68 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { useTeams } from '@/hooks/use-teams';
 import { useOrganizationUsers } from '@/hooks/use-users';
 import { useAuth } from '@/contexts/AuthContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useUserPermissions } from '@/hooks/use-user-permissions';
-import { 
-  DatePreset, 
-  sourceOptions,
-  datePresetOptions,
-} from '@/hooks/use-dashboard-filters';
+import { DatePreset } from '@/hooks/use-dashboard-filters';
 import { DateFilterPopover } from '@/components/ui/date-filter-popover';
-import { CampaignFilter } from './CampaignFilter';
-import { useState } from 'react';
 
-interface DashboardFiltersProps {
+interface SharedFiltersProps {
+  // Período
   datePreset: DatePreset;
   onDatePresetChange: (preset: DatePreset) => void;
   customDateRange: { from: Date; to: Date } | null;
   onCustomDateRangeChange: (range: { from: Date; to: Date } | null) => void;
+  
+  // Equipe e Usuário
   teamId: string | null;
   onTeamChange: (teamId: string | null) => void;
   userId: string | null;
   onUserChange: (userId: string | null) => void;
+  
+  // Origem
   source: string | null;
   onSourceChange: (source: string | null) => void;
+  dynamicSources?: { value: string, label: string }[];
+  isLoadingSources?: boolean;
+  
+  // Meta Ads
   campaignId: string | null;
   onCampaignChange: (id: string | null) => void;
   adSetId: string | null;
   onAdSetChange: (id: string | null) => void;
   adId: string | null;
   onAdChange: (id: string | null) => void;
-  onClear: () => void;
-  hasActiveFilters: boolean;
-  // Dynamic data props
-  dynamicSources?: { value: string, label: string }[];
   campaigns?: { id: string, name: string }[];
   adSets?: { id: string, name: string }[];
   ads?: { id: string, name: string }[];
-  isLoadingSources?: boolean;
   isLoadingCampaigns?: boolean;
   isLoadingAdSets?: boolean;
   isLoadingAds?: boolean;
+  
+  // Tag
+  tagId: string | null;
+  onTagChange: (tagId: string | null) => void;
+  tags?: { id: string, name: string, color: string }[];
+  
+  // Status do negócio
+  dealStatus: string | null;
+  onDealStatusChange: (status: string | null) => void;
+  
+  // Busca
+  searchQuery: string;
+  onSearchChange: (query: string) => void;
+  
+  // Controle
+  onClear: () => void;
+  hasActiveFilters: boolean;
 }
 
-export function DashboardFilters({
+export function SharedFilters({
   datePreset,
   onDatePresetChange,
   customDateRange,
@@ -75,45 +91,44 @@ export function DashboardFilters({
   onAdSetChange,
   adId,
   onAdChange,
+  tagId,
+  onTagChange,
+  dealStatus,
+  onDealStatusChange,
+  searchQuery,
+  onSearchChange,
   onClear,
   hasActiveFilters,
   dynamicSources = [],
   campaigns = [],
   adSets = [],
   ads = [],
+  tags = [],
   isLoadingSources = false,
   isLoadingCampaigns = false,
   isLoadingAdSets = false,
   isLoadingAds = false,
-}: DashboardFiltersProps) {
+}: SharedFiltersProps) {
   const { profile } = useAuth();
   const { data: teams = [] } = useTeams();
   const { data: users = [] } = useOrganizationUsers();
   const isMobile = useIsMobile();
   const { hasPermission } = useUserPermissions();
 
-  // Filter teams based on user role
   const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin';
-  
-  // Check if user can view all leads (admin, super_admin, or has lead_view_all permission)
   const canViewAllLeads = isAdmin || hasPermission('lead_view_all');
-  
-  // Check if user is a team leader
   const isTeamLeader = teams.some(team => 
     team.members?.some(m => m.user_id === profile?.id && m.is_leader)
   );
   
-  // Show user filter only for those with full visibility or team leaders
   const showUserFilter = canViewAllLeads || isTeamLeader;
   
-  // Get available teams (admin sees all, team leader sees their teams, user sees nothing)
   const availableTeams = isAdmin 
     ? teams 
     : teams.filter(team => 
         team.members?.some(m => m.user_id === profile?.id && m.is_leader)
       );
 
-  // Get available users based on selected team
   const availableUsers = teamId 
     ? users.filter(user => {
         const team = teams.find(t => t.id === teamId);
@@ -121,11 +136,8 @@ export function DashboardFilters({
       })
     : users;
 
-  // Check if any extra filters are active (excluding date)
-  const hasExtraFilters = teamId !== null || userId !== null || source !== null || campaignId !== null || adSetId !== null || adId !== null;
+  const hasExtraFilters = teamId !== null || userId !== null || source !== null || campaignId !== null || adSetId !== null || adId !== null || tagId !== null || dealStatus !== null || searchQuery !== '';
 
-
-  // Shared filter components
   const TeamFilter = () => availableTeams.length > 0 ? (
     <Select
       value={teamId || 'all'}
@@ -194,6 +206,53 @@ export function DashboardFilters({
             {option.label}
           </SelectItem>
         ))}
+      </SelectContent>
+    </Select>
+  );
+
+  const TagFilter = () => (
+    <Select
+      value={tagId || 'all'}
+      onValueChange={(value) => onTagChange(value === 'all' ? null : value)}
+    >
+      <SelectTrigger className={cn(
+        "h-9 w-full text-xs",
+        tagId && "border-primary text-primary"
+      )}>
+        <TagIcon className="h-3.5 w-3.5 mr-1.5 flex-shrink-0" />
+        <SelectValue placeholder="Tag" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="all">Todas tags</SelectItem>
+        {tags.map((tag) => (
+          <SelectItem key={tag.id} value={tag.id}>
+            <div className="flex items-center gap-2">
+              <div className="h-2 w-2 rounded-full" style={{ backgroundColor: tag.color }} />
+              {tag.name}
+            </div>
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+
+  const DealStatusFilter = () => (
+    <Select
+      value={dealStatus || 'all'}
+      onValueChange={(value) => onDealStatusChange(value === 'all' ? null : value)}
+    >
+      <SelectTrigger className={cn(
+        "h-9 w-full text-xs",
+        dealStatus && "border-primary text-primary"
+      )}>
+        <CircleDot className="h-3.5 w-3.5 mr-1.5 flex-shrink-0" />
+        <SelectValue placeholder="Status" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="all">Todos status</SelectItem>
+        <SelectItem value="open">Aberto</SelectItem>
+        <SelectItem value="won">Ganho</SelectItem>
+        <SelectItem value="lost">Perdido</SelectItem>
       </SelectContent>
     </Select>
   );
@@ -270,103 +329,64 @@ export function DashboardFilters({
     </div>
   );
 
-  // Consolidate filters for smaller screens (mobile and small desktops/tablets)
-  if (isMobile) {
-    return (
-      <div className="flex items-center justify-end gap-2 w-full">
-        {/* Date Filter - always visible */}
-        <DateFilterPopover
-          datePreset={datePreset}
-          onDatePresetChange={onDatePresetChange}
-          customDateRange={customDateRange}
-          onCustomDateRangeChange={onCustomDateRangeChange}
-          triggerClassName="h-8 sm:min-w-[130px] text-xs justify-start"
-        />
-
-        {/* Filters Popover */}
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className={cn(
-                "h-8 px-2.5 text-xs gap-1.5",
-                (hasExtraFilters) && "border-primary text-primary"
-              )}
-            >
-              <SlidersHorizontal className="h-3.5 w-3.5" />
-              <span className="hidden xs:inline">Filtros</span>
-              {(hasExtraFilters) && (
-                <Badge 
-                  variant="default" 
-                  className="h-4 w-4 p-0 flex items-center justify-center text-[10px] ml-0.5"
-                >
-                  •
-                </Badge>
-              )}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent align="end" className="w-[280px] p-3 max-h-[80vh] overflow-y-auto">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between border-b pb-2 mb-2">
-                <span className="text-sm font-semibold">Filtros</span>
-                {hasActiveFilters && (
-                  <Button variant="ghost" size="sm" onClick={onClear} className="h-7 px-2 text-[10px] text-muted-foreground hover:text-foreground">
-                    Limpar tudo
-                  </Button>
-                )}
-              </div>
-
-              <div className="pb-3 border-b border-border">
-                <div className="flex items-center gap-1.5 px-1 mb-2">
-                  <Facebook className="h-3 w-3 text-[#1877F2]" />
-                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Campanhas Meta</span>
-                </div>
-                <MetaFilters />
-              </div>
-
-              {/* Team */}
-              {availableTeams.length > 0 && (
-                <div className="space-y-1.5">
-                  <TeamFilter />
-                </div>
-              )}
-
-              {/* User */}
-              {showUserFilter && (
-                <div className="space-y-1.5">
-                  <UserFilter />
-                </div>
-              )}
-
-              {/* Source */}
-              <div className="space-y-1.5">
-                <SourceFilter />
-              </div>
-
-              {/* Clear button inside popover for mobile */}
-              {hasActiveFilters && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-full h-9 text-xs text-muted-foreground hover:text-foreground mt-2 border border-dashed"
-                  onClick={onClear}
-                >
-                  <X className="h-3.5 w-3.5 mr-1.5" />
-                  Limpar filtros
-                </Button>
-              )}
-            </div>
-          </PopoverContent>
-        </Popover>
+  const FilterContent = () => (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between border-b border-border/40 pb-2">
+        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Filtros Avançados</span>
+        {hasActiveFilters && (
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={onClear} 
+            className="h-5 px-1.5 text-[9px] uppercase font-bold text-primary hover:bg-primary/10"
+          >
+            Limpar
+          </Button>
+        )}
       </div>
-    );
-  }
 
-  // Desktop layout - Split into Period and Filters
+      <div className="grid gap-2">
+        {/* Search */}
+        <div className="relative group">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground group-focus-within:text-primary" />
+          <Input
+            placeholder="Buscar..."
+            value={searchQuery}
+            onChange={(e) => onSearchChange(e.target.value)}
+            className="h-9 pl-8 text-xs bg-muted/30 border-border/50 focus:bg-background"
+          />
+        </div>
+
+        {/* Team */}
+        {availableTeams.length > 0 && <TeamFilter />}
+
+        {/* User */}
+        {showUserFilter && <UserFilter />}
+
+        {/* Source */}
+        <SourceFilter />
+
+        {/* Tag */}
+        <TagFilter />
+
+        {/* Status */}
+        <DealStatusFilter />
+
+        {/* Meta Ads */}
+        <div className="space-y-2 pt-2 border-t border-border/40">
+          <div className="flex items-center gap-1.5 px-1 mb-1">
+            <Facebook className="h-3 w-3 text-[#1877F2]" />
+            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Campanhas Meta</span>
+          </div>
+          <MetaFilters />
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="flex items-center justify-end gap-2 w-full">
-      {/* Bloco 1: Período */}
+      {/* Date Filter */}
       <div className="flex items-center">
         <DateFilterPopover
           datePreset={datePreset}
@@ -375,13 +395,14 @@ export function DashboardFilters({
           onCustomDateRangeChange={onCustomDateRangeChange}
           triggerClassName={cn(
             "h-8 gap-2 text-[11px] font-semibold uppercase tracking-wider px-3 border-border/60 hover:border-primary/50 transition-colors",
+            isMobile ? "px-2 text-xs font-medium normal-case tracking-normal" : "",
             (datePreset !== 'last30days' || customDateRange) && "border-primary/50 bg-primary/5 text-primary"
           )}
           align="end"
         />
       </div>
 
-      {/* Bloco 2: Filtros */}
+      {/* Filters Popover */}
       <div className="flex items-center gap-1">
         <Popover>
           <PopoverTrigger asChild>
@@ -390,68 +411,28 @@ export function DashboardFilters({
               size="sm" 
               className={cn(
                 "h-8 gap-2 text-[11px] font-semibold uppercase tracking-wider px-3 border-border/60 hover:border-primary/50 transition-colors",
+                isMobile ? "px-2.5 text-xs font-medium normal-case tracking-normal" : "",
                 hasExtraFilters && "border-primary/50 bg-primary/5 text-primary"
               )}
             >
               <SlidersHorizontal className="h-3.5 w-3.5" />
-              <span>Filtros</span>
+              <span className={isMobile ? "hidden xs:inline" : ""}>Filtros</span>
               {hasExtraFilters && (
-                <Badge variant="default" className="ml-1 h-4 min-w-[16px] px-1 text-[9px] bg-primary flex items-center justify-center">
-                  !
+                <Badge variant="default" className={cn(
+                  "ml-1 h-4 min-w-[16px] px-1 text-[9px] bg-primary flex items-center justify-center",
+                  isMobile && "h-4 w-4 p-0 text-[10px] ml-0.5"
+                )}>
+                  {isMobile ? "•" : "!"}
                 </Badge>
               )}
             </Button>
           </PopoverTrigger>
-          <PopoverContent align="end" className="w-72 p-3 border-border/40 shadow-2xl">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between border-b border-border/40 pb-2">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Filtros Avançados</span>
-                {hasActiveFilters && (
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={onClear} 
-                    className="h-5 px-1.5 text-[9px] uppercase font-bold text-primary hover:bg-primary/10"
-                  >
-                    Limpar
-                  </Button>
-                )}
-              </div>
-
-              <div className="grid gap-2">
-                {/* Equipe */}
-                {availableTeams.length > 0 && (
-                  <div className="space-y-1">
-                    <TeamFilter />
-                  </div>
-                )}
-
-                {/* Corretor */}
-                {showUserFilter && (
-                  <div className="space-y-1">
-                    <UserFilter />
-                  </div>
-                )}
-
-                {/* Origem */}
-                <div className="space-y-1">
-                  <SourceFilter />
-                </div>
-
-                {/* Campanhas Meta Ads */}
-                <div className="space-y-2 pt-2 border-t border-border/40">
-                  <div className="flex items-center gap-1.5 px-1 mb-1">
-                    <Facebook className="h-3 w-3 text-[#1877F2]" />
-                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Campanhas Meta</span>
-                  </div>
-                  <MetaFilters />
-                </div>
-              </div>
-            </div>
+          <PopoverContent align="end" className={cn("w-72 p-3 border-border/40 shadow-2xl", isMobile && "w-[280px] max-h-[80vh] overflow-y-auto")}>
+            <FilterContent />
           </PopoverContent>
         </Popover>
 
-        {/* Botão rápido de limpar se houver filtros ativos */}
+
         {hasActiveFilters && (
           <Button
             variant="ghost"

@@ -19,7 +19,7 @@ import { cn } from "@/lib/utils";
 
 // Componentes de Layout e UI
 import { AppLayout } from "@/components/layout/AppLayout";
-import { DashboardFilters } from "@/components/dashboard/DashboardFilters";
+
 import { KPICards } from "@/components/dashboard/KPICards";
 import { SalesFunnelWithPipeline } from "@/components/dashboard/SalesFunnelWithPipeline";
 import { DealsEvolutionChart } from "@/components/dashboard/DealsEvolutionChart";
@@ -30,11 +30,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 // Hooks e Contextos
-import { useDashboardFilters, datePresetOptions } from "@/hooks/use-dashboard-filters";
+import { useSharedFilters } from "@/hooks/use-shared-filters";
 import { useEnhancedDashboardStats, useDealsEvolutionData, useLeadSourcesData } from "@/hooks/use-dashboard-stats";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLeadVisibility, applyVisibilityFilter } from "@/hooks/use-lead-visibility";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { SharedFilters } from "@/components/shared/SharedFilters";
+import { datePresetOptions } from "@/hooks/use-dashboard-filters";
 
 // ==========================================
 // COMPONENTE PRINCIPAL
@@ -63,17 +65,25 @@ export default function Dashboard() {
     setAdSetId,
     adId,
     setAdId,
+    tagId,
+    setTagId,
+    dealStatus,
+    setDealStatus,
+    searchQuery,
+    setSearchQuery,
     clearFilters,
     hasActiveFilters,
     dynamicSources,
     campaigns,
     adSets,
     ads,
+    tags,
     isLoadingSources,
     isLoadingCampaigns,
     isLoadingAdSets,
     isLoadingAds,
-  } = useDashboardFilters();
+  } = useSharedFilters();
+
 
   // Mapeamento de strings de data para chaves de cache estáveis
   const dateFromStr = filters.dateRange.from.toISOString();
@@ -175,7 +185,7 @@ export default function Dashboard() {
           !isMobile ? "flex-1 min-h-0 overflow-hidden" : "",
         )}
       >
-        <DashboardFilters
+        <SharedFilters
           datePreset={datePreset}
           onDatePresetChange={setDatePreset}
           customDateRange={customDateRange}
@@ -192,17 +202,25 @@ export default function Dashboard() {
           onAdSetChange={setAdSetId}
           adId={adId}
           onAdChange={setAdId}
+          tagId={tagId}
+          onTagChange={setTagId}
+          dealStatus={dealStatus}
+          onDealStatusChange={setDealStatus}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
           onClear={clearFilters}
           hasActiveFilters={hasActiveFilters}
           dynamicSources={dynamicSources}
           campaigns={campaigns}
           adSets={adSets}
           ads={ads}
+          tags={tags}
           isLoadingSources={isLoadingSources}
           isLoadingCampaigns={isLoadingCampaigns}
           isLoadingAdSets={isLoadingAdSets}
           isLoadingAds={isLoadingAds}
         />
+
 
         {/* ===== DESKTOP LAYOUT ===== */}
         <div className="hidden lg:grid lg:grid-cols-12 gap-2 md:gap-3 flex-1 min-h-0 overflow-hidden">

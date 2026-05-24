@@ -20,17 +20,21 @@ import {
   XCircle,
   CircleDot,
   RefreshCw,
-  Check,
-  Pencil,
+  Check, 
+  Pencil, 
   ChevronDown,
   Settings,
   Filter,
-  Search
+  Search,
+  LayoutGrid
 } from 'lucide-react';
 import { StageSettingsDialog } from '@/components/pipelines/StageSettingsDialog';
 import { PipelineSlaSettings } from '@/components/pipelines/PipelineSlaSettings';
 import { StagesEditorDialog } from '@/components/pipelines/StagesEditorDialog';
-import { PipelineFilters } from '@/components/pipelines/PipelineFilters';
+import { SharedFilters } from '@/components/shared/SharedFilters';
+import { useSharedFilters } from '@/hooks/use-shared-filters';
+
+
 import { startOfDay, endOfDay, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { LeadCard } from '@/components/leads/LeadCard';
@@ -114,15 +118,43 @@ export default function Pipelines() {
   const [newLeadDialogOpen, setNewLeadDialogOpen] = useState(false);
   const [newLeadStageId, setNewLeadStageId] = useState<string | null>(null);
   // newLeadForm agora é gerenciado pelo CreateLeadDialog
-  const [filterUser, setFilterUser] = useState<string | null>(null);
-  const [filterTag, setFilterTag] = useState<string | null>(null);
-  const [filterDealStatus, setFilterDealStatus] = useState<string | null>(null);
-  const [filterCampaign, setFilterCampaign] = useState<string | null>(null);
-  const [filterAdSet, setFilterAdSet] = useState<string | null>(null);
-  const [filterAd, setFilterAd] = useState<string | null>(null);
-  const [filterSource, setFilterSource] = useState<string | null>(null);
+  const {
+    filters: sharedFilters,
+    datePreset,
+    setDatePreset,
+    customDateRange,
+    setCustomDateRange,
+    userId: filterUser,
+    setUserId: setFilterUser,
+    tagId: filterTag,
+    setTagId: setFilterTag,
+    dealStatus: filterDealStatus,
+    setDealStatus: setFilterDealStatus,
+    campaignId: filterCampaign,
+    setCampaignId: setFilterCampaign,
+    adSetId: filterAdSet,
+    setAdSetId: setFilterAdSet,
+    adId: filterAd,
+    setAdId: setFilterAd,
+    source: filterSource,
+    setSource: setFilterSource,
+    searchQuery,
+    setSearchQuery,
+    clearFilters,
+    hasActiveFilters: hasSharedActiveFilters,
+    dynamicSources,
+    campaigns,
+    adSets,
+    ads,
+    tags: allTagsFromHook,
+    isLoadingSources,
+    isLoadingCampaigns,
+    isLoadingAdSets,
+    isLoadingAds,
+  } = useSharedFilters();
+
   const [searchInput, setSearchInput] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
+
   const [editingStageId, setEditingStageId] = useState<string | null>(null);
   const [editingStageName, setEditingStageName] = useState('');
   const [settingsStage, setSettingsStage] = useState<any | null>(null);
@@ -136,7 +168,9 @@ export default function Pipelines() {
   const [newStageColor, setNewStageColor] = useState('#6b7280');
   const [slaSettingsOpen, setSlaSettingsOpen] = useState(false);
   const [stagesEditorOpen, setStagesEditorOpen] = useState(false);
-  const { datePreset, setDatePreset, customDateRange, setCustomDateRange, activeDateRange: dateRange } = useFilters();
+  // useSharedFilters handles dateRange now
+  const dateRange = sharedFilters.dateRange;
+
   const [isRefreshing, setIsRefreshing] = useState(false);
   
   // Ref para bloquear refetch durante drag-and-drop (evita race condition)
@@ -851,55 +885,149 @@ export default function Pipelines() {
         "flex flex-col h-full overflow-hidden",
         isMobile && "pb-4"
       )}>
-        <PipelineFilters
-          isMobile={isMobile}
-          isAdmin={isAdmin}
-          canEditPipeline={canEditPipeline}
-          pipelines={pipelines}
-          selectedPipelineId={selectedPipelineId}
-          setSelectedPipelineId={setSelectedPipelineId}
-          currentPipeline={currentPipeline}
-          handleDeletePipeline={handleDeletePipeline}
-          setNewPipelineDialogOpen={setNewPipelineDialogOpen}
-          editingPipelineId={editingPipelineId}
-          setEditingPipelineId={setEditingPipelineId}
-          editingPipelineName={editingPipelineName}
-          setEditingPipelineName={setEditingPipelineName}
-          updatePipeline={updatePipeline}
-          setStagesEditorOpen={setStagesEditorOpen}
-          searchInput={searchInput}
-          setSearchInput={setSearchInput}
-          leadsLoading={leadsLoading}
-          handleManualRefresh={handleManualRefresh}
-          isRefreshing={isRefreshing}
-          openNewLeadDialog={openNewLeadDialog}
-          datePreset={datePreset}
-          setDatePreset={setDatePreset}
-          customDateRange={customDateRange}
-          setCustomDateRange={setCustomDateRange}
-          filterUser={filterUser}
-          setFilterUser={setFilterUser}
-          hasLeadViewAll={hasLeadViewAll}
-          users={users}
-          filterTag={filterTag}
-          setFilterTag={setFilterTag}
-          allTags={allTags}
-          filterDealStatus={filterDealStatus}
-          setFilterDealStatus={setFilterDealStatus}
-          filterCampaign={filterCampaign}
-          setFilterCampaign={setFilterCampaign}
-          filterAdSet={filterAdSet}
-          setFilterAdSet={setFilterAdSet}
-          filterAd={filterAd}
-          setFilterAd={setFilterAd}
-          metaFilters={metaFilters}
-          filterSource={filterSource}
-          setFilterSource={setFilterSource}
-          allSources={allSources}
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          profile={profile}
-        />
+        <div className="flex flex-col gap-2 mb-4">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="h-9 px-2 gap-2 hover:bg-muted font-bold text-base">
+                    <LayoutGrid className="h-5 w-5 text-primary" />
+                    <span className="truncate max-w-[150px] sm:max-w-[200px]">{currentPipeline?.name || 'Pipeline'}</span>
+                    <ChevronDown className="h-4 w-4 opacity-50" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-56 p-1">
+                  <p className="px-2 py-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Suas Pipelines</p>
+                  {pipelines.map(pipeline => (
+                    <DropdownMenuItem 
+                      key={pipeline.id}
+                      onClick={() => setSelectedPipelineId(pipeline.id)}
+                      className={cn(
+                        "flex items-center justify-between cursor-pointer rounded-sm py-2",
+                        pipeline.id === selectedPipelineId && "bg-primary/10 text-primary"
+                      )}
+                    >
+                      <span className={cn("font-medium", pipeline.id === selectedPipelineId && "font-bold")}>
+                        {pipeline.name}
+                      </span>
+                      {pipeline.id === selectedPipelineId && <Check className="h-4 w-4" />}
+                    </DropdownMenuItem>
+                  ))}
+                  {isAdmin && (
+                    <>
+                      <DropdownMenuSeparator className="my-1" />
+                      <DropdownMenuItem 
+                        onClick={() => setNewPipelineDialogOpen(true)}
+                        className="cursor-pointer py-2"
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Nova Pipeline
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              {isAdmin && selectedPipelineId && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-8 w-8 text-muted-foreground hover:text-primary transition-colors"
+                        onClick={() => {
+                          setEditingPipelineId(selectedPipelineId);
+                          setEditingPipelineName(currentPipeline?.name || '');
+                        }}
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Editar pipeline</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+
+              <div className="hidden lg:block h-6 w-px bg-border/60 mx-1" />
+
+              {canEditPipeline && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 gap-2 text-[11px] font-bold uppercase tracking-wider border-border/60 hover:border-primary/50 transition-colors"
+                  onClick={() => setStagesEditorOpen(true)}
+                  disabled={!selectedPipelineId}
+                >
+                  <Settings className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Configurar Colunas</span>
+                </Button>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 self-end lg:self-auto">
+              <Button
+                variant="outline"
+                size="icon"
+                className={cn(
+                  "h-8 w-8 border-border/60 hover:border-primary/50 transition-colors", 
+                  isRefreshing && "text-primary border-primary bg-primary/5"
+                )}
+                onClick={handleManualRefresh}
+                disabled={isRefreshing}
+                title="Atualizar pipeline"
+              >
+                <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
+              </Button>
+
+              <SharedFilters
+                datePreset={datePreset}
+                onDatePresetChange={setDatePreset}
+                customDateRange={customDateRange}
+                onCustomDateRangeChange={setCustomDateRange}
+                teamId={sharedFilters.teamId}
+                onTeamChange={setFilterUser}
+                userId={filterUser}
+                onUserChange={setFilterUser}
+                source={filterSource}
+                onSourceChange={setFilterSource}
+                campaignId={filterCampaign}
+                onCampaignChange={setFilterCampaign}
+                adSetId={filterAdSet}
+                onAdSetChange={setFilterAdSet}
+                adId={filterAd}
+                onAdChange={setFilterAd}
+                tagId={filterTag}
+                onTagChange={setFilterTag}
+                dealStatus={filterDealStatus}
+                onDealStatusChange={setFilterDealStatus}
+                searchQuery={searchQuery}
+                onSearchChange={setSearchQuery}
+                onClear={clearFilters}
+                hasActiveFilters={hasSharedActiveFilters}
+                dynamicSources={dynamicSources}
+                campaigns={campaigns}
+                adSets={adSets}
+                ads={ads}
+                tags={allTagsFromHook}
+                isLoadingSources={isLoadingSources}
+                isLoadingCampaigns={isLoadingCampaigns}
+                isLoadingAdSets={isLoadingAdSets}
+                isLoadingAds={isLoadingAds}
+              />
+
+              <Button
+                size="sm"
+                className="h-8 px-4 font-bold text-[11px] uppercase tracking-wider"
+                onClick={() => openNewLeadDialog()}
+              >
+                <Plus className="h-3.5 w-3.5 mr-1.5" />
+                {newButtonLabel}
+              </Button>
+            </div>
+          </div>
+        </div>
+
 
         {/* Floating Action Button (FAB) - Only for Mobile */}
         {isMobile && (
