@@ -395,6 +395,7 @@ export function SharedFilters({
           onCustomDateRangeChange={onCustomDateRangeChange}
           triggerClassName={cn(
             "h-8 gap-2 text-[11px] font-semibold uppercase tracking-wider px-3 border-border/60 hover:border-primary/50 transition-colors",
+            isMobile ? "px-2 text-xs font-medium normal-case tracking-normal" : "",
             (datePreset !== 'last30days' || customDateRange) && "border-primary/50 bg-primary/5 text-primary"
           )}
           align="end"
@@ -410,22 +411,27 @@ export function SharedFilters({
               size="sm" 
               className={cn(
                 "h-8 gap-2 text-[11px] font-semibold uppercase tracking-wider px-3 border-border/60 hover:border-primary/50 transition-colors",
+                isMobile ? "px-2.5 text-xs font-medium normal-case tracking-normal" : "",
                 hasExtraFilters && "border-primary/50 bg-primary/5 text-primary"
               )}
             >
               <SlidersHorizontal className="h-3.5 w-3.5" />
-              <span>Filtros</span>
+              <span className={isMobile ? "hidden xs:inline" : ""}>Filtros</span>
               {hasExtraFilters && (
-                <Badge variant="default" className="ml-1 h-4 min-w-[16px] px-1 text-[9px] bg-primary flex items-center justify-center">
-                  !
+                <Badge variant="default" className={cn(
+                  "ml-1 h-4 min-w-[16px] px-1 text-[9px] bg-primary flex items-center justify-center",
+                  isMobile && "h-4 w-4 p-0 text-[10px] ml-0.5"
+                )}>
+                  {isMobile ? "•" : "!"}
                 </Badge>
               )}
             </Button>
           </PopoverTrigger>
-          <PopoverContent align="end" className="w-72 p-3 border-border/40 shadow-2xl">
+          <PopoverContent align="end" className={cn("w-72 p-3 border-border/40 shadow-2xl", isMobile && "w-[280px] max-h-[80vh] overflow-y-auto")}>
             <FilterContent />
           </PopoverContent>
         </Popover>
+
 
         {hasActiveFilters && (
           <Button
