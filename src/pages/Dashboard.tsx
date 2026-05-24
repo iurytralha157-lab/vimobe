@@ -19,7 +19,7 @@ import { cn } from "@/lib/utils";
 
 // Componentes de Layout e UI
 import { AppLayout } from "@/components/layout/AppLayout";
-import { DashboardFilters } from "@/components/dashboard/DashboardFilters";
+
 import { KPICards } from "@/components/dashboard/KPICards";
 import { SalesFunnelWithPipeline } from "@/components/dashboard/SalesFunnelWithPipeline";
 import { DealsEvolutionChart } from "@/components/dashboard/DealsEvolutionChart";
