@@ -127,7 +127,9 @@ export function SharedFilters({
   }, [localSearch]);
 
   useEffect(() => {
-    setLocalSearch(searchQuery);
+    if (searchQuery !== localSearch) {
+      setLocalSearch(searchQuery);
+    }
   }, [searchQuery]);
 
   const isAdmin = (user as any)?.role === 'admin' || (user as any)?.role === 'super_admin';
