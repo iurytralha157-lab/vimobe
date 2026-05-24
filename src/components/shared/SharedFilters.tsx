@@ -109,16 +109,16 @@ export function SharedFilters({
   isLoadingAdSets = false,
   isLoadingAds = false,
 }: SharedFiltersProps) {
-  const { profile } = useAuth();
+  const { user } = useAuth();
   const { data: teams = [] } = useTeams();
   const { data: users = [] } = useOrganizationUsers();
   const isMobile = useIsMobile();
   const { hasPermission } = useUserPermissions();
 
-  const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin';
+  const isAdmin = (user as any)?.role === 'admin' || (user as any)?.role === 'super_admin';
   const canViewAllLeads = isAdmin || hasPermission('lead_view_all');
   const isTeamLeader = teams.some(team => 
-    team.members?.some(m => m.user_id === profile?.id && m.is_leader)
+    team.members?.some(m => m.user_id === user?.id && m.is_leader)
   );
   
   const showUserFilter = canViewAllLeads || isTeamLeader;
@@ -126,7 +126,7 @@ export function SharedFilters({
   const availableTeams = isAdmin 
     ? teams 
     : teams.filter(team => 
-        team.members?.some(m => m.user_id === profile?.id && m.is_leader)
+        team.members?.some(m => m.user_id === user?.id && m.is_leader)
       );
 
   const availableUsers = teamId 

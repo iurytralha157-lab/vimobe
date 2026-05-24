@@ -124,6 +124,7 @@ export default function Pipelines() {
     setDatePreset,
     customDateRange,
     setCustomDateRange,
+    setTeamId,
     userId: filterUser,
     setUserId: setFilterUser,
     tagId: filterTag,
@@ -986,7 +987,7 @@ export default function Pipelines() {
                 customDateRange={customDateRange}
                 onCustomDateRangeChange={setCustomDateRange}
                 teamId={sharedFilters.teamId}
-                onTeamChange={setFilterUser}
+                onTeamChange={(id) => setTeamId(id)}
                 userId={filterUser}
                 onUserChange={setFilterUser}
                 source={filterSource}
