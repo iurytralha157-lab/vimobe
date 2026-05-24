@@ -95,24 +95,47 @@ import { exportContactsFiltered } from '@/lib/export-contacts';
 import { useLead, useDeleteLead } from '@/hooks/use-leads';
 import { ReentryBadge } from '@/components/leads/ReentryBadge';
 import { useToast } from '@/hooks/use-toast';
-import { DateFilterPopover } from '@/components/ui/date-filter-popover';
-import { DatePreset, getDateRangeFromPreset } from '@/hooks/use-dashboard-filters';
-import { AdvancedFilters } from '@/components/contacts/AdvancedFilters';
+import { SharedFilters } from '@/components/shared/SharedFilters';
+import { useSharedFilters } from '@/hooks/use-shared-filters';
+
 
 export default function Contacts() {
   const isMobile = useIsMobile();
   const { toast } = useToast();
   
-  // Filter states
-  const [search, setSearch] = useState('');
+  const {
+    filters: sharedFilters,
+    datePreset,
+    setDatePreset,
+    customDateRange,
+    setCustomDateRange,
+    userId: selectedAssignee,
+    setUserId: setSelectedAssignee,
+    tagId: selectedTag,
+    setTagId: setSelectedTag,
+    dealStatus: selectedDealStatus,
+    setDealStatus: setSelectedDealStatus,
+    source: selectedSource,
+    setSource: setSelectedSource,
+    searchQuery: search,
+    setSearchQuery: setSearch,
+    clearFilters,
+    hasActiveFilters: hasSharedActiveFilters,
+    dynamicSources,
+    campaigns,
+    adSets,
+    ads,
+    tags: allTagsFromHook,
+    isLoadingSources,
+    isLoadingCampaigns,
+    isLoadingAdSets,
+    isLoadingAds,
+  } = useSharedFilters();
+
+  // Local filters specific to Contacts
   const [selectedPipeline, setSelectedPipeline] = useState<string>('all');
   const [selectedStage, setSelectedStage] = useState<string>('all');
-  const [selectedAssignee, setSelectedAssignee] = useState<string>('all');
-  const [selectedTag, setSelectedTag] = useState<string>('all');
-  const [selectedSource, setSelectedSource] = useState<string>('all');
-  const [selectedDealStatus, setSelectedDealStatus] = useState<string>('all');
-  const [datePreset, setDatePreset] = useState<DatePreset | null>(null);
-  const [customDateRange, setCustomDateRange] = useState<{ from: Date; to: Date } | null>(null);
+
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [deleteContactId, setDeleteContactId] = useState<string | null>(null);
@@ -135,12 +158,9 @@ export default function Contacts() {
   // Debounce search
   const deferredSearch = useDeferredValue(search);
 
-  // Calculate date range from preset or custom range
-  const dateRange = useMemo<{ from: Date; to: Date } | null>(() => {
-    if (customDateRange) return customDateRange;
-    if (!datePreset) return null;
-    return getDateRangeFromPreset(datePreset);
-  }, [datePreset, customDateRange]);
+  // Date range is handled by useSharedFilters
+  const dateRange = sharedFilters.dateRange;
+
 
   // Build filters
   const filters: ContactListFilters = {
@@ -194,18 +214,13 @@ export default function Contacts() {
     lost: { label: 'Perdido', icon: XCircle, className: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300' },
   };
 
-  const clearFilters = () => {
-    setSearch('');
+  const handleClearFilters = () => {
+    clearFilters();
     setSelectedPipeline('all');
     setSelectedStage('all');
-    setSelectedAssignee('all');
-    setSelectedTag('all');
-    setSelectedSource('all');
-    setSelectedDealStatus('all');
-    setDatePreset(null);
-    setCustomDateRange(null);
     setPage(1);
   };
+
 
   const handleExport = async () => {
     setIsExporting(true);
@@ -326,31 +341,40 @@ export default function Contacts() {
         {/* Filters - Mobile vs Tablet/Small Desktop vs Large Desktop */}
         {isMobile ? (
           <div className="flex gap-2 items-center w-full">
-            <MobileFilters
-              search={search}
-              setSearch={(v) => { setSearch(v); setPage(1); }}
-              selectedPipeline={selectedPipeline}
-              setSelectedPipeline={(v) => { handleFilterChange(setSelectedPipeline)(v); setSelectedStage('all'); }}
-              selectedStage={selectedStage}
-              setSelectedStage={handleFilterChange(setSelectedStage)}
-              selectedAssignee={selectedAssignee}
-              setSelectedAssignee={handleFilterChange(setSelectedAssignee)}
-              selectedTag={selectedTag}
-              setSelectedTag={handleFilterChange(setSelectedTag)}
-              selectedSource={selectedSource}
-              setSelectedSource={handleFilterChange(setSelectedSource)}
+            <SharedFilters
               datePreset={datePreset}
-              onDatePresetChange={handleFilterChange(setDatePreset)}
+              onDatePresetChange={setDatePreset}
               customDateRange={customDateRange}
-              onCustomDateRangeChange={handleFilterChange(setCustomDateRange)}
-              pipelines={pipelines}
-              stages={stages}
-              users={users}
-              tags={tags}
-              hasActiveFilters={!!hasActiveFilters}
-              clearFilters={clearFilters}
-              activeFilterCount={activeFilterCount}
-              availableSources={uniqueSources}
+              onCustomDateRangeChange={setCustomDateRange}
+              teamId={sharedFilters.teamId}
+              onTeamChange={() => {}} // Team filter not used here yet
+              userId={selectedAssignee}
+              onUserChange={setSelectedAssignee}
+              source={selectedSource}
+              onSourceChange={setSelectedSource}
+              campaignId={sharedFilters.campaignId}
+              onCampaignChange={() => {}} // Meta filters not used here yet but available
+              adSetId={sharedFilters.adSetId}
+              onAdSetChange={() => {}}
+              adId={sharedFilters.adId}
+              onAdChange={() => {}}
+              tagId={selectedTag}
+              onTagChange={setSelectedTag}
+              dealStatus={selectedDealStatus}
+              onDealStatusChange={setSelectedDealStatus}
+              searchQuery={search}
+              onSearchChange={setSearch}
+              onClear={handleClearFilters}
+              hasActiveFilters={hasSharedActiveFilters || selectedPipeline !== 'all' || selectedStage !== 'all'}
+              dynamicSources={dynamicSources}
+              campaigns={campaigns}
+              adSets={adSets}
+              ads={ads}
+              tags={allTagsFromHook}
+              isLoadingSources={isLoadingSources}
+              isLoadingCampaigns={isLoadingCampaigns}
+              isLoadingAdSets={isLoadingAdSets}
+              isLoadingAds={isLoadingAds}
             />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -374,6 +398,7 @@ export default function Contacts() {
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
+
         ) : (
           <div className="bg-card rounded-xl p-1.5 px-3 shadow-sm overflow-hidden">
             <div className="flex items-center gap-1.5 w-full">
