@@ -71,7 +71,7 @@ export function useSharedFilters() {
       
       return distinctSources.map(s => ({
         value: s as string,
-        label: sourceLabels[s as string] || (s as string).charAt(0).toUpperCase() + (s as string).slice(1)
+        label: (s as string).charAt(0).toUpperCase() + (s as string).slice(1)
       }));
     }
   });
