@@ -30,7 +30,10 @@ import {
 import { StageSettingsDialog } from '@/components/pipelines/StageSettingsDialog';
 import { PipelineSlaSettings } from '@/components/pipelines/PipelineSlaSettings';
 import { StagesEditorDialog } from '@/components/pipelines/StagesEditorDialog';
-import { PipelineFilters } from '@/components/pipelines/PipelineFilters';
+import { SharedFilters } from '@/components/shared/SharedFilters';
+import { useSharedFilters } from '@/hooks/use-shared-filters';
+import { LayoutGrid, Check, Pencil } from 'lucide-react';
+
 import { startOfDay, endOfDay, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { LeadCard } from '@/components/leads/LeadCard';
@@ -114,15 +117,43 @@ export default function Pipelines() {
   const [newLeadDialogOpen, setNewLeadDialogOpen] = useState(false);
   const [newLeadStageId, setNewLeadStageId] = useState<string | null>(null);
   // newLeadForm agora é gerenciado pelo CreateLeadDialog
-  const [filterUser, setFilterUser] = useState<string | null>(null);
-  const [filterTag, setFilterTag] = useState<string | null>(null);
-  const [filterDealStatus, setFilterDealStatus] = useState<string | null>(null);
-  const [filterCampaign, setFilterCampaign] = useState<string | null>(null);
-  const [filterAdSet, setFilterAdSet] = useState<string | null>(null);
-  const [filterAd, setFilterAd] = useState<string | null>(null);
-  const [filterSource, setFilterSource] = useState<string | null>(null);
+  const {
+    filters: sharedFilters,
+    datePreset,
+    setDatePreset,
+    customDateRange,
+    setCustomDateRange,
+    userId: filterUser,
+    setUserId: setFilterUser,
+    tagId: filterTag,
+    setTagId: setFilterTag,
+    dealStatus: filterDealStatus,
+    setDealStatus: setFilterDealStatus,
+    campaignId: filterCampaign,
+    setCampaignId: setFilterCampaign,
+    adSetId: filterAdSet,
+    setAdSetId: setFilterAdSet,
+    adId: filterAd,
+    setAdId: setFilterAd,
+    source: filterSource,
+    setSource: setFilterSource,
+    searchQuery,
+    setSearchQuery,
+    clearFilters,
+    hasActiveFilters: hasSharedActiveFilters,
+    dynamicSources,
+    campaigns,
+    adSets,
+    ads,
+    tags: allTagsFromHook,
+    isLoadingSources,
+    isLoadingCampaigns,
+    isLoadingAdSets,
+    isLoadingAds,
+  } = useSharedFilters();
+
   const [searchInput, setSearchInput] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
+
   const [editingStageId, setEditingStageId] = useState<string | null>(null);
   const [editingStageName, setEditingStageName] = useState('');
   const [settingsStage, setSettingsStage] = useState<any | null>(null);
@@ -136,7 +167,9 @@ export default function Pipelines() {
   const [newStageColor, setNewStageColor] = useState('#6b7280');
   const [slaSettingsOpen, setSlaSettingsOpen] = useState(false);
   const [stagesEditorOpen, setStagesEditorOpen] = useState(false);
-  const { datePreset, setDatePreset, customDateRange, setCustomDateRange, activeDateRange: dateRange } = useFilters();
+  // useSharedFilters handles dateRange now
+  const dateRange = sharedFilters.dateRange;
+
   const [isRefreshing, setIsRefreshing] = useState(false);
   
   // Ref para bloquear refetch durante drag-and-drop (evita race condition)
