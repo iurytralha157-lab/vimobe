@@ -6,7 +6,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { CampaignFilter } from "@/components/dashboard/CampaignFilter";
+// CampaignFilter removed - logic inlined
 
 export interface AdvancedFiltersPopoverProps {
   showSearch?: boolean;
@@ -290,16 +290,17 @@ export function AdvancedFiltersPopover({
                     Campanhas Meta
                   </span>
                 </div>
-                <CampaignFilter
-                  campaignId={campaignId}
-                  onCampaignChange={onCampaignChange || (() => {})}
-                  adSetId={adSetId}
-                  onAdSetChange={onAdSetChange || (() => {})}
-                  adId={adId}
-                  onAdChange={onAdChange || (() => {})}
-                  fullWidth
-                  hideTitles
-                />
+                <div className="space-y-2">
+                  <Select value={campaignId || "all"} onValueChange={(val) => onCampaignChange?.(val === "all" ? null : val)}>
+                    <SelectTrigger className="h-8 text-xs bg-muted/30 border-border/40">
+                      <SelectValue placeholder="Campanha" />
+                    </SelectTrigger>
+                    <SelectContent className="z-[130]">
+                      <SelectItem value="all">Todas campanhas</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
               </div>
             )}
           </div>
