@@ -1,0 +1,444 @@
+import { Users, User, Globe, X, SlidersHorizontal, Check, Facebook, Search, Tag as TagIcon, CircleDot } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
+import { useTeams } from '@/hooks/use-teams';
+import { useOrganizationUsers } from '@/hooks/use-users';
+import { useAuth } from '@/contexts/AuthContext';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { useUserPermissions } from '@/hooks/use-user-permissions';
+import { DatePreset } from '@/hooks/use-dashboard-filters';
+import { DateFilterPopover } from '@/components/ui/date-filter-popover';
+
+interface SharedFiltersProps {
+  // Período
+  datePreset: DatePreset;
+  onDatePresetChange: (preset: DatePreset) => void;
+  customDateRange: { from: Date; to: Date } | null;
+  onCustomDateRangeChange: (range: { from: Date; to: Date } | null) => void;
+  
+  // Equipe e Usuário
+  teamId: string | null;
+  onTeamChange: (teamId: string | null) => void;
+  userId: string | null;
+  onUserChange: (userId: string | null) => void;
+  
+  // Origem
+  source: string | null;
+  onSourceChange: (source: string | null) => void;
+  dynamicSources?: { value: string, label: string }[];
+  isLoadingSources?: boolean;
+  
+  // Meta Ads
+  campaignId: string | null;
+  onCampaignChange: (id: string | null) => void;
+  adSetId: string | null;
+  onAdSetChange: (id: string | null) => void;
+  adId: string | null;
+  onAdChange: (id: string | null) => void;
+  campaigns?: { id: string, name: string }[];
+  adSets?: { id: string, name: string }[];
+  ads?: { id: string, name: string }[];
+  isLoadingCampaigns?: boolean;
+  isLoadingAdSets?: boolean;
+  isLoadingAds?: boolean;
+  
+  // Tag
+  tagId: string | null;
+  onTagChange: (tagId: string | null) => void;
+  tags?: { id: string, name: string, color: string }[];
+  
+  // Status do negócio
+  dealStatus: string | null;
+  onDealStatusChange: (status: string | null) => void;
+  
+  // Busca
+  searchQuery: string;
+  onSearchChange: (query: string) => void;
+  
+  // Controle
+  onClear: () => void;
+  hasActiveFilters: boolean;
+}
+
+export function SharedFilters({
+  datePreset,
+  onDatePresetChange,
+  customDateRange,
+  onCustomDateRangeChange,
+  teamId,
+  onTeamChange,
+  userId,
+  onUserChange,
+  source,
+  onSourceChange,
+  campaignId,
+  onCampaignChange,
+  adSetId,
+  onAdSetChange,
+  adId,
+  onAdChange,
+  tagId,
+  onTagChange,
+  dealStatus,
+  onDealStatusChange,
+  searchQuery,
+  onSearchChange,
+  onClear,
+  hasActiveFilters,
+  dynamicSources = [],
+  campaigns = [],
+  adSets = [],
+  ads = [],
+  tags = [],
+  isLoadingSources = false,
+  isLoadingCampaigns = false,
+  isLoadingAdSets = false,
+  isLoadingAds = false,
+}: SharedFiltersProps) {
+  const { profile } = useAuth();
+  const { data: teams = [] } = useTeams();
+  const { data: users = [] } = useOrganizationUsers();
+  const isMobile = useIsMobile();
+  const { hasPermission } = useUserPermissions();
+
+  const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin';
+  const canViewAllLeads = isAdmin || hasPermission('lead_view_all');
+  const isTeamLeader = teams.some(team => 
+    team.members?.some(m => m.user_id === profile?.id && m.is_leader)
+  );
+  
+  const showUserFilter = canViewAllLeads || isTeamLeader;
+  
+  const availableTeams = isAdmin 
+    ? teams 
+    : teams.filter(team => 
+        team.members?.some(m => m.user_id === profile?.id && m.is_leader)
+      );
+
+  const availableUsers = teamId 
+    ? users.filter(user => {
+        const team = teams.find(t => t.id === teamId);
+        return team?.members?.some(m => m.user_id === user.id);
+      })
+    : users;
+
+  const hasExtraFilters = teamId !== null || userId !== null || source !== null || campaignId !== null || adSetId !== null || adId !== null || tagId !== null || dealStatus !== null || searchQuery !== '';
+
+  const TeamFilter = () => availableTeams.length > 0 ? (
+    <Select
+      value={teamId || 'all'}
+      onValueChange={(value) => {
+        onTeamChange(value === 'all' ? null : value);
+        onUserChange(null);
+      }}
+    >
+      <SelectTrigger className={cn(
+        "h-9 w-full text-xs",
+        teamId && "border-primary text-primary"
+      )}>
+        <Users className="h-3.5 w-3.5 mr-1.5 flex-shrink-0" />
+        <SelectValue placeholder="Equipe" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="all">Todas equipes</SelectItem>
+        {availableTeams.map((team) => (
+          <SelectItem key={team.id} value={team.id}>
+            {team.name}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  ) : null;
+
+  const UserFilter = () => (
+    <Select
+      value={userId || 'all'}
+      onValueChange={(value) => onUserChange(value === 'all' ? null : value)}
+    >
+      <SelectTrigger className={cn(
+        "h-9 w-full text-xs",
+        userId && "border-primary text-primary"
+      )}>
+        <User className="h-3.5 w-3.5 mr-1.5 flex-shrink-0" />
+        <SelectValue placeholder="Corretor" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="all">Todos</SelectItem>
+        {availableUsers.map((user) => (
+          <SelectItem key={user.id} value={user.id}>
+            {user.name}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+
+  const SourceFilter = () => (
+    <Select
+      value={source || 'all'}
+      onValueChange={(value) => onSourceChange(value === 'all' ? null : value)}
+    >
+      <SelectTrigger className={cn(
+        "h-9 w-full text-xs",
+        source && "border-primary text-primary"
+      )}>
+        <Globe className="h-3.5 w-3.5 mr-1.5 flex-shrink-0" />
+        <SelectValue placeholder={isLoadingSources ? "Carregando..." : "Origem"} />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="all">Todas origens</SelectItem>
+        {dynamicSources.map((option) => (
+          <SelectItem key={option.value} value={option.value}>
+            {option.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+
+  const TagFilter = () => (
+    <Select
+      value={tagId || 'all'}
+      onValueChange={(value) => onTagChange(value === 'all' ? null : value)}
+    >
+      <SelectTrigger className={cn(
+        "h-9 w-full text-xs",
+        tagId && "border-primary text-primary"
+      )}>
+        <TagIcon className="h-3.5 w-3.5 mr-1.5 flex-shrink-0" />
+        <SelectValue placeholder="Tag" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="all">Todas tags</SelectItem>
+        {tags.map((tag) => (
+          <SelectItem key={tag.id} value={tag.id}>
+            <div className="flex items-center gap-2">
+              <div className="h-2 w-2 rounded-full" style={{ backgroundColor: tag.color }} />
+              {tag.name}
+            </div>
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+
+  const DealStatusFilter = () => (
+    <Select
+      value={dealStatus || 'all'}
+      onValueChange={(value) => onDealStatusChange(value === 'all' ? null : value)}
+    >
+      <SelectTrigger className={cn(
+        "h-9 w-full text-xs",
+        dealStatus && "border-primary text-primary"
+      )}>
+        <CircleDot className="h-3.5 w-3.5 mr-1.5 flex-shrink-0" />
+        <SelectValue placeholder="Status" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="all">Todos status</SelectItem>
+        <SelectItem value="open">Aberto</SelectItem>
+        <SelectItem value="won">Ganho</SelectItem>
+        <SelectItem value="lost">Perdido</SelectItem>
+      </SelectContent>
+    </Select>
+  );
+
+  const MetaFilters = () => (
+    <div className="space-y-2">
+      <div className="space-y-1">
+        <Select
+          value={campaignId || 'all'}
+          onValueChange={(val) => {
+            onCampaignChange(val === 'all' ? null : val);
+          }}
+        >
+          <SelectTrigger className="h-8 text-xs bg-background/50 border-border/40">
+            <SelectValue placeholder={isLoadingCampaigns ? "Carregando..." : "Todas campanhas"} />
+          </SelectTrigger>
+          <SelectContent className="z-[120]">
+            <SelectItem value="all">Todas campanhas</SelectItem>
+            {campaigns.map((c) => (
+              <SelectItem key={c.id} value={c.id}>
+                {c.name}
+              </SelectItem>
+            ))}
+            {!isLoadingCampaigns && campaigns.length === 0 && (
+              <div className="p-2 text-[10px] text-center text-muted-foreground">Nenhuma campanha no período</div>
+            )}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {campaignId && (
+        <div className="space-y-1">
+          <Select
+            value={adSetId || 'all'}
+            onValueChange={(val) => {
+              onAdSetChange(val === 'all' ? null : val);
+            }}
+          >
+            <SelectTrigger className="h-8 text-xs bg-background/50 border-border/40 animate-in fade-in slide-in-from-top-1">
+              <SelectValue placeholder={isLoadingAdSets ? "Carregando..." : "Todos conjuntos"} />
+            </SelectTrigger>
+            <SelectContent className="z-[120]">
+              <SelectItem value="all">Todos conjuntos</SelectItem>
+              {adSets.map((s) => (
+                <SelectItem key={s.id} value={s.id}>
+                  {s.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      {adSetId && (
+        <div className="space-y-1">
+          <Select
+            value={adId || 'all'}
+            onValueChange={(val) => onAdChange(val === 'all' ? null : val)}
+          >
+            <SelectTrigger className="h-8 text-xs bg-background/50 border-border/40 animate-in fade-in slide-in-from-top-1">
+              <SelectValue placeholder={isLoadingAds ? "Carregando..." : "Todos criativos"} />
+            </SelectTrigger>
+            <SelectContent className="z-[120]">
+              <SelectItem value="all">Todos criativos</SelectItem>
+              {ads.map((a) => (
+                <SelectItem key={a.id} value={a.id}>
+                  {a.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+    </div>
+  );
+
+  const FilterContent = () => (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between border-b border-border/40 pb-2">
+        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Filtros Avançados</span>
+        {hasActiveFilters && (
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={onClear} 
+            className="h-5 px-1.5 text-[9px] uppercase font-bold text-primary hover:bg-primary/10"
+          >
+            Limpar
+          </Button>
+        )}
+      </div>
+
+      <div className="grid gap-2">
+        {/* Search */}
+        <div className="relative group">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground group-focus-within:text-primary" />
+          <Input
+            placeholder="Buscar..."
+            value={searchQuery}
+            onChange={(e) => onSearchChange(e.target.value)}
+            className="h-9 pl-8 text-xs bg-muted/30 border-border/50 focus:bg-background"
+          />
+        </div>
+
+        {/* Team */}
+        {availableTeams.length > 0 && <TeamFilter />}
+
+        {/* User */}
+        {showUserFilter && <UserFilter />}
+
+        {/* Source */}
+        <SourceFilter />
+
+        {/* Tag */}
+        <TagFilter />
+
+        {/* Status */}
+        <DealStatusFilter />
+
+        {/* Meta Ads */}
+        <div className="space-y-2 pt-2 border-t border-border/40">
+          <div className="flex items-center gap-1.5 px-1 mb-1">
+            <Facebook className="h-3 w-3 text-[#1877F2]" />
+            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Campanhas Meta</span>
+          </div>
+          <MetaFilters />
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="flex items-center justify-end gap-2 w-full">
+      {/* Date Filter */}
+      <div className="flex items-center">
+        <DateFilterPopover
+          datePreset={datePreset}
+          onDatePresetChange={onDatePresetChange}
+          customDateRange={customDateRange}
+          onCustomDateRangeChange={onCustomDateRangeChange}
+          triggerClassName={cn(
+            "h-8 gap-2 text-[11px] font-semibold uppercase tracking-wider px-3 border-border/60 hover:border-primary/50 transition-colors",
+            (datePreset !== 'last30days' || customDateRange) && "border-primary/50 bg-primary/5 text-primary"
+          )}
+          align="end"
+        />
+      </div>
+
+      {/* Filters Popover */}
+      <div className="flex items-center gap-1">
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className={cn(
+                "h-8 gap-2 text-[11px] font-semibold uppercase tracking-wider px-3 border-border/60 hover:border-primary/50 transition-colors",
+                hasExtraFilters && "border-primary/50 bg-primary/5 text-primary"
+              )}
+            >
+              <SlidersHorizontal className="h-3.5 w-3.5" />
+              <span>Filtros</span>
+              {hasExtraFilters && (
+                <Badge variant="default" className="ml-1 h-4 min-w-[16px] px-1 text-[9px] bg-primary flex items-center justify-center">
+                  !
+                </Badge>
+              )}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-72 p-3 border-border/40 shadow-2xl">
+            <FilterContent />
+          </PopoverContent>
+        </Popover>
+
+        {hasActiveFilters && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 px-2 text-muted-foreground hover:text-destructive transition-colors"
+            onClick={onClear}
+            title="Limpar todos os filtros"
+          >
+            <X className="h-3.5 w-3.5" />
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
