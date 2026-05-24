@@ -1,12 +1,25 @@
-import { useEffect, useMemo } from "react";
-import { Facebook } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
-import { useLeadMetaFilters } from "@/hooks/use-stages";
-import { useFilters } from "@/contexts/FilterContext";
+import { useEffect, useMemo } from 'react';
+import { Facebook } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
+import { useLeadMetaFilters } from '@/hooks/use-stages';
+import { useFilters } from '@/contexts/FilterContext';
 
 interface CampaignFilterProps {
   campaignId: string | null;
@@ -29,55 +42,76 @@ export function CampaignFilter({
   fullWidth = false,
   hideTitles = false,
 }: CampaignFilterProps) {
+  const { organization } = useAuth();
   const { activeDateRange: dateRange } = useFilters();
 
-  // Busca as campanhas, conjuntos e anúncios baseado no período ativo
+  // Use the central hook for campaigns, adsets and ads
   const { data: metaData, isLoading } = useLeadMetaFilters(dateRange);
   const campaigns = metaData?.campaigns || [];
   const adSets = metaData?.adsets || [];
   const ads = metaData?.ads || [];
 
-  // CORREÇÃO 1: Ajuste nas dependências do useEffect para evitar loops e resets infinitos
+  // Limpeza automática se a campanha selecionada não existir no novo período
   useEffect(() => {
-    if (!isLoading && campaignId && campaigns.length > 0 && campaignId !== "all") {
-      const campaignExists = campaigns.some((c) => c.id === campaignId);
+    if (!isLoading && campaignId && campaigns.length > 0) {
+      const campaignExists = campaigns.some(c => c.id === campaignId);
       if (!campaignExists) {
-        console.log("[CampaignFilter] Campanha não encontrada no período atual, limpando filtros:", campaignId);
+        console.log('[CampaignFilter] Campaign not in current period, clearing filters:', campaignId);
         onCampaignChange(null);
         onAdSetChange(null);
         onAdChange(null);
       }
     }
-    // Removemos as funções de alteração (onCampaignChange, etc) daqui para não resetar o estado cruzado do pai
-  }, [campaigns, isLoading, campaignId]);
+  }, [campaigns, isLoading, campaignId, onCampaignChange, onAdSetChange, onAdChange]);
 
-  // Filtragem local de conjuntos e criativos baseados na seleção
+  // Filter adSets and ads if campaignId or adSetId is selected
   const filteredAdSets = useMemo(() => {
-    if (!campaignId || campaignId === "all") return [];
-    return adSets.filter((s) => s.campaignId === campaignId);
+    if (!campaignId || campaignId === 'all') return [];
+    return adSets.filter(s => s.campaignId === campaignId);
   }, [adSets, campaignId]);
 
   const filteredAds = useMemo(() => {
-    if (!campaignId || campaignId === "all") return [];
-
-    let filtered = ads.filter((a) => a.campaignId === campaignId);
-    if (adSetId && adSetId !== "all") {
-      filtered = filtered.filter((a) => a.adsetId === adSetId);
+    if (!campaignId || campaignId === 'all') return [];
+    
+    // Filter by campaign and optionally by adset
+    let filtered = ads.filter(a => a.campaignId === campaignId);
+    if (adSetId && adSetId !== 'all') {
+      filtered = filtered.filter(a => a.adsetId === adSetId);
     }
-
+    
     return filtered;
   }, [ads, campaignId, adSetId]);
 
-  // Logs de auditoria para Debug
+  // Specific audit logs requested
   useEffect(() => {
-    if (campaignId && campaignId !== "all") {
-      console.log("[Campaign Audit] Campanha Selecionada:", {
+    if (campaignId && campaignId !== 'all') {
+      console.log('[Campaign Audit] Selected Campaign:', {
         selectedCampaign: campaignId,
         totalAdSetsForCampaign: filteredAdSets.length,
         totalCreativesForCampaign: filteredAds.length,
+        first10AdSets: filteredAdSets.slice(0, 10),
+        first10Creatives: filteredAds.slice(0, 10)
       });
     }
   }, [campaignId, filteredAdSets, filteredAds]);
+
+  useEffect(() => {
+    if (adSetId && adSetId !== 'all') {
+      console.log('[Campaign Audit] Selected AdSet:', {
+        selectedAdSet: adSetId,
+        totalCreativesForAdSet: filteredAds.length
+      });
+    }
+  }, [adSetId, filteredAds]);
+
+  useEffect(() => {
+    console.log('Campaign dropdown debug:', {
+      period: dateRange ? { from: dateRange.from.toISOString(), to: dateRange.to.toISOString() } : 'All time',
+      totalCampaignsFromHook: campaigns.length,
+      selectedCampaign: campaignId,
+      isLoading
+    });
+  }, [campaigns, isLoading, dateRange, campaignId]);
 
   const activeCount = [campaignId, adSetId, adId].filter(Boolean).length;
   const hasActiveFilters = activeCount > 0;
@@ -91,9 +125,9 @@ export function CampaignFilter({
             Campanhas Meta
           </h4>
           {hasActiveFilters && (
-            <Button
-              variant="ghost"
-              size="sm"
+            <Button 
+              variant="ghost" 
+              size="sm" 
               className="h-6 px-1.5 text-[9px] font-bold uppercase text-primary hover:bg-primary/10"
               onClick={() => {
                 onCampaignChange(null);
@@ -108,12 +142,11 @@ export function CampaignFilter({
       )}
 
       <div className="space-y-2">
-        {/* SELECT DE CAMPANHAS */}
         <div className="space-y-1">
           <Select
-            value={campaignId || "all"}
+            value={campaignId || 'all'}
             onValueChange={(val) => {
-              onCampaignChange(val === "all" ? null : val);
+              onCampaignChange(val === 'all' ? null : val);
               onAdSetChange(null);
               onAdChange(null);
             }}
@@ -132,14 +165,13 @@ export function CampaignFilter({
           </Select>
         </div>
 
-        {/* SELECT DE CONJUNTOS */}
-        {campaignId && campaignId !== "all" && (
+        {campaignId && (
           <>
             <div className="space-y-1">
               <Select
-                value={adSetId || "all"}
+                value={adSetId || 'all'}
                 onValueChange={(val) => {
-                  onAdSetChange(val === "all" ? null : val);
+                  onAdSetChange(val === 'all' ? null : val);
                   onAdChange(null);
                 }}
               >
@@ -157,9 +189,11 @@ export function CampaignFilter({
               </Select>
             </div>
 
-            {/* SELECT DE CRIATIVOS / ANÚNCIOS */}
             <div className="space-y-1">
-              <Select value={adId || "all"} onValueChange={(val) => onAdChange(val === "all" ? null : val)}>
+              <Select
+                value={adId || 'all'}
+                onValueChange={(val) => onAdChange(val === 'all' ? null : val)}
+              >
                 <SelectTrigger className="h-8 text-xs bg-background/50 border-border/40 animate-in fade-in slide-in-from-top-1 duration-200">
                   <SelectValue placeholder="Todos criativos" />
                 </SelectTrigger>
@@ -191,14 +225,14 @@ export function CampaignFilter({
           size="sm"
           className={cn(
             "h-8 px-2 text-xs gap-1.5",
-            hasActiveFilters && "border-[#1877F2] text-[#1877F2] hover:text-[#1877F2] hover:bg-[#1877F2]/10",
+            hasActiveFilters && "border-[#1877F2] text-[#1877F2] hover:text-[#1877F2] hover:bg-[#1877F2]/10"
           )}
         >
           <Facebook className={cn("h-3.5 w-3.5", hasActiveFilters ? "fill-[#1877F2]" : "text-muted-foreground")} />
           <span className="hidden sm:inline">Meta Ads</span>
           {hasActiveFilters && (
-            <Badge
-              variant="default"
+            <Badge 
+              variant="default" 
               className="h-4 min-w-4 p-0 px-1 flex items-center justify-center text-[10px] ml-0.5 bg-[#1877F2]"
             >
               {activeCount}
