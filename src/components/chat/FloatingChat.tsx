@@ -227,6 +227,7 @@ export function FloatingChat() {
 
   const handleStartConversationWithSession = async (phone: string, sessionId?: string, leadName?: string, leadId?: string) => {
     console.log('[WhatsApp Start] Iniciando fluxo', { phone, leadId, sessionId });
+    setIsStartingConversation(true);
     
     try {
       // 1) Se temos leadId, sempre tentar primeiro abrir conversa existente desse lead (qualquer sessão acessível)
