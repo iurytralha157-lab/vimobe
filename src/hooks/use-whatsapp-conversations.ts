@@ -92,6 +92,13 @@ export function useWhatsAppConversations(
   return useQuery({
     queryKey: ["whatsapp-conversations", sessionId, filters, accessibleSessionIds],
     queryFn: async () => {
+      const { profile } = useAuth();
+      console.log('[WhatsApp Conversations] Buscando conversas...', {
+        userId: profile?.id,
+        sessionId,
+        accessibleSessionIds
+      });
+
       let query = supabase
         .from("whatsapp_conversations")
         .select(`
@@ -116,6 +123,7 @@ export function useWhatsAppConversations(
       } else if (accessibleSessionIds !== undefined) {
         // When "All channels" is selected, enforce only explicitly accessible sessions.
         if (accessibleSessionIds.length === 0) {
+          console.log('[WhatsApp Conversations] Nenhum canal acessível fornecido');
           return [];
         }
 
@@ -129,9 +137,13 @@ export function useWhatsAppConversations(
 
       const { data, error } = await query;
 
-      if (error) throw error;
+      if (error) {
+        console.error('[WhatsApp Conversations] Erro na query:', error);
+        throw error;
+      }
       
-      let conversations = data as WhatsAppConversation[];
+      console.log(`[WhatsApp Conversations] ${data?.length || 0} conversas retornadas`);
+      const conversations = data as WhatsAppConversation[];
       
       // Filter groups on client side (more flexible)
       if (filters?.hideGroups) {
