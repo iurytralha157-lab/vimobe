@@ -92,12 +92,18 @@ export function useWhatsAppConversations(
   return useQuery({
     queryKey: ["whatsapp-conversations", sessionId, filters, accessibleSessionIds],
     queryFn: async () => {
-      const { profile } = useAuth();
-      console.log('[WhatsApp Conversations] Buscando conversas...', {
-        userId: profile?.id,
+      console.log('[WhatsApp Conversations Load] Iniciando carregamento...', {
+        authUserId: profile?.id,
+        organizationActive: profile?.organization_id,
         sessionId,
+        accessibleSessionIdsCount: accessibleSessionIds?.length,
         accessibleSessionIds
       });
+
+      if (!profile?.organization_id) {
+        console.warn('[WhatsApp Conversations Load] Organização não identificada');
+        return [];
+      }
 
       let query = supabase
         .from("whatsapp_conversations")
@@ -115,19 +121,25 @@ export function useWhatsAppConversations(
           )
         `)
         .is("deleted_at", null)
-        .not("last_message_at", "is", null)
-        .order("last_message_at", { ascending: false, nullsFirst: false });
+        // Relaxado conforme solicitado para não ocultar conversas que podem ter last_message_at nulo
+        // .not("last_message_at", "is", null) 
+        .order("last_message_at", { ascending: false, nullsFirst: false })
+        .order("created_at", { ascending: false });
 
       if (sessionId) {
         query = query.eq("session_id", sessionId);
+        console.log(`[WhatsApp Conversations Load] Filtrando por sessão única: ${sessionId}`);
       } else if (accessibleSessionIds !== undefined) {
-        // When "All channels" is selected, enforce only explicitly accessible sessions.
+        // Se ainda não temos a lista de sessões (undefined), não retornamos nada para não dar flash de vazio
+        if (accessibleSessionIds === null) return [];
+        
         if (accessibleSessionIds.length === 0) {
-          console.log('[WhatsApp Conversations] Nenhum canal acessível fornecido');
+          console.log('[WhatsApp Conversations Load] Lista de sessões acessíveis está vazia. Retornando [].');
           return [];
         }
 
         query = query.in("session_id", accessibleSessionIds);
+        console.log(`[WhatsApp Conversations Load] Filtrando por múltiplas sessões: ${accessibleSessionIds.join(', ')}`);
       }
 
       // Filter archived
@@ -138,11 +150,11 @@ export function useWhatsAppConversations(
       const { data, error } = await query;
 
       if (error) {
-        console.error('[WhatsApp Conversations] Erro na query:', error);
+        console.error('[WhatsApp Conversations Load] Erro na query:', error);
         throw error;
       }
       
-      console.log(`[WhatsApp Conversations] ${data?.length || 0} conversas retornadas`);
+      console.log(`[WhatsApp Conversations Load] Sucesso: ${data?.length || 0} conversas retornadas`);
       const conversations = data as WhatsAppConversation[];
       
       // Filter groups on client side (more flexible)
