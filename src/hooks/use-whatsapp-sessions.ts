@@ -192,6 +192,14 @@ export function useCreateWhatsAppSession() {
       // Generate a unique token for evolution_go to identify the instance
       const token = provider === "evolution_go" ? Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15) : null;
 
+      console.log("[useCreateWhatsAppSession] Inserting new session:", {
+        organization_id: profile.organization_id,
+        owner_user_id: profile.id,
+        instance_name: uniqueInstanceName,
+        display_name: displayName,
+        provider
+      });
+
       // Create session row first
       const { data: session, error: dbError } = await supabase
         .from("whatsapp_sessions")
@@ -207,7 +215,10 @@ export function useCreateWhatsAppSession() {
         .select()
         .single();
 
-      if (dbError) throw dbError;
+      if (dbError) {
+        console.error("[useCreateWhatsAppSession] Database error:", dbError);
+        throw dbError;
+      }
 
       // Provision instance on the chosen provider
       const proxyFn = provider === "evolution_go" ? "evolution-go-proxy" : "evolution-proxy";
