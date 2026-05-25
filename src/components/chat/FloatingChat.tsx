@@ -958,6 +958,13 @@ export function FloatingChat() {
         <div className="fixed inset-0 z-50 bg-card flex flex-col overflow-hidden pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
           <FloatingChatHeader mobile />
 
+          {isStartingConversation && (
+            <div className="absolute inset-0 bg-background/50 flex flex-col items-center justify-center z-50">
+              <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
+              <p className="text-xs text-muted-foreground animate-pulse">Iniciando conversa...</p>
+            </div>
+          )}
+
           <div className="flex-1 flex flex-col overflow-hidden min-h-0 w-full max-w-full">
             {activeConversation ? (
               <>
