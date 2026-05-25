@@ -30,58 +30,28 @@ export function useAccessibleSessions() {
         return [];
       }
 
-      console.log("[useAccessibleSessions] Fetching for:", {
+      console.log("[useAccessibleSessions] Fetching accessible sessions for:", {
         userId: profile.id,
         orgId: profile.organization_id,
         role: profile.role
       });
 
-      // Fetch owned sessions and access grants in parallel
-      const [
-        { data: ownedSessions, error: ownedError },
-        { data: accessGrants, error: accessError }
-      ] = await Promise.all([
-        supabase
-          .from("whatsapp_sessions")
-          .select("*")
-          .eq("owner_user_id", profile.id),
-        supabase
-          .from("whatsapp_session_access")
-          .select("session_id")
-          .eq("user_id", profile.id)
-          .eq("can_view", true)
-      ]);
+      // We trust the RLS policy 'whatsapp_sessions_select_accessible' to return
+      // only sessions the user is allowed to see (owned or shared).
+      const { data, error } = await supabase
+        .from("whatsapp_sessions")
+        .select("*")
+        .eq("organization_id", profile.organization_id);
 
-      if (accessError) {
-        console.error("Error fetching session access grants:", accessError);
-      }
-      console.log("[useAccessibleSessions] Access grants found:", accessGrants?.length || 0);
-
-      // Fetch the actual session data for granted session IDs
-      let accessSessions: WhatsAppSession[] = [];
-      if (accessGrants && accessGrants.length > 0) {
-        const grantedSessionIds = accessGrants.map((g: any) => g.session_id).filter(Boolean);
-        if (grantedSessionIds.length > 0) {
-          const { data: grantedSessions, error: gsError } = await supabase
-            .from("whatsapp_sessions")
-            .select("*")
-            .eq("organization_id", profile.organization_id)
-            .in("id", grantedSessionIds);
-
-          if (gsError) {
-            console.error("Error fetching granted sessions:", gsError);
-          } else {
-            accessSessions = (grantedSessions || []) as WhatsAppSession[];
-          }
-        }
+      if (error) {
+        console.error("[useAccessibleSessions] Error fetching sessions:", error);
+        throw error;
       }
 
-      // Combine and deduplicate by session ID
-      const ownedList = (ownedSessions || []) as WhatsAppSession[];
-      const allSessions = [...ownedList, ...accessSessions];
-      const uniqueSessions = [...new Map(allSessions.map(s => [s.id, s])).values()];
+      console.log(`[useAccessibleSessions] Found ${data?.length || 0} accessible sessions`);
       
-      return uniqueSessions.sort((a, b) => 
+      const sessions = (data || []) as WhatsAppSession[];
+      return sessions.sort((a, b) => 
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       );
     },
