@@ -146,11 +146,9 @@ export function useWhatsAppConversations(
       const conversations = data as WhatsAppConversation[];
       
       // Filter groups on client side (more flexible)
-      if (filters?.hideGroups) {
-        conversations = conversations.filter(c => !c.is_group);
-      }
-      
-      let conversationsResult = conversations;
+      let conversationsResult = filters?.hideGroups 
+        ? conversations.filter(c => !c.is_group)
+        : conversations;
       
       // ===== BUSCAR LEADS POR TELEFONE PARA CONVERSAS SEM LEAD_ID =====
       // Isso garante que tags apareçam mesmo se a conversa não foi vinculada automaticamente
