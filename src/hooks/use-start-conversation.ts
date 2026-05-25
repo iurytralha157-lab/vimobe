@@ -16,6 +16,7 @@ export function useStartConversation() {
 
   return useMutation({
     mutationFn: async ({ phone, sessionId, leadId, leadName }: StartConversationParams): Promise<WhatsAppConversation> => {
+      console.log('[WhatsApp Start] useStartConversation iniciado', { phone, sessionId, leadId });
       // Always derive organization_id from the WhatsApp session itself (source of truth for RLS)
       const { data: sessionRow, error: sessionError } = await supabase
         .from("whatsapp_sessions")
@@ -24,6 +25,7 @@ export function useStartConversation() {
         .single();
 
       if (sessionError || !sessionRow) {
+        console.error('[WhatsApp Start] Erro ao buscar sessão:', sessionError);
         throw new Error("Sessão WhatsApp não encontrada ou sem acesso");
       }
 
@@ -33,6 +35,7 @@ export function useStartConversation() {
       const cleanPhone = formatPhoneForWhatsApp(phone);
       const remoteJid = cleanPhone.includes("@") ? cleanPhone : `${cleanPhone}@c.us`;
 
+      console.log('[WhatsApp Start] Buscando se já existe conversa local...', { remoteJid, sessionId });
       // Verificar se já existe conversa com esse telefone na sessão
       const { data: existingConversation, error: searchError } = await supabase
         .from("whatsapp_conversations")
@@ -46,10 +49,15 @@ export function useStartConversation() {
         .is("deleted_at", null)
         .maybeSingle();
 
-      if (searchError) throw searchError;
+      if (searchError) {
+        console.error('[WhatsApp Start] Erro na busca de conversa existente:', searchError);
+        throw searchError;
+      }
 
       if (existingConversation) {
+        console.log('[WhatsApp Start] Conversa encontrada localmente:', existingConversation.id);
         if (leadId && existingConversation.lead_id !== leadId) {
+          console.log('[WhatsApp Start] Atualizando lead_id da conversa existente');
           await supabase
             .from("whatsapp_conversations")
             .update({ lead_id: leadId })
@@ -58,6 +66,7 @@ export function useStartConversation() {
         return existingConversation as WhatsAppConversation;
       }
 
+      console.log('[WhatsApp Start] Inserindo nova conversa...');
       const { data: newConversation, error: insertError } = await supabase
         .from("whatsapp_conversations")
         .insert({
@@ -77,8 +86,12 @@ export function useStartConversation() {
         `)
         .single();
 
-      if (insertError) throw insertError;
+      if (insertError) {
+        console.error('[WhatsApp Start] Erro ao inserir nova conversa:', insertError);
+        throw insertError;
+      }
 
+      console.log('[WhatsApp Start] Nova conversa inserida:', newConversation.id);
       return newConversation as WhatsAppConversation;
     },
     onSuccess: () => {
