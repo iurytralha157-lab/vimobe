@@ -111,6 +111,7 @@ export function SharedFilters({
   isLoadingCampaigns = false,
   isLoadingAdSets = false,
   isLoadingAds = false,
+  hideSearch = false,
 }: SharedFiltersProps) {
   const { user } = useAuth();
   const { data: teams = [] } = useTeams();
