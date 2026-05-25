@@ -113,7 +113,7 @@ export function SharedFilters({
   isLoadingAds = false,
   hideSearch = false,
 }: SharedFiltersProps) {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { data: teams = [] } = useTeams();
   const { data: users = [] } = useOrganizationUsers();
   const isMobile = useIsMobile();
@@ -135,7 +135,7 @@ export function SharedFilters({
     }
   }, [searchQuery]);
 
-  const isAdmin = (user as any)?.role === "admin" || (user as any)?.role === "super_admin";
+  const isAdmin = profile?.role === "admin" || profile?.role === "super_admin";
   const canViewAllLeads = isAdmin || hasPermission("lead_view_all");
   const isTeamLeader = teams.some((team) => team.members?.some((m) => m.user_id === user?.id && m.is_leader));
 
@@ -342,7 +342,6 @@ export function SharedFilters({
       </div>
 
       <div className="grid gap-2">
-        {/* Search */}
         {!hideSearch && (
           <div className="relative group">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground group-focus-within:text-primary" />
@@ -355,22 +354,16 @@ export function SharedFilters({
           </div>
         )}
 
-        {/* Team */}
         {availableTeams.length > 0 && <TeamFilter />}
 
-        {/* User */}
         {showUserFilter && <UserFilter />}
 
-        {/* Source */}
         <SourceFilter />
 
-        {/* Tag */}
         <TagFilter />
 
-        {/* Status */}
         <DealStatusFilter />
 
-        {/* Meta Ads */}
         <div className="space-y-2 pt-2 border-t border-border/40">
           <div className="flex items-center gap-1.5 px-1 mb-1">
             <Facebook className="h-3 w-3 text-[#1877F2]" />
@@ -386,7 +379,6 @@ export function SharedFilters({
 
   return (
     <div className="flex items-center justify-end gap-2 w-full">
-      {/* Date Filter */}
       <div className="flex items-center">
         <DateFilterPopover
           datePreset={datePreset}
@@ -402,7 +394,6 @@ export function SharedFilters({
         />
       </div>
 
-      {/* Filters Popover */}
       <div className="flex items-center gap-1">
         <Popover open={filtersOpen} onOpenChange={setFiltersOpen} modal={true}>
           <PopoverTrigger asChild>
