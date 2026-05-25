@@ -150,6 +150,8 @@ export function useWhatsAppConversations(
         conversations = conversations.filter(c => !c.is_group);
       }
       
+      let conversationsResult = conversations;
+      
       // ===== BUSCAR LEADS POR TELEFONE PARA CONVERSAS SEM LEAD_ID =====
       // Isso garante que tags apareçam mesmo se a conversa não foi vinculada automaticamente
       const unlinkedConversations = conversations.filter(c => !c.lead_id && c.contact_phone && !c.is_group);
