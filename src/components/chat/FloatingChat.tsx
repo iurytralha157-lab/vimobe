@@ -62,6 +62,7 @@ export function FloatingChat() {
   });
   const [showSessionSelector, setShowSessionSelector] = useState(false);
   const [pendingStartData, setPendingStartData] = useState<{phone: string, leadName?: string, leadId?: string} | null>(null);
+  const [isStartingConversation, setIsStartingConversation] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messageInputRef = useRef<HTMLTextAreaElement>(null);
