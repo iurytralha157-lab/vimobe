@@ -92,6 +92,13 @@ export function useWhatsAppConversations(
   return useQuery({
     queryKey: ["whatsapp-conversations", sessionId, filters, accessibleSessionIds],
     queryFn: async () => {
+      const { profile } = useAuth();
+      console.log('[WhatsApp Conversations] Buscando conversas...', {
+        userId: profile?.id,
+        sessionId,
+        accessibleSessionIds
+      });
+
       let query = supabase
         .from("whatsapp_conversations")
         .select(`
@@ -116,6 +123,7 @@ export function useWhatsAppConversations(
       } else if (accessibleSessionIds !== undefined) {
         // When "All channels" is selected, enforce only explicitly accessible sessions.
         if (accessibleSessionIds.length === 0) {
+          console.log('[WhatsApp Conversations] Nenhum canal acessível fornecido');
           return [];
         }
 
@@ -129,18 +137,22 @@ export function useWhatsAppConversations(
 
       const { data, error } = await query;
 
-      if (error) throw error;
+      if (error) {
+        console.error('[WhatsApp Conversations] Erro na query:', error);
+        throw error;
+      }
       
-      let conversations = data as WhatsAppConversation[];
+      console.log(`[WhatsApp Conversations] ${data?.length || 0} conversas retornadas`);
+      const conversations = data as WhatsAppConversation[];
       
       // Filter groups on client side (more flexible)
-      if (filters?.hideGroups) {
-        conversations = conversations.filter(c => !c.is_group);
-      }
+      let conversationsResult = filters?.hideGroups 
+        ? conversations.filter(c => !c.is_group)
+        : conversations;
       
       // ===== BUSCAR LEADS POR TELEFONE PARA CONVERSAS SEM LEAD_ID =====
       // Isso garante que tags apareçam mesmo se a conversa não foi vinculada automaticamente
-      const unlinkedConversations = conversations.filter(c => !c.lead_id && c.contact_phone && !c.is_group);
+      const unlinkedConversations = conversationsResult.filter(c => !c.lead_id && c.contact_phone && !c.is_group);
       
       if (unlinkedConversations.length > 0) {
         // Obter lista de telefones originais e normalizados para busca
@@ -152,7 +164,7 @@ export function useWhatsAppConversations(
         const { data: leads, error: leadsError } = await supabase
           .from('leads')
           .select('id, phone, name, pipeline_id, stage_id, pipeline:pipelines(id, name), stage:stages(id, name, color), tags:lead_tags(tag:tags(id, name, color))')
-          .eq('organization_id', profile.organization_id)
+          .eq('organization_id', profile?.organization_id)
           .in('phone', allPossiblePhones);
         
         if (leadsError) {
@@ -172,7 +184,7 @@ export function useWhatsAppConversations(
           }
           
           // Associar leads às conversas
-          conversations = conversations.map(conv => {
+          conversationsResult = conversationsResult.map(conv => {
             if (conv.lead_id || !conv.contact_phone || conv.is_group) return conv;
             
             const normalizedConvPhone = normalizePhone(conv.contact_phone);
@@ -197,7 +209,7 @@ export function useWhatsAppConversations(
         }
       }
       
-      return conversations;
+      return conversationsResult;
     },
     enabled: !!profile?.organization_id,
     // Realtime push via WhatsAppRealtimeBus + 2min safety refetch
