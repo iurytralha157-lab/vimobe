@@ -9039,6 +9039,14 @@ export type Database = {
         Args: { session_id: string }
         Returns: boolean
       }
+      vimob_can_access_whatsapp_conversation: {
+        Args: { p_conversation_id: string; p_permission?: string }
+        Returns: boolean
+      }
+      vimob_can_access_whatsapp_session: {
+        Args: { p_permission?: string; p_session_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role: "admin" | "user" | "super_admin"
