@@ -84,19 +84,24 @@ export function useWhatsAppSessions() {
   }, [profile?.organization_id, queryClient]);
 
   return useQuery({
-    queryKey: ["whatsapp-sessions", profile?.organization_id],
+    queryKey: ["whatsapp-sessions", profile?.organization_id, profile?.id],
     queryFn: async () => {
+      if (!profile?.id || !profile?.organization_id) return [] as WhatsAppSession[];
+
+      // Isolamento estrito: apenas conexões cujo dono é o próprio usuário,
+      // dentro da organização ativa. Não há exceção para admin de organização.
       const { data, error } = await supabase
         .from("whatsapp_sessions")
         .select(`
           *,
           owner:users!whatsapp_sessions_owner_user_id_fkey(id, name, email)
         `)
+        .eq("organization_id", profile.organization_id)
+        .eq("owner_user_id", profile.id)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      
-      // Map data to include display_name with fallback
+
       return (data || []).map(session => ({
         ...session,
         display_name: (session as any).display_name || null,
@@ -104,7 +109,7 @@ export function useWhatsAppSessions() {
         is_notification_session: (session as any).is_notification_session || false,
       })) as WhatsAppSession[];
     },
-    enabled: !!profile?.organization_id,
+    enabled: !!profile?.organization_id && !!profile?.id,
     staleTime: 0,
     gcTime: 1000 * 60 * 5,
   });
