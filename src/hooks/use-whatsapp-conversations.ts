@@ -120,6 +120,7 @@ export function useWhatsAppConversations(
             tags:lead_tags(tag:tags(id, name, color))
           )
         `)
+        .eq("organization_id", profile.organization_id)
         .is("deleted_at", null)
         // Relaxado conforme solicitado para não ocultar conversas que podem ter last_message_at nulo
         // .not("last_message_at", "is", null) 
