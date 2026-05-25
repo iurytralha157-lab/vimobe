@@ -12,7 +12,7 @@ import {
 import { ptBR } from "date-fns/locale";
 import { DashboardFilters, sourceLabels } from "./use-dashboard-filters";
 import { useAuth } from "@/contexts/AuthContext";
-import { checkLeadVisibility, applyVisibilityFilter, LeadVisibility } from "./use-lead-visibility";
+import { checkLeadVisibility, applyVisibilityFilter } from "./use-lead-visibility";
 
 export interface DealsEvolutionPoint {
   date: string;
@@ -40,7 +40,6 @@ export interface EnhancedDashboardStats {
   leadsTrend: number;
   conversionTrend: number;
   closedTrend: number;
-  // Financial data
   totalReceivables: number;
   totalPayables: number;
   overdueReceivables: number;
@@ -78,7 +77,7 @@ export interface TopBroker {
 
 export interface TopBrokersResult {
   brokers: TopBroker[];
-  isFallbackMode: boolean; // true when showing leads instead of sales
+  isFallbackMode: boolean;
 }
 
 export interface UpcomingTask {
@@ -90,7 +89,6 @@ export interface UpcomingTask {
   lead_id: string;
 }
 
-// Usa RPC otimizada para buscar estatísticas do dashboard
 export function useDashboardStats() {
   return useQuery({
     queryKey: ["dashboard-stats"],
@@ -99,7 +97,6 @@ export function useDashboardStats() {
 
       if (error) {
         console.error("Error fetching dashboard stats:", error);
-        // Fallback para valores padrão
         return {
           totalLeads: 0,
           leadsInProgress: 0,
@@ -110,14 +107,12 @@ export function useDashboardStats() {
         } as DashboardStats;
       }
 
-      const stats = data as unknown as DashboardStats;
-      return stats;
+      return data as unknown as DashboardStats;
     },
-    staleTime: 1000 * 60 * 5, // 5 minutos para estatísticas
+    staleTime: 1000 * 60 * 5,
   });
 }
 
-// Enhanced dashboard stats with filters
 export function useEnhancedDashboardStats(filters?: DashboardFilters) {
   const { user, organization } = useAuth();
   const currentUserId = user?.id;
@@ -148,75 +143,45 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
         const interval = currentTo.getTime() - currentFrom.getTime();
         const prevFrom = new Date(currentFrom.getTime() - interval);
 
-        // Visibilidade obrigatória — usuário comum só vê próprios leads
-        // Otimização: checkLeadVisibility usa cache do TanStack se chamado via hook,
-        // mas aqui estamos num queryFn. O cache manual ou Promise.all ajuda.
         const visibility = currentUserId
           ? await checkLeadVisibility(currentUserId)
           : { canViewAll: false, userId: undefined };
 
-        // 1. Definição das queries básicas
+        const hasMetaFilter = !!(filters?.campaignId || filters?.adSetId || filters?.adId);
+        const hasTagFilter = !!filters?.tagId;
 
-        // Base filters for current period
+        let currentSelect = "id, deal_status, first_response_seconds, valor_interesse";
+        if (hasMetaFilter) currentSelect += ", lead_meta!inner(campaign_id, adset_id, ad_id)";
+        if (hasTagFilter) currentSelect += ", lead_tags!inner(tag_id)";
+
         let query = supabase
           .from("leads")
-          .select("id, deal_status, first_response_seconds, valor_interesse", { count: "exact" })
+          .select(currentSelect, { count: "exact" })
           .eq("organization_id", organizationId)
           .gte("created_at", currentFrom.toISOString())
           .lte("created_at", currentTo.toISOString());
 
-        if (filters?.campaignId || filters?.adSetId || filters?.adId) {
-          query = supabase
-            .from("leads")
-            .select(
-              "id, deal_status, first_response_seconds, valor_interesse, lead_meta!inner(campaign_id, adset_id, ad_id)",
-              { count: "exact" },
-            )
-            .eq("organization_id", organizationId)
-            .gte("created_at", currentFrom.toISOString())
-            .lte("created_at", currentTo.toISOString());
-
-          if (filters.campaignId) query = query.eq("lead_meta.campaign_id", filters.campaignId);
-          if (filters.adSetId) query = query.eq("lead_meta.adset_id", filters.adSetId);
-          if (filters.adId) query = query.eq("lead_meta.ad_id", filters.adId);
-        }
+        if (filters?.campaignId) query = query.eq("lead_meta.campaign_id", filters.campaignId);
+        if (filters?.adSetId) query = query.eq("lead_meta.adset_id", filters.adSetId);
+        if (filters?.adId) query = query.eq("lead_meta.ad_id", filters.adId);
+        if (filters?.tagId) query = query.eq("lead_tags.tag_id", filters.tagId);
         if (filters?.source) query = query.eq("source", filters.source);
         if (filters?.dealStatus) query = query.eq("deal_status", filters.dealStatus);
-        let tagLeadIds: string[] | null = null;
-        if (filters?.tagId) {
-          const { data: taggedLeads } = await supabase.from("lead_tags").select("lead_id").eq("tag_id", filters.tagId);
-          tagLeadIds = (taggedLeads || []).map((t: any) => t.lead_id);
-          if (tagLeadIds.length === 0) {
-            return {
-              totalLeads: 0,
-              conversionRate: 0,
-              closedLeads: 0,
-              avgResponseTime: "--",
-              totalSalesValue: 0,
-              pendingCommissions: 0,
-              leadsTrend: 0,
-              conversionTrend: 0,
-              closedTrend: 0,
-              totalReceivables: 0,
-              totalPayables: 0,
-              overdueReceivables: 0,
-              overduePayables: 0,
-              paidCommissions: 0,
-            };
-          }
-          query = query.in("id", tagLeadIds);
-        }
 
         if (filters?.searchQuery) {
           const q = `%${filters.searchQuery}%`;
           query = (query as any).or(`name.ilike.${q},email.ilike.${q},phone.ilike.${q}`);
         }
+
         query = applyVisibilityFilter(query, visibility, "assigned_user_id", filters?.userId);
 
-        // 2. Query de Vendas Ganhas
+        let wonSelect = "id, valor_interesse, assigned_user_id, source";
+        if (hasMetaFilter) wonSelect += ", lead_meta!inner(campaign_id, adset_id, ad_id)";
+        if (hasTagFilter) wonSelect += ", lead_tags!inner(tag_id)";
+
         let wonQuery = supabase
           .from("leads")
-          .select("id, valor_interesse, assigned_user_id, source, lead_meta!left(campaign_id, adset_id, ad_id)")
+          .select(wonSelect)
           .eq("organization_id", organizationId)
           .eq("deal_status", "won")
           .gte("won_at", currentFrom.toISOString())
@@ -225,58 +190,51 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
         if (filters?.campaignId) wonQuery = wonQuery.eq("lead_meta.campaign_id", filters.campaignId);
         if (filters?.adSetId) wonQuery = wonQuery.eq("lead_meta.adset_id", filters.adSetId);
         if (filters?.adId) wonQuery = wonQuery.eq("lead_meta.ad_id", filters.adId);
+        if (filters?.tagId) wonQuery = wonQuery.eq("lead_tags.tag_id", filters.tagId);
         if (filters?.source) wonQuery = wonQuery.eq("source", filters.source);
         if (filters?.dealStatus) wonQuery = wonQuery.eq("deal_status", filters.dealStatus);
+
         if (filters?.searchQuery) {
           const q = `%${filters.searchQuery}%`;
           wonQuery = (wonQuery as any).or(`name.ilike.${q},email.ilike.${q},phone.ilike.${q}`);
         }
+
         wonQuery = applyVisibilityFilter(wonQuery, visibility, "assigned_user_id", filters?.userId);
 
-        // 3. Query de Período Anterior (Trends)
+        let prevSelect = "id, deal_status";
+        if (hasMetaFilter) prevSelect += ", lead_meta!inner(campaign_id, adset_id, ad_id)";
+        if (hasTagFilter) prevSelect += ", lead_tags!inner(tag_id)";
+
         let prevQuery = supabase
           .from("leads")
-          .select("id, deal_status", { count: "exact", head: true })
+          .select(prevSelect, { count: "exact", head: true })
           .eq("organization_id", organizationId)
           .gte("created_at", prevFrom.toISOString())
           .lt("created_at", currentFrom.toISOString());
 
-        if (filters?.campaignId || filters?.adSetId || filters?.adId) {
-          prevQuery = supabase
-            .from("leads")
-            .select("id, deal_status, lead_meta!inner(campaign_id, adset_id, ad_id)", { count: "exact", head: true })
-            .eq("organization_id", organizationId)
-            .gte("created_at", prevFrom.toISOString())
-            .lt("created_at", currentFrom.toISOString());
-          if (filters.campaignId) prevQuery = prevQuery.eq("lead_meta.campaign_id", filters.campaignId);
-          if (filters.adSetId) prevQuery = prevQuery.eq("lead_meta.adset_id", filters.adSetId);
-          if (filters.adId) prevQuery = prevQuery.eq("lead_meta.ad_id", filters.adId);
-        }
+        if (filters?.campaignId) prevQuery = prevQuery.eq("lead_meta.campaign_id", filters.campaignId);
+        if (filters?.adSetId) prevQuery = prevQuery.eq("lead_meta.adset_id", filters.adSetId);
+        if (filters?.adId) prevQuery = prevQuery.eq("lead_meta.ad_id", filters.adId);
+        if (filters?.tagId) prevQuery = prevQuery.eq("lead_tags.tag_id", filters.tagId);
         if (filters?.source) prevQuery = prevQuery.eq("source", filters.source);
         if (filters?.dealStatus) prevQuery = prevQuery.eq("deal_status", filters.dealStatus);
+
         prevQuery = applyVisibilityFilter(prevQuery, visibility, "assigned_user_id", filters?.userId);
 
-        if (tagLeadIds) {
-          wonQuery = wonQuery.in("id", tagLeadIds);
-          prevQuery = prevQuery.in("id", tagLeadIds);
-        }
-
-        // 4. Se houver filtro de equipe, buscar membros primeiro (necessário para as outras queries)
-        let teamMemberIds: string[] | null = null;
         if (filters?.teamId && (visibility.canViewAll || visibility.teamMemberIds)) {
           const { data: teamMembers } = await supabase
             .from("team_members")
             .select("user_id")
             .eq("team_id", filters.teamId);
+
           if (teamMembers?.length) {
-            teamMemberIds = teamMembers.map((m) => m.user_id);
+            const teamMemberIds = teamMembers.map((m) => m.user_id);
             query = query.in("assigned_user_id", teamMemberIds);
             wonQuery = wonQuery.in("assigned_user_id", teamMemberIds);
             prevQuery = prevQuery.in("assigned_user_id", teamMemberIds);
           }
         }
 
-        // EXECUÇÃO PARALELA DAS QUERIES
         const [leadsResult, wonResult, prevResult] = await Promise.all([query, wonQuery, prevQuery]);
 
         const totalLeads = leadsResult.count || 0;
@@ -285,10 +243,14 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
         const closedLeads = wonLeads.length;
         const prevTotal = prevResult.count || 0;
 
-        const totalSalesValue = wonLeads.reduce((sum, l: any) => sum + (Number(l.valor_interesse) || 0), 0);
+        const totalSalesValue = wonLeads.reduce((sum, lead: any) => {
+          return sum + (Number(lead.valor_interesse) || 0);
+        }, 0);
 
-        const respTimes =
-          leads.filter((l) => l.first_response_seconds != null).map((l) => Number(l.first_response_seconds)) || [];
+        const respTimes = leads
+          .filter((lead: any) => lead.first_response_seconds != null)
+          .map((lead: any) => Number(lead.first_response_seconds));
+
         const avgRespSec = respTimes.length > 0 ? respTimes.reduce((a, b) => a + b, 0) / respTimes.length : null;
 
         const formatAvgTime = (seconds: number | null) => {
@@ -298,9 +260,9 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
           return `${Math.round(seconds / 3600)}h`;
         };
 
-        const wonFromPeriod = leads.filter((l) => l.deal_status === "won").length;
+        const wonFromPeriod = leads.filter((lead: any) => lead.deal_status === "won").length;
         const conversionRate = totalLeads > 0 ? (wonFromPeriod / totalLeads) * 100 : 0;
-        const leadsTrend = prevTotal && prevTotal > 0 ? Math.round(((totalLeads - prevTotal) / prevTotal) * 100) : 0;
+        const leadsTrend = prevTotal > 0 ? Math.round(((totalLeads - prevTotal) / prevTotal) * 100) : 0;
 
         return {
           totalLeads,
@@ -324,7 +286,6 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
   });
 }
 
-// Dados do gráfico de leads por dia (otimizado)
 export function useLeadsChartData() {
   const { user } = useAuth();
   const currentUserId = user?.id;
@@ -333,21 +294,18 @@ export function useLeadsChartData() {
     queryKey: ["leads-chart-data", currentUserId],
     enabled: !!currentUserId,
     queryFn: async () => {
-      // Get visibility level
       const visibility = currentUserId
         ? await checkLeadVisibility(currentUserId)
         : { canViewAll: false, userId: undefined };
 
       const sevenDaysAgo = subDays(new Date(), 7).toISOString();
 
-      // Query with role-based visibility
       let query = supabase
         .from("leads")
         .select("created_at, source, assigned_user_id")
         .gte("created_at", sevenDaysAgo)
         .order("created_at");
 
-      // Apply visibility filter
       query = applyVisibilityFilter(query, visibility);
 
       const { data: leads } = await query;
@@ -360,23 +318,21 @@ export function useLeadsChartData() {
         const dayName = days[date.getDay()];
         const dateStr = format(date, "yyyy-MM-dd");
 
-        const dayLeads = (leads || []).filter((l: any) => l.created_at?.startsWith(dateStr));
+        const dayLeads = (leads || []).filter((lead: any) => lead.created_at?.startsWith(dateStr));
 
         chartData.push({
           name: dayName,
-          meta: dayLeads.filter((l: any) => l.source === "meta").length,
-          site: dayLeads.filter((l: any) => l.source === "site").length,
+          meta: dayLeads.filter((lead: any) => lead.source === "meta").length,
+          site: dayLeads.filter((lead: any) => lead.source === "site").length,
         });
       }
 
       return chartData;
     },
-    staleTime: 1000 * 60 * 5, // 5 minutos
+    staleTime: 1000 * 60 * 5,
   });
 }
 
-// Usa RPC otimizada para dados do funil COM filtros
-// IMPORTANTE: Aplica filtro de role - considera líderes de equipe
 export function useFunnelData(filters?: DashboardFilters, pipelineId?: string | null) {
   const { user } = useAuth();
 
@@ -397,19 +353,13 @@ export function useFunnelData(filters?: DashboardFilters, pipelineId?: string | 
       user?.id,
     ],
     queryFn: async () => {
-      // Get visibility level (admin, team leader, or normal user)
       const visibility = user?.id ? await checkLeadVisibility(user.id) : { canViewAll: false, userId: undefined };
 
-      // Determinar userId efetivo baseado na visibilidade
       let effectiveUserId = filters?.userId;
       if (!effectiveUserId && !visibility.canViewAll) {
-        // Se é líder de equipe, a RPC não suporta array - vamos passar null e filtrar no frontend
-        // Se é usuário normal, passar o próprio ID
         effectiveUserId = visibility.teamMemberIds ? null : visibility.userId;
       }
 
-      // Funil mostra snapshot ATUAL dos leads - não filtra por data de criação
-      // Apenas aplica filtros de equipe/usuário/fonte/pipeline
       const { data, error } = await (supabase as any).rpc("get_funnel_data", {
         p_date_from: filters?.dateRange?.from?.toISOString() || null,
         p_date_to: filters?.dateRange?.to?.toISOString() || null,
@@ -426,27 +376,24 @@ export function useFunnelData(filters?: DashboardFilters, pipelineId?: string | 
         return [] as FunnelDataPoint[];
       }
 
-      // Map the RPC response to the expected format
       const result = (data || []).map((item: any) => ({
         name: item.stage_name,
         value: Number(item.lead_count) || 0,
-        percentage: 0, // Will be calculated in the component
+        percentage: 0,
         stage_key: item.stage_key || item.stage_name,
       }));
 
-      // Calculate percentages
       const total = result.reduce((sum: number, item: FunnelDataPoint) => sum + item.value, 0);
+
       return result.map((item: FunnelDataPoint) => ({
         ...item,
         percentage: total > 0 ? Math.round((item.value / total) * 100) : 0,
       })) as FunnelDataPoint[];
     },
-    staleTime: 1000 * 60 * 5, // 5 minutos
+    staleTime: 1000 * 60 * 5,
   });
 }
 
-// Usa RPC otimizada para dados de fontes de leads COM filtros
-// IMPORTANTE: Aplica filtro de role - considera líderes de equipe
 export function useLeadSourcesData(filters?: DashboardFilters, pipelineId?: string | null) {
   const { user } = useAuth();
 
@@ -467,10 +414,8 @@ export function useLeadSourcesData(filters?: DashboardFilters, pipelineId?: stri
       user?.id,
     ],
     queryFn: async () => {
-      // Get visibility level (admin, team leader, or normal user)
       const visibility = user?.id ? await checkLeadVisibility(user.id) : { canViewAll: false, userId: undefined };
 
-      // Determinar userId efetivo baseado na visibilidade
       let effectiveUserId = filters?.userId;
       if (!effectiveUserId && !visibility.canViewAll) {
         effectiveUserId = visibility.teamMemberIds ? null : visibility.userId;
@@ -492,18 +437,16 @@ export function useLeadSourcesData(filters?: DashboardFilters, pipelineId?: stri
         return [] as SourceDataPoint[];
       }
 
-      // Map source names to friendly labels using the exported mapping
-      const labels = sourceLabels;
-
       const aggregatedData: Record<string, { count: number; rawSource: string }> = {};
 
       (data || []).forEach((item: any) => {
         const rawSource = item.source_name;
-        const label = labels[rawSource] || rawSource || "Outros";
+        const label = sourceLabels[rawSource] || rawSource || "Outros";
 
         if (!aggregatedData[label]) {
-          aggregatedData[label] = { count: 0, rawSource: rawSource };
+          aggregatedData[label] = { count: 0, rawSource };
         }
+
         aggregatedData[label].count += Number(item.lead_count) || 0;
       });
 
@@ -515,11 +458,10 @@ export function useLeadSourcesData(filters?: DashboardFilters, pipelineId?: stri
         }))
         .sort((a, b) => b.value - a.value) as SourceDataPoint[];
     },
-    staleTime: 1000 * 60 * 5, // 5 minutos
+    staleTime: 1000 * 60 * 5,
   });
 }
 
-// Top Brokers (ranking de corretores) - com fallback para leads totais
 export function useTopBrokers(filters?: DashboardFilters) {
   const { user, organization } = useAuth();
   const currentUserId = user?.id;
@@ -541,24 +483,21 @@ export function useTopBrokers(filters?: DashboardFilters) {
     ],
     enabled: !!currentUserId && !!organizationId,
     queryFn: async (): Promise<TopBrokersResult> => {
-      // Get current user to check visibility
       const visibility = currentUserId
         ? await checkLeadVisibility(currentUserId)
         : { canViewAll: false, userId: undefined };
 
-      // Team leaders and admins can see broker ranking
-      // Non-privileged users shouldn't see the full broker ranking
       if (!visibility.canViewAll && !visibility.teamMemberIds) {
         return { brokers: [], isFallbackMode: false };
       }
 
-      // First try: Get leads with won status using deal_status
       let selectString = `
           assigned_user_id,
           valor_interesse,
           deal_status,
           user:users!leads_assigned_user_id_fkey(id, name, avatar_url)
         `;
+
       if (filters?.campaignId || filters?.adSetId || filters?.adId) {
         selectString += ", lead_meta!inner(campaign_id, adset_id, ad_id)";
       }
@@ -566,22 +505,14 @@ export function useTopBrokers(filters?: DashboardFilters) {
       let query = supabase
         .from("leads")
         .select(selectString)
-        .eq("organization_id", organizationId!)
+        .eq("organization_id", organizationId)
         .not("assigned_user_id", "is", null)
         .eq("deal_status", "won");
 
-      // Apply Meta filters
-      if (filters?.campaignId) {
-        query = query.eq("lead_meta.campaign_id", filters.campaignId);
-      }
-      if (filters?.adSetId) {
-        query = query.eq("lead_meta.adset_id", filters.adSetId);
-      }
-      if (filters?.adId) {
-        query = query.eq("lead_meta.ad_id", filters.adId);
-      }
+      if (filters?.campaignId) query = query.eq("lead_meta.campaign_id", filters.campaignId);
+      if (filters?.adSetId) query = query.eq("lead_meta.adset_id", filters.adSetId);
+      if (filters?.adId) query = query.eq("lead_meta.ad_id", filters.adId);
 
-      // Team leaders only see their team members
       if (visibility.teamMemberIds) {
         query = query.in("assigned_user_id", visibility.teamMemberIds);
       }
@@ -592,12 +523,8 @@ export function useTopBrokers(filters?: DashboardFilters) {
           .lte("won_at", filters.dateRange.to.toISOString());
       }
 
-      if (filters?.userId) {
-        query = query.eq("assigned_user_id", filters.userId);
-      }
-      if (filters?.source) {
-        query = query.eq("source", filters.source);
-      }
+      if (filters?.userId) query = query.eq("assigned_user_id", filters.userId);
+      if (filters?.source) query = query.eq("source", filters.source);
 
       const { data: wonLeads, error } = await query;
 
@@ -606,22 +533,20 @@ export function useTopBrokers(filters?: DashboardFilters) {
         return { brokers: [], isFallbackMode: false };
       }
 
-      // If we have won leads, use them for ranking
       if (wonLeads && wonLeads.length > 0) {
-        // Get all user IDs with won leads
-        const userIds = [...new Set(wonLeads.map((l: any) => l.assigned_user_id).filter(Boolean))];
+        const userIds = [...new Set(wonLeads.map((lead: any) => lead.assigned_user_id).filter(Boolean))];
 
-        // Fetch commissions for these users
         const { data: commissions } = await supabase
           .from("commissions")
           .select("user_id, amount, status")
           .in("user_id", userIds);
 
-        // Build commission totals map (only forecast, approved, paid)
         const commissionTotals: Record<string, number> = {};
-        (commissions || []).forEach((c: any) => {
-          if (["forecast", "approved", "paid"].includes(c.status)) {
-            commissionTotals[c.user_id] = (commissionTotals[c.user_id] || 0) + (c.amount || 0);
+
+        (commissions || []).forEach((commission: any) => {
+          if (["forecast", "approved", "paid"].includes(commission.status)) {
+            commissionTotals[commission.user_id] =
+              (commissionTotals[commission.user_id] || 0) + (commission.amount || 0);
           }
         });
 
@@ -654,28 +579,21 @@ export function useTopBrokers(filters?: DashboardFilters) {
         };
       }
 
-      // Fallback: No won leads, show ranking by total leads assigned
       let fallbackSelectString = `
           assigned_user_id,
           valor_interesse,
           user:users!leads_assigned_user_id_fkey(id, name, avatar_url)
         `;
+
       if (filters?.campaignId || filters?.adSetId || filters?.adId) {
         fallbackSelectString += ", lead_meta!inner(campaign_id, adset_id, ad_id)";
       }
 
       let fallbackQuery = supabase.from("leads").select(fallbackSelectString).not("assigned_user_id", "is", null);
 
-      // Apply Meta filters
-      if (filters?.campaignId) {
-        fallbackQuery = fallbackQuery.eq("lead_meta.campaign_id", filters.campaignId);
-      }
-      if (filters?.adSetId) {
-        fallbackQuery = fallbackQuery.eq("lead_meta.adset_id", filters.adSetId);
-      }
-      if (filters?.adId) {
-        fallbackQuery = fallbackQuery.eq("lead_meta.ad_id", filters.adId);
-      }
+      if (filters?.campaignId) fallbackQuery = fallbackQuery.eq("lead_meta.campaign_id", filters.campaignId);
+      if (filters?.adSetId) fallbackQuery = fallbackQuery.eq("lead_meta.adset_id", filters.adSetId);
+      if (filters?.adId) fallbackQuery = fallbackQuery.eq("lead_meta.ad_id", filters.adId);
 
       if (filters?.dateRange) {
         fallbackQuery = fallbackQuery
@@ -683,12 +601,8 @@ export function useTopBrokers(filters?: DashboardFilters) {
           .lte("created_at", filters.dateRange.to.toISOString());
       }
 
-      if (filters?.userId) {
-        fallbackQuery = fallbackQuery.eq("assigned_user_id", filters.userId);
-      }
-      if (filters?.source) {
-        fallbackQuery = fallbackQuery.eq("source", filters.source);
-      }
+      if (filters?.userId) fallbackQuery = fallbackQuery.eq("assigned_user_id", filters.userId);
+      if (filters?.source) fallbackQuery = fallbackQuery.eq("source", filters.source);
 
       const { data: allLeads, error: fallbackError } = await fallbackQuery;
 
@@ -696,7 +610,6 @@ export function useTopBrokers(filters?: DashboardFilters) {
         return { brokers: [], isFallbackMode: true };
       }
 
-      // Aggregate all leads by user (closedLeads = total leads in fallback mode)
       const brokerStats = allLeads.reduce((acc: Record<string, TopBroker>, lead: any) => {
         const userId = lead.assigned_user_id;
         if (!userId || !lead.user) return acc;
@@ -706,7 +619,7 @@ export function useTopBrokers(filters?: DashboardFilters) {
             id: userId,
             name: lead.user.name || "Usuário",
             avatar_url: lead.user.avatar_url,
-            closedLeads: 0, // In fallback mode, this represents total leads
+            closedLeads: 0,
             salesValue: 0,
             totalCommissions: 0,
           };
@@ -729,7 +642,6 @@ export function useTopBrokers(filters?: DashboardFilters) {
   });
 }
 
-// Upcoming tasks
 export function useUpcomingTasks() {
   const { user } = useAuth();
   const currentUserId = user?.id;
@@ -738,21 +650,19 @@ export function useUpcomingTasks() {
     queryKey: ["upcoming-tasks", currentUserId],
     enabled: !!currentUserId,
     queryFn: async (): Promise<UpcomingTask[]> => {
-      // Get visibility level
       const visibility = currentUserId
         ? await checkLeadVisibility(currentUserId)
         : { canViewAll: false, userId: undefined };
 
-      // Build lead IDs array based on visibility
       let leadIds: string[] = [];
+
       if (!visibility.canViewAll) {
-        // For team leaders, get leads of all team members
-        // For normal users, get only their own leads
         const userIdsToFilter = visibility.teamMemberIds || (visibility.userId ? [visibility.userId] : []);
 
         if (userIdsToFilter.length > 0) {
           const { data: userLeads } = await supabase.from("leads").select("id").in("assigned_user_id", userIdsToFilter);
-          leadIds = (userLeads || []).map((l: any) => l.id);
+
+          leadIds = (userLeads || []).map((lead: any) => lead.id);
 
           if (leadIds.length === 0) {
             return [];
@@ -777,7 +687,6 @@ export function useUpcomingTasks() {
         .order("due_date", { ascending: true })
         .limit(10);
 
-      // Users without full visibility only see tasks for their/team leads
       if (!visibility.canViewAll && leadIds.length > 0) {
         query = query.in("lead_id", leadIds);
       }
@@ -798,11 +707,10 @@ export function useUpcomingTasks() {
         lead_id: task.lead?.id || "",
       }));
     },
-    staleTime: 1000 * 60 * 2, // 2 minutos
+    staleTime: 1000 * 60 * 2,
   });
 }
 
-// Deals evolution (ganhos, perdas, em aberto) grouped by time
 export function useDealsEvolutionData(filters?: DashboardFilters) {
   const { user, organization } = useAuth();
   const currentUserId = user?.id;
@@ -828,79 +736,60 @@ export function useDealsEvolutionData(filters?: DashboardFilters) {
     enabled: !!currentUserId && !!organizationId,
     queryFn: async (): Promise<DealsEvolutionPoint[]> => {
       return performanceTracker.trackTimed("useDealsEvolutionData", async () => {
-        // Get visibility level
         const visibility = currentUserId
           ? await checkLeadVisibility(currentUserId)
           : { canViewAll: false, userId: undefined };
 
-        // Calculate date range
         const now = new Date();
         const dateFrom = filters?.dateRange?.from || subDays(now, 30);
         const dateTo = filters?.dateRange?.to || now;
         const daysDiff = differenceInDays(dateTo, dateFrom);
 
-        // Build base query — buscar leads que entraram OU foram ganhos OU foram perdidos no período
         let selectString = "id, created_at, won_at, lost_at, deal_status, assigned_user_id, source";
         if (filters?.campaignId || filters?.adSetId || filters?.adId) {
           selectString += ", lead_meta!inner(campaign_id, adset_id, ad_id)";
+        }
+        if (filters?.tagId) {
+          selectString += ", lead_tags!inner(tag_id)";
         }
 
         let query = supabase
           .from("leads")
           .select(selectString)
-          .eq("organization_id", organizationId!)
+          .eq("organization_id", organizationId)
           .or(
             `and(created_at.gte.${dateFrom.toISOString()},created_at.lte.${dateTo.toISOString()}),` +
               `and(won_at.gte.${dateFrom.toISOString()},won_at.lte.${dateTo.toISOString()}),` +
               `and(lost_at.gte.${dateFrom.toISOString()},lost_at.lte.${dateTo.toISOString()})`,
           );
 
-        // Apply Meta filters
-        if (filters?.campaignId) {
-          query = query.eq("lead_meta.campaign_id", filters.campaignId);
-        }
-        if (filters?.adSetId) {
-          query = query.eq("lead_meta.adset_id", filters.adSetId);
-        }
-        if (filters?.adId) {
-          query = query.eq("lead_meta.ad_id", filters.adId);
-        }
+        if (filters?.campaignId) query = query.eq("lead_meta.campaign_id", filters.campaignId);
+        if (filters?.adSetId) query = query.eq("lead_meta.adset_id", filters.adSetId);
+        if (filters?.adId) query = query.eq("lead_meta.ad_id", filters.adId);
+        if (filters?.tagId) query = query.eq("lead_tags.tag_id", filters.tagId);
 
-        // Apply visibility filter (admin, team leader, or self-only)
         query = applyVisibilityFilter(query, visibility, "assigned_user_id", filters?.userId);
 
-        // Apply source filter
         if (filters?.source) {
           query = query.eq("source", filters.source as any);
         }
 
-        // Apply dealStatus filter
         if (filters?.dealStatus) {
           query = query.eq("deal_status", filters.dealStatus as any);
         }
 
-        // Apply tagId filter via subquery
-        if (filters?.tagId) {
-          const { data: taggedLeads } = await supabase.from("lead_tags").select("lead_id").eq("tag_id", filters.tagId);
-          const tagLeadIds = (taggedLeads || []).map((t: any) => t.lead_id);
-          if (tagLeadIds.length === 0) return [];
-          query = query.in("id", tagLeadIds);
-        }
-
-        // Apply search filter
         if (filters?.searchQuery) {
           const q = `%${filters.searchQuery}%`;
           query = (query as any).or(`name.ilike.${q},email.ilike.${q},phone.ilike.${q}`);
         }
 
-        // Apply team filter (only for users who can view all or are team leaders)
         if (filters?.teamId && (visibility.canViewAll || visibility.teamMemberIds)) {
           const { data: teamMembers } = await supabase
             .from("team_members")
             .select("user_id")
             .eq("team_id", filters.teamId);
 
-          if (teamMembers && teamMembers.length > 0) {
+          if (teamMembers?.length) {
             const memberIds = teamMembers.map((m) => m.user_id);
             query = query.in("assigned_user_id", memberIds);
           }
@@ -917,56 +806,48 @@ export function useDealsEvolutionData(filters?: DashboardFilters) {
           return [];
         }
 
-        // Determine grouping strategy based on date range
         let intervals: Date[];
         let formatLabel: (date: Date) => string;
         let shouldLimitPoints = true;
 
         if (daysDiff <= 31) {
-          // Group by day - ALWAYS show all days for up to 31 days
           intervals = eachDayOfInterval({ start: dateFrom, end: dateTo });
           formatLabel = (date) => format(date, "dd/MM", { locale: ptBR });
-          shouldLimitPoints = false; // Do not skip days for short ranges
+          shouldLimitPoints = false;
         } else if (daysDiff <= 90) {
-          // Group by week
           intervals = eachWeekOfInterval({ start: dateFrom, end: dateTo }, { weekStartsOn: 1 });
           formatLabel = (date) => format(date, "'Sem' w", { locale: ptBR });
         } else {
-          // Group by month
           intervals = eachMonthOfInterval({ start: dateFrom, end: dateTo });
           formatLabel = (date) => format(date, "MMM", { locale: ptBR });
         }
 
-        // Limit intervals to prevent too many points ONLY for long ranges
         if (shouldLimitPoints && intervals.length > 12) {
           const step = Math.ceil(intervals.length / 12);
-          intervals = intervals.filter((_, i) => i % step === 0);
+          intervals = intervals.filter((_, index) => index % step === 0);
         }
 
-        // Group leads by interval — usa a DATA CORRETA para cada categoria:
-        // - abertos: created_at (entrada do lead)
-        // - ganhos: won_at (data da venda)
-        // - perdas: lost_at (data da perda)
         const inRange = (iso: string | null, start: Date, end: Date) => {
           if (!iso) return false;
-          const d = new Date(iso);
-          return d >= start && d < end;
+          const date = new Date(iso);
+          return date >= start && date < end;
         };
 
         const result: DealsEvolutionPoint[] = intervals.map((intervalStart, index) => {
           const intervalEnd = index < intervals.length - 1 ? intervals[index + 1] : dateTo;
 
           const ganhos = leads.filter(
-            (l: any) => l.deal_status === "won" && inRange(l.won_at, intervalStart, intervalEnd),
+            (lead: any) => lead.deal_status === "won" && inRange(lead.won_at, intervalStart, intervalEnd),
           ).length;
 
           const perdas = leads.filter(
-            (l: any) => l.deal_status === "lost" && inRange(l.lost_at, intervalStart, intervalEnd),
+            (lead: any) => lead.deal_status === "lost" && inRange(lead.lost_at, intervalStart, intervalEnd),
           ).length;
 
           const abertos = leads.filter(
-            (l: any) =>
-              (l.deal_status === "open" || !l.deal_status) && inRange(l.created_at, intervalStart, intervalEnd),
+            (lead: any) =>
+              (lead.deal_status === "open" || !lead.deal_status) &&
+              inRange(lead.created_at, intervalStart, intervalEnd),
           ).length;
 
           return {
