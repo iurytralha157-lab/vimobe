@@ -1,873 +1,438 @@
-import { useState, useDeferredValue } from "react";
-import { AppLayout } from "@/components/layout/AppLayout";
-import { Card } from "@/components/ui/card";
-import { LeadDetailDialog } from "@/components/leads/LeadDetailDialog";
+import { useState, useEffect } from "react";
+import { Users, User, Globe, X, SlidersHorizontal, Facebook, Search, Tag as TagIcon, CircleDot } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Table, TableCell, TableHead, TableHeader, TableRow, TableBody } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {
-  MoreHorizontal,
-  Phone,
-  Mail,
-  ExternalLink,
-  Download,
-  Upload,
-  ChevronDown,
-  MessageCircle,
-  ArrowUpDown,
-  ArrowUp,
-  ArrowDown,
-  Trash2,
-  ChevronsLeft,
-  ChevronLeft,
-  ChevronRight,
-  CircleDot,
-  Plus,
-  ChevronsRight,
-  Trophy,
-  XCircle,
-} from "lucide-react";
-import { CreateLeadDialog } from "@/components/leads/CreateLeadDialog";
-import { Checkbox } from "@/components/ui/checkbox";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { ContactCard } from "@/components/contacts/ContactCard";
-import { useStages } from "@/hooks/use-stages";
-import { useOrganizationUsers } from "@/hooks/use-users";
-import { useTags } from "@/hooks/use-tags";
-import { format, formatDistanceToNow } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { ImportContactsDialog } from "@/components/contacts/ImportContactsDialog";
-import { TableSkeleton } from "@/components/contacts/TableSkeleton";
-import { EmptyState } from "@/components/contacts/EmptyState";
-import { useContactsList, type ContactListFilters } from "@/hooks/use-contacts-list";
-import { exportContactsFiltered } from "@/lib/export-contacts";
-import { useLead, useDeleteLead } from "@/hooks/use-leads";
-import { ReentryBadge } from "@/components/leads/ReentryBadge";
-import { useToast } from "@/hooks/use-toast";
-import { SharedFilters } from "@/components/shared/SharedFilters";
-import { useSharedFilters } from "@/hooks/use-shared-filters";
+import { useTeams } from "@/hooks/use-teams";
+import { useOrganizationUsers } from "@/hooks/use-users";
+import { useAuth } from "@/contexts/AuthContext";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { useUserPermissions } from "@/hooks/use-user-permissions";
+import { DatePreset } from "@/hooks/use-dashboard-filters";
+import { DateFilterPopover } from "@/components/ui/date-filter-popover";
 
-export default function Contacts() {
-  const isMobile = useIsMobile();
-  const { toast } = useToast();
+interface SharedFiltersProps {
+  // Período
+  datePreset: DatePreset;
+  onDatePresetChange: (preset: DatePreset) => void;
+  customDateRange: { from: Date; to: Date } | null;
+  onCustomDateRangeChange: (range: { from: Date; to: Date } | null) => void;
 
-  const {
-    filters: sharedFilters,
-    datePreset,
-    setDatePreset,
-    customDateRange,
-    setCustomDateRange,
-    userId: selectedAssignee,
-    setUserId: setSelectedAssignee,
-    tagId: selectedTag,
-    setTagId: setSelectedTag,
-    dealStatus: selectedDealStatus,
-    setDealStatus: setSelectedDealStatus,
-    source: selectedSource,
-    setSource: setSelectedSource,
-    searchQuery: search,
-    setSearchQuery: setSearch,
-    clearFilters,
-    hasActiveFilters: hasSharedActiveFilters,
-    dynamicSources,
-    campaigns,
-    adSets,
-    ads,
-    tags: allTagsFromHook,
-    isLoadingSources,
-    isLoadingCampaigns,
-    isLoadingAdSets,
-    isLoadingAds,
-  } = useSharedFilters();
+  // Equipe e Usuário
+  teamId: string | null;
+  onTeamChange: (teamId: string | null) => void;
+  userId: string | null;
+  onUserChange: (userId: string | null) => void;
 
-  const [selectedPipeline, setSelectedPipeline] = useState<string>("all");
-  const [selectedStage, setSelectedStage] = useState<string>("all");
+  // Origem
+  source: string | null;
+  onSourceChange: (source: string | null) => void;
+  dynamicSources?: { value: string; label: string }[];
+  isLoadingSources?: boolean;
 
-  const [importDialogOpen, setImportDialogOpen] = useState(false);
-  const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
-  const [deleteContactId, setDeleteContactId] = useState<string | null>(null);
-  const [pageInputValue, setPageInputValue] = useState("1");
-  const [isExporting, setIsExporting] = useState(false);
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  // Meta Ads
+  campaignId: string | null;
+  onCampaignChange: (id: string | null) => void;
+  adSetId: string | null;
+  onAdSetChange: (id: string | null) => void;
+  adId: string | null;
+  onAdChange: (id: string | null) => void;
+  campaigns?: { id: string; name: string }[];
+  adSets?: { id: string; name: string }[];
+  ads?: { id: string; name: string }[];
+  isLoadingCampaigns?: boolean;
+  isLoadingAdSets?: boolean;
+  isLoadingAds?: boolean;
 
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
+  // Tag
+  tagId: string | null;
+  onTagChange: (tagId: string | null) => void;
+  tags?: { id: string; name: string; color: string }[];
 
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(50);
-  const [sortBy, setSortBy] = useState<ContactListFilters["sortBy"]>("created_at");
-  const [sortDir, setSortDir] = useState<ContactListFilters["sortDir"]>("desc");
+  // Status do negócio
+  dealStatus: string | null;
+  onDealStatusChange: (status: string | null) => void;
 
-  const PAGE_SIZE_OPTIONS = [5, 10, 30, 50, 100];
+  // Busca
+  searchQuery: string;
+  onSearchChange: (query: string) => void;
 
-  const deferredSearch = useDeferredValue(search);
-  const dateRange = sharedFilters.dateRange;
+  // Controle
+  onClear: () => void;
+  hasActiveFilters: boolean;
+  hideSearch?: boolean;
+}
 
-  const filters: ContactListFilters = {
-    search: deferredSearch || undefined,
-    pipelineId: !deferredSearch && selectedPipeline !== "all" ? selectedPipeline : undefined,
-    stageId: !deferredSearch && selectedStage !== "all" ? selectedStage : undefined,
-    assigneeId:
-      !deferredSearch && selectedAssignee !== "all" && selectedAssignee !== "unassigned" ? selectedAssignee : undefined,
-    unassigned: !deferredSearch && selectedAssignee === "unassigned",
-    tagId: !deferredSearch && selectedTag !== "all" ? selectedTag : undefined,
-    source: !deferredSearch && selectedSource !== "all" ? selectedSource : undefined,
-    dealStatus:
-      !deferredSearch && selectedDealStatus !== "all" ? (selectedDealStatus as "open" | "won" | "lost") : undefined,
-    createdFrom: !deferredSearch && dateRange ? dateRange.from.toISOString() : undefined,
-    createdTo: !deferredSearch && dateRange ? dateRange.to.toISOString() : undefined,
-    sortBy,
-    sortDir,
-    page,
-    limit: pageSize,
-  };
-
-  const { data: contacts = [], isLoading } = useContactsList(filters);
-  const { data: stages = [] } = useStages(selectedPipeline !== "all" ? selectedPipeline : undefined);
+export function SharedFilters({
+  datePreset,
+  onDatePresetChange,
+  customDateRange,
+  onCustomDateRangeChange,
+  teamId,
+  onTeamChange,
+  userId,
+  onUserChange,
+  source,
+  onSourceChange,
+  campaignId,
+  onCampaignChange,
+  adSetId,
+  onAdSetChange,
+  adId,
+  onAdChange,
+  tagId,
+  onTagChange,
+  dealStatus,
+  onDealStatusChange,
+  searchQuery,
+  onSearchChange,
+  onClear,
+  hasActiveFilters,
+  dynamicSources = [],
+  campaigns = [],
+  adSets = [],
+  ads = [],
+  tags = [],
+  isLoadingSources = false,
+  isLoadingCampaigns = false,
+  isLoadingAdSets = false,
+  isLoadingAds = false,
+  hideSearch = false,
+}: SharedFiltersProps) {
+  const { user, profile } = useAuth();
+  const { data: teams = [] } = useTeams();
   const { data: users = [] } = useOrganizationUsers();
-  const { data: tags = [] } = useTags();
+  const isMobile = useIsMobile();
+  const { hasPermission } = useUserPermissions();
 
-  const { data: selectedLead } = useLead(selectedContactId);
-  const deleteLead = useDeleteLead();
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [localSearch, setLocalSearch] = useState(searchQuery);
 
-  const totalCount = contacts[0]?.total_count || 0;
-  const totalPages = Math.ceil(totalCount / pageSize);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      onSearchChange(localSearch);
+    }, 300);
 
-  const sourceLabels: Record<string, string> = {
-    manual: "Manual",
-    meta: "Meta Ads",
-    site: "Site",
-  };
+    return () => clearTimeout(timer);
+  }, [localSearch]);
 
-  const dealStatusConfig = {
-    open: { label: "Aberto", icon: CircleDot, className: "bg-muted text-muted-foreground" },
-    won: {
-      label: "Ganho",
-      icon: Trophy,
-      className: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300",
-    },
-    lost: {
-      label: "Perdido",
-      icon: XCircle,
-      className: "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300",
-    },
-  };
-
-  const handleClearFilters = () => {
-    clearFilters();
-    setSelectedPipeline("all");
-    setSelectedStage("all");
-    setPage(1);
-  };
-
-  const handleExport = async () => {
-    setIsExporting(true);
-
-    try {
-      const count = await exportContactsFiltered({
-        filters: {
-          search: deferredSearch || undefined,
-          pipelineId: selectedPipeline !== "all" ? selectedPipeline : undefined,
-          stageId: selectedStage !== "all" ? selectedStage : undefined,
-          assigneeId: selectedAssignee !== "all" && selectedAssignee !== "unassigned" ? selectedAssignee : undefined,
-          unassigned: selectedAssignee === "unassigned",
-          tagId: selectedTag !== "all" ? selectedTag : undefined,
-          source: selectedSource !== "all" ? selectedSource : undefined,
-          dealStatus: selectedDealStatus !== "all" ? selectedDealStatus : undefined,
-          createdFrom: dateRange ? dateRange.from.toISOString() : undefined,
-          createdTo: dateRange ? dateRange.to.toISOString() : undefined,
-        },
-        filename: `contatos-${format(new Date(), "yyyy-MM-dd")}`,
-      });
-
-      toast({
-        title: "Exportação concluída",
-        description: `${count} contatos exportados com sucesso`,
-      });
-    } catch (error: any) {
-      toast({
-        title: "Erro na exportação",
-        description: error.message || "Não foi possível exportar os contatos",
-        variant: "destructive",
-      });
-    } finally {
-      setIsExporting(false);
+  useEffect(() => {
+    if (searchQuery !== localSearch) {
+      setLocalSearch(searchQuery);
     }
-  };
+  }, [searchQuery]);
 
-  const clearSelection = () => setSelectedIds(new Set());
+  const isAdmin = profile?.role === "admin" || profile?.role === "super_admin";
+  const canViewAllLeads = isAdmin || hasPermission("lead_view_all");
+  const isTeamLeader = teams.some((team) =>
+    team.members?.some((member) => member.user_id === user?.id && member.is_leader),
+  );
 
-  const toggleSelectAll = () => {
-    if (selectedIds.size === contacts.length && contacts.length > 0) {
-      clearSelection();
-    } else {
-      setSelectedIds(new Set(contacts.map((contact: any) => contact.id)));
-    }
-  };
+  const showUserFilter = canViewAllLeads || isTeamLeader;
 
-  const toggleSelectOne = (id: string) => {
-    const newSet = new Set(selectedIds);
+  const availableTeams = isAdmin
+    ? teams
+    : teams.filter((team) => team.members?.some((member) => member.user_id === user?.id && member.is_leader));
 
-    if (newSet.has(id)) {
-      newSet.delete(id);
-    } else {
-      newSet.add(id);
-    }
+  const availableUsers = teamId
+    ? users.filter((availableUser) => {
+        const team = teams.find((item) => item.id === teamId);
+        return team?.members?.some((member) => member.user_id === availableUser.id);
+      })
+    : users;
 
-    setSelectedIds(newSet);
-  };
+  const hasExtraFilters =
+    teamId !== null ||
+    userId !== null ||
+    source !== null ||
+    campaignId !== null ||
+    adSetId !== null ||
+    adId !== null ||
+    tagId !== null ||
+    dealStatus !== null ||
+    searchQuery !== "";
 
-  const handleBulkDelete = async () => {
-    for (const id of selectedIds) {
-      await deleteLead.mutateAsync(id);
-    }
+  const TeamFilter = () =>
+    availableTeams.length > 0 ? (
+      <Select
+        value={teamId || "all"}
+        onValueChange={(value) => {
+          onTeamChange(value === "all" ? null : value);
+          onUserChange(null);
+        }}
+      >
+        <SelectTrigger className={cn("h-9 w-full text-xs", teamId && "border-primary text-primary")}>
+          <Users className="h-3.5 w-3.5 mr-1.5 flex-shrink-0" />
+          <SelectValue placeholder="Equipe" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">Todas equipes</SelectItem>
+          {availableTeams.map((team) => (
+            <SelectItem key={team.id} value={team.id}>
+              {team.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    ) : null;
 
-    clearSelection();
-    setBulkDeleteDialogOpen(false);
-  };
+  const UserFilter = () => (
+    <Select value={userId || "all"} onValueChange={(value) => onUserChange(value === "all" ? null : value)}>
+      <SelectTrigger className={cn("h-9 w-full text-xs", userId && "border-primary text-primary")}>
+        <User className="h-3.5 w-3.5 mr-1.5 flex-shrink-0" />
+        <SelectValue placeholder="Corretor" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="all">Todos</SelectItem>
+        {availableUsers.map((availableUser) => (
+          <SelectItem key={availableUser.id} value={availableUser.id}>
+            {availableUser.name}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
 
-  const hasActiveFilters =
-    search ||
-    selectedPipeline !== "all" ||
-    selectedStage !== "all" ||
-    selectedAssignee !== "all" ||
-    selectedTag !== "all" ||
-    selectedSource !== "all" ||
-    selectedDealStatus !== "all" ||
-    datePreset ||
-    customDateRange;
+  const SourceFilter = () => (
+    <Select value={source || "all"} onValueChange={(value) => onSourceChange(value === "all" ? null : value)}>
+      <SelectTrigger className={cn("h-9 w-full text-xs", source && "border-primary text-primary")}>
+        <Globe className="h-3.5 w-3.5 mr-1.5 flex-shrink-0" />
+        <SelectValue placeholder={isLoadingSources ? "Carregando..." : "Origem"} />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="all">Todas origens</SelectItem>
+        {dynamicSources.map((option) => (
+          <SelectItem key={option.value} value={option.value}>
+            {option.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
 
-  const getInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
-  };
+  const TagFilter = () => (
+    <Select value={tagId || "all"} onValueChange={(value) => onTagChange(value === "all" ? null : value)}>
+      <SelectTrigger className={cn("h-9 w-full text-xs", tagId && "border-primary text-primary")}>
+        <TagIcon className="h-3.5 w-3.5 mr-1.5 flex-shrink-0" />
+        <SelectValue placeholder="Tag" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="all">Todas tags</SelectItem>
+        {tags.map((tag) => (
+          <SelectItem key={tag.id} value={tag.id}>
+            <div className="flex items-center gap-2">
+              <div className="h-2 w-2 rounded-full" style={{ backgroundColor: tag.color }} />
+              {tag.name}
+            </div>
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
 
-  const handleSort = (column: ContactListFilters["sortBy"]) => {
-    if (sortBy === column) {
-      setSortDir(sortDir === "asc" ? "desc" : "asc");
-    } else {
-      setSortBy(column);
-      setSortDir("desc");
-    }
+  const DealStatusFilter = () => (
+    <Select value={dealStatus || "all"} onValueChange={(value) => onDealStatusChange(value === "all" ? null : value)}>
+      <SelectTrigger className={cn("h-9 w-full text-xs", dealStatus && "border-primary text-primary")}>
+        <CircleDot className="h-3.5 w-3.5 mr-1.5 flex-shrink-0" />
+        <SelectValue placeholder="Status" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="all">Todos status</SelectItem>
+        <SelectItem value="open">Aberto</SelectItem>
+        <SelectItem value="won">Ganho</SelectItem>
+        <SelectItem value="lost">Perdido</SelectItem>
+      </SelectContent>
+    </Select>
+  );
 
-    setPage(1);
-  };
+  const MetaFilters = () => (
+    <div className="space-y-2">
+      <div className="space-y-1">
+        <Select
+          value={campaignId || "all"}
+          onValueChange={(value) => {
+            onCampaignChange(value === "all" ? null : value);
+          }}
+        >
+          <SelectTrigger className="h-8 text-xs bg-background/50 border-border/40">
+            <SelectValue placeholder={isLoadingCampaigns ? "Carregando..." : "Todas campanhas"} />
+          </SelectTrigger>
+          <SelectContent className="z-[120]">
+            <SelectItem value="all">Todas campanhas</SelectItem>
+            {campaigns.map((campaign) => (
+              <SelectItem key={campaign.id} value={campaign.id}>
+                {campaign.name}
+              </SelectItem>
+            ))}
+            {!isLoadingCampaigns && campaigns.length === 0 && (
+              <div className="p-2 text-[10px] text-center text-muted-foreground">Nenhuma campanha no período</div>
+            )}
+          </SelectContent>
+        </Select>
+      </div>
 
-  const SortIcon = ({ column }: { column: ContactListFilters["sortBy"] }) => {
-    if (sortBy !== column) return <ArrowUpDown className="h-3 w-3 ml-1 opacity-50" />;
+      {campaignId && (
+        <div className="space-y-1">
+          <Select
+            value={adSetId || "all"}
+            onValueChange={(value) => {
+              onAdSetChange(value === "all" ? null : value);
+            }}
+          >
+            <SelectTrigger className="h-8 text-xs bg-background/50 border-border/40 animate-in fade-in slide-in-from-top-1">
+              <SelectValue placeholder={isLoadingAdSets ? "Carregando..." : "Todos conjuntos"} />
+            </SelectTrigger>
+            <SelectContent className="z-[120]">
+              <SelectItem value="all">Todos conjuntos</SelectItem>
+              {adSets.map((adSet) => (
+                <SelectItem key={adSet.id} value={adSet.id}>
+                  {adSet.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
-    return sortDir === "asc" ? <ArrowUp className="h-3 w-3 ml-1" /> : <ArrowDown className="h-3 w-3 ml-1" />;
-  };
+      {adSetId && (
+        <div className="space-y-1">
+          <Select value={adId || "all"} onValueChange={(value) => onAdChange(value === "all" ? null : value)}>
+            <SelectTrigger className="h-8 text-xs bg-background/50 border-border/40 animate-in fade-in slide-in-from-top-1">
+              <SelectValue placeholder={isLoadingAds ? "Carregando..." : "Todos criativos"} />
+            </SelectTrigger>
+            <SelectContent className="z-[120]">
+              <SelectItem value="all">Todos criativos</SelectItem>
+              {ads.map((ad) => (
+                <SelectItem key={ad.id} value={ad.id}>
+                  {ad.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+    </div>
+  );
 
-  const handleFilterChange =
-    <T,>(setter: (value: T) => void) =>
-    (value: T) => {
-      setter(value);
-      setPage(1);
-    };
+  const FilterContent = () => (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between border-b border-border/40 pb-2">
+        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Filtros Avançados</span>
+        {hasActiveFilters && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClear}
+            className="h-5 px-1.5 text-[9px] uppercase font-bold text-primary hover:bg-primary/10"
+          >
+            Limpar
+          </Button>
+        )}
+      </div>
+
+      <div className="grid gap-2">
+        {!hideSearch && (
+          <div className="relative group">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground group-focus-within:text-primary" />
+            <Input
+              placeholder="Buscar..."
+              value={localSearch}
+              onChange={(event) => setLocalSearch(event.target.value)}
+              className="h-9 pl-8 text-xs bg-muted/30 border-border/50 focus:bg-background"
+            />
+          </div>
+        )}
+
+        {availableTeams.length > 0 && <TeamFilter />}
+
+        {showUserFilter && <UserFilter />}
+
+        <SourceFilter />
+
+        <TagFilter />
+
+        <DealStatusFilter />
+
+        <div className="space-y-2 pt-2 border-t border-border/40">
+          <div className="flex items-center gap-1.5 px-1 mb-1">
+            <Facebook className="h-3 w-3 text-[#1877F2]" />
+            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+              Campanhas Meta
+            </span>
+          </div>
+          <MetaFilters />
+        </div>
+      </div>
+    </div>
+  );
 
   return (
-    <AppLayout title="Contatos">
-      <div className="space-y-6 animate-in relative">
-        {isMobile ? (
-          <div className="flex gap-2 items-center w-full">
-            <SharedFilters
-              datePreset={datePreset}
-              onDatePresetChange={setDatePreset}
-              customDateRange={customDateRange}
-              onCustomDateRangeChange={setCustomDateRange}
-              teamId={sharedFilters.teamId}
-              onTeamChange={() => {}}
-              userId={selectedAssignee}
-              onUserChange={setSelectedAssignee}
-              source={selectedSource}
-              onSourceChange={setSelectedSource}
-              campaignId={sharedFilters.campaignId}
-              onCampaignChange={() => {}}
-              adSetId={sharedFilters.adSetId}
-              onAdSetChange={() => {}}
-              adId={sharedFilters.adId}
-              onAdChange={() => {}}
-              tagId={selectedTag}
-              onTagChange={setSelectedTag}
-              dealStatus={selectedDealStatus}
-              onDealStatusChange={setSelectedDealStatus}
-              searchQuery={search}
-              onSearchChange={setSearch}
-              onClear={handleClearFilters}
-              hasActiveFilters={hasSharedActiveFilters || selectedPipeline !== "all" || selectedStage !== "all"}
-              dynamicSources={dynamicSources}
-              campaigns={campaigns}
-              adSets={adSets}
-              ads={ads}
-              tags={allTagsFromHook}
-              isLoadingSources={isLoadingSources}
-              isLoadingCampaigns={isLoadingCampaigns}
-              isLoadingAdSets={isLoadingAdSets}
-              isLoadingAds={isLoadingAds}
-            />
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon" className="shrink-0">
-                  <Upload className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem onClick={() => setImportDialogOpen(true)} className="py-2.5">
-                  <Upload className="h-4 w-4 mr-2 text-primary" />
-                  Importar CSV/Excel
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleExport} disabled={isExporting || totalCount === 0} className="py-2.5">
-                  <Download className="h-4 w-4 mr-2 text-primary" />
-                  {isExporting ? "Exportando..." : "Exportar Lista"}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        ) : (
-          <div className="bg-card rounded-xl p-1.5 px-3 shadow-sm overflow-hidden">
-            <div className="flex items-center gap-2 w-full justify-end">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-9 gap-2 font-medium border-none hover:bg-muted">
-                    <Upload className="h-4 w-4" />
-                    <span className="hidden xl:inline">Importar / Exportar</span>
-                    <ChevronDown className="h-4 w-4 opacity-50" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuItem onClick={() => setImportDialogOpen(true)} className="py-2.5">
-                    <Upload className="h-4 w-4 mr-2 text-primary" />
-                    Importar CSV/Excel
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={handleExport}
-                    disabled={isExporting || totalCount === 0}
-                    className="py-2.5"
-                  >
-                    <Download className="h-4 w-4 mr-2 text-primary" />
-                    {isExporting ? "Exportando..." : "Exportar Lista"}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              <Button
-                size="sm"
-                onClick={() => setIsCreateDialogOpen(true)}
-                className="h-9 gap-2 shadow-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90"
-              >
-                <Plus className="h-4 w-4" />
-                <span className="hidden sm:inline">Novo Contato</span>
-              </Button>
-
-              <div className="h-6 w-[1px] bg-border mx-1" />
-
-              <SharedFilters
-                datePreset={datePreset || "last30days"}
-                onDatePresetChange={handleFilterChange(setDatePreset)}
-                customDateRange={customDateRange}
-                onCustomDateRangeChange={handleFilterChange(setCustomDateRange)}
-                teamId={sharedFilters.teamId}
-                onTeamChange={() => {}}
-                userId={selectedAssignee}
-                onUserChange={handleFilterChange(setSelectedAssignee)}
-                source={selectedSource}
-                onSourceChange={handleFilterChange(setSelectedSource)}
-                campaignId={sharedFilters.campaignId}
-                onCampaignChange={() => {}}
-                adSetId={sharedFilters.adSetId}
-                onAdSetChange={() => {}}
-                adId={sharedFilters.adId}
-                onAdChange={() => {}}
-                tagId={selectedTag}
-                onTagChange={handleFilterChange(setSelectedTag)}
-                dealStatus={selectedDealStatus}
-                onDealStatusChange={handleFilterChange(setSelectedDealStatus)}
-                searchQuery={search}
-                onSearchChange={(value) => {
-                  setSearch(value);
-                  setPage(1);
-                }}
-                onClear={handleClearFilters}
-                hasActiveFilters={hasSharedActiveFilters || selectedPipeline !== "all" || selectedStage !== "all"}
-                dynamicSources={dynamicSources}
-                campaigns={campaigns}
-                adSets={adSets}
-                ads={ads}
-                tags={allTagsFromHook}
-                isLoadingSources={isLoadingSources}
-                isLoadingCampaigns={isLoadingCampaigns}
-                isLoadingAdSets={isLoadingAdSets}
-                isLoadingAds={isLoadingAds}
-              />
-            </div>
-          </div>
-        )}
-
-        <Card>
-          {isMobile ? (
-            <div>
-              {isLoading ? (
-                <div className="divide-y">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <div key={i} className="p-4 space-y-3 animate-pulse">
-                      <div className="flex justify-between">
-                        <div className="space-y-2 flex-1">
-                          <div className="h-4 w-32 bg-muted rounded" />
-                          <div className="h-3 w-24 bg-muted rounded" />
-                        </div>
-                        <div className="h-8 w-8 bg-muted rounded" />
-                      </div>
-                      <div className="flex gap-2">
-                        <div className="h-6 w-20 bg-muted rounded-full" />
-                        <div className="h-6 w-16 bg-muted rounded-full" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : contacts.length === 0 ? (
-                <EmptyState
-                  hasActiveFilters={!!hasActiveFilters}
-                  onImport={() => setImportDialogOpen(true)}
-                  onCreate={() => setIsCreateDialogOpen(true)}
-                  onClearFilters={clearFilters}
-                />
-              ) : (
-                <div className="divide-y">
-                  {contacts.map((contact: any) => (
-                    <ContactCard
-                      key={contact.id}
-                      contact={contact}
-                      sourceLabels={sourceLabels}
-                      onViewDetails={() => setSelectedContactId(contact.id)}
-                      onDelete={() => setDeleteContactId(contact.id)}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              {isLoading ? (
-                <TableSkeleton />
-              ) : contacts.length === 0 ? (
-                <EmptyState
-                  hasActiveFilters={!!hasActiveFilters}
-                  onImport={() => setImportDialogOpen(true)}
-                  onCreate={() => setIsCreateDialogOpen(true)}
-                  onClearFilters={clearFilters}
-                />
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-10">
-                        <Checkbox
-                          checked={selectedIds.size === contacts.length && contacts.length > 0}
-                          onCheckedChange={toggleSelectAll}
-                        />
-                      </TableHead>
-                      <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("name")}>
-                        <div className="flex items-center">
-                          Nome <SortIcon column="name" />
-                        </div>
-                      </TableHead>
-                      <TableHead>Contato</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Pipeline / Estágio</TableHead>
-                      <TableHead>Responsável</TableHead>
-                      <TableHead>Tags</TableHead>
-                      <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("created_at")}>
-                        <div className="flex items-center">
-                          Criado em <SortIcon column="created_at" />
-                        </div>
-                      </TableHead>
-                      <TableHead className="w-10"></TableHead>
-                    </TableRow>
-                  </TableHeader>
-
-                  <TableBody>
-                    {contacts.map((contact: any) => {
-                      const isLost = contact.deal_status === "lost";
-                      const isWon = contact.deal_status === "won";
-                      const status = contact.deal_status || "open";
-                      const StatusIcon = dealStatusConfig[status]?.icon || CircleDot;
-
-                      return (
-                        <TableRow
-                          key={contact.id}
-                          className={cn(
-                            "cursor-pointer hover:bg-muted/30",
-                            isLost && "bg-red-50/50 dark:bg-red-950/20 hover:bg-red-100/50 dark:hover:bg-red-950/30",
-                            isWon &&
-                              "bg-emerald-50/50 dark:bg-emerald-950/20 hover:bg-emerald-100/50 dark:hover:bg-emerald-950/30",
-                          )}
-                          onClick={() => setSelectedContactId(contact.id)}
-                        >
-                          <TableCell onClick={(e) => e.stopPropagation()}>
-                            <Checkbox
-                              checked={selectedIds.has(contact.id)}
-                              onCheckedChange={() => toggleSelectOne(contact.id)}
-                            />
-                          </TableCell>
-
-                          <TableCell>
-                            <div className="flex items-center gap-3">
-                              <Avatar className="h-9 w-9">
-                                <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                                  {getInitials(contact.name)}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div>
-                                <div className="flex items-center gap-2">
-                                  <p className="font-medium text-foreground">{contact.name}</p>
-                                  <ReentryBadge count={contact.reentry_count} lastEntryAt={contact.last_entry_at} />
-                                </div>
-                                {contact.source && (
-                                  <p className="text-xs text-muted-foreground">
-                                    {sourceLabels[contact.source] || contact.source}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                          </TableCell>
-
-                          <TableCell>
-                            <div className="space-y-1">
-                              {contact.phone && (
-                                <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                                  <Phone className="h-3 w-3" />
-                                  {contact.phone}
-                                </div>
-                              )}
-                              {contact.email && (
-                                <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                                  <Mail className="h-3 w-3" />
-                                  {contact.email}
-                                </div>
-                              )}
-                            </div>
-                          </TableCell>
-
-                          <TableCell onClick={() => setSelectedContactId(contact.id)}>
-                            <div className="space-y-1">
-                              <Badge
-                                variant="secondary"
-                                className={cn("text-xs gap-1 px-2", dealStatusConfig[status]?.className)}
-                              >
-                                <StatusIcon className="h-3 w-3" />
-                                {dealStatusConfig[status]?.label}
-                              </Badge>
-                              {isLost && contact.lost_reason && (
-                                <p
-                                  className="text-xs text-red-600 dark:text-red-400 max-w-[150px] truncate"
-                                  title={contact.lost_reason}
-                                >
-                                  {contact.lost_reason}
-                                </p>
-                              )}
-                            </div>
-                          </TableCell>
-
-                          <TableCell onClick={() => setSelectedContactId(contact.id)}>
-                            <div className="space-y-1">
-                              {contact.stage_name && (
-                                <Badge variant="outline" className="text-xs">
-                                  {contact.stage_name}
-                                </Badge>
-                              )}
-                            </div>
-                          </TableCell>
-
-                          <TableCell onClick={() => setSelectedContactId(contact.id)}>
-                            {contact.assignee_name ? (
-                              <div className="flex items-center gap-2">
-                                <Avatar className="h-6 w-6">
-                                  <AvatarImage src={contact.assignee_avatar || undefined} />
-                                  <AvatarFallback className="text-[10px] bg-secondary">
-                                    {getInitials(contact.assignee_name)}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <span className="text-sm">{contact.assignee_name}</span>
-                              </div>
-                            ) : (
-                              <span className="text-xs text-muted-foreground">Sem responsável</span>
-                            )}
-                          </TableCell>
-
-                          <TableCell onClick={() => setSelectedContactId(contact.id)}>
-                            <div className="flex flex-wrap gap-1">
-                              {contact.tags?.slice(0, 2).map((tag: any) => (
-                                <Badge
-                                  key={tag.id}
-                                  variant="secondary"
-                                  className="text-[10px] px-1.5"
-                                  style={{
-                                    backgroundColor: tag.color,
-                                    color: "#FFFFFF",
-                                    borderColor: tag.color,
-                                  }}
-                                >
-                                  {tag.name}
-                                </Badge>
-                              ))}
-                              {contact.tags && contact.tags.length > 2 && (
-                                <Badge variant="secondary" className="text-[10px] px-1.5">
-                                  +{contact.tags.length - 2}
-                                </Badge>
-                              )}
-                            </div>
-                          </TableCell>
-
-                          <TableCell onClick={() => setSelectedContactId(contact.id)}>
-                            <div className="text-sm">
-                              <p>{format(new Date(contact.created_at), "dd/MM/yyyy", { locale: ptBR })}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {formatDistanceToNow(new Date(contact.created_at), { addSuffix: true, locale: ptBR })}
-                              </p>
-                            </div>
-                          </TableCell>
-
-                          <TableCell onClick={(e) => e.stopPropagation()}>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => setSelectedContactId(contact.id)}>
-                                  <ExternalLink className="h-4 w-4 mr-2" />
-                                  Ver detalhes
-                                </DropdownMenuItem>
-                                {contact.phone && (
-                                  <DropdownMenuItem asChild>
-                                    <a
-                                      href={`https://wa.me/${contact.phone.replace(/\D/g, "")}`}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                    >
-                                      <MessageCircle className="h-4 w-4 mr-2" />
-                                      WhatsApp
-                                    </a>
-                                  </DropdownMenuItem>
-                                )}
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  className="text-destructive focus:text-destructive"
-                                  onClick={() => setDeleteContactId(contact.id)}
-                                >
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  Excluir
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              )}
-            </div>
+    <div className="flex items-center justify-end gap-2 w-full">
+      <div className="flex items-center">
+        <DateFilterPopover
+          datePreset={datePreset}
+          onDatePresetChange={onDatePresetChange}
+          customDateRange={customDateRange}
+          onCustomDateRangeChange={onCustomDateRangeChange}
+          triggerClassName={cn(
+            "h-8 gap-2 text-[11px] font-semibold uppercase tracking-wider px-3 border-border/60 hover:border-primary/50 transition-colors",
+            isMobile ? "px-2 text-xs font-medium normal-case tracking-normal" : "",
+            (datePreset !== "last30days" || customDateRange) && "border-primary/50 bg-primary/5 text-primary",
           )}
-        </Card>
-
-        {selectedIds.size > 0 && (
-          <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-background border rounded-lg shadow-lg p-3 flex items-center gap-4 z-50">
-            <span className="text-sm font-medium">{selectedIds.size} selecionado(s)</span>
-            <Button variant="destructive" size="sm" onClick={() => setBulkDeleteDialogOpen(true)}>
-              <Trash2 className="h-4 w-4 mr-1" />
-              Excluir
-            </Button>
-            <Button variant="ghost" size="sm" onClick={clearSelection}>
-              Cancelar
-            </Button>
-          </div>
-        )}
-
-        {(totalPages > 1 || totalCount > 0) && (
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <div className="flex items-center gap-2">
-              <p className="text-sm text-muted-foreground">
-                Página {page} de {totalPages || 1}
-              </p>
-              <Select
-                value={String(pageSize)}
-                onValueChange={(value) => {
-                  setPageSize(Number(value));
-                  setPage(1);
-                }}
-              >
-                <SelectTrigger className="h-8 w-[100px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {PAGE_SIZE_OPTIONS.map((size) => (
-                    <SelectItem key={size} value={String(size)}>
-                      {size} por pág
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="flex items-center gap-1">
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => setPage(1)}
-                disabled={page === 1}
-              >
-                <ChevronsLeft className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => setPage((currentPage) => Math.max(1, currentPage - 1))}
-                disabled={page === 1}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-
-              <div className="flex items-center gap-1 mx-2">
-                <Input
-                  type="text"
-                  value={pageInputValue}
-                  onChange={(e) => setPageInputValue(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      const pageNumber = parseInt(pageInputValue);
-
-                      if (!isNaN(pageNumber) && pageNumber >= 1 && pageNumber <= totalPages) {
-                        setPage(pageNumber);
-                      } else {
-                        setPageInputValue(String(page));
-                      }
-                    }
-                  }}
-                  onBlur={() => {
-                    const pageNumber = parseInt(pageInputValue);
-
-                    if (!isNaN(pageNumber) && pageNumber >= 1 && pageNumber <= totalPages) {
-                      setPage(pageNumber);
-                    } else {
-                      setPageInputValue(String(page));
-                    }
-                  }}
-                  className="w-12 h-8 text-center p-1"
-                />
-                <span className="text-sm text-muted-foreground">/ {totalPages}</span>
-              </div>
-
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => setPage((currentPage) => Math.min(totalPages, currentPage + 1))}
-                disabled={page === totalPages}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => setPage(totalPages)}
-                disabled={page === totalPages}
-              >
-                <ChevronsRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {selectedLead && (
-          <LeadDetailDialog
-            lead={selectedLead}
-            stages={stages}
-            onClose={() => setSelectedContactId(null)}
-            allTags={tags}
-            allUsers={users}
-            refetchStages={() => {}}
-          />
-        )}
-
-        <CreateLeadDialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen} />
-
-        <AlertDialog open={!!deleteContactId} onOpenChange={(open) => !open && setDeleteContactId(null)}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Excluir contato</AlertDialogTitle>
-              <AlertDialogDescription>
-                Tem certeza que deseja excluir este contato? Esta ação não pode ser desfeita.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-              <AlertDialogAction
-                className="bg-destructive hover:bg-destructive/90"
-                onClick={async () => {
-                  if (deleteContactId) {
-                    await deleteLead.mutateAsync(deleteContactId);
-                    setDeleteContactId(null);
-                  }
-                }}
-              >
-                Excluir
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-
-        <AlertDialog open={bulkDeleteDialogOpen} onOpenChange={setBulkDeleteDialogOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Excluir {selectedIds.size} contatos</AlertDialogTitle>
-              <AlertDialogDescription>
-                Tem certeza que deseja excluir {selectedIds.size} contatos selecionados? Esta ação não pode ser
-                desfeita.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-              <AlertDialogAction className="bg-destructive hover:bg-destructive/90" onClick={handleBulkDelete}>
-                Excluir {selectedIds.size} contatos
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-
-        <ImportContactsDialog open={importDialogOpen} onOpenChange={setImportDialogOpen} />
+          align="end"
+        />
       </div>
-    </AppLayout>
+
+      <div className="flex items-center gap-1">
+        <Popover open={filtersOpen} onOpenChange={setFiltersOpen} modal={true}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              className={cn(
+                "h-8 gap-2 text-[11px] font-semibold uppercase tracking-wider px-3 border-border/60 hover:border-primary/50 transition-colors",
+                isMobile ? "px-2.5 text-xs font-medium normal-case tracking-normal" : "",
+                hasExtraFilters && "border-primary/50 bg-primary/5 text-primary",
+              )}
+            >
+              <SlidersHorizontal className="h-3.5 w-3.5" />
+              <span className={isMobile ? "hidden xs:inline" : ""}>Filtros</span>
+              {hasExtraFilters && (
+                <Badge
+                  variant="default"
+                  className={cn(
+                    "ml-1 h-4 min-w-[16px] px-1 text-[9px] bg-primary flex items-center justify-center",
+                    isMobile && "h-4 w-4 p-0 text-[10px] ml-0.5",
+                  )}
+                >
+                  {isMobile ? "•" : "!"}
+                </Badge>
+              )}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent
+            align="end"
+            className={cn("w-72 p-3 border-border/40 shadow-2xl", isMobile && "w-[280px] max-h-[80vh] overflow-y-auto")}
+          >
+            {FilterContent()}
+          </PopoverContent>
+        </Popover>
+
+        {hasActiveFilters && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 px-2 text-muted-foreground hover:text-destructive transition-colors"
+            onClick={onClear}
+            title="Limpar todos os filtros"
+          >
+            <X className="h-3.5 w-3.5" />
+          </Button>
+        )}
+      </div>
+    </div>
   );
 }
