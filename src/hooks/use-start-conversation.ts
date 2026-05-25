@@ -16,6 +16,7 @@ export function useStartConversation() {
 
   return useMutation({
     mutationFn: async ({ phone, sessionId, leadId, leadName }: StartConversationParams): Promise<WhatsAppConversation> => {
+      console.log('[WhatsApp Start] useStartConversation iniciado', { phone, sessionId, leadId });
       // Always derive organization_id from the WhatsApp session itself (source of truth for RLS)
       const { data: sessionRow, error: sessionError } = await supabase
         .from("whatsapp_sessions")
@@ -24,6 +25,7 @@ export function useStartConversation() {
         .single();
 
       if (sessionError || !sessionRow) {
+        console.error('[WhatsApp Start] Erro ao buscar sessão:', sessionError);
         throw new Error("Sessão WhatsApp não encontrada ou sem acesso");
       }
 
@@ -33,6 +35,7 @@ export function useStartConversation() {
       const cleanPhone = formatPhoneForWhatsApp(phone);
       const remoteJid = cleanPhone.includes("@") ? cleanPhone : `${cleanPhone}@c.us`;
 
+      console.log('[WhatsApp Start] Buscando se já existe conversa local...', { remoteJid, sessionId });
       // Verificar se já existe conversa com esse telefone na sessão
       const { data: existingConversation, error: searchError } = await supabase
         .from("whatsapp_conversations")
@@ -46,10 +49,15 @@ export function useStartConversation() {
         .is("deleted_at", null)
         .maybeSingle();
 
-      if (searchError) throw searchError;
+      if (searchError) {
+        console.error('[WhatsApp Start] Erro na busca de conversa existente:', searchError);
+        throw searchError;
+      }
 
       if (existingConversation) {
+        console.log('[WhatsApp Start] Conversa encontrada localmente:', existingConversation.id);
         if (leadId && existingConversation.lead_id !== leadId) {
+          console.log('[WhatsApp Start] Atualizando lead_id da conversa existente');
           await supabase
             .from("whatsapp_conversations")
             .update({ lead_id: leadId })
@@ -58,6 +66,7 @@ export function useStartConversation() {
         return existingConversation as WhatsAppConversation;
       }
 
+      console.log('[WhatsApp Start] Inserindo nova conversa...');
       const { data: newConversation, error: insertError } = await supabase
         .from("whatsapp_conversations")
         .insert({
@@ -77,8 +86,12 @@ export function useStartConversation() {
         `)
         .single();
 
-      if (insertError) throw insertError;
+      if (insertError) {
+        console.error('[WhatsApp Start] Erro ao inserir nova conversa:', insertError);
+        throw insertError;
+      }
 
+      console.log('[WhatsApp Start] Nova conversa inserida:', newConversation.id);
       return newConversation as WhatsAppConversation;
     },
     onSuccess: () => {
@@ -98,8 +111,10 @@ export function useStartConversation() {
 export function useFindConversationByPhone() {
   return useMutation({
     mutationFn: async ({ phone, leadId, sessionId }: { phone: string; leadId?: string; sessionId?: string }): Promise<WhatsAppConversation | null> => {
+      console.log('[WhatsApp Start] useFindConversationByPhone iniciado', { phone, leadId, sessionId });
       // 1) Se temos leadId E sessionId, buscar conversa vinculada ao lead NA sessão específica
       if (leadId && sessionId) {
+        console.log('[WhatsApp Start] Buscando por leadId + sessionId...');
         const { data: byLeadSession, error: byLeadSessionError } = await supabase
           .from("whatsapp_conversations")
           .select(`
@@ -113,14 +128,19 @@ export function useFindConversationByPhone() {
           .order("last_message_at", { ascending: false, nullsFirst: false })
           .limit(1);
 
-        if (byLeadSessionError) throw byLeadSessionError;
+        if (byLeadSessionError) {
+          console.error('[WhatsApp Start] Erro na busca por leadId+sessionId:', byLeadSessionError);
+          throw byLeadSessionError;
+        }
         if (byLeadSession?.[0]) {
+          console.log('[WhatsApp Start] Encontrado por leadId + sessionId:', byLeadSession[0].id);
           return byLeadSession[0] as WhatsAppConversation;
         }
       }
 
       // 2) Se temos leadId (sem sessionId específico), priorizar conversa já vinculada ao lead
       if (leadId && !sessionId) {
+        console.log('[WhatsApp Start] Buscando por leadId (sem sessionId)...');
         const { data: byLead, error: byLeadError } = await supabase
           .from("whatsapp_conversations")
           .select(`
@@ -133,14 +153,19 @@ export function useFindConversationByPhone() {
           .order("last_message_at", { ascending: false, nullsFirst: false })
           .limit(1);
 
-        if (byLeadError) throw byLeadError;
+        if (byLeadError) {
+          console.error('[WhatsApp Start] Erro na busca por leadId:', byLeadError);
+          throw byLeadError;
+        }
         if (byLead?.[0]) {
+          console.log('[WhatsApp Start] Encontrado por leadId:', byLead[0].id);
           return byLead[0] as WhatsAppConversation;
         }
       }
 
       // 3) Fallback por telefone - restringir pela sessão se fornecida
       const cleanPhone = formatPhoneForWhatsApp(phone);
+      console.log('[WhatsApp Start] Buscando por variante de telefone:', cleanPhone);
       
       const digits = cleanPhone.replace(/\D/g, '');
       const withoutCountry = digits.startsWith('55') && digits.length >= 12 
@@ -175,8 +200,14 @@ export function useFindConversationByPhone() {
 
       const { data, error } = await query;
 
-      if (error) throw error;
-      return (data?.[0] as WhatsAppConversation) || null;
+      if (error) {
+        console.error('[WhatsApp Start] Erro na busca por telefone:', error);
+        throw error;
+      }
+      
+      const result = (data?.[0] as WhatsAppConversation) || null;
+      console.log('[WhatsApp Start] Resultado da busca por telefone:', result?.id || 'não encontrado');
+      return result;
     },
   });
 }

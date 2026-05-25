@@ -62,6 +62,7 @@ export function FloatingChat() {
   });
   const [showSessionSelector, setShowSessionSelector] = useState(false);
   const [pendingStartData, setPendingStartData] = useState<{phone: string, leadName?: string, leadId?: string} | null>(null);
+  const [isStartingConversation, setIsStartingConversation] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messageInputRef = useRef<HTMLTextAreaElement>(null);
@@ -225,11 +226,16 @@ export function FloatingChat() {
   };
 
   const handleStartConversationWithSession = async (phone: string, sessionId?: string, leadName?: string, leadId?: string) => {
+    console.log('[WhatsApp Start] Iniciando fluxo', { phone, leadId, sessionId });
+    setIsStartingConversation(true);
+    
     try {
       // 1) Se temos leadId, sempre tentar primeiro abrir conversa existente desse lead (qualquer sessão acessível)
       if (leadId) {
+        console.log('[WhatsApp Start] Buscando conversa existente por leadId:', leadId);
         const anyExisting = await findConversation.mutateAsync({ phone, leadId });
         if (anyExisting) {
+          console.log('[WhatsApp Start] Conversa encontrada por leadId:', anyExisting.id);
           openConversation(anyExisting);
           return;
         }
@@ -237,9 +243,12 @@ export function FloatingChat() {
 
       // 2) Se temos sessionId, tentar conversa existente na sessão específica
       if (sessionId) {
+        console.log('[WhatsApp Start] Buscando conversa existente na sessão:', sessionId);
         const existing = await findConversation.mutateAsync({ phone, leadId, sessionId });
         if (existing) {
+          console.log('[WhatsApp Start] Conversa encontrada na sessão:', existing.id);
           if (leadId && existing.lead_id !== leadId) {
+            console.log('[WhatsApp Start] Vinculando conversa ao leadId:', leadId);
             await supabase
               .from("whatsapp_conversations")
               .update({ lead_id: leadId })
@@ -251,35 +260,63 @@ export function FloatingChat() {
       }
 
       // 3) Fallback: tentar histórico via edge function (acesso restrito)
+      // Adicionamos um timeout para não travar o fluxo
       if (leadId) {
-        const { data: restrictedData, error: restrictedError } = await supabase.functions.invoke("whatsapp-history-access", {
-          body: { leadId },
-        });
+        console.log('[WhatsApp Start] Chamando whatsapp-history-access para leadId:', leadId);
+        try {
+          const { data: restrictedData, error: restrictedError } = await Promise.race([
+            supabase.functions.invoke("whatsapp-history-access", {
+              body: { leadId },
+            }),
+            new Promise<{data: any, error: any}>((_, reject) => 
+              setTimeout(() => reject(new Error("Timeout")), 5000)
+            )
+          ]) as any;
 
-        if (!restrictedError && restrictedData?.conversation) {
-          openConversation(restrictedData.conversation);
-          return;
+          if (!restrictedError && restrictedData?.conversation) {
+            console.log('[WhatsApp Start] Conversa encontrada via edge function:', restrictedData.conversation.id);
+            openConversation(restrictedData.conversation);
+            return;
+          }
+          console.log('[WhatsApp Start] Nenhuma conversa encontrada via edge function');
+        } catch (efError) {
+          console.warn('[WhatsApp Start] Erro ou timeout na edge function, continuando...', efError);
         }
       }
 
       if (!sessionId) {
+        console.log('[WhatsApp Start] Falha: sessionId não fornecido e conversa não encontrada');
         toast({
-          title: "Histórico não encontrado",
-          description: "Não há conversa existente visível para este lead.",
+          title: "Sessão não encontrada",
+          description: "Não há conversa existente e nenhuma sessão WhatsApp conectada/selecionada.",
           variant: "destructive"
         });
+        // Limpar o estado de pending para não ficar tentando em loop
+        clearActiveConversation();
         return;
       }
 
+      console.log('[WhatsApp Start] Criando nova conversa na sessão:', sessionId);
       const newConversation = await startConversation.mutateAsync({
         phone,
         sessionId,
         leadId,
         leadName
       });
+      
+      console.log('[WhatsApp Start] Nova conversa criada com sucesso:', newConversation.id);
       openConversation(newConversation);
-    } catch (error) {
-      console.error("Error starting conversation:", error);
+    } catch (error: any) {
+      console.error("[WhatsApp Start] Erro final no fluxo:", error);
+      toast({
+        title: "Erro ao iniciar conversa",
+        description: error.message || "Ocorreu um erro inesperado ao tentar abrir o chat.",
+        variant: "destructive"
+      });
+      // Limpar o estado de pending em caso de erro crítico
+      clearActiveConversation();
+    } finally {
+      setIsStartingConversation(false);
     }
   };
 
@@ -921,6 +958,13 @@ export function FloatingChat() {
         <div className="fixed inset-0 z-50 bg-card flex flex-col overflow-hidden pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
           <FloatingChatHeader mobile />
 
+          {isStartingConversation && (
+            <div className="absolute inset-0 bg-background/50 flex flex-col items-center justify-center z-50">
+              <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
+              <p className="text-xs text-muted-foreground animate-pulse">Iniciando conversa...</p>
+            </div>
+          )}
+
           <div className="flex-1 flex flex-col overflow-hidden min-h-0 w-full max-w-full">
             {activeConversation ? (
               <>
@@ -948,6 +992,13 @@ export function FloatingChat() {
       <div className={cn("fixed bottom-4 right-4 z-50", "bg-card", "border border-border", "rounded-2xl", "shadow-[0_25px_50px_-12px_rgba(0,0,0,0.25)]", "ring-1 ring-border", "transition-all duration-300 ease-out", "flex flex-col overflow-hidden", "animate-scale-in", isMinimized ? "w-80 h-14" : "w-[420px] h-[600px]")}>
         {/* Header */}
         <FloatingChatHeader />
+
+        {isStartingConversation && (
+          <div className="absolute inset-0 bg-background/50 flex flex-col items-center justify-center z-50">
+            <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
+            <p className="text-xs text-muted-foreground animate-pulse">Iniciando conversa...</p>
+          </div>
+        )}
 
         {!isMinimized && (
           <>
