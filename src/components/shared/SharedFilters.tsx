@@ -1,16 +1,5 @@
 import { useState, useEffect } from "react";
-import {
-  Users,
-  User,
-  Globe,
-  X,
-  SlidersHorizontal,
-  Check,
-  Facebook,
-  Search,
-  Tag as TagIcon,
-  CircleDot,
-} from "lucide-react";
+import { Users, User, Globe, X, SlidersHorizontal, Facebook, Search, Tag as TagIcon, CircleDot } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -26,25 +15,21 @@ import { DatePreset } from "@/hooks/use-dashboard-filters";
 import { DateFilterPopover } from "@/components/ui/date-filter-popover";
 
 interface SharedFiltersProps {
-  // Período
   datePreset: DatePreset;
   onDatePresetChange: (preset: DatePreset) => void;
   customDateRange: { from: Date; to: Date } | null;
   onCustomDateRangeChange: (range: { from: Date; to: Date } | null) => void;
 
-  // Equipe e Usuário
   teamId: string | null;
   onTeamChange: (teamId: string | null) => void;
   userId: string | null;
   onUserChange: (userId: string | null) => void;
 
-  // Origem
   source: string | null;
   onSourceChange: (source: string | null) => void;
   dynamicSources?: { value: string; label: string }[];
   isLoadingSources?: boolean;
 
-  // Meta Ads
   campaignId: string | null;
   onCampaignChange: (id: string | null) => void;
   adSetId: string | null;
@@ -58,20 +43,16 @@ interface SharedFiltersProps {
   isLoadingAdSets?: boolean;
   isLoadingAds?: boolean;
 
-  // Tag
   tagId: string | null;
   onTagChange: (tagId: string | null) => void;
   tags?: { id: string; name: string; color: string }[];
 
-  // Status do negócio
   dealStatus: string | null;
   onDealStatusChange: (status: string | null) => void;
 
-  // Busca
   searchQuery: string;
   onSearchChange: (query: string) => void;
 
-  // Controle
   onClear: () => void;
   hasActiveFilters: boolean;
   hideSearch?: boolean;
@@ -126,29 +107,33 @@ export function SharedFilters({
     const timer = setTimeout(() => {
       onSearchChange(localSearch);
     }, 300);
+
     return () => clearTimeout(timer);
-  }, [localSearch]);
+  }, [localSearch, onSearchChange]);
 
   useEffect(() => {
     if (searchQuery !== localSearch) {
       setLocalSearch(searchQuery);
     }
-  }, [searchQuery]);
+  }, [searchQuery, localSearch]);
 
   const isAdmin = profile?.role === "admin" || profile?.role === "super_admin";
   const canViewAllLeads = isAdmin || hasPermission("lead_view_all");
-  const isTeamLeader = teams.some((team) => team.members?.some((m) => m.user_id === user?.id && m.is_leader));
+
+  const isTeamLeader = teams.some((team) =>
+    team.members?.some((member) => member.user_id === user?.id && member.is_leader),
+  );
 
   const showUserFilter = canViewAllLeads || isTeamLeader;
 
   const availableTeams = isAdmin
     ? teams
-    : teams.filter((team) => team.members?.some((m) => m.user_id === user?.id && m.is_leader));
+    : teams.filter((team) => team.members?.some((member) => member.user_id === user?.id && member.is_leader));
 
   const availableUsers = teamId
-    ? users.filter((user) => {
-        const team = teams.find((t) => t.id === teamId);
-        return team?.members?.some((m) => m.user_id === user.id);
+    ? users.filter((availableUser) => {
+        const team = teams.find((item) => item.id === teamId);
+        return team?.members?.some((member) => member.user_id === availableUser.id);
       })
     : users;
 
@@ -195,9 +180,9 @@ export function SharedFilters({
       </SelectTrigger>
       <SelectContent>
         <SelectItem value="all">Todos</SelectItem>
-        {availableUsers.map((user) => (
-          <SelectItem key={user.id} value={user.id}>
-            {user.name}
+        {availableUsers.map((availableUser) => (
+          <SelectItem key={availableUser.id} value={availableUser.id}>
+            {availableUser.name}
           </SelectItem>
         ))}
       </SelectContent>
@@ -261,8 +246,8 @@ export function SharedFilters({
       <div className="space-y-1">
         <Select
           value={campaignId || "all"}
-          onValueChange={(val) => {
-            onCampaignChange(val === "all" ? null : val);
+          onValueChange={(value) => {
+            onCampaignChange(value === "all" ? null : value);
           }}
         >
           <SelectTrigger className="h-8 text-xs bg-background/50 border-border/40">
@@ -270,9 +255,9 @@ export function SharedFilters({
           </SelectTrigger>
           <SelectContent className="z-[120]">
             <SelectItem value="all">Todas campanhas</SelectItem>
-            {campaigns.map((c) => (
-              <SelectItem key={c.id} value={c.id}>
-                {c.name}
+            {campaigns.map((campaign) => (
+              <SelectItem key={campaign.id} value={campaign.id}>
+                {campaign.name}
               </SelectItem>
             ))}
             {!isLoadingCampaigns && campaigns.length === 0 && (
@@ -286,8 +271,8 @@ export function SharedFilters({
         <div className="space-y-1">
           <Select
             value={adSetId || "all"}
-            onValueChange={(val) => {
-              onAdSetChange(val === "all" ? null : val);
+            onValueChange={(value) => {
+              onAdSetChange(value === "all" ? null : value);
             }}
           >
             <SelectTrigger className="h-8 text-xs bg-background/50 border-border/40 animate-in fade-in slide-in-from-top-1">
@@ -295,9 +280,9 @@ export function SharedFilters({
             </SelectTrigger>
             <SelectContent className="z-[120]">
               <SelectItem value="all">Todos conjuntos</SelectItem>
-              {adSets.map((s) => (
-                <SelectItem key={s.id} value={s.id}>
-                  {s.name}
+              {adSets.map((adSet) => (
+                <SelectItem key={adSet.id} value={adSet.id}>
+                  {adSet.name}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -307,15 +292,15 @@ export function SharedFilters({
 
       {adSetId && (
         <div className="space-y-1">
-          <Select value={adId || "all"} onValueChange={(val) => onAdChange(val === "all" ? null : val)}>
+          <Select value={adId || "all"} onValueChange={(value) => onAdChange(value === "all" ? null : value)}>
             <SelectTrigger className="h-8 text-xs bg-background/50 border-border/40 animate-in fade-in slide-in-from-top-1">
               <SelectValue placeholder={isLoadingAds ? "Carregando..." : "Todos criativos"} />
             </SelectTrigger>
             <SelectContent className="z-[120]">
               <SelectItem value="all">Todos criativos</SelectItem>
-              {ads.map((a) => (
-                <SelectItem key={a.id} value={a.id}>
-                  {a.name}
+              {ads.map((ad) => (
+                <SelectItem key={ad.id} value={ad.id}>
+                  {ad.name}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -348,7 +333,20 @@ export function SharedFilters({
             <Input
               placeholder="Buscar..."
               value={localSearch}
-              onChange={(e) => setLocalSearch(e.target.value)}
+              onChange={(event) => setLocalSearch(event.target.value)}
+              onKeyDown={(event) => {
+                event.stopPropagation();
+              }}
+              onKeyUp={(event) => {
+                event.stopPropagation();
+              }}
+              onPointerDown={(event) => {
+                event.stopPropagation();
+              }}
+              onClick={(event) => {
+                event.stopPropagation();
+              }}
+              autoComplete="off"
               className="h-9 pl-8 text-xs bg-muted/30 border-border/50 focus:bg-background"
             />
           </div>
@@ -367,9 +365,7 @@ export function SharedFilters({
         <div className="space-y-2 pt-2 border-t border-border/40">
           <div className="flex items-center gap-1.5 px-1 mb-1">
             <Facebook className="h-3 w-3 text-[#1877F2]" />
-            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-              Campanhas Meta
-            </span>
+            <span className="text-[10px] font-bold text-muted-foreground">CAMPANHAS META</span>
           </div>
           <MetaFilters />
         </div>
@@ -421,11 +417,13 @@ export function SharedFilters({
               )}
             </Button>
           </PopoverTrigger>
+
           <PopoverContent
             align="end"
+            onOpenAutoFocus={(event) => event.preventDefault()}
             className={cn("w-72 p-3 border-border/40 shadow-2xl", isMobile && "w-[280px] max-h-[80vh] overflow-y-auto")}
           >
-            <FilterContent />
+            {FilterContent()}
           </PopoverContent>
         </Popover>
 
