@@ -105,17 +105,17 @@ export function SharedFilters({
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      onSearchChange(localSearch);
+      if (localSearch !== searchQuery) {
+        onSearchChange(localSearch);
+      }
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [localSearch, onSearchChange]);
+  }, [localSearch]);
 
   useEffect(() => {
-    if (searchQuery !== localSearch) {
-      setLocalSearch(searchQuery);
-    }
-  }, [searchQuery, localSearch]);
+    setLocalSearch(searchQuery);
+  }, [searchQuery]);
 
   const isAdmin = profile?.role === "admin" || profile?.role === "super_admin";
   const canViewAllLeads = isAdmin || hasPermission("lead_view_all");
