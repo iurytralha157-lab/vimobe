@@ -315,6 +315,8 @@ export function FloatingChat() {
       });
       // Limpar o estado de pending em caso de erro crítico
       clearActiveConversation();
+    } finally {
+      setIsStartingConversation(false);
     }
   };
 
