@@ -1,39 +1,21 @@
-import { useState, useDeferredValue, useMemo } from 'react';
-import { AppLayout } from '@/components/layout/AppLayout';
-import { Card, CardContent } from '@/components/ui/card';
-import { LeadDetailDialog } from '@/components/leads/LeadDetailDialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import {
-  Table,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  TableBody,
-} from '@/components/ui/table';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import { Label } from '@/components/ui/label';
+import { useState, useDeferredValue, useMemo } from "react";
+import { AppLayout } from "@/components/layout/AppLayout";
+import { Card } from "@/components/ui/card";
+import { LeadDetailDialog } from "@/components/leads/LeadDetailDialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Table, TableCell, TableHead, TableHeader, TableRow, TableBody } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+} from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -43,17 +25,13 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { 
-  Search, 
-  MoreHorizontal, 
-  Phone, 
-  Mail, 
+} from "@/components/ui/alert-dialog";
+import {
+  Search,
+  MoreHorizontal,
+  Phone,
+  Mail,
   ExternalLink,
-  Users,
-  UserCircle,
-  Calendar,
-  X,
   Download,
   Upload,
   ChevronDown,
@@ -67,42 +45,36 @@ import {
   ChevronRight,
   Filter,
   CircleDot,
-  Check,
   Plus,
   ChevronsRight,
-  Tags,
-  CheckSquare,
-  Square,
   Trophy,
   XCircle,
-} from 'lucide-react';
-import { CreateLeadDialog } from '@/components/leads/CreateLeadDialog';
-import { Checkbox } from '@/components/ui/checkbox';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { ContactCard } from '@/components/contacts/ContactCard';
-import { MobileFilters } from '@/components/contacts/MobileFilters';
-import { usePipelines, useStages } from '@/hooks/use-stages';
-import { useOrganizationUsers } from '@/hooks/use-users';
-import { useTags } from '@/hooks/use-tags';
-import { format, formatDistanceToNow, startOfDay, endOfDay } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
-import { cn } from '@/lib/utils';
-import { ImportContactsDialog } from '@/components/contacts/ImportContactsDialog';
-import { TableSkeleton } from '@/components/contacts/TableSkeleton';
-import { EmptyState } from '@/components/contacts/EmptyState';
-import { useContactsList, type ContactListFilters } from '@/hooks/use-contacts-list';
-import { exportContactsFiltered } from '@/lib/export-contacts';
-import { useLead, useDeleteLead } from '@/hooks/use-leads';
-import { ReentryBadge } from '@/components/leads/ReentryBadge';
-import { useToast } from '@/hooks/use-toast';
-import { SharedFilters } from '@/components/shared/SharedFilters';
-import { useSharedFilters } from '@/hooks/use-shared-filters';
-
+} from "lucide-react";
+import { CreateLeadDialog } from "@/components/leads/CreateLeadDialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { ContactCard } from "@/components/contacts/ContactCard";
+import { usePipelines, useStages } from "@/hooks/use-stages";
+import { useOrganizationUsers } from "@/hooks/use-users";
+import { useTags } from "@/hooks/use-tags";
+import { format, formatDistanceToNow } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { cn } from "@/lib/utils";
+import { ImportContactsDialog } from "@/components/contacts/ImportContactsDialog";
+import { TableSkeleton } from "@/components/contacts/TableSkeleton";
+import { EmptyState } from "@/components/contacts/EmptyState";
+import { useContactsList, type ContactListFilters } from "@/hooks/use-contacts-list";
+import { exportContactsFiltered } from "@/lib/export-contacts";
+import { useLead, useDeleteLead } from "@/hooks/use-leads";
+import { ReentryBadge } from "@/components/leads/ReentryBadge";
+import { useToast } from "@/hooks/use-toast";
+import { SharedFilters } from "@/components/shared/SharedFilters";
+import { useSharedFilters } from "@/hooks/use-shared-filters";
 
 export default function Contacts() {
   const isMobile = useIsMobile();
   const { toast } = useToast();
-  
+
   const {
     filters: sharedFilters,
     datePreset,
@@ -132,46 +104,40 @@ export default function Contacts() {
     isLoadingAds,
   } = useSharedFilters();
 
-  // Local filters specific to Contacts
-  const [selectedPipeline, setSelectedPipeline] = useState<string>('all');
-  const [selectedStage, setSelectedStage] = useState<string>('all');
+  const [selectedPipeline, setSelectedPipeline] = useState<string>("all");
+  const [selectedStage, setSelectedStage] = useState<string>("all");
 
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [deleteContactId, setDeleteContactId] = useState<string | null>(null);
-  const [pageInputValue, setPageInputValue] = useState('1');
+  const [pageInputValue, setPageInputValue] = useState("1");
   const [isExporting, setIsExporting] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  
-  // Bulk selection state
+
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
 
-  // Pagination & Sort states
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(50); // Aumentado para 50 como padrão otimizado
-  const [sortBy, setSortBy] = useState<ContactListFilters['sortBy']>('created_at');
-  const [sortDir, setSortDir] = useState<ContactListFilters['sortDir']>('desc');
-  
+  const [pageSize, setPageSize] = useState(50);
+  const [sortBy, setSortBy] = useState<ContactListFilters["sortBy"]>("created_at");
+  const [sortDir, setSortDir] = useState<ContactListFilters["sortDir"]>("desc");
+
   const PAGE_SIZE_OPTIONS = [5, 10, 30, 50, 100];
 
-  // Debounce search
   const deferredSearch = useDeferredValue(search);
-
-  // Date range is handled by useSharedFilters
   const dateRange = sharedFilters.dateRange;
 
-
-  // Build filters
   const filters: ContactListFilters = {
     search: deferredSearch || undefined,
-    pipelineId: !deferredSearch && selectedPipeline !== 'all' ? selectedPipeline : undefined,
-    stageId: !deferredSearch && selectedStage !== 'all' ? selectedStage : undefined,
-    assigneeId: !deferredSearch && selectedAssignee !== 'all' && selectedAssignee !== 'unassigned' ? selectedAssignee : undefined,
-    unassigned: !deferredSearch && selectedAssignee === 'unassigned',
-    tagId: !deferredSearch && selectedTag !== 'all' ? selectedTag : undefined,
-    source: !deferredSearch && selectedSource !== 'all' ? selectedSource : undefined,
-    dealStatus: !deferredSearch && selectedDealStatus !== 'all' ? selectedDealStatus as 'open' | 'won' | 'lost' : undefined,
+    pipelineId: !deferredSearch && selectedPipeline !== "all" ? selectedPipeline : undefined,
+    stageId: !deferredSearch && selectedStage !== "all" ? selectedStage : undefined,
+    assigneeId:
+      !deferredSearch && selectedAssignee !== "all" && selectedAssignee !== "unassigned" ? selectedAssignee : undefined,
+    unassigned: !deferredSearch && selectedAssignee === "unassigned",
+    tagId: !deferredSearch && selectedTag !== "all" ? selectedTag : undefined,
+    source: !deferredSearch && selectedSource !== "all" ? selectedSource : undefined,
+    dealStatus:
+      !deferredSearch && selectedDealStatus !== "all" ? (selectedDealStatus as "open" | "won" | "lost") : undefined,
     createdFrom: !deferredSearch && dateRange ? dateRange.from.toISOString() : undefined,
     createdTo: !deferredSearch && dateRange ? dateRange.to.toISOString() : undefined,
     sortBy,
@@ -180,22 +146,20 @@ export default function Contacts() {
     limit: pageSize,
   };
 
-  // Fetch data
-  const { data: contacts = [], isLoading, isFetching } = useContactsList(filters);
+  const { data: contacts = [], isLoading } = useContactsList(filters);
   const { data: pipelines = [] } = usePipelines();
-  const { data: stages = [] } = useStages(selectedPipeline !== 'all' ? selectedPipeline : undefined);
+  const { data: stages = [] } = useStages(selectedPipeline !== "all" ? selectedPipeline : undefined);
   const { data: users = [] } = useOrganizationUsers();
   const { data: tags = [] } = useTags();
-  
-  const uniqueSources = useMemo(() => {
+
+  useMemo(() => {
     const sources = new Set<string>();
     contacts.forEach((c: any) => {
       if (c.source) sources.add(c.source);
     });
     return Array.from(sources).sort();
   }, [contacts]);
-  
-  // Fetch selected lead for detail dialog
+
   const { data: selectedLead } = useLead(selectedContactId);
   const deleteLead = useDeleteLead();
 
@@ -203,142 +167,141 @@ export default function Contacts() {
   const totalPages = Math.ceil(totalCount / pageSize);
 
   const sourceLabels: Record<string, string> = {
-    manual: 'Manual',
-    meta: 'Meta Ads',
-    site: 'Site',
+    manual: "Manual",
+    meta: "Meta Ads",
+    site: "Site",
   };
 
   const dealStatusConfig = {
-    open: { label: 'Aberto', icon: CircleDot, className: 'bg-muted text-muted-foreground' },
-    won: { label: 'Ganho', icon: Trophy, className: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300' },
-    lost: { label: 'Perdido', icon: XCircle, className: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300' },
+    open: { label: "Aberto", icon: CircleDot, className: "bg-muted text-muted-foreground" },
+    won: {
+      label: "Ganho",
+      icon: Trophy,
+      className: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300",
+    },
+    lost: { label: "Perdido", icon: XCircle, className: "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300" },
   };
 
   const handleClearFilters = () => {
     clearFilters();
-    setSelectedPipeline('all');
-    setSelectedStage('all');
+    setSelectedPipeline("all");
+    setSelectedStage("all");
     setPage(1);
   };
 
-
   const handleExport = async () => {
     setIsExporting(true);
+
     try {
       const count = await exportContactsFiltered({
         filters: {
           search: deferredSearch || undefined,
-          pipelineId: selectedPipeline !== 'all' ? selectedPipeline : undefined,
-          stageId: selectedStage !== 'all' ? selectedStage : undefined,
-          assigneeId: selectedAssignee !== 'all' && selectedAssignee !== 'unassigned' ? selectedAssignee : undefined,
-          unassigned: selectedAssignee === 'unassigned',
-          tagId: selectedTag !== 'all' ? selectedTag : undefined,
-          source: selectedSource !== 'all' ? selectedSource : undefined,
-          dealStatus: selectedDealStatus !== 'all' ? selectedDealStatus : undefined,
+          pipelineId: selectedPipeline !== "all" ? selectedPipeline : undefined,
+          stageId: selectedStage !== "all" ? selectedStage : undefined,
+          assigneeId: selectedAssignee !== "all" && selectedAssignee !== "unassigned" ? selectedAssignee : undefined,
+          unassigned: selectedAssignee === "unassigned",
+          tagId: selectedTag !== "all" ? selectedTag : undefined,
+          source: selectedSource !== "all" ? selectedSource : undefined,
+          dealStatus: selectedDealStatus !== "all" ? selectedDealStatus : undefined,
           createdFrom: dateRange ? dateRange.from.toISOString() : undefined,
           createdTo: dateRange ? dateRange.to.toISOString() : undefined,
         },
-        filename: `contatos-${format(new Date(), 'yyyy-MM-dd')}`,
+        filename: `contatos-${format(new Date(), "yyyy-MM-dd")}`,
       });
+
       toast({
-        title: 'Exportação concluída',
+        title: "Exportação concluída",
         description: `${count} contatos exportados com sucesso`,
       });
     } catch (error: any) {
       toast({
-        title: 'Erro na exportação',
-        description: error.message || 'Não foi possível exportar os contatos',
-        variant: 'destructive',
+        title: "Erro na exportação",
+        description: error.message || "Não foi possível exportar os contatos",
+        variant: "destructive",
       });
     } finally {
       setIsExporting(false);
     }
   };
 
-  // Clear selection when data changes
   const clearSelection = () => setSelectedIds(new Set());
-  
+
   const toggleSelectAll = () => {
     if (selectedIds.size === contacts.length && contacts.length > 0) {
       clearSelection();
     } else {
-      setSelectedIds(new Set(contacts.map(c => c.id)));
+      setSelectedIds(new Set(contacts.map((c: any) => c.id)));
     }
   };
-  
+
   const toggleSelectOne = (id: string) => {
     const newSet = new Set(selectedIds);
+
     if (newSet.has(id)) {
       newSet.delete(id);
     } else {
       newSet.add(id);
     }
+
     setSelectedIds(newSet);
   };
-  
+
   const handleBulkDelete = async () => {
     for (const id of selectedIds) {
       await deleteLead.mutateAsync(id);
     }
+
     clearSelection();
     setBulkDeleteDialogOpen(false);
   };
 
-  const hasActiveFilters = search || selectedPipeline !== 'all' || selectedStage !== 'all' || 
-    selectedAssignee !== 'all' || selectedTag !== 'all' || selectedSource !== 'all' || 
-    selectedDealStatus !== 'all' || datePreset || customDateRange;
-
-  const activeFilterCount = [
-    selectedPipeline !== 'all',
-    selectedStage !== 'all',
-    selectedAssignee !== 'all',
-    selectedTag !== 'all',
-    selectedSource !== 'all',
-    selectedDealStatus !== 'all',
-    datePreset || customDateRange,
-  ].filter(Boolean).length;
-
-  const activeAdvancedCount = [
-    selectedAssignee !== 'all',
-    selectedTag !== 'all',
-    selectedSource !== 'all',
-    selectedDealStatus !== 'all',
-  ].filter(Boolean).length;
+  const hasActiveFilters =
+    search ||
+    selectedPipeline !== "all" ||
+    selectedStage !== "all" ||
+    selectedAssignee !== "all" ||
+    selectedTag !== "all" ||
+    selectedSource !== "all" ||
+    selectedDealStatus !== "all" ||
+    datePreset ||
+    customDateRange;
 
   const getInitials = (name: string) => {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
   };
 
-  const handleSort = (column: ContactListFilters['sortBy']) => {
+  const handleSort = (column: ContactListFilters["sortBy"]) => {
     if (sortBy === column) {
-      setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
+      setSortDir(sortDir === "asc" ? "desc" : "asc");
     } else {
       setSortBy(column);
-      setSortDir('desc');
+      setSortDir("desc");
     }
+
     setPage(1);
   };
 
-  const SortIcon = ({ column }: { column: ContactListFilters['sortBy'] }) => {
+  const SortIcon = ({ column }: { column: ContactListFilters["sortBy"] }) => {
     if (sortBy !== column) return <ArrowUpDown className="h-3 w-3 ml-1 opacity-50" />;
-    return sortDir === 'asc' 
-      ? <ArrowUp className="h-3 w-3 ml-1" />
-      : <ArrowDown className="h-3 w-3 ml-1" />;
+
+    return sortDir === "asc" ? <ArrowUp className="h-3 w-3 ml-1" /> : <ArrowDown className="h-3 w-3 ml-1" />;
   };
 
-  // Reset page when filters change
-  const handleFilterChange = <T,>(setter: (value: T) => void) => (value: T) => {
-    setter(value);
-    setPage(1);
-  };
+  const handleFilterChange =
+    <T,>(setter: (value: T) => void) =>
+    (value: T) => {
+      setter(value);
+      setPage(1);
+    };
 
   return (
     <AppLayout title="Contatos">
       <div className="space-y-6 animate-in relative">
-
-
-
-        {/* Filters - Mobile vs Tablet/Small Desktop vs Large Desktop */}
         {isMobile ? (
           <div className="flex gap-2 items-center w-full">
             <SharedFilters
@@ -347,13 +310,13 @@ export default function Contacts() {
               customDateRange={customDateRange}
               onCustomDateRangeChange={setCustomDateRange}
               teamId={sharedFilters.teamId}
-              onTeamChange={() => {}} // Team filter not used here yet
+              onTeamChange={() => {}}
               userId={selectedAssignee}
               onUserChange={setSelectedAssignee}
               source={selectedSource}
               onSourceChange={setSelectedSource}
               campaignId={sharedFilters.campaignId}
-              onCampaignChange={() => {}} // Meta filters not used here yet but available
+              onCampaignChange={() => {}}
               adSetId={sharedFilters.adSetId}
               onAdSetChange={() => {}}
               adId={sharedFilters.adId}
@@ -365,7 +328,7 @@ export default function Contacts() {
               searchQuery={search}
               onSearchChange={setSearch}
               onClear={handleClearFilters}
-              hasActiveFilters={hasSharedActiveFilters || selectedPipeline !== 'all' || selectedStage !== 'all'}
+              hasActiveFilters={hasSharedActiveFilters || selectedPipeline !== "all" || selectedStage !== "all"}
               dynamicSources={dynamicSources}
               campaigns={campaigns}
               adSets={adSets}
@@ -376,6 +339,7 @@ export default function Contacts() {
               isLoadingAdSets={isLoadingAdSets}
               isLoadingAds={isLoadingAds}
             />
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="icon" className="shrink-0">
@@ -387,96 +351,122 @@ export default function Contacts() {
                   <Upload className="h-4 w-4 mr-2 text-primary" />
                   Importar CSV/Excel
                 </DropdownMenuItem>
-                <DropdownMenuItem 
-                  onClick={handleExport}
-                  disabled={isExporting || totalCount === 0}
-                  className="py-2.5"
-                >
+                <DropdownMenuItem onClick={handleExport} disabled={isExporting || totalCount === 0} className="py-2.5">
                   <Download className="h-4 w-4 mr-2 text-primary" />
-                  {isExporting ? 'Exportando...' : 'Exportar Lista'}
+                  {isExporting ? "Exportando..." : "Exportar Lista"}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-
         ) : (
           <div className="bg-card rounded-xl p-1.5 px-3 shadow-sm overflow-hidden">
             <div className="flex items-center gap-1.5 w-full">
-              {/* Search - Always visible in desktop mode */}
               <div className="relative flex-1 min-w-[150px] max-w-[300px]">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Buscar..."
                   value={search}
-                  onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                  onChange={(e) => {
+                    setSearch(e.target.value);
+                    setPage(1);
+                  }}
                   className="pl-9 h-9 bg-muted/50 border focus-visible:ring-1 focus-visible:ring-primary/20"
                 />
               </div>
 
-              {/* Individual Filters - Only on large screens */}
               <div className="hidden xl:flex items-center gap-1.5">
                 <div className="h-6 w-[1px] bg-border mx-1" />
-                
-                {/* Pipeline */}
-                <Select value={selectedPipeline} onValueChange={(v) => {
-                  handleFilterChange(setSelectedPipeline)(v);
-                  setSelectedStage('all');
-                }}>
+
+                <Select
+                  value={selectedPipeline}
+                  onValueChange={(v) => {
+                    handleFilterChange(setSelectedPipeline)(v);
+                    setSelectedStage("all");
+                  }}
+                >
                   <SelectTrigger className="w-[140px] h-9 border-none bg-transparent hover:bg-muted font-medium">
                     <SelectValue placeholder="Pipeline" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todas pipelines</SelectItem>
-                    {pipelines.map(p => (
-                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                    {pipelines.map((p: any) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.name}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
 
-                {/* Stage */}
-                <Select value={selectedStage} onValueChange={handleFilterChange(setSelectedStage)} disabled={selectedPipeline === 'all'}>
+                <Select
+                  value={selectedStage}
+                  onValueChange={handleFilterChange(setSelectedStage)}
+                  disabled={selectedPipeline === "all"}
+                >
                   <SelectTrigger className="w-[140px] h-9 border-none bg-transparent hover:bg-muted font-medium">
                     <SelectValue placeholder="Estágio" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todos estágios</SelectItem>
-                    {stages.map(s => (
-                      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                    {stages.map((s: any) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.name}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
 
-              {/* Consolidate extra filters into a single Popover for Medium screens */}
               <div className="flex xl:hidden items-center gap-1.5">
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" size="sm" className={cn("h-9 gap-2", (selectedPipeline !== 'all' || selectedStage !== 'all') && "border-primary text-primary")}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className={cn(
+                        "h-9 gap-2",
+                        (selectedPipeline !== "all" || selectedStage !== "all") && "border-primary text-primary",
+                      )}
+                    >
                       <Filter className="h-4 w-4" />
                       <span>Pipeline</span>
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-64 p-3 space-y-3">
                     <div className="space-y-3">
-                      <Select value={selectedPipeline} onValueChange={(v) => { handleFilterChange(setSelectedPipeline)(v); setSelectedStage('all'); }}>
+                      <Select
+                        value={selectedPipeline}
+                        onValueChange={(v) => {
+                          handleFilterChange(setSelectedPipeline)(v);
+                          setSelectedStage("all");
+                        }}
+                      >
                         <SelectTrigger className="h-9">
                           <SelectValue placeholder="Pipeline" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">Todas pipelines</SelectItem>
-                          {pipelines.map(p => (
-                            <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                          {pipelines.map((p: any) => (
+                            <SelectItem key={p.id} value={p.id}>
+                              {p.name}
+                            </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
-                      <Select value={selectedStage} onValueChange={handleFilterChange(setSelectedStage)} disabled={selectedPipeline === 'all'}>
+
+                      <Select
+                        value={selectedStage}
+                        onValueChange={handleFilterChange(setSelectedStage)}
+                        disabled={selectedPipeline === "all"}
+                      >
                         <SelectTrigger className="h-9">
                           <SelectValue placeholder="Estágio" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">Todos estágios</SelectItem>
-                          {stages.map(s => (
-                            <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                          {stages.map((s: any) => (
+                            <SelectItem key={s.id} value={s.id}>
+                              {s.name}
+                            </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -487,10 +477,9 @@ export default function Contacts() {
 
               <div className="h-6 w-[1px] bg-border mx-1" />
 
-              {/* Advanced Filters & Date - Always grouped on desktop */}
               <div className="flex items-center gap-1.5 ml-auto">
                 <SharedFilters
-                  datePreset={datePreset || 'last30days'}
+                  datePreset={datePreset || "last30days"}
                   onDatePresetChange={handleFilterChange(setDatePreset)}
                   customDateRange={customDateRange}
                   onCustomDateRangeChange={handleFilterChange(setCustomDateRange)}
@@ -511,9 +500,12 @@ export default function Contacts() {
                   dealStatus={selectedDealStatus}
                   onDealStatusChange={handleFilterChange(setSelectedDealStatus)}
                   searchQuery={search}
-                  onSearchChange={(v) => { setSearch(v); setPage(1); }}
+                  onSearchChange={(v) => {
+                    setSearch(v);
+                    setPage(1);
+                  }}
                   onClear={handleClearFilters}
-                  hasActiveFilters={hasSharedActiveFilters || selectedPipeline !== 'all' || selectedStage !== 'all'}
+                  hasActiveFilters={hasSharedActiveFilters || selectedPipeline !== "all" || selectedStage !== "all"}
                   dynamicSources={dynamicSources}
                   campaigns={campaigns}
                   adSets={adSets}
@@ -524,19 +516,10 @@ export default function Contacts() {
                   isLoadingAdSets={isLoadingAdSets}
                   isLoadingAds={isLoadingAds}
                 />
-
               </div>
-
-              {hasActiveFilters && (
-                <Button variant="ghost" size="sm" onClick={clearFilters} className="h-9 px-3 text-muted-foreground hover:text-primary transition-colors">
-                  <X className="h-4 w-4 mr-1.5" />
-                  Limpar
-                </Button>
-              )}
 
               <div className="h-6 w-[1px] bg-border mx-1" />
 
-              {/* Actions */}
               <div className="flex items-center gap-2 ml-auto">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -551,19 +534,19 @@ export default function Contacts() {
                       <Upload className="h-4 w-4 mr-2 text-primary" />
                       Importar CSV/Excel
                     </DropdownMenuItem>
-                    <DropdownMenuItem 
+                    <DropdownMenuItem
                       onClick={handleExport}
                       disabled={isExporting || totalCount === 0}
                       className="py-2.5"
                     >
                       <Download className="h-4 w-4 mr-2 text-primary" />
-                      {isExporting ? 'Exportando...' : 'Exportar Lista'}
+                      {isExporting ? "Exportando..." : "Exportar Lista"}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
 
-                <Button 
-                  size="sm" 
+                <Button
+                  size="sm"
                   onClick={() => setIsCreateDialogOpen(true)}
                   className="h-9 gap-2 shadow-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90"
                 >
@@ -575,10 +558,8 @@ export default function Contacts() {
           </div>
         )}
 
-        {/* Content - Mobile Cards vs Desktop Table */}
         <Card>
           {isMobile ? (
-            // Mobile Card List
             <div>
               {isLoading ? (
                 <div className="divide-y">
@@ -607,10 +588,10 @@ export default function Contacts() {
                 />
               ) : (
                 <div className="divide-y">
-                  {contacts.map((contact) => (
-                    <ContactCard 
-                      key={contact.id} 
-                      contact={contact} 
+                  {contacts.map((contact: any) => (
+                    <ContactCard
+                      key={contact.id}
+                      contact={contact}
                       sourceLabels={sourceLabels}
                       onViewDetails={() => setSelectedContactId(contact.id)}
                       onDelete={() => setDeleteContactId(contact.id)}
@@ -620,7 +601,6 @@ export default function Contacts() {
               )}
             </div>
           ) : (
-            // Desktop Table
             <div className="overflow-x-auto">
               {isLoading ? (
                 <TableSkeleton />
@@ -636,15 +616,12 @@ export default function Contacts() {
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-10">
-                        <Checkbox 
+                        <Checkbox
                           checked={selectedIds.size === contacts.length && contacts.length > 0}
                           onCheckedChange={toggleSelectAll}
                         />
                       </TableHead>
-                      <TableHead 
-                        className="cursor-pointer hover:bg-muted/50"
-                        onClick={() => handleSort('name')}
-                      >
+                      <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("name")}>
                         <div className="flex items-center">
                           Nome <SortIcon column="name" />
                         </div>
@@ -654,10 +631,7 @@ export default function Contacts() {
                       <TableHead>Pipeline / Estágio</TableHead>
                       <TableHead>Responsável</TableHead>
                       <TableHead>Tags</TableHead>
-                      <TableHead 
-                        className="cursor-pointer hover:bg-muted/50"
-                        onClick={() => handleSort('created_at')}
-                      >
+                      <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("created_at")}>
                         <div className="flex items-center">
                           Criado em <SortIcon column="created_at" />
                         </div>
@@ -665,168 +639,185 @@ export default function Contacts() {
                       <TableHead className="w-10"></TableHead>
                     </TableRow>
                   </TableHeader>
+
                   <TableBody>
-                    {contacts.map((contact) => {
-                      const isLost = contact.deal_status === 'lost';
-                      const isWon = contact.deal_status === 'won';
-                      const status = contact.deal_status || 'open';
+                    {contacts.map((contact: any) => {
+                      const isLost = contact.deal_status === "lost";
+                      const isWon = contact.deal_status === "won";
+                      const status = contact.deal_status || "open";
                       const StatusIcon = dealStatusConfig[status]?.icon || CircleDot;
-                      
+
                       return (
-                      <TableRow 
-                        key={contact.id} 
-                        className={cn(
-                          "cursor-pointer hover:bg-muted/30",
-                          isLost && "bg-red-50/50 dark:bg-red-950/20 hover:bg-red-100/50 dark:hover:bg-red-950/30",
-                          isWon && "bg-emerald-50/50 dark:bg-emerald-950/20 hover:bg-emerald-100/50 dark:hover:bg-emerald-950/30"
-                        )}
-                        onClick={() => setSelectedContactId(contact.id)}
-                      >
-                        <TableCell onClick={(e) => e.stopPropagation()}>
-                          <Checkbox 
-                            checked={selectedIds.has(contact.id)}
-                            onCheckedChange={() => toggleSelectOne(contact.id)}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            <Avatar className="h-9 w-9">
-                              <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                                {getInitials(contact.name)}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <p className="font-medium text-foreground">{contact.name}</p>
-                                <ReentryBadge count={contact.reentry_count} lastEntryAt={contact.last_entry_at} />
+                        <TableRow
+                          key={contact.id}
+                          className={cn(
+                            "cursor-pointer hover:bg-muted/30",
+                            isLost && "bg-red-50/50 dark:bg-red-950/20 hover:bg-red-100/50 dark:hover:bg-red-950/30",
+                            isWon &&
+                              "bg-emerald-50/50 dark:bg-emerald-950/20 hover:bg-emerald-100/50 dark:hover:bg-emerald-950/30",
+                          )}
+                          onClick={() => setSelectedContactId(contact.id)}
+                        >
+                          <TableCell onClick={(e) => e.stopPropagation()}>
+                            <Checkbox
+                              checked={selectedIds.has(contact.id)}
+                              onCheckedChange={() => toggleSelectOne(contact.id)}
+                            />
+                          </TableCell>
+
+                          <TableCell>
+                            <div className="flex items-center gap-3">
+                              <Avatar className="h-9 w-9">
+                                <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                                  {getInitials(contact.name)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <p className="font-medium text-foreground">{contact.name}</p>
+                                  <ReentryBadge count={contact.reentry_count} lastEntryAt={contact.last_entry_at} />
+                                </div>
+                                {contact.source && (
+                                  <p className="text-xs text-muted-foreground">
+                                    {sourceLabels[contact.source] || contact.source}
+                                  </p>
+                                )}
                               </div>
-                              {contact.source && (
-                                <p className="text-xs text-muted-foreground">
-                                  {sourceLabels[contact.source] || contact.source}
+                            </div>
+                          </TableCell>
+
+                          <TableCell>
+                            <div className="space-y-1">
+                              {contact.phone && (
+                                <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                  <Phone className="h-3 w-3" />
+                                  {contact.phone}
+                                </div>
+                              )}
+                              {contact.email && (
+                                <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                  <Mail className="h-3 w-3" />
+                                  {contact.email}
+                                </div>
+                              )}
+                            </div>
+                          </TableCell>
+
+                          <TableCell onClick={() => setSelectedContactId(contact.id)}>
+                            <div className="space-y-1">
+                              <Badge
+                                variant="secondary"
+                                className={cn("text-xs gap-1 px-2", dealStatusConfig[status]?.className)}
+                              >
+                                <StatusIcon className="h-3 w-3" />
+                                {dealStatusConfig[status]?.label}
+                              </Badge>
+                              {isLost && contact.lost_reason && (
+                                <p
+                                  className="text-xs text-red-600 dark:text-red-400 max-w-[150px] truncate"
+                                  title={contact.lost_reason}
+                                >
+                                  {contact.lost_reason}
                                 </p>
                               )}
                             </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="space-y-1">
-                            {contact.phone && (
-                              <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                                <Phone className="h-3 w-3" />
-                                {contact.phone}
-                              </div>
-                            )}
-                            {contact.email && (
-                              <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                                <Mail className="h-3 w-3" />
-                                {contact.email}
-                              </div>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell onClick={() => setSelectedContactId(contact.id)}>
-                          <div className="space-y-1">
-                            <Badge 
-                              variant="secondary" 
-                              className={cn("text-xs gap-1 px-2", dealStatusConfig[status]?.className)}
-                            >
-                              <StatusIcon className="h-3 w-3" />
-                              {dealStatusConfig[status]?.label}
-                            </Badge>
-                            {isLost && contact.lost_reason && (
-                              <p className="text-xs text-red-600 dark:text-red-400 max-w-[150px] truncate" title={contact.lost_reason}>
-                                {contact.lost_reason}
-                              </p>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell onClick={() => setSelectedContactId(contact.id)}>
-                          <div className="space-y-1">
-                            {contact.stage_name && (
-                              <Badge variant="outline" className="text-xs">
-                                {contact.stage_name}
-                              </Badge>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell onClick={() => setSelectedContactId(contact.id)}>
-                          {contact.assignee_name ? (
-                            <div className="flex items-center gap-2">
-                              <Avatar className="h-6 w-6">
-                                <AvatarImage src={contact.assignee_avatar || undefined} />
-                                <AvatarFallback className="text-[10px] bg-secondary">
-                                  {getInitials(contact.assignee_name)}
-                                </AvatarFallback>
-                              </Avatar>
-                              <span className="text-sm">{contact.assignee_name}</span>
-                            </div>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">Sem responsável</span>
-                          )}
-                        </TableCell>
-                        <TableCell onClick={() => setSelectedContactId(contact.id)}>
-                          <div className="flex flex-wrap gap-1">
-                            {contact.tags?.slice(0, 2).map((tag: any) => (
-                              <Badge 
-                                key={tag.id} 
-                                variant="secondary"
-                                className="text-[10px] px-1.5"
-                                style={{ 
-                                  backgroundColor: tag.color,
-                                  color: '#FFFFFF',
-                                  borderColor: tag.color
-                                }}
-                              >
-                                {tag.name}
-                              </Badge>
-                            ))}
-                            {contact.tags && contact.tags.length > 2 && (
-                              <Badge variant="secondary" className="text-[10px] px-1.5">
-                                +{contact.tags.length - 2}
-                              </Badge>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell onClick={() => setSelectedContactId(contact.id)}>
-                          <div className="text-sm">
-                            <p>{format(new Date(contact.created_at), 'dd/MM/yyyy', { locale: ptBR })}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {formatDistanceToNow(new Date(contact.created_at), { addSuffix: true, locale: ptBR })}
-                            </p>
-                          </div>
-                        </TableCell>
-                        <TableCell onClick={(e) => e.stopPropagation()}>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => setSelectedContactId(contact.id)}>
-                                <ExternalLink className="h-4 w-4 mr-2" />
-                                Ver detalhes
-                              </DropdownMenuItem>
-                              {contact.phone && (
-                                <DropdownMenuItem asChild>
-                                  <a href={`https://wa.me/${contact.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer">
-                                    <MessageCircle className="h-4 w-4 mr-2" />
-                                    WhatsApp
-                                  </a>
-                                </DropdownMenuItem>
+                          </TableCell>
+
+                          <TableCell onClick={() => setSelectedContactId(contact.id)}>
+                            <div className="space-y-1">
+                              {contact.stage_name && (
+                                <Badge variant="outline" className="text-xs">
+                                  {contact.stage_name}
+                                </Badge>
                               )}
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem 
-                                className="text-destructive focus:text-destructive"
-                                onClick={() => setDeleteContactId(contact.id)}
-                              >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Excluir
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
+                            </div>
+                          </TableCell>
+
+                          <TableCell onClick={() => setSelectedContactId(contact.id)}>
+                            {contact.assignee_name ? (
+                              <div className="flex items-center gap-2">
+                                <Avatar className="h-6 w-6">
+                                  <AvatarImage src={contact.assignee_avatar || undefined} />
+                                  <AvatarFallback className="text-[10px] bg-secondary">
+                                    {getInitials(contact.assignee_name)}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <span className="text-sm">{contact.assignee_name}</span>
+                              </div>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">Sem responsável</span>
+                            )}
+                          </TableCell>
+
+                          <TableCell onClick={() => setSelectedContactId(contact.id)}>
+                            <div className="flex flex-wrap gap-1">
+                              {contact.tags?.slice(0, 2).map((tag: any) => (
+                                <Badge
+                                  key={tag.id}
+                                  variant="secondary"
+                                  className="text-[10px] px-1.5"
+                                  style={{
+                                    backgroundColor: tag.color,
+                                    color: "#FFFFFF",
+                                    borderColor: tag.color,
+                                  }}
+                                >
+                                  {tag.name}
+                                </Badge>
+                              ))}
+                              {contact.tags && contact.tags.length > 2 && (
+                                <Badge variant="secondary" className="text-[10px] px-1.5">
+                                  +{contact.tags.length - 2}
+                                </Badge>
+                              )}
+                            </div>
+                          </TableCell>
+
+                          <TableCell onClick={() => setSelectedContactId(contact.id)}>
+                            <div className="text-sm">
+                              <p>{format(new Date(contact.created_at), "dd/MM/yyyy", { locale: ptBR })}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {formatDistanceToNow(new Date(contact.created_at), { addSuffix: true, locale: ptBR })}
+                              </p>
+                            </div>
+                          </TableCell>
+
+                          <TableCell onClick={(e) => e.stopPropagation()}>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => setSelectedContactId(contact.id)}>
+                                  <ExternalLink className="h-4 w-4 mr-2" />
+                                  Ver detalhes
+                                </DropdownMenuItem>
+                                {contact.phone && (
+                                  <DropdownMenuItem asChild>
+                                    <a
+                                      href={`https://wa.me/${contact.phone.replace(/\D/g, "")}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                    >
+                                      <MessageCircle className="h-4 w-4 mr-2" />
+                                      WhatsApp
+                                    </a>
+                                  </DropdownMenuItem>
+                                )}
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  className="text-destructive focus:text-destructive"
+                                  onClick={() => setDeleteContactId(contact.id)}
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Excluir
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
                       );
                     })}
                   </TableBody>
@@ -836,15 +827,10 @@ export default function Contacts() {
           )}
         </Card>
 
-        {/* Bulk Actions Bar */}
         {selectedIds.size > 0 && (
           <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-background border rounded-lg shadow-lg p-3 flex items-center gap-4 z-50">
             <span className="text-sm font-medium">{selectedIds.size} selecionado(s)</span>
-            <Button 
-              variant="destructive" 
-              size="sm"
-              onClick={() => setBulkDeleteDialogOpen(true)}
-            >
+            <Button variant="destructive" size="sm" onClick={() => setBulkDeleteDialogOpen(true)}>
               <Trash2 className="h-4 w-4 mr-1" />
               Excluir
             </Button>
@@ -854,22 +840,24 @@ export default function Contacts() {
           </div>
         )}
 
-        {/* Pagination */}
         {(totalPages > 1 || totalCount > 0) && (
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div className="flex items-center gap-2">
               <p className="text-sm text-muted-foreground">
                 Página {page} de {totalPages || 1}
               </p>
-              <Select 
-                value={String(pageSize)} 
-                onValueChange={(v) => { setPageSize(Number(v)); setPage(1); }}
+              <Select
+                value={String(pageSize)}
+                onValueChange={(v) => {
+                  setPageSize(Number(v));
+                  setPage(1);
+                }}
               >
                 <SelectTrigger className="h-8 w-[100px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {PAGE_SIZE_OPTIONS.map(size => (
+                  {PAGE_SIZE_OPTIONS.map((size) => (
                     <SelectItem key={size} value={String(size)}>
                       {size} por pág
                     </SelectItem>
@@ -877,6 +865,7 @@ export default function Contacts() {
                 </SelectContent>
               </Select>
             </div>
+
             <div className="flex items-center gap-1">
               <Button
                 variant="outline"
@@ -891,20 +880,19 @@ export default function Contacts() {
                 variant="outline"
                 size="icon"
                 className="h-8 w-8"
-                onClick={() => setPage(p => Math.max(1, p - 1))}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1}
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              
-              {/* Page Input */}
+
               <div className="flex items-center gap-1 mx-2">
                 <Input
                   type="text"
                   value={pageInputValue}
                   onChange={(e) => setPageInputValue(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
+                    if (e.key === "Enter") {
                       const num = parseInt(pageInputValue);
                       if (!isNaN(num) && num >= 1 && num <= totalPages) {
                         setPage(num);
@@ -930,7 +918,7 @@ export default function Contacts() {
                 variant="outline"
                 size="icon"
                 className="h-8 w-8"
-                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
               >
                 <ChevronRight className="h-4 w-4" />
@@ -948,7 +936,6 @@ export default function Contacts() {
           </div>
         )}
 
-        {/* Lead Detail Dialog */}
         {selectedLead && (
           <LeadDetailDialog
             lead={selectedLead}
@@ -960,13 +947,8 @@ export default function Contacts() {
           />
         )}
 
-        {/* Create Lead Dialog */}
-        <CreateLeadDialog
-          open={isCreateDialogOpen}
-          onOpenChange={setIsCreateDialogOpen}
-        />
+        <CreateLeadDialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen} />
 
-        {/* Delete Confirmation Dialog */}
         <AlertDialog open={!!deleteContactId} onOpenChange={(open) => !open && setDeleteContactId(null)}>
           <AlertDialogContent>
             <AlertDialogHeader>
@@ -992,32 +974,25 @@ export default function Contacts() {
           </AlertDialogContent>
         </AlertDialog>
 
-        {/* Bulk Delete Confirmation Dialog */}
         <AlertDialog open={bulkDeleteDialogOpen} onOpenChange={setBulkDeleteDialogOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Excluir {selectedIds.size} contatos</AlertDialogTitle>
               <AlertDialogDescription>
-                Tem certeza que deseja excluir {selectedIds.size} contatos selecionados? Esta ação não pode ser desfeita.
+                Tem certeza que deseja excluir {selectedIds.size} contatos selecionados? Esta ação não pode ser
+                desfeita.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancelar</AlertDialogCancel>
-              <AlertDialogAction
-                className="bg-destructive hover:bg-destructive/90"
-                onClick={handleBulkDelete}
-              >
+              <AlertDialogAction className="bg-destructive hover:bg-destructive/90" onClick={handleBulkDelete}>
                 Excluir {selectedIds.size} contatos
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
 
-        {/* Import Dialog */}
-        <ImportContactsDialog
-          open={importDialogOpen}
-          onOpenChange={setImportDialogOpen}
-        />
+        <ImportContactsDialog open={importDialogOpen} onOpenChange={setImportDialogOpen} />
       </div>
     </AppLayout>
   );
