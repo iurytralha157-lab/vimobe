@@ -986,6 +986,13 @@ export function FloatingChat() {
         {/* Header */}
         <FloatingChatHeader />
 
+        {isStartingConversation && (
+          <div className="absolute inset-0 bg-background/50 flex flex-col items-center justify-center z-50">
+            <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
+            <p className="text-xs text-muted-foreground animate-pulse">Iniciando conversa...</p>
+          </div>
+        )}
+
         {!isMinimized && (
           <>
             {activeConversation ? (
