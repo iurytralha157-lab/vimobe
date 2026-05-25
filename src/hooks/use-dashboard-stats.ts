@@ -182,9 +182,10 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
         }
         if (filters?.source) query = query.eq("source", filters.source);
         if (filters?.dealStatus) query = query.eq("deal_status", filters.dealStatus);
+        let tagLeadIds: string[] | null = null;
         if (filters?.tagId) {
           const { data: taggedLeads } = await supabase.from("lead_tags").select("lead_id").eq("tag_id", filters.tagId);
-          const tagLeadIds = (taggedLeads || []).map((t: any) => t.lead_id);
+          tagLeadIds = (taggedLeads || []).map((t: any) => t.lead_id);
           if (tagLeadIds.length === 0) {
             return {
               totalLeads: 0,
@@ -204,9 +205,8 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
             };
           }
           query = query.in("id", tagLeadIds);
-          wonQuery = wonQuery.in("id", tagLeadIds);
-          prevQuery = prevQuery.in("id", tagLeadIds);
         }
+
         if (filters?.searchQuery) {
           const q = `%${filters.searchQuery}%`;
           query = (query as any).or(`name.ilike.${q},email.ilike.${q},phone.ilike.${q}`);
@@ -255,6 +255,11 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
         if (filters?.source) prevQuery = prevQuery.eq("source", filters.source);
         if (filters?.dealStatus) prevQuery = prevQuery.eq("deal_status", filters.dealStatus);
         prevQuery = applyVisibilityFilter(prevQuery, visibility, "assigned_user_id", filters?.userId);
+
+        if (tagLeadIds) {
+          wonQuery = wonQuery.in("id", tagLeadIds);
+          prevQuery = prevQuery.in("id", tagLeadIds);
+        }
 
         // 4. Se houver filtro de equipe, buscar membros primeiro (necessário para as outras queries)
         let teamMemberIds: string[] | null = null;
