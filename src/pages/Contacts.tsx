@@ -1,4 +1,4 @@
-import { useState, useDeferredValue, useMemo } from "react";
+import { useState, useDeferredValue } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card } from "@/components/ui/card";
 import { LeadDetailDialog } from "@/components/leads/LeadDetailDialog";
@@ -8,7 +8,6 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Table, TableCell, TableHead, TableHeader, TableRow, TableBody } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,7 +26,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  Search,
   MoreHorizontal,
   Phone,
   Mail,
@@ -43,7 +41,6 @@ import {
   ChevronsLeft,
   ChevronLeft,
   ChevronRight,
-  Filter,
   CircleDot,
   Plus,
   ChevronsRight,
@@ -54,7 +51,7 @@ import { CreateLeadDialog } from "@/components/leads/CreateLeadDialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ContactCard } from "@/components/contacts/ContactCard";
-import { usePipelines, useStages } from "@/hooks/use-stages";
+import { useStages } from "@/hooks/use-stages";
 import { useOrganizationUsers } from "@/hooks/use-users";
 import { useTags } from "@/hooks/use-tags";
 import { format, formatDistanceToNow } from "date-fns";
@@ -147,18 +144,9 @@ export default function Contacts() {
   };
 
   const { data: contacts = [], isLoading } = useContactsList(filters);
-  const { data: pipelines = [] } = usePipelines();
   const { data: stages = [] } = useStages(selectedPipeline !== "all" ? selectedPipeline : undefined);
   const { data: users = [] } = useOrganizationUsers();
   const { data: tags = [] } = useTags();
-
-  useMemo(() => {
-    const sources = new Set<string>();
-    contacts.forEach((c: any) => {
-      if (c.source) sources.add(c.source);
-    });
-    return Array.from(sources).sort();
-  }, [contacts]);
 
   const { data: selectedLead } = useLead(selectedContactId);
   const deleteLead = useDeleteLead();
@@ -179,7 +167,11 @@ export default function Contacts() {
       icon: Trophy,
       className: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300",
     },
-    lost: { label: "Perdido", icon: XCircle, className: "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300" },
+    lost: {
+      label: "Perdido",
+      icon: XCircle,
+      className: "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300",
+    },
   };
 
   const handleClearFilters = () => {
@@ -230,7 +222,7 @@ export default function Contacts() {
     if (selectedIds.size === contacts.length && contacts.length > 0) {
       clearSelection();
     } else {
-      setSelectedIds(new Set(contacts.map((c: any) => c.id)));
+      setSelectedIds(new Set(contacts.map((contact: any) => contact.id)));
     }
   };
 
@@ -360,200 +352,80 @@ export default function Contacts() {
           </div>
         ) : (
           <div className="bg-card rounded-xl p-1.5 px-3 shadow-sm overflow-hidden">
-            <div className="flex items-center gap-1.5 w-full">
-              <div className="relative flex-1 min-w-[150px] max-w-[300px]">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar..."
-                  value={search}
-                  onChange={(e) => {
-                    setSearch(e.target.value);
-                    setPage(1);
-                  }}
-                  className="pl-9 h-9 bg-muted/50 border focus-visible:ring-1 focus-visible:ring-primary/20"
-                />
-              </div>
+            <div className="flex items-center gap-2 w-full justify-end">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-9 gap-2 font-medium border-none hover:bg-muted">
+                    <Upload className="h-4 w-4" />
+                    <span className="hidden xl:inline">Importar / Exportar</span>
+                    <ChevronDown className="h-4 w-4 opacity-50" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem onClick={() => setImportDialogOpen(true)} className="py-2.5">
+                    <Upload className="h-4 w-4 mr-2 text-primary" />
+                    Importar CSV/Excel
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={handleExport}
+                    disabled={isExporting || totalCount === 0}
+                    className="py-2.5"
+                  >
+                    <Download className="h-4 w-4 mr-2 text-primary" />
+                    {isExporting ? "Exportando..." : "Exportar Lista"}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
 
-              <div className="hidden xl:flex items-center gap-1.5">
-                <div className="h-6 w-[1px] bg-border mx-1" />
-
-                <Select
-                  value={selectedPipeline}
-                  onValueChange={(v) => {
-                    handleFilterChange(setSelectedPipeline)(v);
-                    setSelectedStage("all");
-                  }}
-                >
-                  <SelectTrigger className="w-[140px] h-9 border-none bg-transparent hover:bg-muted font-medium">
-                    <SelectValue placeholder="Pipeline" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todas pipelines</SelectItem>
-                    {pipelines.map((p: any) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {p.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                <Select
-                  value={selectedStage}
-                  onValueChange={handleFilterChange(setSelectedStage)}
-                  disabled={selectedPipeline === "all"}
-                >
-                  <SelectTrigger className="w-[140px] h-9 border-none bg-transparent hover:bg-muted font-medium">
-                    <SelectValue placeholder="Estágio" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos estágios</SelectItem>
-                    {stages.map((s: any) => (
-                      <SelectItem key={s.id} value={s.id}>
-                        {s.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="flex xl:hidden items-center gap-1.5">
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className={cn(
-                        "h-9 gap-2",
-                        (selectedPipeline !== "all" || selectedStage !== "all") && "border-primary text-primary",
-                      )}
-                    >
-                      <Filter className="h-4 w-4" />
-                      <span>Pipeline</span>
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-64 p-3 space-y-3">
-                    <div className="space-y-3">
-                      <Select
-                        value={selectedPipeline}
-                        onValueChange={(v) => {
-                          handleFilterChange(setSelectedPipeline)(v);
-                          setSelectedStage("all");
-                        }}
-                      >
-                        <SelectTrigger className="h-9">
-                          <SelectValue placeholder="Pipeline" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Todas pipelines</SelectItem>
-                          {pipelines.map((p: any) => (
-                            <SelectItem key={p.id} value={p.id}>
-                              {p.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-
-                      <Select
-                        value={selectedStage}
-                        onValueChange={handleFilterChange(setSelectedStage)}
-                        disabled={selectedPipeline === "all"}
-                      >
-                        <SelectTrigger className="h-9">
-                          <SelectValue placeholder="Estágio" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Todos estágios</SelectItem>
-                          {stages.map((s: any) => (
-                            <SelectItem key={s.id} value={s.id}>
-                              {s.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </PopoverContent>
-                </Popover>
-              </div>
+              <Button
+                size="sm"
+                onClick={() => setIsCreateDialogOpen(true)}
+                className="h-9 gap-2 shadow-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90"
+              >
+                <Plus className="h-4 w-4" />
+                <span className="hidden sm:inline">Novo Contato</span>
+              </Button>
 
               <div className="h-6 w-[1px] bg-border mx-1" />
 
-              <div className="flex items-center gap-1.5 ml-auto">
-                <SharedFilters
-                  datePreset={datePreset || "last30days"}
-                  onDatePresetChange={handleFilterChange(setDatePreset)}
-                  customDateRange={customDateRange}
-                  onCustomDateRangeChange={handleFilterChange(setCustomDateRange)}
-                  teamId={sharedFilters.teamId}
-                  onTeamChange={() => {}}
-                  userId={selectedAssignee}
-                  onUserChange={handleFilterChange(setSelectedAssignee)}
-                  source={selectedSource}
-                  onSourceChange={handleFilterChange(setSelectedSource)}
-                  campaignId={sharedFilters.campaignId}
-                  onCampaignChange={() => {}}
-                  adSetId={sharedFilters.adSetId}
-                  onAdSetChange={() => {}}
-                  adId={sharedFilters.adId}
-                  onAdChange={() => {}}
-                  tagId={selectedTag}
-                  onTagChange={handleFilterChange(setSelectedTag)}
-                  dealStatus={selectedDealStatus}
-                  onDealStatusChange={handleFilterChange(setSelectedDealStatus)}
-                  searchQuery={search}
-                  onSearchChange={(v) => {
-                    setSearch(v);
-                    setPage(1);
-                  }}
-                  onClear={handleClearFilters}
-                  hasActiveFilters={hasSharedActiveFilters || selectedPipeline !== "all" || selectedStage !== "all"}
-                  dynamicSources={dynamicSources}
-                  campaigns={campaigns}
-                  adSets={adSets}
-                  ads={ads}
-                  tags={allTagsFromHook}
-                  isLoadingSources={isLoadingSources}
-                  isLoadingCampaigns={isLoadingCampaigns}
-                  isLoadingAdSets={isLoadingAdSets}
-                  isLoadingAds={isLoadingAds}
-                />
-              </div>
-
-              <div className="h-6 w-[1px] bg-border mx-1" />
-
-              <div className="flex items-center gap-2 ml-auto">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="h-9 gap-2 font-medium border-none hover:bg-muted">
-                      <Upload className="h-4 w-4" />
-                      <span className="hidden xl:inline">Importar / Exportar</span>
-                      <ChevronDown className="h-4 w-4 opacity-50" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-48">
-                    <DropdownMenuItem onClick={() => setImportDialogOpen(true)} className="py-2.5">
-                      <Upload className="h-4 w-4 mr-2 text-primary" />
-                      Importar CSV/Excel
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={handleExport}
-                      disabled={isExporting || totalCount === 0}
-                      className="py-2.5"
-                    >
-                      <Download className="h-4 w-4 mr-2 text-primary" />
-                      {isExporting ? "Exportando..." : "Exportar Lista"}
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-
-                <Button
-                  size="sm"
-                  onClick={() => setIsCreateDialogOpen(true)}
-                  className="h-9 gap-2 shadow-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90"
-                >
-                  <Plus className="h-4 w-4" />
-                  <span className="hidden sm:inline">Novo Contato</span>
-                </Button>
-              </div>
+              <SharedFilters
+                datePreset={datePreset || "last30days"}
+                onDatePresetChange={handleFilterChange(setDatePreset)}
+                customDateRange={customDateRange}
+                onCustomDateRangeChange={handleFilterChange(setCustomDateRange)}
+                teamId={sharedFilters.teamId}
+                onTeamChange={() => {}}
+                userId={selectedAssignee}
+                onUserChange={handleFilterChange(setSelectedAssignee)}
+                source={selectedSource}
+                onSourceChange={handleFilterChange(setSelectedSource)}
+                campaignId={sharedFilters.campaignId}
+                onCampaignChange={() => {}}
+                adSetId={sharedFilters.adSetId}
+                onAdSetChange={() => {}}
+                adId={sharedFilters.adId}
+                onAdChange={() => {}}
+                tagId={selectedTag}
+                onTagChange={handleFilterChange(setSelectedTag)}
+                dealStatus={selectedDealStatus}
+                onDealStatusChange={handleFilterChange(setSelectedDealStatus)}
+                searchQuery={search}
+                onSearchChange={(value) => {
+                  setSearch(value);
+                  setPage(1);
+                }}
+                onClear={handleClearFilters}
+                hasActiveFilters={hasSharedActiveFilters || selectedPipeline !== "all" || selectedStage !== "all"}
+                dynamicSources={dynamicSources}
+                campaigns={campaigns}
+                adSets={adSets}
+                ads={ads}
+                tags={allTagsFromHook}
+                isLoadingSources={isLoadingSources}
+                isLoadingCampaigns={isLoadingCampaigns}
+                isLoadingAdSets={isLoadingAdSets}
+                isLoadingAds={isLoadingAds}
+              />
             </div>
           </div>
         )}
@@ -848,8 +720,8 @@ export default function Contacts() {
               </p>
               <Select
                 value={String(pageSize)}
-                onValueChange={(v) => {
-                  setPageSize(Number(v));
+                onValueChange={(value) => {
+                  setPageSize(Number(value));
                   setPage(1);
                 }}
               >
@@ -880,7 +752,7 @@ export default function Contacts() {
                 variant="outline"
                 size="icon"
                 className="h-8 w-8"
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                onClick={() => setPage((currentPage) => Math.max(1, currentPage - 1))}
                 disabled={page === 1}
               >
                 <ChevronLeft className="h-4 w-4" />
@@ -893,18 +765,20 @@ export default function Contacts() {
                   onChange={(e) => setPageInputValue(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
-                      const num = parseInt(pageInputValue);
-                      if (!isNaN(num) && num >= 1 && num <= totalPages) {
-                        setPage(num);
+                      const pageNumber = parseInt(pageInputValue);
+
+                      if (!isNaN(pageNumber) && pageNumber >= 1 && pageNumber <= totalPages) {
+                        setPage(pageNumber);
                       } else {
                         setPageInputValue(String(page));
                       }
                     }
                   }}
                   onBlur={() => {
-                    const num = parseInt(pageInputValue);
-                    if (!isNaN(num) && num >= 1 && num <= totalPages) {
-                      setPage(num);
+                    const pageNumber = parseInt(pageInputValue);
+
+                    if (!isNaN(pageNumber) && pageNumber >= 1 && pageNumber <= totalPages) {
+                      setPage(pageNumber);
                     } else {
                       setPageInputValue(String(page));
                     }
@@ -918,7 +792,7 @@ export default function Contacts() {
                 variant="outline"
                 size="icon"
                 className="h-8 w-8"
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                onClick={() => setPage((currentPage) => Math.min(totalPages, currentPage + 1))}
                 disabled={page === totalPages}
               >
                 <ChevronRight className="h-4 w-4" />
