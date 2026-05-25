@@ -256,6 +256,11 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
         if (filters?.dealStatus) prevQuery = prevQuery.eq("deal_status", filters.dealStatus);
         prevQuery = applyVisibilityFilter(prevQuery, visibility, "assigned_user_id", filters?.userId);
 
+        if (tagLeadIds) {
+          wonQuery = wonQuery.in("id", tagLeadIds);
+          prevQuery = prevQuery.in("id", tagLeadIds);
+        }
+
         // 4. Se houver filtro de equipe, buscar membros primeiro (necessário para as outras queries)
         let teamMemberIds: string[] | null = null;
         if (filters?.teamId && (visibility.canViewAll || visibility.teamMemberIds)) {
