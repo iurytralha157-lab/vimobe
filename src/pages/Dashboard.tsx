@@ -84,7 +84,6 @@ export default function Dashboard() {
     isLoadingAds,
   } = useSharedFilters();
 
-
   // Mapeamento de strings de data para chaves de cache estáveis
   const dateFromStr = filters.dateRange.from.toISOString();
   const dateToStr = filters.dateRange.to.toISOString();
@@ -130,9 +129,62 @@ export default function Dashboard() {
 
   // Query: Visitas Agendadas
   const { data: scheduledVisitsCount = 0 } = useQuery({
-    queryKey: ["dashboard-scheduled-visits", organization?.id, dateFromStr, dateToStr, filters.userId, visibility],
+    queryKey: [
+      "dashboard-scheduled-visits",
+      organization?.id,
+      dateFromStr,
+      dateToStr,
+      filters.userId,
+      filters.teamId,
+      filters.source,
+      filters.tagId,
+      filters.dealStatus,
+      visibility,
+    ],
     queryFn: async () => {
       if (!organization?.id || !visibility) return 0;
+
+      // Se há filtros que dependem de lead (source, tag, dealStatus, team),
+      // precisamos buscar os lead_ids correspondentes primeiro
+      let leadIds: string[] | null = null;
+      const needsLeadFilter = filters.source || filters.tagId || filters.dealStatus || filters.teamId;
+
+      if (needsLeadFilter) {
+        let leadQuery = supabase.from("leads").select("id").eq("organization_id", organization.id);
+
+        if (filters.source) leadQuery = leadQuery.eq("source", filters.source);
+        if (filters.dealStatus) leadQuery = leadQuery.eq("deal_status", filters.dealStatus);
+
+        if (filters.teamId) {
+          const { data: teamMembers } = await supabase
+            .from("team_members")
+            .select("user_id")
+            .eq("team_id", filters.teamId);
+          if (teamMembers?.length) {
+            leadQuery = leadQuery.in(
+              "assigned_user_id",
+              teamMembers.map((m) => m.user_id),
+            );
+          }
+        }
+
+        if (filters.tagId) {
+          const { data: taggedLeads } = await supabase.from("lead_tags").select("lead_id").eq("tag_id", filters.tagId);
+          if (taggedLeads?.length) {
+            leadQuery = leadQuery.in(
+              "id",
+              taggedLeads.map((t) => t.lead_id),
+            );
+          } else {
+            return 0; // nenhum lead com essa tag
+          }
+        }
+
+        const { data: leads } = await leadQuery;
+        leadIds = (leads || []).map((l) => l.id);
+        if (leadIds.length === 0) return 0;
+      }
+
       let query = supabase
         .from("schedule_events")
         .select("*", { count: "exact", head: true })
@@ -140,6 +192,10 @@ export default function Dashboard() {
         .eq("event_type", "visit")
         .gte("start_time", dateFromStr)
         .lte("start_time", dateToStr);
+
+      if (leadIds !== null) {
+        query = query.in("lead_id", leadIds);
+      }
 
       query = applyVisibilityFilter(query, visibility, "user_id", filters.userId);
 
@@ -210,6 +266,7 @@ export default function Dashboard() {
           onSearchChange={setSearchQuery}
           onClear={clearFilters}
           hasActiveFilters={hasActiveFilters}
+          hideSearch
           dynamicSources={dynamicSources}
           campaigns={campaigns}
           adSets={adSets}
@@ -220,7 +277,6 @@ export default function Dashboard() {
           isLoadingAdSets={isLoadingAdSets}
           isLoadingAds={isLoadingAds}
         />
-
 
         {/* ===== DESKTOP LAYOUT ===== */}
         <div className="hidden lg:grid lg:grid-cols-12 gap-2 md:gap-3 flex-1 min-h-0 overflow-hidden">

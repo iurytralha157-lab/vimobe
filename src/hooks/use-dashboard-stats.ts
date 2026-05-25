@@ -182,7 +182,31 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
         }
         if (filters?.source) query = query.eq("source", filters.source);
         if (filters?.dealStatus) query = query.eq("deal_status", filters.dealStatus);
-        if (filters?.tagId) query = (query as any).eq("lead_tags.tag_id", filters.tagId);
+        if (filters?.tagId) {
+          const { data: taggedLeads } = await supabase.from("lead_tags").select("lead_id").eq("tag_id", filters.tagId);
+          const tagLeadIds = (taggedLeads || []).map((t: any) => t.lead_id);
+          if (tagLeadIds.length === 0) {
+            return {
+              totalLeads: 0,
+              conversionRate: 0,
+              closedLeads: 0,
+              avgResponseTime: "--",
+              totalSalesValue: 0,
+              pendingCommissions: 0,
+              leadsTrend: 0,
+              conversionTrend: 0,
+              closedTrend: 0,
+              totalReceivables: 0,
+              totalPayables: 0,
+              overdueReceivables: 0,
+              overduePayables: 0,
+              paidCommissions: 0,
+            };
+          }
+          query = query.in("id", tagLeadIds);
+          wonQuery = wonQuery.in("id", tagLeadIds);
+          prevQuery = prevQuery.in("id", tagLeadIds);
+        }
         if (filters?.searchQuery) {
           const q = `%${filters.searchQuery}%`;
           query = (query as any).or(`name.ilike.${q},email.ilike.${q},phone.ilike.${q}`);
@@ -362,6 +386,8 @@ export function useFunnelData(filters?: DashboardFilters, pipelineId?: string | 
       filters?.campaignId,
       filters?.adSetId,
       filters?.adId,
+      filters?.tagId,
+      filters?.dealStatus,
       pipelineId,
       user?.id,
     ],
@@ -386,6 +412,8 @@ export function useFunnelData(filters?: DashboardFilters, pipelineId?: string | 
         p_user_id: effectiveUserId || null,
         p_source: filters?.source || null,
         p_pipeline_id: pipelineId || null,
+        p_tag_id: filters?.tagId || null,
+        p_deal_status: filters?.dealStatus || null,
       });
 
       if (error) {
@@ -428,6 +456,8 @@ export function useLeadSourcesData(filters?: DashboardFilters, pipelineId?: stri
       filters?.campaignId,
       filters?.adSetId,
       filters?.adId,
+      filters?.tagId,
+      filters?.dealStatus,
       pipelineId,
       user?.id,
     ],
@@ -448,6 +478,8 @@ export function useLeadSourcesData(filters?: DashboardFilters, pipelineId?: stri
         p_user_id: effectiveUserId || null,
         p_source: filters?.source || null,
         p_pipeline_id: pipelineId || null,
+        p_tag_id: filters?.tagId || null,
+        p_deal_status: filters?.dealStatus || null,
       });
 
       if (error) {
@@ -840,6 +872,14 @@ export function useDealsEvolutionData(filters?: DashboardFilters) {
         // Apply dealStatus filter
         if (filters?.dealStatus) {
           query = query.eq("deal_status", filters.dealStatus as any);
+        }
+
+        // Apply tagId filter via subquery
+        if (filters?.tagId) {
+          const { data: taggedLeads } = await supabase.from("lead_tags").select("lead_id").eq("tag_id", filters.tagId);
+          const tagLeadIds = (taggedLeads || []).map((t: any) => t.lead_id);
+          if (tagLeadIds.length === 0) return [];
+          query = query.in("id", tagLeadIds);
         }
 
         // Apply search filter
