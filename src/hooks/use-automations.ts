@@ -1,36 +1,36 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
-import { toast } from 'sonner';
-import { Json } from '@/integrations/supabase/types';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
+import { Json } from "@/integrations/supabase/types";
 
-export type TriggerType = 
-  | 'message_received' 
-  | 'scheduled' 
-  | 'lead_stage_changed' 
-  | 'lead_created' 
-  | 'tag_added' 
-  | 'inactivity' 
-  | 'manual';
+export type TriggerType =
+  | "message_received"
+  | "scheduled"
+  | "lead_stage_changed"
+  | "lead_created"
+  | "tag_added"
+  | "inactivity"
+  | "manual";
 
-export type NodeType = 'trigger' | 'action' | 'condition' | 'delay';
+export type NodeType = "trigger" | "action" | "condition" | "delay";
 
-export type ActionType = 
-  | 'send_whatsapp' 
-  | 'send_whatsapp_template' 
-  | 'send_email' 
-  | 'send_image'
-  | 'send_audio'
-  | 'send_video'
-  | 'collect_input'
-  | 'move_lead' 
-  | 'add_tag' 
-  | 'remove_tag' 
-  | 'create_task' 
-  | 'assign_user' 
-  | 'webhook'
-  | 'redirect'
-  | 'set_variable';
+export type ActionType =
+  | "send_whatsapp"
+  | "send_whatsapp_template"
+  | "send_email"
+  | "send_image"
+  | "send_audio"
+  | "send_video"
+  | "collect_input"
+  | "move_lead"
+  | "add_tag"
+  | "remove_tag"
+  | "create_task"
+  | "assign_user"
+  | "webhook"
+  | "redirect"
+  | "set_variable";
 
 // JSON flow definition types (n8n-style)
 export interface FlowNode {
@@ -129,47 +129,40 @@ export interface AutomationWithNodes extends Automation {
 }
 
 export const TRIGGER_TYPE_LABELS: Record<TriggerType, string> = {
-  message_received: 'Mensagem Recebida',
-  scheduled: 'Agendado',
-  lead_stage_changed: 'Lead Mudou de Etapa',
-  lead_created: 'Lead Criado',
-  tag_added: 'Tag Adicionada',
-  inactivity: 'Inatividade',
-  manual: 'Manual',
+  message_received: "Mensagem Recebida",
+  scheduled: "Agendado",
+  lead_stage_changed: "Lead Mudou de Etapa",
+  lead_created: "Lead Criado",
+  tag_added: "Tag Adicionada",
+  inactivity: "Inatividade",
+  manual: "Manual",
 };
 
 export const TRIGGER_TYPE_DESCRIPTIONS: Record<TriggerType, string> = {
-  message_received: 'Dispara quando uma mensagem é recebida no WhatsApp',
-  scheduled: 'Dispara em horários programados (cron)',
-  lead_stage_changed: 'Dispara quando um lead muda de etapa',
-  lead_created: 'Dispara quando um novo lead é criado',
-  tag_added: 'Dispara quando uma tag é adicionada a um lead',
-  inactivity: 'Dispara após período de inatividade do lead',
-  manual: 'Disparo manual por ação do usuário',
+  message_received: "Dispara quando uma mensagem é recebida no WhatsApp",
+  scheduled: "Dispara em horários programados (cron)",
+  lead_stage_changed: "Dispara quando um lead muda de etapa",
+  lead_created: "Dispara quando um novo lead é criado",
+  tag_added: "Dispara quando uma tag é adicionada a um lead",
+  inactivity: "Dispara após período de inatividade do lead",
+  manual: "Disparo manual por ação do usuário",
 };
 
-// Fetch all automations for the organization
+// ─── FETCH ALL AUTOMATIONS ───────────────────────────────────────────────────
+// FIX: removido filtro por created_by para usuários comuns.
+// O RLS do banco já garante isolamento por organization_id — filtrar no
+// frontend escondia automações criadas pelo admin que se aplicam a todos.
 export function useAutomations() {
-  const { profile, isSuperAdmin } = useAuth();
+  const { profile } = useAuth();
 
   return useQuery({
-    queryKey: ['automations', profile?.organization_id, profile?.id],
+    queryKey: ["automations", profile?.organization_id],
     queryFn: async () => {
-      let query = supabase
-        .from('automations')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      // Regular users only see their own automations
-      const isAdmin = isSuperAdmin || profile?.role === 'admin';
-      if (!isAdmin && profile?.id) {
-        query = query.eq('created_by', profile.id);
-      }
-
-      const { data, error } = await query;
+      const { data, error } = await supabase.from("automations").select("*").order("created_at", { ascending: false });
 
       if (error) throw error;
-      return (data as any[]).map(d => ({
+
+      return (data as any[]).map((d) => ({
         ...d,
         flow_definition: d.flow_definition as FlowDefinition | null,
       })) as Automation[];
@@ -178,25 +171,25 @@ export function useAutomations() {
   });
 }
 
-// Fetch a single automation with nodes and connections
-// Prioritizes flow_definition JSON when available, falls back to separate tables
+// ─── FETCH SINGLE AUTOMATION ─────────────────────────────────────────────────
+// Prioriza flow_definition JSON; cai no fallback de tabelas separadas se vazio.
 export function useAutomation(automationId: string) {
   return useQuery({
-    queryKey: ['automation', automationId],
+    queryKey: ["automation", automationId],
     queryFn: async () => {
       const { data: automationData, error } = await supabase
-        .from('automations')
-        .select('*')
-        .eq('id', automationId)
+        .from("automations")
+        .select("*")
+        .eq("id", automationId)
         .single();
 
       if (error) throw error;
 
       const flowDef = (automationData as any).flow_definition as FlowDefinition | null;
 
-      // If flow_definition exists, use it directly
+      // Se flow_definition existir, usa diretamente
       if (flowDef && flowDef.nodes && flowDef.nodes.length > 0) {
-        const nodes: AutomationNode[] = flowDef.nodes.map(n => ({
+        const nodes: AutomationNode[] = flowDef.nodes.map((n) => ({
           id: n.id,
           automation_id: automationId,
           node_type: n.type as NodeType,
@@ -204,7 +197,7 @@ export function useAutomation(automationId: string) {
           config: n.config as Json,
           position_x: n.position.x,
           position_y: n.position.y,
-          created_at: automationData.created_at || '',
+          created_at: automationData.created_at || "",
         }));
 
         const connections: AutomationConnection[] = flowDef.connections.map((c, i) => ({
@@ -224,11 +217,14 @@ export function useAutomation(automationId: string) {
         } as unknown as AutomationWithNodes;
       }
 
-      // Fallback: load from separate tables
+      // Fallback: carrega das tabelas separadas
       const [nodesRes, connectionsRes] = await Promise.all([
-        supabase.from('automation_nodes').select('*').eq('automation_id', automationId).order('created_at'),
-        (supabase as any).from('automation_connections').select('*').eq('automation_id', automationId),
+        supabase.from("automation_nodes").select("*").eq("automation_id", automationId).order("created_at"),
+        supabase.from("automation_connections").select("*").eq("automation_id", automationId),
       ]);
+
+      if (nodesRes.error) throw nodesRes.error;
+      if (connectionsRes.error) throw connectionsRes.error;
 
       const nodes = (nodesRes.data || []).map((node: any) => ({
         ...node,
@@ -245,7 +241,7 @@ export function useAutomation(automationId: string) {
   });
 }
 
-// Create a new automation
+// ─── CREATE AUTOMATION ───────────────────────────────────────────────────────
 export function useCreateAutomation() {
   const queryClient = useQueryClient();
   const { profile } = useAuth();
@@ -258,7 +254,7 @@ export function useCreateAutomation() {
       trigger_config?: Record<string, unknown>;
       flow_definition?: FlowDefinition;
     }) => {
-      if (!profile?.organization_id) throw new Error('No organization');
+      if (!profile?.organization_id) throw new Error("No organization");
 
       const insertData: any = {
         organization_id: profile.organization_id,
@@ -274,30 +270,28 @@ export function useCreateAutomation() {
         insertData.flow_definition = data.flow_definition as unknown as Json;
       }
 
-      const { data: automation, error } = await supabase
-        .from('automations')
-        .insert([insertData])
-        .select()
-        .single();
+      const { data: automation, error } = await supabase.from("automations").insert([insertData]).select().single();
 
       if (error) throw error;
 
-      // If no flow_definition provided, create default trigger node in separate table (backward compat)
+      // Se não veio flow_definition, cria nó trigger inicial (backward compat)
       if (!data.flow_definition) {
-        await supabase.from('automation_nodes').insert([{
-          automation_id: automation.id,
-          node_type: 'trigger',
-          node_config: { trigger_type: data.trigger_type, ...(data.trigger_config || {}) } as Json,
-          position_x: 250,
-          position_y: 50,
-        }]);
+        await supabase.from("automation_nodes").insert([
+          {
+            automation_id: automation.id,
+            node_type: "trigger",
+            node_config: { trigger_type: data.trigger_type, ...(data.trigger_config || {}) } as Json,
+            position_x: 250,
+            position_y: 50,
+          },
+        ]);
       }
 
       return automation as unknown as Automation;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['automations'] });
-      toast.success('Automação criada com sucesso!');
+      queryClient.invalidateQueries({ queryKey: ["automations"] });
+      toast.success("Automação criada com sucesso!");
     },
     onError: (error: Error) => {
       toast.error(`Erro ao criar automação: ${error.message}`);
@@ -305,103 +299,84 @@ export function useCreateAutomation() {
   });
 }
 
-// Update automation
+// ─── UPDATE AUTOMATION ───────────────────────────────────────────────────────
+// FIX: lógica anterior deletava flow_definition do updateData e depois tentava
+// recuperá-la — funcionava por acidente. Agora o fluxo é explícito e limpo.
 export function useUpdateAutomation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, ...data }: Partial<Automation> & { id: string }) => {
-      const updateData: any = { ...data };
-      // Handle flow_definition separately to cast properly
-      if (data.flow_definition !== undefined) {
-        updateData.flow_definition = data.flow_definition as unknown as Json;
+    mutationFn: async ({ id, flow_definition, ...rest }: Partial<Automation> & { id: string }) => {
+      const updatePayload: any = { ...rest };
+
+      if (flow_definition !== undefined) {
+        updatePayload.flow_definition = flow_definition as unknown as Json;
       }
-      delete updateData.flow_definition;
-      
-      const { error } = await supabase
-        .from('automations')
-        .update({
-          ...updateData,
-          ...(data.flow_definition !== undefined ? { flow_definition: data.flow_definition as unknown as Json } : {}),
-        })
-        .eq('id', id);
+
+      const { error } = await supabase.from("automations").update(updatePayload).eq("id", id);
 
       if (error) throw error;
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['automations'] });
-      queryClient.invalidateQueries({ queryKey: ['automation', variables.id] });
+      queryClient.invalidateQueries({ queryKey: ["automations"] });
+      queryClient.invalidateQueries({ queryKey: ["automation", variables.id] });
     },
   });
 }
 
-// Delete automation
+// ─── DELETE AUTOMATION ───────────────────────────────────────────────────────
 export function useDeleteAutomation() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('automations')
-        .delete()
-        .eq('id', id);
+      const { error } = await supabase.from("automations").delete().eq("id", id);
 
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['automations'] });
-      toast.success('Automação excluída!');
+      queryClient.invalidateQueries({ queryKey: ["automations"] });
+      toast.success("Automação excluída!");
     },
   });
 }
 
-// Toggle automation active state
+// ─── TOGGLE ACTIVE ───────────────────────────────────────────────────────────
 export function useToggleAutomation() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
-      const { error } = await supabase
-        .from('automations')
-        .update({ is_active })
-        .eq('id', id);
+      const { error } = await supabase.from("automations").update({ is_active }).eq("id", id);
 
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['automations'] });
+      queryClient.invalidateQueries({ queryKey: ["automations"] });
     },
   });
 }
 
-// Save entire flow as JSON (new n8n-style approach)
+// ─── SAVE FLOW AS JSON (abordagem n8n-style) ─────────────────────────────────
 export function useSaveAutomationFlowJSON() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({
-      automationId,
-      flowDefinition,
-    }: {
-      automationId: string;
-      flowDefinition: FlowDefinition;
-    }) => {
+    mutationFn: async ({ automationId, flowDefinition }: { automationId: string; flowDefinition: FlowDefinition }) => {
       const { error } = await supabase
-        .from('automations')
+        .from("automations")
         .update({ flow_definition: flowDefinition as unknown as Json })
-        .eq('id', automationId);
+        .eq("id", automationId);
 
       if (error) throw error;
 
-      // Also sync to separate tables for backward compatibility with execution engine
-      // Delete existing
-      await supabase.from('automation_connections').delete().eq('automation_id', automationId);
-      await supabase.from('automation_nodes').delete().eq('automation_id', automationId);
+      // Sincroniza nas tabelas separadas para compatibilidade com o engine
+      await supabase.from("automation_connections").delete().eq("automation_id", automationId);
+      await supabase.from("automation_nodes").delete().eq("automation_id", automationId);
 
-      // Insert nodes
       const nodesToInsert = flowDefinition.nodes.map((node) => ({
         automation_id: automationId,
-        node_type: node.type || 'action',
+        node_type: node.type || "action",
         action_type: node.action_type || null,
         node_config: (node.config || {}) as Json,
         position_x: node.position.x,
@@ -409,13 +384,12 @@ export function useSaveAutomationFlowJSON() {
       }));
 
       const { data: insertedNodes, error: nodesError } = await supabase
-        .from('automation_nodes')
+        .from("automation_nodes")
         .insert(nodesToInsert)
         .select();
 
       if (nodesError) throw nodesError;
 
-      // Map flow node IDs to inserted DB IDs
       const idMap = new Map<string, string>();
       flowDefinition.nodes.forEach((node, index) => {
         if (insertedNodes[index]) {
@@ -423,26 +397,19 @@ export function useSaveAutomationFlowJSON() {
         }
       });
 
-      // Insert connections with mapped IDs
       if (flowDefinition.connections.length > 0) {
         const connectionsToInsert = flowDefinition.connections
-          .filter((conn) => {
-            const sourceId = idMap.get(conn.source);
-            const targetId = idMap.get(conn.target);
-            return sourceId && targetId;
-          })
+          .filter((conn) => idMap.has(conn.source) && idMap.has(conn.target))
           .map((conn) => ({
             automation_id: automationId,
             source_node_id: idMap.get(conn.source)!,
             target_node_id: idMap.get(conn.target)!,
             source_handle: conn.source_handle || null,
-            condition_branch: conn.condition_branch || 'default',
+            condition_branch: conn.condition_branch || "default",
           }));
 
         if (connectionsToInsert.length > 0) {
-          const { error: connError } = await supabase
-            .from('automation_connections')
-            .insert(connectionsToInsert);
+          const { error: connError } = await supabase.from("automation_connections").insert(connectionsToInsert);
 
           if (connError) throw connError;
         }
@@ -451,13 +418,16 @@ export function useSaveAutomationFlowJSON() {
       return { nodes: insertedNodes };
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['automation', variables.automationId] });
-      queryClient.invalidateQueries({ queryKey: ['automations'] });
+      queryClient.invalidateQueries({ queryKey: ["automation", variables.automationId] });
+      queryClient.invalidateQueries({ queryKey: ["automations"] });
     },
   });
 }
 
-// Legacy: Save entire flow (nodes + connections) - kept for backward compatibility
+// ─── SAVE FLOW LEGACY (tabelas separadas) ────────────────────────────────────
+// FIX: adicionado tratamento de erro no update do flow_definition.
+// Antes, se o update falhasse, o código continuava deletando/reinserindo
+// nodes — deixando o banco em estado inconsistente.
 export function useSaveAutomationFlow() {
   const queryClient = useQueryClient();
 
@@ -471,37 +441,38 @@ export function useSaveAutomationFlow() {
       nodes: Partial<AutomationNode>[];
       connections: Partial<AutomationConnection>[];
     }) => {
-      // Build flow_definition JSON
       const flowDefinition: FlowDefinition = {
-        nodes: nodes.map(n => ({
-          id: n.id || '',
-          type: n.node_type || 'action',
+        nodes: nodes.map((n) => ({
+          id: n.id || "",
+          type: n.node_type || "action",
           action_type: n.action_type || null,
           position: { x: n.position_x || 0, y: n.position_y || 0 },
           config: (n.config || {}) as Record<string, unknown>,
         })),
-        connections: connections.map(c => ({
-          source: c.source_node_id || '',
-          target: c.target_node_id || '',
+        connections: connections.map((c) => ({
+          source: c.source_node_id || "",
+          target: c.target_node_id || "",
           source_handle: c.source_handle || null,
           condition_branch: c.condition_branch || null,
         })),
         settings: {},
       };
 
-      // Save flow_definition JSON atomically
-      await supabase
-        .from('automations')
+      // FIX: agora trata o erro antes de continuar
+      const { error: flowError } = await supabase
+        .from("automations")
         .update({ flow_definition: flowDefinition as unknown as Json })
-        .eq('id', automationId);
+        .eq("id", automationId);
 
-      // Also save to separate tables for execution engine compatibility
-      await supabase.from('automation_connections').delete().eq('automation_id', automationId);
-      await supabase.from('automation_nodes').delete().eq('automation_id', automationId);
+      if (flowError) throw flowError;
+
+      // Só apaga e recria nodes após confirmar que o JSON foi salvo
+      await supabase.from("automation_connections").delete().eq("automation_id", automationId);
+      await supabase.from("automation_nodes").delete().eq("automation_id", automationId);
 
       const nodesToInsert = nodes.map((node) => ({
         automation_id: automationId,
-        node_type: node.node_type || 'action',
+        node_type: node.node_type || "action",
         action_type: node.action_type || null,
         node_config: (node.config || {}) as Json,
         position_x: node.position_x || 0,
@@ -509,7 +480,7 @@ export function useSaveAutomationFlow() {
       }));
 
       const { data: insertedNodes, error: nodesError } = await supabase
-        .from('automation_nodes')
+        .from("automation_nodes")
         .insert(nodesToInsert)
         .select();
 
@@ -517,31 +488,24 @@ export function useSaveAutomationFlow() {
 
       const idMap = new Map<string, string>();
       nodes.forEach((node, index) => {
-        const originalId = node.id;
-        if (originalId && insertedNodes[index]) {
-          idMap.set(originalId, insertedNodes[index].id);
+        if (node.id && insertedNodes[index]) {
+          idMap.set(node.id, insertedNodes[index].id);
         }
       });
 
       if (connections.length > 0) {
         const connectionsToInsert = connections
-          .filter((conn) => {
-            const sourceId = idMap.get(conn.source_node_id || '');
-            const targetId = idMap.get(conn.target_node_id || '');
-            return sourceId && targetId;
-          })
+          .filter((conn) => idMap.has(conn.source_node_id || "") && idMap.has(conn.target_node_id || ""))
           .map((conn) => ({
             automation_id: automationId,
-            source_node_id: idMap.get(conn.source_node_id || '')!,
-            target_node_id: idMap.get(conn.target_node_id || '')!,
+            source_node_id: idMap.get(conn.source_node_id || "")!,
+            target_node_id: idMap.get(conn.target_node_id || "")!,
             source_handle: conn.source_handle || null,
-            condition_branch: conn.condition_branch || 'default',
+            condition_branch: conn.condition_branch || "default",
           }));
 
         if (connectionsToInsert.length > 0) {
-          const { error: connError } = await supabase
-            .from('automation_connections')
-            .insert(connectionsToInsert);
+          const { error: connError } = await supabase.from("automation_connections").insert(connectionsToInsert);
 
           if (connError) throw connError;
         }
@@ -550,22 +514,23 @@ export function useSaveAutomationFlow() {
       return { nodes: insertedNodes };
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['automation', variables.automationId] });
+      queryClient.invalidateQueries({ queryKey: ["automation", variables.automationId] });
+      queryClient.invalidateQueries({ queryKey: ["automations"] });
     },
   });
 }
 
-// Automation templates
+// ─── AUTOMATION TEMPLATES ─────────────────────────────────────────────────────
 export function useAutomationTemplates() {
   const { profile } = useAuth();
 
   return useQuery({
-    queryKey: ['automation-templates', profile?.organization_id],
+    queryKey: ["automation-templates", profile?.organization_id],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('automation_templates')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .from("automation_templates")
+        .select("*")
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
       return data as AutomationTemplate[];
@@ -580,22 +545,24 @@ export function useCreateTemplate() {
 
   return useMutation({
     mutationFn: async (data: { name: string; content: string; media_url?: string; media_type?: string }) => {
-      if (!profile?.organization_id) throw new Error('No organization');
+      if (!profile?.organization_id) throw new Error("No organization");
 
-      const { error } = await supabase.from('automation_templates').insert([{
-        organization_id: profile.organization_id,
-        name: data.name,
-        content: data.content,
-        media_url: data.media_url || null,
-        media_type: data.media_type || null,
-        created_by: profile.id,
-      }]);
+      const { error } = await supabase.from("automation_templates").insert([
+        {
+          organization_id: profile.organization_id,
+          name: data.name,
+          content: data.content,
+          media_url: data.media_url || null,
+          media_type: data.media_type || null,
+          created_by: profile.id,
+        },
+      ]);
 
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['automation-templates'] });
-      toast.success('Template criado!');
+      queryClient.invalidateQueries({ queryKey: ["automation-templates"] });
+      toast.success("Template criado!");
     },
   });
 }
@@ -605,59 +572,64 @@ export function useDeleteTemplate() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('automation_templates').delete().eq('id', id);
+      const { error } = await supabase.from("automation_templates").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['automation-templates'] });
-      toast.success('Template excluído!');
+      queryClient.invalidateQueries({ queryKey: ["automation-templates"] });
+      toast.success("Template excluído!");
     },
   });
 }
 
-// Cancel a specific automation execution
+// ─── CANCEL EXECUTION ────────────────────────────────────────────────────────
 export function useCancelExecution() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (executionId: string) => {
       const { error } = await supabase
-        .from('automation_executions')
-        .update({ 
-          status: 'cancelled', 
+        .from("automation_executions")
+        .update({
+          status: "cancelled",
           completed_at: new Date().toISOString(),
-          error_message: 'Cancelado manualmente pelo usuário'
+          error_message: "Cancelado manualmente pelo usuário",
         })
-        .eq('id', executionId);
+        .eq("id", executionId);
 
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['automation-executions'] });
-      toast.success('Automação interrompida!');
+      queryClient.invalidateQueries({ queryKey: ["automation-executions"] });
+      toast.success("Automação interrompida!");
     },
   });
 }
 
-// Execution logs
-export function useAutomationExecutions(automationId?: string) {
+// ─── EXECUTION LOGS ──────────────────────────────────────────────────────────
+// FIX: adicionado limit configurável com padrão 50 (era 100 fixo sem paginação).
+// Com refetchInterval de 10s, buscar 100 registros com joins a cada 10s
+// pode gerar carga desnecessária conforme o histórico cresce.
+export function useAutomationExecutions(automationId?: string, limit = 50) {
   const { profile } = useAuth();
 
   return useQuery({
-    queryKey: ['automation-executions', automationId, profile?.organization_id],
+    queryKey: ["automation-executions", automationId, profile?.organization_id, limit],
     queryFn: async () => {
       let query = supabase
-        .from('automation_executions')
-        .select(`
+        .from("automation_executions")
+        .select(
+          `
           *,
           lead:leads(id, name),
           automation:automations(id, name)
-        `)
-        .order('started_at', { ascending: false })
-        .limit(100);
+        `,
+        )
+        .order("started_at", { ascending: false })
+        .limit(limit);
 
       if (automationId) {
-        query = query.eq('automation_id', automationId);
+        query = query.eq("automation_id", automationId);
       }
 
       const { data, error } = await query;
