@@ -70,30 +70,7 @@ Deno.serve(async (req) => {
     // For simplicity and atomicity, we'll implement it here or call create-organization-admin
     // Since we are already in an edge function, let's call the logic directly to avoid another HTTP call
     
-    // a. Create Org
-    const { data: org, error: orgError } = await supabaseAdmin
-      .from('organizations')
-      .insert({
-        name: onboardingRequest.company_name,
-        segment: onboardingRequest.segment || 'imobiliario',
-        whatsapp: onboardingRequest.company_whatsapp || null,
-        cnpj: onboardingRequest.cnpj || null,
-        endereco: onboardingRequest.company_address || null,
-        cidade: onboardingRequest.company_city || null,
-        bairro: onboardingRequest.company_neighborhood || null,
-        numero: onboardingRequest.company_number || null,
-        complemento: onboardingRequest.company_complement || null,
-        plan_id: planId,
-        subscription_status: 'trial',
-        subscription_type: 'trial',
-        trial_ends_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days trial
-      })
-      .select()
-      .single();
-
-    if (orgError) throw orgError;
-
-    // b. Get or Create Auth User
+    // a. Get or Create Auth User
     let userId: string;
     const { data: existingUserQuery, error: userQueryError } = await supabaseAdmin
       .from('users')
@@ -105,7 +82,7 @@ Deno.serve(async (req) => {
 
     if (existingUserQuery) {
       userId = existingUserQuery.id;
-      console.log(`User already exists with ID: ${userId}, updating profile.`);
+      console.log(`User already exists with ID: ${userId}`);
     } else {
       const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
         email: onboardingRequest.responsible_email,
@@ -117,7 +94,6 @@ Deno.serve(async (req) => {
       });
 
       if (authError) {
-        // Double check if it's an email_exists error that happened between our check and create
         if (authError.message.includes('already been registered') || (authError as any).code === 'email_exists') {
           const { data: retryUser } = await supabaseAdmin
             .from('users')
@@ -136,6 +112,29 @@ Deno.serve(async (req) => {
         userId = authData.user.id;
       }
     }
+
+    // b. Create Org
+    const { data: org, error: orgError } = await supabaseAdmin
+      .from('organizations')
+      .insert({
+        name: onboardingRequest.company_name,
+        segment: onboardingRequest.segment || 'imobiliario',
+        whatsapp: onboardingRequest.company_whatsapp || null,
+        cnpj: onboardingRequest.cnpj || null,
+        endereco: onboardingRequest.company_address || null,
+        cidade: onboardingRequest.company_city || null,
+        bairro: onboardingRequest.company_neighborhood || null,
+        numero: onboardingRequest.company_number || null,
+        complemento: onboardingRequest.company_complement || null,
+        plan_id: planId,
+        subscription_status: 'trial',
+        subscription_type: 'trial',
+        trial_ends_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      })
+      .select()
+      .single();
+
+    if (orgError) throw orgError;
 
     // c. Update user profile
     await supabaseAdmin
