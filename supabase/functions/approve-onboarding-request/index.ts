@@ -70,7 +70,50 @@ Deno.serve(async (req) => {
     // For simplicity and atomicity, we'll implement it here or call create-organization-admin
     // Since we are already in an edge function, let's call the logic directly to avoid another HTTP call
     
-    // a. Create Org
+    // a. Get or Create Auth User
+    let userId: string;
+    const { data: existingUserQuery, error: userQueryError } = await supabaseAdmin
+      .from('users')
+      .select('id')
+      .eq('email', onboardingRequest.responsible_email)
+      .maybeSingle();
+
+    if (userQueryError) throw userQueryError;
+
+    if (existingUserQuery) {
+      userId = existingUserQuery.id;
+      console.log(`User already exists with ID: ${userId}`);
+    } else {
+      const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+        email: onboardingRequest.responsible_email,
+        password: generatedPassword,
+        email_confirm: true,
+        user_metadata: {
+          name: onboardingRequest.responsible_name,
+        },
+      });
+
+      if (authError) {
+        if (authError.message.includes('already been registered') || (authError as any).code === 'email_exists') {
+          const { data: retryUser } = await supabaseAdmin
+            .from('users')
+            .select('id')
+            .eq('email', onboardingRequest.responsible_email)
+            .maybeSingle();
+          if (retryUser) {
+            userId = retryUser.id;
+          } else {
+            throw authError;
+          }
+        } else {
+          throw authError;
+        }
+      } else {
+        userId = authData.user.id;
+      }
+    }
+
+    // b. Create Org
     const { data: org, error: orgError } = await supabaseAdmin
       .from('organizations')
       .insert({
@@ -86,24 +129,12 @@ Deno.serve(async (req) => {
         plan_id: planId,
         subscription_status: 'trial',
         subscription_type: 'trial',
-        trial_ends_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days trial
+        trial_ends_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
       })
       .select()
       .single();
 
     if (orgError) throw orgError;
-
-    // b. Create Auth User
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-      email: onboardingRequest.responsible_email,
-      password: generatedPassword,
-      email_confirm: true,
-      user_metadata: {
-        name: onboardingRequest.responsible_name,
-      },
-    });
-
-    if (authError) throw authError;
 
     // c. Update user profile
     await supabaseAdmin
@@ -115,12 +146,12 @@ Deno.serve(async (req) => {
         is_active: true,
         whatsapp: onboardingRequest.responsible_phone || onboardingRequest.company_whatsapp || null,
       })
-      .eq('id', authData.user.id);
+      .eq('id', userId);
 
     // d. Set user role
     await supabaseAdmin
       .from('user_roles')
-      .upsert({ user_id: authData.user.id, role: 'admin' });
+      .upsert({ user_id: userId, role: 'admin' });
 
     // 4. Update Onboarding Request
     const { error: updateError } = await supabaseAdmin
