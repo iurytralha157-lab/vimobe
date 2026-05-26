@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { z } from "zod";
-import { Loader2, Eye, EyeOff, ArrowLeft, Mail, AlertCircle, Check, ShieldAlert } from "lucide-react";
+import { Loader2, Eye, EyeOff, ArrowLeft, Mail, AlertCircle, ShieldAlert } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -13,39 +13,49 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { supabase } from "@/integrations/supabase/client";
 import { getFriendlyErrorMessage } from "@/lib/error-handler";
 
 const loginSchema = z.object({
   email: z.string().email("Email inválido"),
-  password: z.string().min(8, "Senha deve ter pelo menos 8 caracteres")
+  password: z.string().min(8, "Senha deve ter pelo menos 8 caracteres"),
 });
-
-const RESET_COOLDOWN_MS = 60 * 1000; // 1 minuto entre resets
-
-const STRENGTH_COLORS: Record<PasswordStrength['level'], string> = {
-  'very-weak': 'bg-red-500',
-  'weak': 'bg-orange-500',
-  'fair': 'bg-yellow-500',
-  'good': 'bg-lime-500',
-  'strong': 'bg-green-500',
-};
-
-const STRENGTH_LABELS: Record<PasswordStrength['level'], string> = {
-  'very-weak': 'Muito fraca',
-  'weak': 'Fraca',
-  'fair': 'Razoável',
-  'good': 'Boa',
-  'strong': 'Forte',
-};
 
 const forgotPasswordSchema = z.object({
   email: z.string().email("Email inválido"),
 });
 
+const RESET_COOLDOWN_MS = 60 * 1000;
+
+const STRENGTH_COLORS: Record<PasswordStrength["level"], string> = {
+  "very-weak": "bg-red-500",
+  weak: "bg-orange-500",
+  fair: "bg-yellow-500",
+  good: "bg-lime-500",
+  strong: "bg-green-500",
+};
+
+const STRENGTH_LABELS: Record<PasswordStrength["level"], string> = {
+  "very-weak": "Muito fraca",
+  weak: "Fraca",
+  fair: "Razoável",
+  good: "Boa",
+  strong: "Forte",
+};
+
 export default function Auth() {
   const navigate = useNavigate();
-  const { user, authInitialized, signIn, resetPassword } = useAuth();
+  const {
+    user,
+    authInitialized,
+    organizationsLoaded,
+    isInitializingOrg,
+    organization,
+    userOrganizations,
+    isSuperAdmin,
+    impersonating,
+    signIn,
+    resetPassword,
+  } = useAuth();
   const { toast } = useToast();
   const { resolvedTheme } = useTheme();
   const { data: systemSettings, isLoading: settingsLoading } = useSystemSettings();
@@ -54,7 +64,7 @@ export default function Auth() {
 
   const logoUrl = useMemo(() => {
     if (!systemSettings) return null;
-    return resolvedTheme === 'dark'
+    return resolvedTheme === "dark"
       ? systemSettings.logo_url_dark || systemSettings.logo_url_light
       : systemSettings.logo_url_light || systemSettings.logo_url_dark;
   }, [systemSettings, resolvedTheme]);
@@ -64,53 +74,73 @@ export default function Auth() {
     return systemSettings.login_bg_url || null;
   }, [systemSettings]);
 
-
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [capsLockOn, setCapsLockOn] = useState(false);
-  const [mode, setMode] = useState<'login' | 'forgot'>('login');
+  const [mode, setMode] = useState<"login" | "forgot">("login");
   const [loginData, setLoginData] = useState({ email: "", password: "" });
   const [forgotEmail, setForgotEmail] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [bgLoaded, setBgLoaded] = useState(false);
   const [rememberMe, setRememberMe] = useState(() => {
-    return localStorage.getItem('remember_me') === 'true';
+    return localStorage.getItem("remember_me") === "true";
   });
   const [lastResetTime, setLastResetTime] = useState<number>(() => {
-    const stored = localStorage.getItem('last_password_reset');
+    const stored = localStorage.getItem("last_password_reset");
     return stored ? parseInt(stored, 10) : 0;
   });
   const [isTransitioning, setIsTransitioning] = useState(false);
 
-  
-  // Redirect if already logged in
+  // FIX: redirecionamento agora usa a mesma lógica do App.tsx (getDefaultRedirect),
+  // evitando inconsistência onde Auth.tsx mandava sempre para /dashboard
+  // enquanto o usuário poderia precisar ir para /admin, /select-organization etc.
   useEffect(() => {
-    if (authInitialized && user) {
-      console.log('[Auth] User already logged in, redirecting to dashboard');
-      navigate('/dashboard', { replace: true });
-    }
-  }, [authInitialized, user, navigate]);
+    if (!authInitialized || !user) return;
+    if (!organizationsLoaded || isInitializingOrg) return;
 
-  // Optimized background image loading
+    const orgCount = userOrganizations?.length ?? 0;
+    const hasActiveOrg = !!organization || !!impersonating;
+
+    let destination = "/dashboard";
+
+    if (isSuperAdmin && !impersonating && !organization) {
+      destination = "/admin";
+    } else if (orgCount === 0 && !isSuperAdmin) {
+      destination = "/select-organization";
+    } else if (!hasActiveOrg && orgCount > 1) {
+      const savedOrgId = localStorage.getItem(`vimob_active_organization_${user.id}`);
+      if (!savedOrgId) destination = "/select-organization";
+    }
+
+    navigate(destination, { replace: true });
+  }, [
+    authInitialized,
+    user,
+    organizationsLoaded,
+    isInitializingOrg,
+    organization,
+    userOrganizations,
+    isSuperAdmin,
+    impersonating,
+    navigate,
+  ]);
+
+  // Otimização de carregamento da imagem de fundo
   useEffect(() => {
     if (!loginBgUrl) return;
-    
-    // Use a small blurred placeholder or a lower quality version initially
+
     const img = new Image();
-    
-    // If it's a Supabase URL, use image transformation for WebP and resizing
-    // We request a smaller width initially for mobile or a general good default
-    const optimizedUrl = loginBgUrl.includes('supabase.co') 
+    const optimizedUrl = loginBgUrl.includes("supabase.co")
       ? `${loginBgUrl}?width=800&quality=60&format=webp`
       : loginBgUrl;
-         
+
     img.src = optimizedUrl;
     img.onload = () => setBgLoaded(true);
   }, [loginBgUrl]);
 
   const setFieldErrorFromZod = (zodError: z.ZodError) => {
     const fieldErrors: Record<string, string> = {};
-    zodError.errors.forEach(err => {
+    zodError.errors.forEach((err) => {
       const key = err.path[0]?.toString();
       if (key) fieldErrors[key] = err.message;
     });
@@ -118,20 +148,23 @@ export default function Auth() {
   };
 
   const handleCapsLock = useCallback((e: React.KeyboardEvent) => {
-    setCapsLockOn(e.getModifierState('CapsLock'));
+    setCapsLockOn(e.getModifierState("CapsLock"));
   }, []);
 
-  const switchMode = useCallback((newMode: 'login' | 'forgot') => {
-    setIsTransitioning(true);
-    setTimeout(() => {
-      setMode(newMode);
-      setErrors({});
-      if (newMode === 'forgot') {
-        setForgotEmail(loginData.email);
-      }
-      setTimeout(() => setIsTransitioning(false), 50);
-    }, 200);
-  }, [loginData.email]);
+  const switchMode = useCallback(
+    (newMode: "login" | "forgot") => {
+      setIsTransitioning(true);
+      setTimeout(() => {
+        setMode(newMode);
+        setErrors({});
+        if (newMode === "forgot") {
+          setForgotEmail(loginData.email);
+        }
+        setTimeout(() => setIsTransitioning(false), 50);
+      }, 200);
+    },
+    [loginData.email],
+  );
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -150,13 +183,13 @@ export default function Auth() {
 
     const delay = loginAttempts.nextAttemptDelay;
     if (delay > 0) {
-      await new Promise(resolve => setTimeout(resolve, delay));
+      await new Promise((resolve) => setTimeout(resolve, delay));
     }
 
     const parsed = loginSchema.safeParse(loginData);
     if (!parsed.success) {
       setFieldErrorFromZod(parsed.error);
-      securityLogger.logValidationError('email/password', 'Validação básica falhou');
+      securityLogger.logValidationError("email/password", "Validação básica falhou");
       return;
     }
 
@@ -178,6 +211,8 @@ export default function Auth() {
 
       loginAttempts.resetOnSuccess();
       securityLogger.logLoginAttempt(loginData.email, true);
+      // O redirecionamento acontece automaticamente via useEffect acima
+      // quando o AuthContext atualizar user + organizationsLoaded
     } catch (error) {
       loginAttempts.recordFailedAttempt();
       securityLogger.logLoginAttempt(loginData.email, false, String(error));
@@ -195,7 +230,6 @@ export default function Auth() {
     e.preventDefault();
     setErrors({});
 
-    // Rate limiting: 1 reset por minuto
     const now = Date.now();
     const timeSinceLastReset = now - lastResetTime;
     if (timeSinceLastReset < RESET_COOLDOWN_MS) {
@@ -211,7 +245,7 @@ export default function Auth() {
     const parsed = forgotPasswordSchema.safeParse({ email: forgotEmail });
     if (!parsed.success) {
       setFieldErrorFromZod(parsed.error);
-      securityLogger.logValidationError('email', 'Email inválido para reset');
+      securityLogger.logValidationError("email", "Email inválido para reset");
       return;
     }
 
@@ -227,23 +261,22 @@ export default function Auth() {
           description: getFriendlyErrorMessage(error),
         });
         securityLogger.logEvent({
-          type: 'password_reset_requested',
+          type: "password_reset_requested",
           email: forgotEmail,
           details: { error: error.message },
         });
         return;
       }
 
-      // Registrar timestamp do reset para rate limiting
       setLastResetTime(now);
-      localStorage.setItem('last_password_reset', now.toString());
+      localStorage.setItem("last_password_reset", now.toString());
 
       toast({
         title: "Email enviado!",
         description: "Verifique sua caixa de entrada para redefinir sua senha.",
       });
       securityLogger.logPasswordResetRequest(forgotEmail);
-      switchMode('login');
+      switchMode("login");
       setForgotEmail("");
     } catch (error) {
       toast({
@@ -252,7 +285,7 @@ export default function Auth() {
         description: "Ocorreu um erro. Tente novamente.",
       });
       securityLogger.logEvent({
-        type: 'password_reset_requested',
+        type: "password_reset_requested",
         email: forgotEmail,
         details: { error: String(error) },
       });
@@ -261,22 +294,20 @@ export default function Auth() {
     }
   };
 
-  // We no longer block the entire page on settings loading to improve perceived speed
-  const showBg = loginBgUrl && bgLoaded;
-
   return (
     <div className="dark min-h-screen flex flex-col lg:flex-row bg-background relative overflow-x-hidden">
-      {/* Mobile background: full screen background on mobile */}
+      {/* Background mobile */}
       <div className="lg:hidden absolute inset-0 w-full h-full overflow-hidden pointer-events-none">
         {loginBgUrl ? (
           <div className="relative w-full h-full">
-            <img 
-              src={loginBgUrl.includes('supabase.co') ? `${loginBgUrl}?width=800&quality=60&format=webp` : loginBgUrl}
+            <img
+              src={loginBgUrl.includes("supabase.co") ? `${loginBgUrl}?width=800&quality=60&format=webp` : loginBgUrl}
               alt=""
-              className={`w-full h-full object-cover object-center transition-opacity duration-700 ${bgLoaded ? 'opacity-100' : 'opacity-0'}`}
+              className={`w-full h-full object-cover object-center transition-opacity duration-700 ${
+                bgLoaded ? "opacity-100" : "opacity-0"
+              }`}
               loading="eager"
             />
-            {/* Vertical gradient similar to desktop horizontal gradient */}
             <div className="absolute inset-x-0 bottom-0 h-[80%] bg-gradient-to-t from-background via-background/90 to-transparent" />
           </div>
         ) : (
@@ -284,47 +315,47 @@ export default function Auth() {
         )}
       </div>
 
-      {/* Login form container */}
+      {/* Formulário de login */}
       <div className="w-full lg:w-[420px] xl:w-[460px] flex flex-col items-center justify-center px-8 py-8 lg:py-10 flex-shrink-0 mx-auto lg:ml-[100px] xl:ml-[100px] flex-1 lg:flex-none relative z-10">
         <div className="w-full max-w-sm">
           <div className="flex flex-col items-center mb-2 min-h-[56px] justify-center">
             {settingsLoading ? (
               <div className="h-10 w-32 bg-muted animate-pulse rounded-lg" />
             ) : logoUrl ? (
-              <img
-                src={logoUrl}
-                alt="Logo"
-                width="160"
-                height="56"
-                className="h-14 w-auto mb-2"
-                decoding="async"
-              />
+              <img src={logoUrl} alt="Logo" width="160" height="56" className="h-14 w-auto mb-2" decoding="async" />
             ) : null}
           </div>
           <p className="text-sm text-muted-foreground text-center mb-6" aria-live="polite">
-            {mode === 'login'
-              ? 'Acesse seu sistema de gestão imobiliária'
-              : 'Recupere o acesso à sua conta'}
+            {mode === "login" ? "Acesse seu sistema de gestão imobiliária" : "Recupere o acesso à sua conta"}
           </p>
 
           <div
-            className={`transition-all duration-200 ease-in-out ${isTransitioning ? 'opacity-0 translate-y-2' : 'opacity-100 translate-y-0'
-              }`}
+            className={`transition-all duration-200 ease-in-out ${
+              isTransitioning ? "opacity-0 translate-y-2" : "opacity-100 translate-y-0"
+            }`}
           >
-            {mode === 'login' ? (
+            {mode === "login" ? (
               <form onSubmit={handleLogin} className="space-y-5">
                 {loginAttempts.isLockedOut && (
-                  <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-lg flex items-start gap-2" role="alert">
+                  <div
+                    className="p-3 bg-destructive/10 border border-destructive/30 rounded-lg flex items-start gap-2"
+                    role="alert"
+                  >
                     <AlertCircle className="h-4 w-4 text-destructive mt-0.5 flex-shrink-0" />
                     <div className="text-xs text-destructive">
                       <p className="font-semibold">Temporariamente bloqueado</p>
-                      <p>Muitas tentativas. Tente novamente em {Math.ceil(loginAttempts.remainingLockoutTime / 1000 / 60)} minutos.</p>
+                      <p>
+                        Muitas tentativas. Tente novamente em{" "}
+                        {Math.ceil(loginAttempts.remainingLockoutTime / 1000 / 60)} minutos.
+                      </p>
                     </div>
                   </div>
                 )}
 
                 <div>
-                  <Label htmlFor="login-email" className="text-sm text-foreground">Seu e-mail</Label>
+                  <Label htmlFor="login-email" className="text-sm text-foreground">
+                    Seu e-mail
+                  </Label>
                   <div className="relative">
                     <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -334,19 +365,25 @@ export default function Auth() {
                       placeholder="seu@email.com"
                       autoComplete="username"
                       value={loginData.email}
-                      onChange={e => setLoginData({ ...loginData, email: e.target.value })}
+                      onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
                       className="h-11 rounded-xl bg-muted pl-11"
                       disabled={loginAttempts.isLockedOut}
                       aria-invalid={!!errors.email}
-                      aria-describedby={errors.email ? 'login-email-error' : undefined}
+                      aria-describedby={errors.email ? "login-email-error" : undefined}
                     />
                   </div>
-                  {errors.email && <p id="login-email-error" className="text-xs text-destructive mt-1" role="alert">{errors.email}</p>}
+                  {errors.email && (
+                    <p id="login-email-error" className="text-xs text-destructive mt-1" role="alert">
+                      {errors.email}
+                    </p>
+                  )}
                 </div>
 
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <Label htmlFor="login-password" className="text-sm text-foreground">Sua senha</Label>
+                    <Label htmlFor="login-password" className="text-sm text-foreground">
+                      Sua senha
+                    </Label>
                   </div>
                   <div className="relative">
                     <Input
@@ -356,25 +393,29 @@ export default function Auth() {
                       placeholder="••••••••"
                       autoComplete="current-password"
                       value={loginData.password}
-                      onChange={e => setLoginData({ ...loginData, password: e.target.value })}
+                      onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
                       onKeyDown={handleCapsLock}
                       onKeyUp={handleCapsLock}
                       className="h-11 rounded-xl bg-muted pr-12"
                       disabled={loginAttempts.isLockedOut}
                       aria-invalid={!!errors.password}
-                      aria-describedby={errors.password ? 'login-password-error' : undefined}
+                      aria-describedby={errors.password ? "login-password-error" : undefined}
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                       disabled={loginAttempts.isLockedOut}
-                      aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                      aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
                     >
                       {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
                   </div>
-                  {errors.password && <p id="login-password-error" className="text-xs text-destructive mt-1" role="alert">{errors.password}</p>}
+                  {errors.password && (
+                    <p id="login-password-error" className="text-xs text-destructive mt-1" role="alert">
+                      {errors.password}
+                    </p>
+                  )}
 
                   <div className="flex items-center justify-between mt-3 px-1">
                     <div className="flex items-center space-x-2">
@@ -384,7 +425,7 @@ export default function Auth() {
                         onCheckedChange={(checked) => {
                           const isChecked = checked === true;
                           setRememberMe(isChecked);
-                          localStorage.setItem('remember_me', isChecked.toString());
+                          localStorage.setItem("remember_me", isChecked.toString());
                         }}
                       />
                       <label htmlFor="remember-me" className="text-xs text-muted-foreground cursor-pointer select-none">
@@ -393,7 +434,6 @@ export default function Auth() {
                     </div>
                   </div>
 
-                  {/* Caps Lock warning */}
                   {capsLockOn && (
                     <div className="flex items-center gap-1.5 mt-1.5 text-xs text-warning">
                       <ShieldAlert size={14} />
@@ -414,7 +454,7 @@ export default function Auth() {
                 <div className="text-center">
                   <button
                     type="button"
-                    onClick={() => switchMode('forgot')}
+                    onClick={() => switchMode("forgot")}
                     disabled={loginAttempts.isLockedOut}
                     className="text-sm text-primary hover:underline disabled:opacity-50"
                   >
@@ -427,7 +467,7 @@ export default function Auth() {
                 <div className="flex items-center gap-2 mb-2">
                   <button
                     type="button"
-                    onClick={() => switchMode('login')}
+                    onClick={() => switchMode("login")}
                     className="text-muted-foreground hover:text-foreground transition-colors"
                     aria-label="Voltar para login"
                   >
@@ -441,7 +481,9 @@ export default function Auth() {
                 </p>
 
                 <div>
-                  <Label htmlFor="forgot-email" className="text-sm text-foreground">Seu e-mail</Label>
+                  <Label htmlFor="forgot-email" className="text-sm text-foreground">
+                    Seu e-mail
+                  </Label>
                   <div className="relative">
                     <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -451,13 +493,17 @@ export default function Auth() {
                       placeholder="seu@email.com"
                       autoComplete="email"
                       value={forgotEmail}
-                      onChange={e => setForgotEmail(e.target.value)}
+                      onChange={(e) => setForgotEmail(e.target.value)}
                       className="h-11 rounded-xl bg-muted pl-11"
                       aria-invalid={!!errors.email}
-                      aria-describedby={errors.email ? 'forgot-email-error' : undefined}
+                      aria-describedby={errors.email ? "forgot-email-error" : undefined}
                     />
                   </div>
-                  {errors.email && <p id="forgot-email-error" className="text-xs text-destructive mt-1" role="alert">{errors.email}</p>}
+                  {errors.email && (
+                    <p id="forgot-email-error" className="text-xs text-destructive mt-1" role="alert">
+                      {errors.email}
+                    </p>
+                  )}
                 </div>
 
                 <Button
@@ -474,20 +520,21 @@ export default function Auth() {
         </div>
       </div>
 
-      {/* Right panel - Background image (desktop only) */}
+      {/* Painel direito - imagem de fundo (só desktop) */}
       <div className="hidden lg:block flex-1 relative bg-muted">
         {loginBgUrl && (
           <img
-            src={loginBgUrl.includes('supabase.co') ? `${loginBgUrl}?width=1200&quality=70&format=webp` : loginBgUrl}
+            src={loginBgUrl.includes("supabase.co") ? `${loginBgUrl}?width=1200&quality=70&format=webp` : loginBgUrl}
             alt=""
             aria-hidden="true"
             role="presentation"
             loading="eager"
             decoding="async"
-            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${bgLoaded ? 'opacity-100' : 'opacity-0'}`}
+            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${
+              bgLoaded ? "opacity-100" : "opacity-0"
+            }`}
           />
         )}
-        {/* Horizontal gradient to blend form background with image */}
         <div className="absolute inset-y-0 left-0 w-[400px] xl:w-[500px] bg-gradient-to-r from-background via-background/80 to-transparent pointer-events-none" />
       </div>
     </div>
