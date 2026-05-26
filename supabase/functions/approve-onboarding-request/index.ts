@@ -93,17 +93,49 @@ Deno.serve(async (req) => {
 
     if (orgError) throw orgError;
 
-    // b. Create Auth User
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-      email: onboardingRequest.responsible_email,
-      password: generatedPassword,
-      email_confirm: true,
-      user_metadata: {
-        name: onboardingRequest.responsible_name,
-      },
-    });
+    // b. Get or Create Auth User
+    let userId: string;
+    const { data: existingUserQuery, error: userQueryError } = await supabaseAdmin
+      .from('users')
+      .select('id')
+      .eq('email', onboardingRequest.responsible_email)
+      .maybeSingle();
 
-    if (authError) throw authError;
+    if (userQueryError) throw userQueryError;
+
+    if (existingUserQuery) {
+      userId = existingUserQuery.id;
+      console.log(`User already exists with ID: ${userId}, updating profile.`);
+    } else {
+      const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+        email: onboardingRequest.responsible_email,
+        password: generatedPassword,
+        email_confirm: true,
+        user_metadata: {
+          name: onboardingRequest.responsible_name,
+        },
+      });
+
+      if (authError) {
+        // Double check if it's an email_exists error that happened between our check and create
+        if (authError.message.includes('already been registered') || (authError as any).code === 'email_exists') {
+          const { data: retryUser } = await supabaseAdmin
+            .from('users')
+            .select('id')
+            .eq('email', onboardingRequest.responsible_email)
+            .maybeSingle();
+          if (retryUser) {
+            userId = retryUser.id;
+          } else {
+            throw authError;
+          }
+        } else {
+          throw authError;
+        }
+      } else {
+        userId = authData.user.id;
+      }
+    }
 
     // c. Update user profile
     await supabaseAdmin
@@ -115,7 +147,7 @@ Deno.serve(async (req) => {
         is_active: true,
         whatsapp: onboardingRequest.responsible_phone || onboardingRequest.company_whatsapp || null,
       })
-      .eq('id', authData.user.id);
+      .eq('id', userId);
 
     // d. Set user role
     await supabaseAdmin
