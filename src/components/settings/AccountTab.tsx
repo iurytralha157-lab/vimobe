@@ -1,27 +1,34 @@
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { PhoneInput } from '@/components/ui/phone-input';
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { PhoneInput } from "@/components/ui/phone-input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Camera, Loader2, Globe, Eye, EyeOff, KeyRound, Building2, User, Percent, Info, Upload, Scissors } from 'lucide-react';
-import { ImageCropper } from '@/components/ui/image-cropper';
-import { useAuth } from '@/contexts/AuthContext';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
-import { Language, languageNames } from '@/i18n';
+  Camera,
+  Loader2,
+  Globe,
+  Eye,
+  EyeOff,
+  KeyRound,
+  Building2,
+  User,
+  Percent,
+  Info,
+  Upload,
+  Scissors,
+} from "lucide-react";
+import { ImageCropper } from "@/components/ui/image-cropper";
+import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { Language, languageNames } from "@/i18n";
 
 interface ProfileFormData {
   name: string;
@@ -53,67 +60,80 @@ interface OrganizationFormData {
 export function AccountTab() {
   const { profile, organization, refreshProfile } = useAuth();
   const { language, setLanguage, t } = useLanguage();
-  
+
   // Profile states
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
-  const [passwordData, setPasswordData] = useState({ newPassword: '', confirmPassword: '' });
+  const [passwordData, setPasswordData] = useState({ newPassword: "", confirmPassword: "" });
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [showCpf, setShowCpf] = useState(false);
-  
+
   // Organization states
   const [savingOrg, setSavingOrg] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [cropDialogOpen, setCropDialogOpen] = useState(false);
   const [pendingLogoUrl, setPendingLogoUrl] = useState<string | null>(null);
-  const isAdmin = profile?.role === 'admin';
+  const isAdmin = profile?.role === "admin";
 
   const [profileForm, setProfileForm] = useState<ProfileFormData>({
-    name: '', phone: '', whatsapp: '', cpf: '',
+    name: "",
+    phone: "",
+    whatsapp: "",
+    cpf: "",
   });
 
   const [orgForm, setOrgForm] = useState<OrganizationFormData>({
-    name: '', cnpj: '', inscricao_estadual: '', razao_social: '',
-    nome_fantasia: '', cep: '', endereco: '', numero: '',
-    complemento: '', bairro: '', cidade: '', uf: '',
-    telefone: '', whatsapp: '', email: '', website: '',
-    default_commission_percentage: '5',
+    name: "",
+    cnpj: "",
+    inscricao_estadual: "",
+    razao_social: "",
+    nome_fantasia: "",
+    cep: "",
+    endereco: "",
+    numero: "",
+    complemento: "",
+    bairro: "",
+    cidade: "",
+    uf: "",
+    telefone: "",
+    whatsapp: "",
+    email: "",
+    website: "",
+    default_commission_percentage: "5",
   });
 
-  // Load profile data
   useEffect(() => {
     if (profile) {
       setProfileForm({
-        name: profile.name || '',
-        phone: profile.phone || '',
-        whatsapp: profile.whatsapp || '',
-        cpf: profile.cpf || '',
+        name: profile.name || "",
+        phone: profile.phone || "",
+        whatsapp: profile.whatsapp || "",
+        cpf: profile.cpf || "",
       });
     }
   }, [profile]);
 
-  // Load organization data
   useEffect(() => {
     if (organization) {
       setOrgForm({
-        name: organization.name || '',
-        cnpj: organization.cnpj || '',
-        inscricao_estadual: organization.inscricao_estadual || '',
-        razao_social: organization.razao_social || '',
-        nome_fantasia: organization.nome_fantasia || '',
-        cep: organization.cep || '',
-        endereco: organization.endereco || '',
-        numero: organization.numero || '',
-        complemento: organization.complemento || '',
-        bairro: organization.bairro || '',
-        cidade: organization.cidade || '',
-        uf: organization.uf || '',
-        telefone: organization.telefone || '',
-        whatsapp: organization.whatsapp || '',
-        email: organization.email || '',
-        website: organization.website || '',
+        name: organization.name || "",
+        cnpj: organization.cnpj || "",
+        inscricao_estadual: organization.inscricao_estadual || "",
+        razao_social: organization.razao_social || "",
+        nome_fantasia: organization.nome_fantasia || "",
+        cep: organization.cep || "",
+        endereco: organization.endereco || "",
+        numero: organization.numero || "",
+        complemento: organization.complemento || "",
+        bairro: organization.bairro || "",
+        cidade: organization.cidade || "",
+        uf: organization.uf || "",
+        telefone: organization.telefone || "",
+        whatsapp: organization.whatsapp || "",
+        email: organization.email || "",
+        website: organization.website || "",
         default_commission_percentage: String(organization.default_commission_percentage || 5),
       });
     }
@@ -123,31 +143,29 @@ export function AccountTab() {
     if (!profile?.id) return;
     setUploadingAvatar(true);
     try {
-      const fileExt = file.name.split('.').pop();
+      const fileExt = file.name.split(".").pop();
       const fileName = `${profile.id}-${Date.now()}.${fileExt}`;
       const filePath = `avatars/${fileName}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, file, { upsert: true });
+      const { error: uploadError } = await supabase.storage.from("avatars").upload(filePath, file, { upsert: true });
 
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(filePath);
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("avatars").getPublicUrl(filePath);
 
       const { error: updateError } = await supabase
-        .from('users')
+        .from("users")
         .update({ avatar_url: publicUrl })
-        .eq('id', profile.id);
+        .eq("id", profile.id);
 
       if (updateError) throw updateError;
 
       await refreshProfile();
       toast.success(t.settings.profile.saveSuccess);
     } catch (error) {
-      console.error('Error uploading avatar:', error);
+      console.error("Error uploading avatar:", error);
       toast.error(t.settings.profile.saveError);
     } finally {
       setUploadingAvatar(false);
@@ -159,20 +177,20 @@ export function AccountTab() {
     setSavingProfile(true);
     try {
       const { error } = await supabase
-        .from('users')
+        .from("users")
         .update({
           name: profileForm.name.trim() || profile.name,
           phone: profileForm.phone || null,
           whatsapp: profileForm.whatsapp || null,
           cpf: profileForm.cpf || null,
         })
-        .eq('id', profile.id);
+        .eq("id", profile.id);
 
       if (error) throw error;
       await refreshProfile();
       toast.success(t.settings.profile.saveSuccess);
     } catch (error) {
-      console.error('Error saving profile:', error);
+      console.error("Error saving profile:", error);
       toast.error(t.settings.profile.saveError);
     } finally {
       setSavingProfile(false);
@@ -184,7 +202,7 @@ export function AccountTab() {
     setSavingOrg(true);
     try {
       const { error } = await supabase
-        .from('organizations')
+        .from("organizations")
         .update({
           name: orgForm.name,
           cnpj: orgForm.cnpj || null,
@@ -204,13 +222,13 @@ export function AccountTab() {
           website: orgForm.website || null,
           default_commission_percentage: parseFloat(orgForm.default_commission_percentage) || 5,
         })
-        .eq('id', organization.id);
+        .eq("id", organization.id);
 
       if (error) throw error;
       await refreshProfile();
       toast.success(t.settings.organization.saveSuccess);
     } catch (error) {
-      console.error('Error saving organization:', error);
+      console.error("Error saving organization:", error);
       toast.error(t.settings.organization.saveError);
     } finally {
       setSavingOrg(false);
@@ -226,26 +244,30 @@ export function AccountTab() {
     reader.readAsDataURL(file);
   };
 
+  // ✅ CORRIGIDO: path agora usa subpasta 'organizations' que é permitida pela policy
   const onCropComplete = async (blob: Blob) => {
     if (!organization?.id) return;
     setCropDialogOpen(false);
     setUploadingLogo(true);
     try {
-      const path = `logos/${organization.id}-${Date.now()}.png`;
-      const { error: uploadError } = await supabase.storage.from('logos').upload(path, blob);
+      const path = `organizations/${organization.id}/${Date.now()}.png`;
+      const { error: uploadError } = await supabase.storage.from("logos").upload(path, blob);
       if (uploadError) throw uploadError;
-      const { data: { publicUrl } } = supabase.storage.from('logos').getPublicUrl(path);
-      
+
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("logos").getPublicUrl(path);
+
       const { error: updateError } = await supabase
-        .from('organizations')
+        .from("organizations")
         .update({ logo_url: publicUrl })
-        .eq('id', organization.id);
+        .eq("id", organization.id);
       if (updateError) throw updateError;
 
       await refreshProfile();
-      toast.success('Logo atualizada com sucesso!');
+      toast.success("Logo atualizada com sucesso!");
     } catch (error: any) {
-      toast.error('Erro ao salvar logo: ' + error.message);
+      toast.error("Erro ao salvar logo: " + error.message);
     } finally {
       setUploadingLogo(false);
       setPendingLogoUrl(null);
@@ -254,11 +276,11 @@ export function AccountTab() {
 
   const handleChangePassword = async () => {
     if (passwordData.newPassword.length < 6) {
-      toast.error('A senha deve ter pelo menos 6 caracteres');
+      toast.error("A senha deve ter pelo menos 6 caracteres");
       return;
     }
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      toast.error('As senhas não coincidem');
+      toast.error("As senhas não coincidem");
       return;
     }
 
@@ -268,11 +290,11 @@ export function AccountTab() {
         password: passwordData.newPassword,
       });
       if (error) throw error;
-      toast.success('Senha alterada com sucesso!');
-      setPasswordData({ newPassword: '', confirmPassword: '' });
+      toast.success("Senha alterada com sucesso!");
+      setPasswordData({ newPassword: "", confirmPassword: "" });
     } catch (error: any) {
-      console.error('Error changing password:', error);
-      toast.error(error.message || 'Erro ao alterar senha');
+      console.error("Error changing password:", error);
+      toast.error(error.message || "Erro ao alterar senha");
     } finally {
       setChangingPassword(false);
     }
@@ -285,7 +307,6 @@ export function AccountTab() {
 
   return (
     <div className="space-y-6">
-      {/* Two columns: Profile (left) + Organization (right) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* LEFT: Profile Card */}
         <Card>
@@ -303,7 +324,11 @@ export function AccountTab() {
                 <Avatar className="h-20 w-20">
                   <AvatarImage src={profile?.avatar_url || undefined} />
                   <AvatarFallback className="bg-primary text-primary-foreground text-xl">
-                    {profile?.name?.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                    {profile?.name
+                      ?.split(" ")
+                      .map((n) => n[0])
+                      .join("")
+                      .slice(0, 2)}
                   </AvatarFallback>
                 </Avatar>
                 <input
@@ -320,21 +345,17 @@ export function AccountTab() {
                   size="icon"
                   variant="secondary"
                   className="absolute -bottom-1 -right-1 h-7 w-7 rounded-full"
-                  onClick={() => document.getElementById('avatar-upload')?.click()}
+                  onClick={() => document.getElementById("avatar-upload")?.click()}
                   disabled={uploadingAvatar}
                 >
-                  {uploadingAvatar ? (
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                  ) : (
-                    <Camera className="h-3 w-3" />
-                  )}
+                  {uploadingAvatar ? <Loader2 className="h-3 w-3 animate-spin" /> : <Camera className="h-3 w-3" />}
                 </Button>
               </div>
               <div>
                 <h3 className="font-medium">{profile?.name}</h3>
                 <p className="text-sm text-muted-foreground">{profile?.email}</p>
                 <Badge variant="secondary" className="mt-1">
-                  {profile?.role === 'admin' ? t.settings.users.admin : t.settings.users.user}
+                  {profile?.role === "admin" ? t.settings.users.admin : t.settings.users.user}
                 </Badge>
               </div>
             </div>
@@ -350,8 +371,8 @@ export function AccountTab() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="pt-BR">{languageNames['pt-BR']}</SelectItem>
-                  <SelectItem value="en">{languageNames['en']}</SelectItem>
+                  <SelectItem value="pt-BR">{languageNames["pt-BR"]}</SelectItem>
+                  <SelectItem value="en">{languageNames["en"]}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -362,19 +383,19 @@ export function AccountTab() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label className="text-xs">{t.common.name}</Label>
-                  <Input 
+                  <Input
                     value={profileForm.name}
-                    onChange={(e) => setProfileForm(prev => ({ ...prev, name: e.target.value }))}
+                    onChange={(e) => setProfileForm((prev) => ({ ...prev, name: e.target.value }))}
                   />
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs">{t.settings.profile.cpf}</Label>
                   <div className="relative">
-                    <Input 
+                    <Input
                       type={showCpf ? "text" : "password"}
                       placeholder="000.000.000-00"
                       value={profileForm.cpf}
-                      onChange={(e) => setProfileForm(prev => ({ ...prev, cpf: e.target.value }))}
+                      onChange={(e) => setProfileForm((prev) => ({ ...prev, cpf: e.target.value }))}
                       className="pr-10"
                     />
                     <Button
@@ -401,16 +422,16 @@ export function AccountTab() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label className="text-xs">{t.common.phone}</Label>
-                  <PhoneInput 
+                  <PhoneInput
                     value={profileForm.phone}
-                    onChange={(value) => setProfileForm(prev => ({ ...prev, phone: value }))}
+                    onChange={(value) => setProfileForm((prev) => ({ ...prev, phone: value }))}
                   />
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs">{t.settings.profile.whatsapp}</Label>
-                  <PhoneInput 
+                  <PhoneInput
                     value={profileForm.whatsapp}
-                    onChange={(value) => setProfileForm(prev => ({ ...prev, whatsapp: value }))}
+                    onChange={(value) => setProfileForm((prev) => ({ ...prev, whatsapp: value }))}
                   />
                 </div>
               </div>
@@ -426,11 +447,11 @@ export function AccountTab() {
                 <div className="space-y-1.5">
                   <Label className="text-xs">Nova senha</Label>
                   <div className="relative">
-                    <Input 
+                    <Input
                       type={showNewPassword ? "text" : "password"}
                       placeholder="••••••••"
                       value={passwordData.newPassword}
-                      onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
+                      onChange={(e) => setPasswordData((prev) => ({ ...prev, newPassword: e.target.value }))}
                       className="pr-10 h-9"
                     />
                     <button
@@ -445,11 +466,11 @@ export function AccountTab() {
                 <div className="space-y-1.5">
                   <Label className="text-xs">Confirmar nova senha</Label>
                   <div className="relative">
-                    <Input 
+                    <Input
                       type={showConfirmPassword ? "text" : "password"}
                       placeholder="••••••••"
                       value={passwordData.confirmPassword}
-                      onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                      onChange={(e) => setPasswordData((prev) => ({ ...prev, confirmPassword: e.target.value }))}
                       className="pr-10 h-9"
                     />
                     <button
@@ -463,13 +484,11 @@ export function AccountTab() {
                 </div>
               </div>
               <div className="flex items-center justify-between">
-                <p className="text-[10px] text-muted-foreground">
-                  Mínimo 6 caracteres
-                </p>
-                <Button 
+                <p className="text-[10px] text-muted-foreground">Mínimo 6 caracteres</p>
+                <Button
                   size="sm"
                   variant="outline"
-                  onClick={handleChangePassword} 
+                  onClick={handleChangePassword}
                   disabled={changingPassword || !passwordData.newPassword || !passwordData.confirmPassword}
                   className="h-8"
                 >
@@ -510,35 +529,39 @@ export function AccountTab() {
                     <Upload className="h-6 w-6 text-muted-foreground" />
                   )}
                   {isAdmin && (
-                    <input 
+                    <input
                       id="org-logo-upload"
-                      type="file" 
-                      className="absolute inset-0 opacity-0 cursor-pointer" 
-                      accept="image/*" 
+                      type="file"
+                      className="absolute inset-0 opacity-0 cursor-pointer"
+                      accept="image/*"
                       onChange={(e) => {
                         const file = e.target.files?.[0];
                         if (file) handleUploadLogo(file);
-                        e.target.value = '';
-                      }} 
+                        e.target.value = "";
+                      }}
                     />
                   )}
-                  {uploadingLogo && <div className="absolute inset-0 bg-background/80 flex items-center justify-center"><Loader2 className="h-5 w-5 animate-spin" /></div>}
+                  {uploadingLogo && (
+                    <div className="absolute inset-0 bg-background/80 flex items-center justify-center">
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    </div>
+                  )}
                 </div>
                 {isAdmin && (
                   <div className="flex flex-col gap-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
+                    <Button
+                      variant="outline"
+                      size="sm"
                       className="h-8"
-                      onClick={() => document.getElementById('org-logo-upload')?.click()}
+                      onClick={() => document.getElementById("org-logo-upload")?.click()}
                       disabled={uploadingLogo}
                     >
                       Alterar Logo
                     </Button>
                     {organization?.logo_url && (
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         className="h-8 gap-2"
                         onClick={() => {
                           setPendingLogoUrl(organization.logo_url);
@@ -555,7 +578,7 @@ export function AccountTab() {
             </div>
 
             {cropDialogOpen && pendingLogoUrl && (
-              <ImageCropper 
+              <ImageCropper
                 imageSrc={pendingLogoUrl}
                 onCropComplete={onCropComplete}
                 onCancel={() => {
@@ -570,7 +593,7 @@ export function AccountTab() {
               <Label className="text-xs">{t.settings.organization.companyName}</Label>
               <Input
                 value={orgForm.name}
-                onChange={(e) => setOrgForm(prev => ({ ...prev, name: e.target.value }))}
+                onChange={(e) => setOrgForm((prev) => ({ ...prev, name: e.target.value }))}
                 disabled={!isAdmin}
               />
             </div>
@@ -581,34 +604,34 @@ export function AccountTab() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label className="text-xs">{t.settings.organization.cnpj}</Label>
-                  <Input 
-                    placeholder="00.000.000/0000-00" 
+                  <Input
+                    placeholder="00.000.000/0000-00"
                     value={orgForm.cnpj}
-                    onChange={(e) => setOrgForm(prev => ({ ...prev, cnpj: e.target.value }))}
+                    onChange={(e) => setOrgForm((prev) => ({ ...prev, cnpj: e.target.value }))}
                     disabled={!isAdmin}
                   />
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs">{t.settings.organization.stateRegistration}</Label>
-                  <Input 
+                  <Input
                     value={orgForm.inscricao_estadual}
-                    onChange={(e) => setOrgForm(prev => ({ ...prev, inscricao_estadual: e.target.value }))}
+                    onChange={(e) => setOrgForm((prev) => ({ ...prev, inscricao_estadual: e.target.value }))}
                     disabled={!isAdmin}
                   />
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs">{t.settings.organization.legalName}</Label>
-                  <Input 
+                  <Input
                     value={orgForm.razao_social}
-                    onChange={(e) => setOrgForm(prev => ({ ...prev, razao_social: e.target.value }))}
+                    onChange={(e) => setOrgForm((prev) => ({ ...prev, razao_social: e.target.value }))}
                     disabled={!isAdmin}
                   />
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs">{t.settings.organization.tradeName}</Label>
-                  <Input 
+                  <Input
                     value={orgForm.nome_fantasia}
-                    onChange={(e) => setOrgForm(prev => ({ ...prev, nome_fantasia: e.target.value }))}
+                    onChange={(e) => setOrgForm((prev) => ({ ...prev, nome_fantasia: e.target.value }))}
                     disabled={!isAdmin}
                   />
                 </div>
@@ -621,59 +644,59 @@ export function AccountTab() {
               <div className="grid grid-cols-3 gap-3">
                 <div className="space-y-1.5">
                   <Label className="text-xs">{t.settings.profile.cep}</Label>
-                  <Input 
-                    placeholder="00000-000" 
+                  <Input
+                    placeholder="00000-000"
                     value={orgForm.cep}
-                    onChange={(e) => setOrgForm(prev => ({ ...prev, cep: e.target.value }))}
+                    onChange={(e) => setOrgForm((prev) => ({ ...prev, cep: e.target.value }))}
                     disabled={!isAdmin}
                   />
                 </div>
                 <div className="space-y-1.5 col-span-2">
                   <Label className="text-xs">{t.settings.profile.street}</Label>
-                  <Input 
+                  <Input
                     value={orgForm.endereco}
-                    onChange={(e) => setOrgForm(prev => ({ ...prev, endereco: e.target.value }))}
+                    onChange={(e) => setOrgForm((prev) => ({ ...prev, endereco: e.target.value }))}
                     disabled={!isAdmin}
                   />
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs">{t.settings.profile.number}</Label>
-                  <Input 
+                  <Input
                     value={orgForm.numero}
-                    onChange={(e) => setOrgForm(prev => ({ ...prev, numero: e.target.value }))}
+                    onChange={(e) => setOrgForm((prev) => ({ ...prev, numero: e.target.value }))}
                     disabled={!isAdmin}
                   />
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs">{t.settings.profile.complement}</Label>
-                  <Input 
+                  <Input
                     value={orgForm.complemento}
-                    onChange={(e) => setOrgForm(prev => ({ ...prev, complemento: e.target.value }))}
+                    onChange={(e) => setOrgForm((prev) => ({ ...prev, complemento: e.target.value }))}
                     disabled={!isAdmin}
                   />
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs">{t.settings.profile.neighborhood}</Label>
-                  <Input 
+                  <Input
                     value={orgForm.bairro}
-                    onChange={(e) => setOrgForm(prev => ({ ...prev, bairro: e.target.value }))}
+                    onChange={(e) => setOrgForm((prev) => ({ ...prev, bairro: e.target.value }))}
                     disabled={!isAdmin}
                   />
                 </div>
                 <div className="space-y-1.5 col-span-2">
                   <Label className="text-xs">{t.settings.profile.city}</Label>
-                  <Input 
+                  <Input
                     value={orgForm.cidade}
-                    onChange={(e) => setOrgForm(prev => ({ ...prev, cidade: e.target.value }))}
+                    onChange={(e) => setOrgForm((prev) => ({ ...prev, cidade: e.target.value }))}
                     disabled={!isAdmin}
                   />
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs">{t.settings.profile.state}</Label>
-                  <Input 
+                  <Input
                     maxLength={2}
                     value={orgForm.uf}
-                    onChange={(e) => setOrgForm(prev => ({ ...prev, uf: e.target.value.toUpperCase() }))}
+                    onChange={(e) => setOrgForm((prev) => ({ ...prev, uf: e.target.value.toUpperCase() }))}
                     disabled={!isAdmin}
                   />
                 </div>
@@ -686,37 +709,37 @@ export function AccountTab() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label className="text-xs">{t.common.phone}</Label>
-                  <Input 
-                    placeholder="(00) 0000-0000" 
+                  <Input
+                    placeholder="(00) 0000-0000"
                     value={orgForm.telefone}
-                    onChange={(e) => setOrgForm(prev => ({ ...prev, telefone: e.target.value }))}
+                    onChange={(e) => setOrgForm((prev) => ({ ...prev, telefone: e.target.value }))}
                     disabled={!isAdmin}
                   />
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs">{t.settings.profile.whatsapp}</Label>
-                  <Input 
-                    placeholder="(00) 00000-0000" 
+                  <Input
+                    placeholder="(00) 00000-0000"
                     value={orgForm.whatsapp}
-                    onChange={(e) => setOrgForm(prev => ({ ...prev, whatsapp: e.target.value }))}
+                    onChange={(e) => setOrgForm((prev) => ({ ...prev, whatsapp: e.target.value }))}
                     disabled={!isAdmin}
                   />
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs">{t.common.email}</Label>
-                  <Input 
-                    placeholder="contato@empresa.com" 
+                  <Input
+                    placeholder="contato@empresa.com"
                     value={orgForm.email}
-                    onChange={(e) => setOrgForm(prev => ({ ...prev, email: e.target.value }))}
+                    onChange={(e) => setOrgForm((prev) => ({ ...prev, email: e.target.value }))}
                     disabled={!isAdmin}
                   />
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs">{t.settings.organization.website}</Label>
-                  <Input 
-                    placeholder="https://www.empresa.com" 
+                  <Input
+                    placeholder="https://www.empresa.com"
                     value={orgForm.website}
-                    onChange={(e) => setOrgForm(prev => ({ ...prev, website: e.target.value }))}
+                    onChange={(e) => setOrgForm((prev) => ({ ...prev, website: e.target.value }))}
                     disabled={!isAdmin}
                   />
                 </div>
@@ -743,14 +766,14 @@ export function AccountTab() {
                   <Percent className="h-3 w-3" />
                   Comissão Padrão (%)
                 </Label>
-                <Input 
+                <Input
                   type="number"
                   min="0"
                   max="100"
                   step="0.5"
                   placeholder="5"
                   value={orgForm.default_commission_percentage}
-                  onChange={(e) => setOrgForm(prev => ({ ...prev, default_commission_percentage: e.target.value }))}
+                  onChange={(e) => setOrgForm((prev) => ({ ...prev, default_commission_percentage: e.target.value }))}
                   disabled={!isAdmin}
                   className="w-32"
                 />
@@ -775,7 +798,6 @@ export function AccountTab() {
           </CardContent>
         </Card>
       </div>
-
     </div>
   );
 }
