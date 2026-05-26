@@ -152,7 +152,7 @@ Deno.serve(async (req) => {
     // d. Set user role
     await supabaseAdmin
       .from('user_roles')
-      .upsert({ user_id: authData.user.id, role: 'admin' });
+      .upsert({ user_id: userId, role: 'admin' });
 
     // 4. Update Onboarding Request
     const { error: updateError } = await supabaseAdmin
