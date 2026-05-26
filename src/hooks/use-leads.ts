@@ -337,35 +337,9 @@ export function useCreateLead() {
         source: lead.source || 'manual',
       });
 
-      // NOVO: Notificação de boas-vindas para novos leads via Dispatcher
-      if (data.id && lead.phone) {
-        try {
-          // Buscar nome do corretor para a variável
-          let corretorName = 'nossa equipe';
-          if (lead.assigned_user_id) {
-            const { data: assignedUser } = await supabase
-              .from('users')
-              .select('name')
-              .eq('id', lead.assigned_user_id)
-              .maybeSingle();
-            if (assignedUser?.name) corretorName = assignedUser.name;
-          }
+      // Mensagem de boas-vindas automática DESATIVADA por solicitação do produto.
+      // Não enviar nenhuma mensagem WhatsApp automática ao criar lead.
 
-          await notificationService.send({
-            eventKey: 'welcome_lead',
-            organizationId: organizationId,
-            userId: lead.assigned_user_id,
-            recipient: lead.phone,
-            variables: {
-              nome: lead.name,
-              corretor: corretorName
-            },
-            dedupeKey: `welcome:${data.id}`
-          });
-        } catch (err) {
-          console.error('Welcome notification failed:', err);
-        }
-      }
       
       return data;
     },
