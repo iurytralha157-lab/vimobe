@@ -25,14 +25,6 @@ Deno.serve(async (req) => {
     const EVOLUTION_API_URL = Deno.env.get("EVOLUTION_API_URL");
     const EVOLUTION_API_KEY = Deno.env.get("EVOLUTION_API_KEY");
 
-    if (!EVOLUTION_API_URL || !EVOLUTION_API_KEY) {
-      console.error("Evolution API not configured");
-      return new Response(
-        JSON.stringify({ success: false, error: "Evolution API not configured" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     // 1. Try to find the organization's notification session
@@ -129,7 +121,7 @@ Deno.serve(async (req) => {
       let proxyData;
       try {
         proxyData = JSON.parse(proxyText);
-      } catch (e) {
+      } catch (_error) {
         proxyData = { message: proxyText };
       }
 
@@ -143,7 +135,11 @@ Deno.serve(async (req) => {
 
       if (!proxyResponse.ok || proxyData?.ok === false) {
         return new Response(
-          JSON.stringify({ success: false, error: proxyData?.error || proxyData?.message || "Failed to send Go notification", data: proxyData }),
+          JSON.stringify({
+            success: false,
+            error: proxyData?.error || proxyData?.message || "Failed to send Go notification",
+            data: proxyData,
+          }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
@@ -151,6 +147,14 @@ Deno.serve(async (req) => {
       return new Response(
         JSON.stringify({ success: true, data: proxyData }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!EVOLUTION_API_URL || !EVOLUTION_API_KEY) {
+      console.error("Evolution API not configured");
+      return new Response(
+        JSON.stringify({ success: false, error: "Evolution API not configured" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
     
