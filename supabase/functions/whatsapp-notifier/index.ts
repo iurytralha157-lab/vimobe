@@ -36,16 +36,18 @@ Deno.serve(async (req) => {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     // 1. Try to find the organization's notification session
+    let notificationSession: any = null;
     let instanceName: string | null = null;
 
     const { data: session } = await supabase
       .from("whatsapp_sessions")
-      .select("id, instance_name, status")
+      .select("id, instance_name, status, provider")
       .eq("organization_id", organization_id)
       .eq("is_notification_session", true)
       .single();
 
     if (session?.status === "connected" && session.instance_name) {
+      notificationSession = session;
       instanceName = session.instance_name;
       console.log("Using org notification session:", instanceName);
     } else {
@@ -103,8 +105,54 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 4. Send the message via Evolution API
+    // 4. Send the message via the configured provider
     const formattedPhone = targetPhone.replace(/\D/g, "");
+
+    if (notificationSession?.provider === "evolution_go") {
+      const proxyResponse = await fetch(`${SUPABASE_URL}/functions/v1/evolution-go-proxy`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        },
+        body: JSON.stringify({
+          action: "send.text",
+          session_id: notificationSession.id,
+          body: {
+            number: formattedPhone,
+            text: message,
+          },
+        }),
+      });
+
+      const proxyText = await proxyResponse.text();
+      let proxyData;
+      try {
+        proxyData = JSON.parse(proxyText);
+      } catch (e) {
+        proxyData = { message: proxyText };
+      }
+
+      console.log("WhatsApp Go notification sent:", {
+        user: targetName,
+        phone: formattedPhone,
+        instance: instanceName,
+        status: proxyResponse.status,
+        ok: proxyData?.ok,
+      });
+
+      if (!proxyResponse.ok || proxyData?.ok === false) {
+        return new Response(
+          JSON.stringify({ success: false, error: proxyData?.error || proxyData?.message || "Failed to send Go notification", data: proxyData }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ success: true, data: proxyData }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
     
     const response = await fetch(`${EVOLUTION_API_URL}/message/sendText/${instanceName}`, {
       method: "POST",
