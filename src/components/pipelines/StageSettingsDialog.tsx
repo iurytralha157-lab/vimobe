@@ -26,8 +26,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { ColorPicker } from '@/components/ui/color-picker';
-import { Plus, Trash2, Phone, MessageCircle, Mail, FileText, Clock, Loader2, Lock } from 'lucide-react';
-import { useCadenceTemplates, useCreateCadenceTask, useDeleteCadenceTask, CadenceTemplate } from '@/hooks/use-cadences';
+import { Plus, Trash2, Phone, MessageCircle, Mail, FileText, Clock, Loader2, Lock, Pencil, Check, X } from 'lucide-react';
+import { useCadenceTemplates, useCreateCadenceTask, useDeleteCadenceTask, useUpdateCadenceTask } from '@/hooks/use-cadences';
 import { useCanEditCadences } from '@/hooks/use-can-edit-cadences';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -75,6 +75,12 @@ export function StageSettingsDialog({
   
   // Task dialog state
   const [taskDialogOpen, setTaskDialogOpen] = useState(false);
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [editingTask, setEditingTask] = useState({
+    dayOffset: 1,
+    type: 'call' as 'call' | 'message' | 'email' | 'note',
+    title: ''
+  });
   const [newTask, setNewTask] = useState({ 
     dayOffset: 1, 
     type: 'call' as 'call' | 'message' | 'email' | 'note', 
@@ -87,6 +93,7 @@ export function StageSettingsDialog({
   
   const { data: templates = [] } = useCadenceTemplates();
   const createTask = useCreateCadenceTask();
+  const updateTask = useUpdateCadenceTask();
   const deleteTask = useDeleteCadenceTask();
   
   // Find the cadence template for this stage
@@ -136,6 +143,33 @@ export function StageSettingsDialog({
   
   const handleDeleteTask = async (taskId: string) => {
     await deleteTask.mutateAsync(taskId);
+  };
+
+  const handleStartEditTask = (task: any) => {
+    setEditingTaskId(task.id);
+    setEditingTask({
+      dayOffset: task.day_offset ?? 0,
+      type: (task.type || 'call') as 'call' | 'message' | 'email' | 'note',
+      title: task.title || '',
+    });
+  };
+
+  const handleCancelEditTask = () => {
+    setEditingTaskId(null);
+    setEditingTask({ dayOffset: 1, type: 'call', title: '' });
+  };
+
+  const handleSaveTask = async () => {
+    if (!editingTaskId || !editingTask.title.trim()) return;
+
+    await updateTask.mutateAsync({
+      id: editingTaskId,
+      day_offset: editingTask.dayOffset,
+      type: editingTask.type,
+      title: editingTask.title.trim(),
+    });
+
+    handleCancelEditTask();
   };
 
   if (!stage) return null;
@@ -236,21 +270,95 @@ export function StageSettingsDialog({
                     const Icon = taskTypeIcons[task.type] || Clock;
                     return (
                       <TableRow key={task.id}>
-                        <TableCell className="font-mono">{task.day_offset}</TableCell>
-                        <TableCell>
-                          <Icon className="h-4 w-4 text-muted-foreground" />
-                        </TableCell>
-                        <TableCell>{task.title}</TableCell>
+                        {editingTaskId === task.id ? (
+                          <>
+                            <TableCell>
+                              <Input
+                                type="number"
+                                min="0"
+                                value={editingTask.dayOffset}
+                                onChange={(e) => setEditingTask({ ...editingTask, dayOffset: parseInt(e.target.value) || 0 })}
+                                className="h-8 w-16"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Select
+                                value={editingTask.type}
+                                onValueChange={(v) => setEditingTask({ ...editingTask, type: v as any })}
+                              >
+                                <SelectTrigger className="h-8 w-28">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="call">Ligação</SelectItem>
+                                  <SelectItem value="message">Mensagem</SelectItem>
+                                  <SelectItem value="email">Email</SelectItem>
+                                  <SelectItem value="note">Observação</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                value={editingTask.title}
+                                onChange={(e) => setEditingTask({ ...editingTask, title: e.target.value })}
+                                className="h-8"
+                                autoFocus
+                              />
+                            </TableCell>
+                          </>
+                        ) : (
+                          <>
+                            <TableCell className="font-mono">{task.day_offset}</TableCell>
+                            <TableCell>
+                              <Icon className="h-4 w-4 text-muted-foreground" />
+                            </TableCell>
+                            <TableCell>{task.title}</TableCell>
+                          </>
+                        )}
                         <TableCell>
                           {canEdit && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                              onClick={() => handleDeleteTask(task.id)}
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
+                            <div className="flex items-center justify-end gap-1">
+                              {editingTaskId === task.id ? (
+                                <>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7 text-primary"
+                                    onClick={handleSaveTask}
+                                    disabled={updateTask.isPending}
+                                  >
+                                    <Check className="h-3.5 w-3.5" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7"
+                                    onClick={handleCancelEditTask}
+                                  >
+                                    <X className="h-3.5 w-3.5" />
+                                  </Button>
+                                </>
+                              ) : (
+                                <>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                                    onClick={() => handleStartEditTask(task)}
+                                  >
+                                    <Pencil className="h-3.5 w-3.5" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                                    onClick={() => handleDeleteTask(task.id)}
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </Button>
+                                </>
+                              )}
+                            </div>
                           )}
                         </TableCell>
                       </TableRow>

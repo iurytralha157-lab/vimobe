@@ -123,8 +123,6 @@ Deno.serve(async (req) => {
           const previousNode = automation.nodes?.find((n: any) => n.id === connToCurrent?.source_node_id);
 
           if (previousNode && (previousNode.node_type === "delay" || previousNode.node_type === "wait")) {
-            const nodeConfig = previousNode.node_config || previousNode.config || {};
-            
             console.log(`Waking up execution ${exec.id} via node ${previousNode.id}`);
             
             // Legacy auto-reply and stage move logic removed to ensure only explicit flow bubbles are executed.
@@ -142,20 +140,17 @@ Deno.serve(async (req) => {
                 status: "running",
                 next_execution_at: null
               }).eq("id", exec.id);
-            } else if (nodeConfig.stop_on_reply === true) {
-              // 4. Verificar se deve parar a automação (apenas se não houver ramo de resposta específico)
-              console.log(`Stopping execution ${exec.id} due to stop_on_reply`);
+            } else {
+              // CRM default: a customer reply stops pending follow-up automations.
+              // Continuing a no-reply path after the lead answered can send duplicate messages.
+              console.log(`Stopping execution ${exec.id} because lead replied and no replied branch exists`);
               await supabaseAdmin.from("automation_executions").update({
-                status: "completed",
-                completed_at: new Date().toISOString()
+                status: "cancelled",
+                completed_at: new Date().toISOString(),
+                next_execution_at: null,
+                error_message: "Cancelado: lead respondeu",
               }).eq("id", exec.id);
               continue;
-            } else {
-              // Caso contrário, apenas continua o fluxo normal (pula o tempo de espera)
-              await supabaseAdmin.from("automation_executions").update({
-                status: "running",
-                next_execution_at: null
-              }).eq("id", exec.id);
             }
 
             // Trigger executor para continuar
@@ -227,15 +222,30 @@ Deno.serve(async (req) => {
         // Check trigger conditions
         const triggerConfig = automation.trigger_config || {};
         
-        // Fetch lead data for validation (user filter, source filter, meta form filter)
+        // Fetch lead data for validation (user/source/meta/campaign filters)
         let leadDataForValidation = null;
-        if (data.lead_id && (triggerConfig.filter_user_id || triggerConfig.source || triggerConfig.meta_form_id)) {
+        if (data.lead_id && (
+          triggerConfig.filter_user_id ||
+          triggerConfig.source ||
+          triggerConfig.meta_form_id ||
+          triggerConfig.campaign_id ||
+          triggerConfig.filter_campaign_id ||
+          triggerConfig.campaign_name ||
+          triggerConfig.filter_campaign_name
+        )) {
           const { data: lead } = await supabaseAdmin
             .from("leads")
             .select("assigned_user_id, source, meta_form_id")
             .eq("id", data.lead_id)
             .single();
-          leadDataForValidation = lead;
+          const { data: leadMeta } = await supabaseAdmin
+            .from("lead_meta")
+            .select("campaign_id, campaign_name, utm_campaign")
+            .eq("lead_id", data.lead_id)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          leadDataForValidation = { ...lead, lead_meta: leadMeta };
         }
         
         // Validate conditions based on trigger type
@@ -245,7 +255,9 @@ Deno.serve(async (req) => {
           {
             ...data,
             source: data.source || leadDataForValidation?.source,
-            meta_form_id: data.meta_form_id || leadDataForValidation?.meta_form_id
+            meta_form_id: data.meta_form_id || leadDataForValidation?.meta_form_id,
+            campaign_id: data.campaign_id || leadDataForValidation?.lead_meta?.campaign_id,
+            campaign_name: data.campaign_name || leadDataForValidation?.lead_meta?.campaign_name || leadDataForValidation?.lead_meta?.utm_campaign,
           },
           automation.created_by,
           leadDataForValidation?.assigned_user_id
@@ -410,6 +422,21 @@ function validateTriggerConditions(
       }
     } else if (leadAssignedUserId !== filterUserId) {
       console.log(`User filter not matched: lead.assigned_user_id=${leadAssignedUserId}, filter_user_id=${filterUserId}`);
+      return false;
+    }
+  }
+
+  const configuredCampaignId = (config.campaign_id || config.filter_campaign_id) as string | undefined;
+  if (configuredCampaignId && configuredCampaignId !== data.campaign_id) {
+    console.log(`Campaign id filter not matched: lead.campaign_id=${data.campaign_id}, filter.campaign_id=${configuredCampaignId}`);
+    return false;
+  }
+
+  const configuredCampaignName = (config.campaign_name || config.filter_campaign_name) as string | undefined;
+  if (configuredCampaignName) {
+    const leadCampaignName = String(data.campaign_name || "").trim().toLowerCase();
+    if (leadCampaignName !== configuredCampaignName.trim().toLowerCase()) {
+      console.log(`Campaign name filter not matched: lead.campaign_name=${data.campaign_name}, filter.campaign_name=${configuredCampaignName}`);
       return false;
     }
   }

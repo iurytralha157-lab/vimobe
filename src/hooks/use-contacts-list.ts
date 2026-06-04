@@ -29,6 +29,7 @@ export interface Contact {
   name: string;
   phone: string | null;
   email: string | null;
+  whatsapp_avatar_url: string | null;
   pipeline_id: string | null;
   stage_id: string | null;
   stage_name: string | null;

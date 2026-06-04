@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -233,13 +233,8 @@ export function RolesTab() {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <div>
-          <CardTitle className="flex items-center gap-2">
-            <Shield className="h-5 w-5" />
-            Funções e Permissões
-          </CardTitle>
-          <CardDescription>
-            Crie funções personalizadas e defina o que cada cargo pode acessar
-          </CardDescription>
+          <CardTitle className="text-xl font-semibold text-foreground">Funções e Permissões</CardTitle>
+          <CardDescription className="mt-0.5 text-sm text-muted-foreground">Crie funções personalizadas e defina o que cada cargo pode acessar</CardDescription>
         </div>
         <Sheet open={createDialogOpen} onOpenChange={(open) => {
           setCreateDialogOpen(open);

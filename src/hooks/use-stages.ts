@@ -30,6 +30,7 @@ const LEAD_PIPELINE_FIELDS = `
   id, name, phone, email, source, created_at, 
   stage_id, assigned_user_id, pipeline_id, message,
   stage_entered_at, organization_id,
+  whatsapp_avatar_url,
   deal_status, valor_interesse, property_id, lost_reason, won_at, lost_at,
   interest_property_id, interest_plan_id,
   first_response_at, first_response_seconds, first_response_is_automation,
@@ -61,8 +62,6 @@ async function getFilteredLeadIds(filters: {
   if (!hasTagFilter && !hasMetaFilter) return null;
 
   let currentFilteredIds: string[] | null = null;
-  const t0 = performance.now();
-
   try {
     if (hasTagFilter) {
       const { data: taggedLeads, error } = await supabase
@@ -76,11 +75,6 @@ async function getFilteredLeadIds(filters: {
         new Set((taggedLeads || []).map((item) => item.lead_id).filter(Boolean))
       );
       
-      console.log('[Pipeline filters] Tag filter result:', {
-        tagId: filters.filterTag,
-        count: currentFilteredIds.length
-      });
-
       if (currentFilteredIds.length === 0) return [];
     }
 
@@ -122,17 +116,6 @@ async function getFilteredLeadIds(filters: {
         new Set((metaLeads || []).map((item) => item.lead_id).filter(Boolean))
       );
 
-      // Log para auditoria de campanhas
-      if (metaLeads && metaLeads.length > 0) {
-        const sampleCampaigns = metaLeads.slice(0, 10).map(m => m.campaign_name || m.campaign_id);
-        console.log('[Pipeline filters] Meta filter audit:', {
-          selected: filters.filterCampaign,
-          foundIds: metaIds.length,
-          sampleFound: sampleCampaigns,
-          elapsedMs: Math.round(performance.now() - t0)
-        });
-      }
-
       if (currentFilteredIds === null) {
         currentFilteredIds = metaIds;
       } else {
@@ -173,8 +156,6 @@ export async function buildPipelineLeadQueryFilters(params: {
   apply: (query: any) => any;
 }> {
   const { filterUserId, filters = {} } = params;
-  const t0 = performance.now();
-
   const filteredLeadIds = await getFilteredLeadIds({
     filterTag: filters.filterTag,
     filterCampaign: filters.filterCampaign,
@@ -183,23 +164,6 @@ export async function buildPipelineLeadQueryFilters(params: {
   });
 
   const isEmpty = filteredLeadIds !== null && filteredLeadIds.length === 0;
-
-  console.log('[Pipeline filters] build', {
-    filterUserId,
-    dateRange: filters.dateRange
-      ? { from: filters.dateRange.from.toISOString(), to: filters.dateRange.to.toISOString() }
-      : null,
-    filterTag: filters.filterTag,
-    filterDealStatus: filters.filterDealStatus,
-    filterSource: filters.filterSource,
-    filterCampaign: filters.filterCampaign,
-    filterAdSet: filters.filterAdSet,
-    filterAd: filters.filterAd,
-    searchQuery: filters.searchQuery,
-    joinFilteredIds: filteredLeadIds?.length ?? null,
-    isEmpty,
-    buildMs: Math.round(performance.now() - t0),
-  });
 
   const apply = (query: any) => {
     const normalizedSearch = filters.searchQuery?.trim();
@@ -294,7 +258,6 @@ export function useStagesWithLeads(
     staleTime: 30000,
     gcTime: 1000 * 60 * 15,
     queryFn: async () => {
-      const tQueryStart = performance.now();
       try {
         let targetPipelineId = pipelineId;
         if (!targetPipelineId) {
@@ -325,10 +288,6 @@ export function useStagesWithLeads(
 
         // Curto-circuito quando o filtro de join não retornou nenhum id
         if (isEmpty) {
-          console.log('[Pipeline filters] short-circuit empty result', {
-            pipelineId: targetPipelineId,
-            elapsedMs: Math.round(performance.now() - tQueryStart),
-          });
           return stages.map((stage) => ({
             ...stage,
             leads: [],
@@ -384,14 +343,6 @@ export function useStagesWithLeads(
             enrichedLeadsByStage[lead.stage_id] = [];
           }
           enrichedLeadsByStage[lead.stage_id].push(lead);
-        });
-
-        console.log('[Pipeline filters] query result', {
-          pipelineId: targetPipelineId,
-          stages: stages.length,
-          loadedLeads: leads.length,
-          totalLeads,
-          elapsedMs: Math.round(performance.now() - tQueryStart),
         });
 
         return stages.map((stage) => ({
@@ -510,13 +461,6 @@ export function useLeadMetaFilters(dateRange?: { from: Date; to: Date } | null) 
       const ads = Array.from(uniqueAds.values())
         .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
         
-      console.log('[LeadMetaFilters] Loaded for period:', {
-        period: dateRange ? { from: dateRange.from.toISOString(), to: dateRange.to.toISOString() } : 'All time',
-        campaignsCount: campaigns.length,
-        adsetsCount: adsets.length,
-        adsCount: ads.length
-      });
-
       return { campaigns, adsets, ads };
     },
     staleTime: 1000 * 60 * 5,

@@ -15,9 +15,18 @@ interface ImageCropperProps {
   onCropComplete: (blob: Blob) => void;
   onCancel: () => void;
   aspect?: number;
+  title?: string;
+  circularCrop?: boolean;
 }
 
-export function ImageCropper({ imageSrc, onCropComplete, onCancel, aspect = 1 }: ImageCropperProps) {
+export function ImageCropper({
+  imageSrc,
+  onCropComplete,
+  onCancel,
+  aspect = 1,
+  title = 'Ajustar imagem',
+  circularCrop = false,
+}: ImageCropperProps) {
   const [crop, setCrop] = useState<Crop>();
   const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
   const imgRef = useRef<HTMLImageElement>(null);
@@ -75,7 +84,7 @@ export function ImageCropper({ imageSrc, onCropComplete, onCancel, aspect = 1 }:
     <Dialog open={true} onOpenChange={(open) => !open && onCancel()}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Ajustar Logo</DialogTitle>
+          <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
         <div className="flex flex-col items-center justify-center p-4 min-h-[300px] bg-muted/20 rounded-lg">
           <ReactCrop
@@ -83,7 +92,7 @@ export function ImageCropper({ imageSrc, onCropComplete, onCancel, aspect = 1 }:
             onChange={(c) => setCrop(c)}
             onComplete={(c) => setCompletedCrop(c)}
             aspect={aspect}
-            circularCrop={false}
+            circularCrop={circularCrop}
           >
             <img
               ref={imgRef}

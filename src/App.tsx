@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect } from "react";
+﻿import { lazy, Suspense, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -19,9 +19,33 @@ import { useSystemBranding } from "@/hooks/use-system-branding";
 import { SetupGuideDialog } from "@/components/setup-guide/SetupGuideDialog";
 import { MetricsPanel } from "@/components/MetricsPanel";
 import { ModuleGuard } from "@/components/guards/ModuleGuard";
+import { useSystemSettings } from "@/hooks/use-system-settings";
+import { useTheme } from "next-themes";
 
-// Public site root — separate bundle, no CRM providers
+// Public site root â€” separate bundle, no CRM providers
 const PublicAppRoot = lazy(() => import("./PublicAppRoot"));
+
+const SETUP_GUIDE_BLOCKED_PATH_PREFIXES = [
+  "/auth",
+  "/login",
+  "/signup",
+  "/onboarding",
+  "/reset-password",
+  "/site",
+  "/sites",
+  "/public",
+  "/api",
+  "/docs",
+];
+
+const shouldHideSetupGuide = (pathname: string) =>
+  SETUP_GUIDE_BLOCKED_PATH_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+
+function LegacyGamificationRedirect() {
+  const location = useLocation();
+  const nextPath = location.pathname.replace(/^\/gamification/, "/gamificacao");
+  return <Navigate to={`${nextPath}${location.search}${location.hash}`} replace />;
+}
 
 // Lazy imports - critical routes
 const Auth = lazy(() => import("./pages/Auth"));
@@ -90,6 +114,7 @@ const AdminHelpEditor = lazy(() => import("./pages/admin/AdminHelpEditor"));
 const AdminDatabase = lazy(() => import("./pages/admin/AdminDatabase"));
 const AdminOnboarding = lazy(() => import("./pages/admin/AdminOnboarding"));
 const AdminNotifications = lazy(() => import("./pages/admin/AdminNotifications"));
+const AdminAI = lazy(() => import("./pages/admin/AdminAI"));
 const Checkout = lazy(() => import("./pages/Checkout"));
 const EmailTemplates = lazy(() => import("./pages/admin/EmailTemplates"));
 const EmailLogs = lazy(() => import("./pages/admin/EmailLogs"));
@@ -143,23 +168,60 @@ const queryClient = new QueryClient({
     queries: {
       staleTime: 1000 * 30,
       gcTime: 1000 * 60 * 15,
-      refetchOnWindowFocus: true,
+      refetchOnWindowFocus: false,
       retry: 1,
     },
   },
 });
 
-const PageLoader = () => (
-  <div className="flex items-center justify-center p-8">
-    <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-  </div>
-);
+const PageLoader = () => {
+  const { data: systemSettings } = useSystemSettings();
+  const { resolvedTheme } = useTheme();
+  const logoUrl =
+    resolvedTheme === "dark"
+      ? systemSettings?.favicon_url_dark ||
+        systemSettings?.favicon_url_light ||
+        systemSettings?.logo_url_dark ||
+        systemSettings?.logo_url_light
+      : systemSettings?.favicon_url_light ||
+        systemSettings?.favicon_url_dark ||
+        systemSettings?.logo_url_light ||
+        systemSettings?.logo_url_dark;
 
-// ─── PROTECTED ROUTE ─────────────────────────────────────────────────────────
+  return (
+    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-background/75 backdrop-blur-[1px]">
+      <div className="flex flex-col items-center gap-4">
+        <div className="flex h-20 w-20 items-center justify-center">
+          <div className="flex h-16 w-16 items-center justify-center">
+            {logoUrl && (
+              <img
+                src={logoUrl}
+                alt="Vimob"
+                className="h-14 w-14 object-contain drop-shadow-[0_10px_22px_hsl(var(--primary)/0.22)]"
+                decoding="async"
+                loading="eager"
+              />
+            )}
+          </div>
+        </div>
+        <div className="text-center text-xs font-light uppercase tracking-[0.28em] text-muted-foreground">
+          Carregando
+          <span className="inline-flex w-6 justify-start text-primary">
+            <span className="animate-[loader-dot_1.4s_infinite]">.</span>
+            <span className="animate-[loader-dot_1.4s_infinite_0.2s]">.</span>
+            <span className="animate-[loader-dot_1.4s_infinite_0.4s]">.</span>
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// â”€â”€â”€ PROTECTED ROUTE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // FIX: aguarda authInitialized + organizationsLoaded + !isInitializingOrg
-// antes de tomar qualquer decisão de redirecionamento. Sem isso, há race
-// condition onde o usuário é mandado para /onboarding ou /auth enquanto
-// as orgs ainda estão carregando.
+// antes de tomar qualquer decisÃ£o de redirecionamento. Sem isso, hÃ¡ race
+// condition onde o usuÃ¡rio Ã© mandado para /onboarding ou /auth enquanto
+// as orgs ainda estÃ£o carregando.
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const {
     user,
@@ -173,31 +235,32 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     isInitializingOrg,
   } = useAuth();
 
-  // Aguarda inicialização completa antes de qualquer decisão
+  // Aguarda inicializaÃ§Ã£o completa antes de qualquer decisÃ£o
   if (loading || !authInitialized || !organizationsLoaded || isInitializingOrg) {
     return <PageLoader />;
   }
 
-  // Não autenticado → login
+  // NÃ£o autenticado â†’ login
   if (!user) return <Navigate to="/auth" replace />;
 
   const orgCount = userOrganizations?.length ?? 0;
   const hasValidActiveOrg = !!organization || !!impersonating || (isSuperAdmin && !organization);
 
-  // Tem orgs mas nenhuma ativa ainda → seleção
+  // Tem orgs mas nenhuma ativa ainda â†’ seleÃ§Ã£o
   if (orgCount > 0 && !hasValidActiveOrg) {
     return <Navigate to="/select-organization" replace />;
   }
 
-  // Sem orgs e não é superadmin → onboarding
+  // Sem orgs e nÃ£o Ã© superadmin â†’ seleÃ§Ã£o/estado de acesso.
+  // Onboarding fica disponÃ­vel apenas por link direto ou pelo CTA de cadastro.
   if (orgCount === 0 && !isSuperAdmin) {
-    return <Navigate to="/onboarding" replace />;
+    return <Navigate to="/select-organization" replace />;
   }
 
   return <>{children}</>;
 }
 
-// ─── APP ROUTES ──────────────────────────────────────────────────────────────
+// â”€â”€â”€ APP ROUTES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function AppRoutes() {
   const {
     user,
@@ -221,34 +284,34 @@ function AppRoutes() {
     }
   }, [user, loading, organizationsLoaded]);
 
-  // FIX: getDefaultRedirect agora é uma função pura sem console.log em produção.
-  // A lógica foi simplificada e comentada para deixar claro cada caso.
+  // FIX: getDefaultRedirect agora Ã© uma funÃ§Ã£o pura sem console.log em produÃ§Ã£o.
+  // A lÃ³gica foi simplificada e comentada para deixar claro cada caso.
   const getDefaultRedirect = (): string => {
     const orgCount = userOrganizations?.length ?? 0;
     const hasActiveOrg = !!organization || !!impersonating;
 
-    // SuperAdmin sem impersonation → painel admin
+    // SuperAdmin sem impersonation â†’ painel admin
     if (isSuperAdmin && !impersonating && !organization) return "/admin";
 
-    // Sem orgs e não é superadmin → seleção (que mostrará mensagem de sem acesso)
+    // Sem orgs e nÃ£o Ã© superadmin â†’ seleÃ§Ã£o/estado de acesso.
+    // NÃ£o redireciona automaticamente para onboarding.
     if (orgCount === 0 && !isSuperAdmin) return "/select-organization";
 
-    // Org ativa carregada → dashboard
+    // Org ativa carregada â†’ dashboard
+    if (orgCount > 1) return "/select-organization";
+
     if (hasActiveOrg) return "/dashboard";
 
-    // Múltiplas orgs sem nenhuma salva → seleção
-    const savedOrgId = user ? localStorage.getItem(`vimob_active_organization_${user.id}`) : null;
-    if (orgCount > 1 && !savedOrgId) return "/select-organization";
-
-    // Padrão (1 org, ou multi com org salva que será carregada pelo AuthContext)
+    // MÃºltiplas orgs sem nenhuma salva â†’ seleÃ§Ã£o
+    // PadrÃ£o (1 org, ou multi com org salva que serÃ¡ carregada pelo AuthContext)
     return "/dashboard";
   };
 
   // FIX: /auth agora redireciona para o destino correto baseado no perfil completo,
-  // não apenas para /dashboard fixo. Também removido o console.log de debug que
-  // vazava info em produção.
+  // nÃ£o apenas para /dashboard fixo. TambÃ©m removido o console.log de debug que
+  // vazava info em produÃ§Ã£o.
   const renderAuthRoute = () => {
-    // Aguarda inicialização básica do auth
+    // Aguarda inicializaÃ§Ã£o bÃ¡sica do auth
     if (loading || !authInitialized) return <PageLoader />;
 
     if (user) {
@@ -262,6 +325,7 @@ function AppRoutes() {
 
   const location = useLocation();
   const isResetPasswordRoute = location.pathname === "/reset-password";
+  const hideSetupGuide = isResetPasswordRoute || shouldHideSetupGuide(location.pathname);
 
   return (
     <>
@@ -272,13 +336,13 @@ function AppRoutes() {
           <TrialExpiredModal />
         </Suspense>
       )}
-      {!isResetPasswordRoute && user && profile && profile.organization_id && <SetupGuideDialog />}
+      {!hideSetupGuide && user && profile && profile.organization_id && <SetupGuideDialog />}
       <ScrollToTop />
       <div className={impersonating ? "pt-12" : ""}>
         {isSuperAdmin && <MetricsPanel />}
         <Suspense fallback={<PageLoader />}>
           <Routes>
-            {/* ── Rotas públicas ─────────────────────────────────────────── */}
+            {/* â”€â”€ Rotas pÃºblicas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
             <Route path="/auth" element={renderAuthRoute()} />
             <Route
               path="/reset-password"
@@ -314,8 +378,8 @@ function AppRoutes() {
             />
             <Route path="/assinatura" element={<Navigate to="/settings?tab=subscription" replace />} />
 
-            {/* ── Seleção de organização ─────────────────────────────────── */}
-            {/* FIX: lógica inline simplificada e consistente com ProtectedRoute */}
+            {/* â”€â”€ SeleÃ§Ã£o de organizaÃ§Ã£o â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+            {/* FIX: lÃ³gica inline simplificada e consistente com ProtectedRoute */}
             <Route
               path="/select-organization"
               element={
@@ -323,7 +387,11 @@ function AppRoutes() {
                   <PageLoader />
                 ) : !user ? (
                   <Navigate to="/auth" replace />
-                ) : (userOrganizations?.length ?? 0) === 1 && organization ? (
+                ) : (userOrganizations?.length ?? 0) === 0 && !isSuperAdmin ? (
+                  <Suspense fallback={<PageLoader />}>
+                    <SelectOrganization />
+                  </Suspense>
+                ) : (userOrganizations?.length ?? 0) <= 1 ? (
                   <Navigate to="/dashboard" replace />
                 ) : (
                   <Suspense fallback={<PageLoader />}>
@@ -333,7 +401,7 @@ function AppRoutes() {
               }
             />
 
-            {/* ── Super Admin ────────────────────────────────────────────── */}
+            {/* â”€â”€ Super Admin â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
             <Route
               path="/admin"
               element={
@@ -407,6 +475,14 @@ function AppRoutes() {
               }
             />
             <Route
+              path="/admin/ai"
+              element={
+                <SuperAdminRoute>
+                  <AdminAI />
+                </SuperAdminRoute>
+              }
+            />
+            <Route
               path="/admin/requests"
               element={
                 <SuperAdminRoute>
@@ -455,7 +531,7 @@ function AppRoutes() {
               }
             />
 
-            {/* ── Raiz ──────────────────────────────────────────────────── */}
+            {/* â”€â”€ Raiz â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
             {/* FIX: / agora aguarda auth completo antes de redirecionar,
                 evitando flash de /dashboard antes de saber o destino real */}
             <Route
@@ -469,7 +545,7 @@ function AppRoutes() {
               }
             />
 
-            {/* ── CRM Principal ─────────────────────────────────────────── */}
+            {/* â”€â”€ CRM Principal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
             <Route
               path="/dashboard"
               element={
@@ -631,7 +707,7 @@ function AppRoutes() {
               }
             />
 
-            {/* ── Financeiro ────────────────────────────────────────────── */}
+            {/* â”€â”€ Financeiro â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
             <Route
               path="/financeiro"
               element={
@@ -721,7 +797,7 @@ function AppRoutes() {
               }
             />
 
-            {/* ── Obras ─────────────────────────────────────────────────── */}
+            {/* â”€â”€ Obras â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
             <Route
               path="/obras/obras"
               element={
@@ -811,7 +887,7 @@ function AppRoutes() {
               }
             />
 
-            {/* ── Telecom ───────────────────────────────────────────────── */}
+            {/* â”€â”€ Telecom â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
             <Route
               path="/plans"
               element={
@@ -845,7 +921,7 @@ function AppRoutes() {
               }
             />
 
-            {/* ── Gamificação ───────────────────────────────────────────── */}
+            {/* â”€â”€ GamificaÃ§Ã£o â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
             {/* FIX: removida rota <Route index> duplicada dentro de /gamificacao */}
             <Route
               path="/gamificacao"
@@ -863,8 +939,9 @@ function AppRoutes() {
               <Route path="historico" element={<GamificationHistory />} />
               <Route path="configuracoes" element={<GamificationAdmin />} />
             </Route>
+            <Route path="/gamification/*" element={<LegacyGamificationRedirect />} />
 
-            {/* ── Automações ────────────────────────────────────────────── */}
+            {/* â”€â”€ AutomaÃ§Ãµes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
             <Route
               path="/automations"
               element={
@@ -876,9 +953,9 @@ function AppRoutes() {
               }
             />
 
-            {/* ── Site público / docs ───────────────────────────────────── */}
+            {/* â”€â”€ Site pÃºblico / docs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
             <Route path="/site/preview/*" element={<PreviewSiteWrapper />} />
-            <Route path="/site/previsualização/*" element={<PreviewSiteWrapper />} />
+            <Route path="/site/previsualizaÃ§Ã£o/*" element={<PreviewSiteWrapper />} />
             <Route
               path="/docs/api"
               element={

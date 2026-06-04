@@ -1,14 +1,15 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+﻿import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import { useState, useEffect, useCallback } from "react";
 
 /**
- * Feature flag to enable/disable creation of new Evolution Go instances.
- * When false, all new connections will use the standard Evolution provider.
+ * Evolution Go is the only provider enabled for new WhatsApp connections.
+ * Legacy Evolution sessions may still exist in the database until they are migrated/deleted.
  */
-export const EVOLUTION_GO_CREATION_ENABLED = false;
+export const EVOLUTION_GO_CREATION_ENABLED = true;
+export const WHATSAPP_LEGACY_EVOLUTION_ENABLED = false;
 
 export type WhatsAppProvider = "evolution" | "evolution_go";
 
@@ -88,8 +89,8 @@ export function useWhatsAppSessions() {
     queryFn: async () => {
       if (!profile?.id || !profile?.organization_id) return [] as WhatsAppSession[];
 
-      // Isolamento estrito: apenas conexões cujo dono é o próprio usuário,
-      // dentro da organização ativa. Não há exceção para admin de organização.
+      // Isolamento estrito: apenas conexÃµes cujo dono Ã© o prÃ³prio usuário,
+      // dentro da organização ativa. NÃ£o hÃ¡ exceÃ§Ã£o para admin de organização.
       const { data, error } = await supabase
         .from("whatsapp_sessions")
         .select(`
@@ -174,13 +175,50 @@ export function useCreateWhatsAppSession() {
         throw new Error("User not authenticated");
       }
       const displayName = typeof input === "string" ? input : input.displayName;
-      let provider: WhatsAppProvider =
-        typeof input === "string" ? "evolution" : input.provider || "evolution";
-      
-      // Security: Force 'evolution' if Evolution Go creation is disabled
-      if (!EVOLUTION_GO_CREATION_ENABLED && provider === "evolution_go") {
-        console.warn("Evolution Go creation is disabled. Defaulting to standard Evolution.");
-        provider = "evolution";
+      const requestedProvider: WhatsAppProvider =
+        typeof input === "string" ? "evolution_go" : input.provider || "evolution_go";
+      const provider: WhatsAppProvider = "evolution_go";
+
+      if (requestedProvider !== "evolution_go") {
+        console.warn("Legacy Evolution creation is disabled. Forcing Evolution Go.");
+      }
+
+      const { data: organization, error: orgError } = await supabase
+        .from("organizations")
+        .select("plan_id, max_whatsapp_sessions_override")
+        .eq("id", profile.organization_id)
+        .single();
+
+      if (orgError) throw orgError;
+
+      let maxWhatsAppSessions: number | null | undefined = (organization as any)?.max_whatsapp_sessions_override;
+
+      if ((maxWhatsAppSessions === null || maxWhatsAppSessions === undefined) && organization?.plan_id) {
+        const { data: plan, error: planError } = await supabase
+          .from("admin_subscription_plans")
+          .select("max_whatsapp_sessions")
+          .eq("id", organization.plan_id)
+          .single();
+
+        if (planError) {
+          console.warn("[useCreateWhatsAppSession] Could not read plan WhatsApp limit:", planError);
+        }
+
+        maxWhatsAppSessions = plan?.max_whatsapp_sessions;
+      }
+
+      if (typeof maxWhatsAppSessions === "number" && maxWhatsAppSessions > 0) {
+        const { count, error: countError } = await supabase
+          .from("whatsapp_sessions")
+          .select("id", { count: "exact", head: true })
+          .eq("organization_id", profile.organization_id)
+          .eq("is_active", true);
+
+        if (countError) throw countError;
+
+        if ((count || 0) >= maxWhatsAppSessions) {
+          throw new Error(`Limite do plano atingido: máximo de ${maxWhatsAppSessions} WhatsApp${maxWhatsAppSessions === 1 ? "" : "s"}.`);
+        }
       }
 
       // Generate unique instance name: {sanitized_name}_{org_prefix}_{random_suffix}
@@ -221,17 +259,13 @@ export function useCreateWhatsAppSession() {
       }
 
       // Provision instance on the chosen provider
-      const proxyFn = provider === "evolution_go" ? "evolution-go-proxy" : "evolution-proxy";
-      const webhookUrl = provider === "evolution_go"
-        ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/evolution-go-webhook`
-        : undefined;
+      const proxyFn = "evolution-go-proxy";
+      const webhookUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/evolution-go-webhook`;
 
-      const body = provider === "evolution_go"
-        ? {
-            action: "instance.create",
-            body: { name: uniqueInstanceName, token },
-          }
-        : { action: "createInstance", instanceName: uniqueInstanceName };
+      const body = {
+        action: "instance.create",
+        body: { name: uniqueInstanceName, token },
+      };
 
       const { data: result, error: fnError } = await supabase.functions.invoke(proxyFn, { body });
 
@@ -240,7 +274,7 @@ export function useCreateWhatsAppSession() {
         throw fnError;
       }
 
-      const failed = provider === "evolution_go" ? !result?.ok : !result?.success;
+      const failed = !result?.ok;
       if (failed) {
         await supabase.from("whatsapp_sessions").delete().eq("id", session.id);
         const msg =
@@ -258,36 +292,63 @@ export function useCreateWhatsAppSession() {
         result?.data?.instance?.id || 
         result?.data?.id ||
         (result?.data as any)?.instance?.uuid;
+      const createNotificationSafeApplied =
+        result?.notificationSafeSettings?.ok === true
+          ? { notification_safe_settings_applied_at: new Date().toISOString() }
+          : {};
 
       if (evoId) {
         await supabase
           .from("whatsapp_sessions")
           .update({ 
             instance_id: evoId,
-            advanced_settings: { token }
+            advanced_settings: {
+              ...((session as any).advanced_settings || {}),
+              token,
+              ...createNotificationSafeApplied,
+            }
           })
           .eq("id", session.id);
         (session as any).instance_id = evoId;
-        (session as any).advanced_settings = { token };
+        (session as any).advanced_settings = {
+          ...((session as any).advanced_settings || {}),
+          token,
+          ...createNotificationSafeApplied,
+        };
       }
 
-      // For evolution_go: trigger connect with webhook
-      if (provider === "evolution_go") {
-        await supabase.functions.invoke("evolution-go-proxy", {
-          body: {
-            action: "instance.connect",
-            session_id: session.id,
-            instance_id: evoId,
-            token,
-            body: { 
-              webhookUrl: `${webhookUrl}?session_id=${session.id}&instance_id=${evoId}`, 
-              subscribe: ["ALL"], 
-              immediate: true 
-            },
+      const configuredWebhookUrl = `${webhookUrl}?session_id=${session.id}&instance_id=${evoId || ""}`;
+      const { data: connectResult } = await supabase.functions.invoke("evolution-go-proxy", {
+        body: {
+          action: "instance.connect",
+          session_id: session.id,
+          instance_id: evoId,
+          token,
+          body: { 
+            webhookUrl: configuredWebhookUrl, 
+            subscribe: ["ALL"], 
+            immediate: true 
           },
-        });
-      }
+        },
+      });
 
+      const notificationSafeApplied =
+        connectResult?.notificationSafeSettings?.ok === true
+          ? { notification_safe_settings_applied_at: new Date().toISOString() }
+          : {};
+
+      await supabase
+        .from("whatsapp_sessions")
+        .update({
+          advanced_settings: {
+            ...((session as any).advanced_settings || {}),
+            token,
+            webhook_url: configuredWebhookUrl,
+            webhook_last_configured_at: new Date().toISOString(),
+            ...notificationSafeApplied,
+          },
+        })
+        .eq("id", session.id);
 
 
       return {
@@ -322,13 +383,13 @@ export function useDeleteWhatsAppSession() {
     mutationFn: async (session: WhatsAppSession) => {
       // Try to delete from Evolution API first
       try {
-        const isGo = session.provider === "evolution_go";
-        const proxyFn = isGo ? "evolution-go-proxy" : "evolution-proxy";
-        const action = isGo ? "instance.delete" : "deleteInstance";
+        if (session.provider !== "evolution_go") {
+          throw new Error("Evolution legada esta desativada.");
+        }
         
-        await supabase.functions.invoke(proxyFn, {
+        await supabase.functions.invoke("evolution-go-proxy", {
           body: {
-            action,
+            action: "instance.delete",
             instanceName: session.instance_name,
             instance_id: session.instance_id,
           },
@@ -369,13 +430,7 @@ export function useGetQRCode() {
     ) => {
       // Legacy: string => evolution-proxy
       if (typeof arg === "string") {
-        const { data, error } = await supabase.functions.invoke("evolution-proxy", {
-          body: { action: "getQRCode", instanceName: arg },
-        });
-        if (error) throw error;
-        if (!data.success) throw new Error(data.error || "Failed to get QR code");
-        const qr = data.data?.qrcode || data.data?.base64 || data.data?.code;
-        return { base64: qr, qrcode: qr };
+        throw new Error("Evolution legada esta desativada. Crie uma nova conexao Evolution Go.");
       }
 
       if (arg.provider === "evolution_go") {
@@ -388,13 +443,7 @@ export function useGetQRCode() {
         return { base64: qr, qrcode: qr };
       }
 
-      const { data, error } = await supabase.functions.invoke("evolution-proxy", {
-        body: { action: "getQRCode", instanceName: arg.instanceName },
-      });
-      if (error) throw error;
-      if (!data.success) throw new Error(data.error || "Failed to get QR code");
-      const qr = data.data?.qrcode || data.data?.base64 || data.data?.code;
-      return { base64: qr, qrcode: qr };
+      throw new Error("Evolution legada esta desativada. Crie uma nova conexao Evolution Go.");
     },
   });
 }
@@ -405,12 +454,7 @@ export function useGetConnectionStatus() {
       arg: string | { provider: WhatsAppProvider; instanceName: string; sessionId?: string; instanceId?: string | null },
     ) => {
       if (typeof arg === "string") {
-        const { data, error } = await supabase.functions.invoke("evolution-proxy", {
-          body: { action: "getConnectionStatus", instanceName: arg },
-        });
-        if (error) throw error;
-        if (!data.success) throw new Error(data.error || "Failed to get status");
-        return data.data;
+        throw new Error("Evolution legada esta desativada. Crie uma nova conexao Evolution Go.");
       }
 
       if (arg.provider === "evolution_go") {
@@ -442,12 +486,7 @@ export function useGetConnectionStatus() {
         };
       }
 
-      const { data, error } = await supabase.functions.invoke("evolution-proxy", {
-        body: { action: "getConnectionStatus", instanceName: arg.instanceName },
-      });
-      if (error) throw error;
-      if (!data.success) throw new Error(data.error || "Failed to get status");
-      return data.data;
+      throw new Error("Evolution legada esta desativada. Crie uma nova conexao Evolution Go.");
     },
   });
 }
@@ -456,18 +495,7 @@ export function useGetConnectionStatus() {
 export function useSetWebhook() {
   return useMutation({
     mutationFn: async ({ instanceName, webhookUrl }: { instanceName: string; webhookUrl: string }) => {
-      const { data, error } = await supabase.functions.invoke("evolution-proxy", {
-        body: {
-          action: "setWebhook",
-          instanceName,
-          webhookUrl,
-        },
-      });
-
-      if (error) throw error;
-      if (!data.success) throw new Error(data.error || "Failed to set webhook");
-
-      return data.data;
+      throw new Error("Evolution legada esta desativada. Webhook deve usar evolution-go-webhook.");
     },
   });
 }
@@ -548,27 +576,70 @@ export function useRecreateWhatsAppInstance() {
 
   return useMutation({
     mutationFn: async (session: WhatsAppSession) => {
-      // Recreate instance in Evolution API with the same instance name
-      const { data: result, error: fnError } = await supabase.functions.invoke(
-        "evolution-proxy",
-        {
-          body: {
-            action: "createInstance",
-            instanceName: session.instance_name,
-          },
-        }
-      );
+      if (session.provider !== "evolution_go") {
+        throw new Error("Evolution legada esta desativada. Exclua esta sessao e crie uma nova Evolution Go.");
+      }
+
+      const token = (session.advanced_settings as any)?.token || Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      const { data: result, error: fnError } = await supabase.functions.invoke("evolution-go-proxy", {
+        body: {
+          action: "instance.create",
+          body: { name: session.instance_name, token },
+        },
+      });
 
       if (fnError) throw fnError;
 
-      if (!result.success) {
+      if (!result?.ok) {
         throw new Error(result.error || "Failed to recreate instance");
       }
+
+      const evoId: string | undefined =
+        result?.data?.data?.id ||
+        result?.data?.instance?.id ||
+        result?.data?.id ||
+        (result?.data as any)?.instance?.uuid;
+      const createNotificationSafeApplied =
+        result?.notificationSafeSettings?.ok === true
+          ? { notification_safe_settings_applied_at: new Date().toISOString() }
+          : {};
+
+      const webhookUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/evolution-go-webhook`;
+      const configuredWebhookUrl = `${webhookUrl}?session_id=${session.id}&instance_id=${evoId || ""}`;
+      const { data: connectResult } = await supabase.functions.invoke("evolution-go-proxy", {
+        body: {
+          action: "instance.connect",
+          session_id: session.id,
+          instance_id: evoId,
+          token,
+          body: {
+            webhookUrl: configuredWebhookUrl,
+            subscribe: ["ALL"],
+            immediate: true,
+          },
+        },
+      });
+
+      const notificationSafeApplied =
+        connectResult?.notificationSafeSettings?.ok === true
+          ? { notification_safe_settings_applied_at: new Date().toISOString() }
+          : {};
 
       // Update database status to disconnected (ready to scan QR)
       await supabase
         .from("whatsapp_sessions")
-        .update({ status: "disconnected" })
+        .update({
+          status: "disconnected",
+          instance_id: evoId,
+          advanced_settings: {
+            ...(session.advanced_settings || {}),
+            token,
+            webhook_url: configuredWebhookUrl,
+            webhook_last_configured_at: new Date().toISOString(),
+            ...createNotificationSafeApplied,
+            ...notificationSafeApplied,
+          },
+        })
         .eq("id", session.id);
 
       return { session, evolutionData: result.data };
@@ -595,10 +666,15 @@ export function useLogoutSession() {
 
   return useMutation({
     mutationFn: async (session: WhatsAppSession) => {
-      const { data, error } = await supabase.functions.invoke("evolution-proxy", {
+      if (session.provider !== "evolution_go") {
+        throw new Error("Evolution legada esta desativada. Exclua esta sessao e crie uma nova Evolution Go.");
+      }
+
+      const { data, error } = await supabase.functions.invoke("evolution-go-proxy", {
         body: {
-          action: "logoutInstance",
-          instanceName: session.instance_name,
+          action: "instance.logout",
+          session_id: session.id,
+          instance_id: session.instance_id ?? undefined,
         },
       });
 
@@ -614,10 +690,11 @@ export function useLogoutSession() {
       try {
         const { notificationService } = await import('@/services/NotificationService');
         await notificationService.send({
-          templateSlug: 'whatsapp_disconnected_system',
+          eventKey: 'whatsapp_disconnected',
           organizationId: session.organization_id,
           userId: session.owner_user_id,
           variables: {
+            session_name: session.display_name || session.instance_name,
             display_name: session.display_name || session.instance_name
           }
         });
@@ -655,7 +732,7 @@ export function useQRCodePolling(session: WhatsAppSession | null) {
     
     const pollQRCode = async () => {
       try {
-        const provider = (session.provider || "evolution") as WhatsAppProvider;
+        const provider = (session.provider || "evolution_go") as WhatsAppProvider;
         const arg = {
           provider,
           instanceName: session.instance_name,

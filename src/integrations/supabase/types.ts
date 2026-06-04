@@ -1,4 +1,4 @@
-export type Json =
+﻿export type Json =
   | string
   | number
   | boolean
@@ -67,10 +67,12 @@ export type Database = {
           id: string
           is_active: boolean | null
           max_leads: number | null
+          max_whatsapp_sessions: number | null
           max_users: number | null
           modules: string[] | null
           name: string
           price: number
+          trial_enabled: boolean | null
           trial_days: number | null
           updated_at: string | null
         }
@@ -81,10 +83,12 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           max_leads?: number | null
+          max_whatsapp_sessions?: number | null
           max_users?: number | null
           modules?: string[] | null
           name: string
           price?: number
+          trial_enabled?: boolean | null
           trial_days?: number | null
           updated_at?: string | null
         }
@@ -95,10 +99,12 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           max_leads?: number | null
+          max_whatsapp_sessions?: number | null
           max_users?: number | null
           modules?: string[] | null
           name?: string
           price?: number
+          trial_enabled?: boolean | null
           trial_days?: number | null
           updated_at?: string | null
         }
@@ -3015,7 +3021,7 @@ export type Database = {
           referrer: string | null
           screen_height: number | null
           screen_width: number | null
-          session_id: string
+          session_id: string | null
           utm_campaign: string | null
           utm_medium: string | null
           utm_source: string | null
@@ -3034,7 +3040,7 @@ export type Database = {
           referrer?: string | null
           screen_height?: number | null
           screen_width?: number | null
-          session_id: string
+          session_id?: string | null
           utm_campaign?: string | null
           utm_medium?: string | null
           utm_source?: string | null
@@ -3053,7 +3059,7 @@ export type Database = {
           referrer?: string | null
           screen_height?: number | null
           screen_width?: number | null
-          session_id?: string
+          session_id?: string | null
           utm_campaign?: string | null
           utm_medium?: string | null
           utm_source?: string | null
@@ -4651,6 +4657,7 @@ export type Database = {
           company_phone: string | null
           company_whatsapp: string | null
           confirmed_value: number | null
+          creci: string | null
           created_at: string | null
           custom_domain: string | null
           facebook: string | null
@@ -4694,6 +4701,7 @@ export type Database = {
           company_phone?: string | null
           company_whatsapp?: string | null
           confirmed_value?: number | null
+          creci?: string | null
           created_at?: string | null
           custom_domain?: string | null
           facebook?: string | null
@@ -4737,6 +4745,7 @@ export type Database = {
           company_phone?: string | null
           company_whatsapp?: string | null
           confirmed_value?: number | null
+          creci?: string | null
           created_at?: string | null
           custom_domain?: string | null
           facebook?: string | null
@@ -5206,6 +5215,7 @@ export type Database = {
           complemento: string | null
           created_at: string
           created_by: string | null
+          creci: string | null
           default_commission_percentage: number | null
           email: string | null
           endereco: string | null
@@ -5216,6 +5226,7 @@ export type Database = {
           last_access_at: string | null
           logo_size: number | null
           logo_url: string | null
+          max_whatsapp_sessions_override: number | null
           max_users: number
           name: string
           next_billing_date: string | null
@@ -5251,6 +5262,7 @@ export type Database = {
           complemento?: string | null
           created_at?: string
           created_by?: string | null
+          creci?: string | null
           default_commission_percentage?: number | null
           email?: string | null
           endereco?: string | null
@@ -5261,6 +5273,7 @@ export type Database = {
           last_access_at?: string | null
           logo_size?: number | null
           logo_url?: string | null
+          max_whatsapp_sessions_override?: number | null
           max_users?: number
           name: string
           next_billing_date?: string | null
@@ -5296,6 +5309,7 @@ export type Database = {
           complemento?: string | null
           created_at?: string
           created_by?: string | null
+          creci?: string | null
           default_commission_percentage?: number | null
           email?: string | null
           endereco?: string | null
@@ -5306,6 +5320,7 @@ export type Database = {
           last_access_at?: string | null
           logo_size?: number | null
           logo_url?: string | null
+          max_whatsapp_sessions_override?: number | null
           max_users?: number
           name?: string
           next_billing_date?: string | null
@@ -5573,6 +5588,7 @@ export type Database = {
           posicao_localizacao: string | null
           preco: number | null
           projeto_aprovado: boolean | null
+          public_address_visibility: string
           proximidades: string[] | null
           quartos: number | null
           referencia_alternativa: string | null
@@ -5672,6 +5688,7 @@ export type Database = {
           posicao_localizacao?: string | null
           preco?: number | null
           projeto_aprovado?: boolean | null
+          public_address_visibility?: string
           proximidades?: string[] | null
           quartos?: number | null
           referencia_alternativa?: string | null
@@ -5771,6 +5788,7 @@ export type Database = {
           posicao_localizacao?: string | null
           preco?: number | null
           projeto_aprovado?: boolean | null
+          public_address_visibility?: string
           proximidades?: string[] | null
           quartos?: number | null
           referencia_alternativa?: string | null
@@ -6731,7 +6749,7 @@ export type Database = {
           referrer: string | null
           screen_height: number | null
           screen_width: number | null
-          session_id: string
+          session_id: string | null
           utm_campaign: string | null
           utm_medium: string | null
           utm_source: string | null
@@ -6749,7 +6767,7 @@ export type Database = {
           referrer?: string | null
           screen_height?: number | null
           screen_width?: number | null
-          session_id: string
+          session_id?: string | null
           utm_campaign?: string | null
           utm_medium?: string | null
           utm_source?: string | null
@@ -6767,7 +6785,7 @@ export type Database = {
           referrer?: string | null
           screen_height?: number | null
           screen_width?: number | null
-          session_id?: string
+          session_id?: string | null
           utm_campaign?: string | null
           utm_medium?: string | null
           utm_source?: string | null
@@ -8076,7 +8094,7 @@ export type Database = {
           organization_id: string | null
           presence_updated_at: string | null
           remote_jid: string
-          session_id: string
+          session_id: string | null
           unread_count: number | null
           updated_at: string
         }
@@ -8096,7 +8114,7 @@ export type Database = {
           organization_id?: string | null
           presence_updated_at?: string | null
           remote_jid: string
-          session_id: string
+          session_id?: string | null
           unread_count?: number | null
           updated_at?: string
         }
@@ -8116,7 +8134,7 @@ export type Database = {
           organization_id?: string | null
           presence_updated_at?: string | null
           remote_jid?: string
-          session_id?: string
+          session_id?: string | null
           unread_count?: number | null
           updated_at?: string
         }
@@ -8452,7 +8470,7 @@ export type Database = {
           sender_jid: string | null
           sender_name: string | null
           sent_at: string
-          session_id: string
+          session_id: string | null
           status: string | null
         }
         Insert: {
@@ -8475,7 +8493,7 @@ export type Database = {
           sender_jid?: string | null
           sender_name?: string | null
           sent_at?: string
-          session_id: string
+          session_id: string | null
           status?: string | null
         }
         Update: {
@@ -8498,7 +8516,7 @@ export type Database = {
           sender_jid?: string | null
           sender_name?: string | null
           sent_at?: string
-          session_id?: string
+          session_id?: string | null
           status?: string | null
         }
         Relationships: [
@@ -9227,3 +9245,5 @@ export const Constants = {
     },
   },
 } as const
+
+

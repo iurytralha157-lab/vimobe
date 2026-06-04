@@ -78,13 +78,19 @@ export default function Auth() {
   const [showPassword, setShowPassword] = useState(false);
   const [capsLockOn, setCapsLockOn] = useState(false);
   const [mode, setMode] = useState<"login" | "forgot">("login");
-  const [loginData, setLoginData] = useState({ email: "", password: "" });
-  const [forgotEmail, setForgotEmail] = useState("");
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [bgLoaded, setBgLoaded] = useState(false);
   const [rememberMe, setRememberMe] = useState(() => {
     return localStorage.getItem("remember_me") === "true";
   });
+  const [loginData, setLoginData] = useState(() => {
+    const remember = localStorage.getItem("remember_me") === "true";
+    const savedEmail = remember ? localStorage.getItem("remembered_email") || "" : "";
+    return { email: savedEmail, password: "" };
+  });
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [bgLoaded, setBgLoaded] = useState(false);
+  // Cooldown local apenas para evitar spam visual de solicitação de reset.
+  // A regra real de segurança da troca de senha fica na Edge Function `change-password`.
   const [lastResetTime, setLastResetTime] = useState<number>(() => {
     const stored = localStorage.getItem("last_password_reset");
     return stored ? parseInt(stored, 10) : 0;
@@ -107,9 +113,10 @@ export default function Auth() {
       destination = "/admin";
     } else if (orgCount === 0 && !isSuperAdmin) {
       destination = "/select-organization";
-    } else if (!hasActiveOrg && orgCount > 1) {
-      const savedOrgId = localStorage.getItem(`vimob_active_organization_${user.id}`);
-      if (!savedOrgId) destination = "/select-organization";
+    } else if (orgCount > 1) {
+      destination = "/select-organization";
+    } else if (!hasActiveOrg) {
+      destination = "/dashboard";
     }
 
     navigate(destination, { replace: true });
@@ -209,6 +216,11 @@ export default function Auth() {
         return;
       }
 
+      if (rememberMe) {
+        localStorage.setItem("remembered_email", loginData.email);
+      } else {
+        localStorage.removeItem("remembered_email");
+      }
       loginAttempts.resetOnSuccess();
       securityLogger.logLoginAttempt(loginData.email, true);
       // O redirecionamento acontece automaticamente via useEffect acima
@@ -451,7 +463,7 @@ export default function Auth() {
                   Entrar
                 </Button>
 
-                <div className="text-center">
+                <div className="flex items-center justify-center gap-3 text-center">
                   <button
                     type="button"
                     onClick={() => switchMode("forgot")}
@@ -459,6 +471,15 @@ export default function Auth() {
                     className="text-sm text-primary hover:underline disabled:opacity-50"
                   >
                     Esqueceu sua senha?
+                  </button>
+                  <span className="text-xs text-muted-foreground">•</span>
+                  <button
+                    type="button"
+                    onClick={() => navigate("/onboarding")}
+                    disabled={loginAttempts.isLockedOut}
+                    className="text-sm text-primary hover:underline disabled:opacity-50"
+                  >
+                    Cadastre-se
                   </button>
                 </div>
               </form>

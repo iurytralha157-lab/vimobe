@@ -52,7 +52,7 @@ export default function PublicAbout() {
 
   const stats = siteConfig?.about_stats?.length ? siteConfig?.about_stats : defaultStats;
   const checkmarks = siteConfig?.about_checkmarks?.length ? siteConfig?.about_checkmarks : defaultCheckmarks;
-  const features = (siteConfig?.about_features?.length ? siteConfig?.about_features : defaultFeatures).map(f => ({
+  const features = (siteConfig?.about_features?.length ? siteConfig.about_features : defaultFeatures).map(f => ({
     ...f,
     Icon: iconMap[f.icon] || Building,
   }));

@@ -43,6 +43,59 @@ function isValidBase64(str: string): boolean {
   return base64Regex.test(str);
 }
 
+function firstPresent(...values: any[]) {
+  return values.find((value) => value !== undefined && value !== null && value !== "");
+}
+
+function normalizeGoMediaPayload(media: any) {
+  if (!media || typeof media !== "object") return null;
+  return {
+    ...media,
+    url: firstPresent(media.url, media.URL, media.Url, media.mediaUrl, media.MediaUrl),
+    directPath: firstPresent(media.directPath, media.DirectPath),
+    mediaKey: firstPresent(media.mediaKey, media.MediaKey),
+    fileSHA256: firstPresent(media.fileSHA256, media.FileSHA256, media.fileSha256),
+    fileEncSHA256: firstPresent(media.fileEncSHA256, media.FileEncSHA256, media.fileEncSha256),
+    fileLength: firstPresent(media.fileLength, media.FileLength),
+    mimetype: firstPresent(media.mimetype, media.Mimetype),
+  };
+}
+
+function pickGoMediaPayload(messageKey: any, mediaType: string) {
+  const direct = normalizeGoMediaPayload(messageKey?.media);
+  if (direct) return direct;
+
+  const rawMessage = messageKey?.raw_message?.message || messageKey?.raw_message?.Message || messageKey?.raw_message;
+  const candidates = [
+    rawMessage?.imageMessage,
+    rawMessage?.ImageMessage,
+    rawMessage?.audioMessage,
+    rawMessage?.AudioMessage,
+    rawMessage?.videoMessage,
+    rawMessage?.VideoMessage,
+    rawMessage?.documentMessage,
+    rawMessage?.DocumentMessage,
+    rawMessage?.stickerMessage,
+    rawMessage?.StickerMessage,
+  ];
+  const byType: Record<string, number[]> = {
+    image: [0, 1],
+    audio: [2, 3],
+    video: [4, 5],
+    document: [6, 7],
+    sticker: [8, 9],
+  };
+  for (const index of byType[mediaType] || []) {
+    const normalized = normalizeGoMediaPayload(candidates[index]);
+    if (normalized) return normalized;
+  }
+  for (const candidate of candidates) {
+    const normalized = normalizeGoMediaPayload(candidate);
+    if (normalized) return normalized;
+  }
+  return null;
+}
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -58,6 +111,8 @@ Deno.serve(async (req) => {
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const EVOLUTION_API_URL = Deno.env.get("EVOLUTION_API_URL");
     const EVOLUTION_API_KEY = Deno.env.get("EVOLUTION_API_KEY");
+    const EVOLUTION_GO_API_URL = (Deno.env.get("EVOLUTION_GO_API_URL") || "").replace(/\/+$/, "");
+    const EVOLUTION_GO_API_KEY = Deno.env.get("EVOLUTION_GO_API_KEY") || "";
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
@@ -87,7 +142,7 @@ Deno.serve(async (req) => {
         `)
         .eq("media_status", "pending")
         .is("media_url", null)
-        .in("message_type", ["image", "audio", "video", "document"])
+        .in("message_type", ["image", "audio", "video", "document", "sticker"])
         .gte("sent_at", new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
 
       let created = 0;
@@ -139,6 +194,13 @@ Deno.serve(async (req) => {
         .single();
 
       if (message) {
+        if (message.media_url && message.media_status === "ready") {
+          return new Response(
+            JSON.stringify({ success: true, message: "Media already ready", media_url: message.media_url }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
         console.log(`Force retry for message ${body.message_id}`);
         
         // Mark as pending
@@ -232,10 +294,24 @@ Deno.serve(async (req) => {
         // Try multiple strategies to download media
         let mediaContent: Uint8Array | null = null;
         const messageId = job.message_key?.id;
-        let failureReasons: string[] = [];
+        const failureReasons: string[] = [];
         let messageNotFound = false;
 
-        if (EVOLUTION_API_URL && EVOLUTION_API_KEY && messageId) {
+        if (session.provider === "evolution_go") {
+          const resultGo = await tryEvolutionGoDownloadMedia(
+            EVOLUTION_GO_API_URL,
+            EVOLUTION_GO_API_KEY,
+            session.instance_id || session.instance_name,
+            pickGoMediaPayload(job.message_key, job.media_type),
+            job.media_mime_type || "",
+          );
+
+          if (resultGo.content) {
+            mediaContent = resultGo.content;
+          } else {
+            failureReasons.push(`GO: ${resultGo.error || "Unknown error"}`);
+          }
+        } else if (EVOLUTION_API_URL && EVOLUTION_API_KEY && messageId) {
           // Strategy 1a: getBase64FromMediaMessage with full key
           let result1 = await tryGetBase64(
             EVOLUTION_API_URL,
@@ -526,7 +602,7 @@ async function tryDownloadMedia(
     `${apiUrl}/message/downloadMedia/${instanceName}`,
   ];
 
-  let errors: string[] = [];
+  const errors: string[] = [];
 
   for (const endpoint of endpoints) {
     try {
@@ -577,6 +653,67 @@ async function tryDownloadMedia(
   }
 
   return { content: null, error: errors.join(" | ") };
+}
+
+async function tryEvolutionGoDownloadMedia(
+  apiUrl: string,
+  apiKey: string,
+  instanceId: string,
+  media: any,
+  expectedMime: string
+): Promise<{ content: Uint8Array | null; error?: string }> {
+  if (!apiUrl || !apiKey || !instanceId) return { content: null, error: "Missing Evolution Go configuration" };
+  if (!media || typeof media !== "object") return { content: null, error: "Missing media payload" };
+
+  try {
+    const response = await fetch(`${apiUrl}/message/downloadimage`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": apiKey,
+        "instanceId": instanceId,
+      },
+      body: JSON.stringify(media),
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      return { content: null, error: `HTTP ${response.status}: ${text.substring(0, 160)}` };
+    }
+
+    const contentType = response.headers.get("content-type") || "";
+    if (!contentType.includes("application/json")) {
+      const buffer = await response.arrayBuffer();
+      const content = new Uint8Array(buffer);
+      if (content.length > 100 && validateMagicBytes(content, expectedMime)) return { content };
+      return { content: null, error: `Invalid binary media (${content.length} bytes)` };
+    }
+
+    const data = await response.json();
+    const rawBase64 =
+      data.base64 ||
+      data.image ||
+      data.audio ||
+      data.video ||
+      data.document ||
+      data.sticker ||
+      data.media ||
+      data.file ||
+      data.data?.base64 ||
+      data.data?.image ||
+      data.data?.sticker ||
+      data.data?.media;
+    if (typeof rawBase64 !== "string") return { content: null, error: "No media content in JSON response" };
+
+    const normalized = normalizeBase64(rawBase64);
+    if (!isValidBase64(normalized)) return { content: null, error: "Invalid base64 received" };
+
+    const content = decode(normalized);
+    if (content.length > 100 && validateMagicBytes(content, expectedMime)) return { content };
+    return { content: null, error: `Magic bytes validation failed or too small (${content.length} bytes)` };
+  } catch (e) {
+    return { content: null, error: e instanceof Error ? e.message : String(e) };
+  }
 }
 
 function getExtensionFromMime(mime: string): string {

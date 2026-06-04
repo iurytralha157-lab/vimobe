@@ -1,8 +1,9 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+﻿import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Tables } from '@/integrations/supabase/types';
 import { normalizePhone } from '@/lib/phone-utils';
+import { enforceClientActionRateLimit, getClientRateLimitMessage } from '@/lib/client-action-rate-limit';
 import { notifyLeadCreated } from './use-lead-notifications';
 import { logAuditAction } from './use-audit-logs';
 import { notificationService } from '@/services/NotificationService';
@@ -138,11 +139,17 @@ export function useCreateLead() {
       lost_reason?: string;
       is_own_resource?: boolean;
     }) => {
-      // Buscar usuário autenticado - org_id é definido pelo trigger enforce_organization_id()
-      const { data: user } = await supabase.auth.getUser();
+      const { data: authUser } = await supabase.auth.getUser();
+      enforceClientActionRateLimit(`lead:create:${authUser.user?.id || 'anonymous'}`, [
+        { limit: 1, windowMs: 1000 },
+        { limit: 10, windowMs: 60_000 },
+      ]);
+
+      // Buscar usuÃ¡rio autenticado - org_id Ã© definido pelo trigger enforce_organization_id()
+      const user = authUser;
       if (!user.user) throw new Error('Usuário não autenticado');
       
-      // Buscar org_id para verificação de leads duplicados (não para INSERT)
+      // Buscar org_id para verificaÃ§Ã£o de leads duplicados (nÃ£o para INSERT)
       const { data: userData } = await supabase
         .from('users')
         .select('organization_id')
@@ -152,7 +159,7 @@ export function useCreateLead() {
       
       if (!organizationId) throw new Error('Usuário não possui organização');
       
-      // ===== VERIFICAR SE JÁ EXISTE LEAD COM ESTE TELEFONE =====
+      // ===== VERIFICAR SE JÃ EXISTE LEAD COM ESTE TELEFONE =====
       if (lead.phone) {
         const normalizedPhone = normalizePhone(lead.phone);
         
@@ -191,7 +198,7 @@ export function useCreateLead() {
 
             if (reentryError) {
               console.error('Erro ao registrar reentrada:', reentryError);
-              // Fallback para atualização simples se a RPC falhar
+              // Fallback para atualizaÃ§Ã£o simples se a RPC falhar
               await supabase.from('leads').update({
                 name: lead.name,
                 email: lead.email,
@@ -258,10 +265,10 @@ export function useCreateLead() {
       const { tag_ids, ...leadData } = lead;
       
       // O trigger enforce_organization_id() vai sobrescrever organization_id
-      // mas precisamos incluí-lo para satisfazer o TypeScript
+      // mas precisamos incluÃ­-lo para satisfazer o TypeScript
       const insertData = {
         ...leadData,
-        organization_id: organizationId!, // Será sobrescrito pelo trigger
+        organization_id: organizationId!, // SerÃ¡ sobrescrito pelo trigger
         pipeline_id: pipelineId,
         stage_id: stageId,
         source: (lead.source || 'manual') as any,
@@ -327,7 +334,7 @@ export function useCreateLead() {
         organizationId
       ).catch(console.error);
       
-      // Notificar todas as partes interessadas (vendedor, líderes, admins)
+      // Notificar todas as partes interessadas (vendedor, lÃ­deres, admins)
       await notifyLeadCreated({
         leadId: data.id,
         leadName: lead.name,
@@ -337,8 +344,8 @@ export function useCreateLead() {
         source: lead.source || 'manual',
       });
 
-      // Mensagem de boas-vindas automática DESATIVADA por solicitação do produto.
-      // Não enviar nenhuma mensagem WhatsApp automática ao criar lead.
+      // Mensagem de boas-vindas automÃ¡tica DESATIVADA por solicitaÃ§Ã£o do produto.
+      // NÃ£o enviar nenhuma mensagem WhatsApp automÃ¡tica ao criar lead.
 
       
       return data;
@@ -354,6 +361,11 @@ export function useCreateLead() {
       toast.success('Lead criado com sucesso!');
     },
     onError: (error) => {
+      const rateLimitMessage = getClientRateLimitMessage(error);
+      if (rateLimitMessage) {
+        toast.error(rateLimitMessage);
+        return;
+      }
       toast.error('Erro ao criar lead: ' + error.message);
     },
   });
@@ -364,8 +376,12 @@ export function useUpdateLead() {
   
   return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<Lead> & { id: string }) => {
-      const { data: user } = await supabase.auth.getUser();
-      
+      const { data: authUser } = await supabase.auth.getUser();
+      enforceClientActionRateLimit(`lead:update:${authUser.user?.id || 'anonymous'}:${id}`, [
+        { limit: 2, windowMs: 1000 },
+        { limit: 30, windowMs: 60_000 },
+      ]);
+
       const updateData: any = { ...updates };
       delete updateData.tags;
       delete updateData.assignee;
@@ -373,7 +389,6 @@ export function useUpdateLead() {
       
       // Check if this is a stage change
       const isStageChange = !!updates.stage_id;
-      const isAssigneeChange = updates.assigned_user_id !== undefined;
       
       if (isStageChange) {
         updateData.stage_entered_at = new Date().toISOString();
@@ -394,83 +409,6 @@ export function useUpdateLead() {
         .single();
       
       if (error) throw error;
-      
-      // Log activity based on what changed
-      if (user?.user?.id) {
-        // Check if it's a contact info update (not stage/assignee)
-        const contactFields = ['name', 'phone', 'email', 'cargo', 'empresa', 'endereco', 
-          'numero', 'complemento', 'bairro', 'cidade', 'uf', 'cep', 'message', 
-          'valor_interesse', 'property_id', 'property_code'];
-        
-        const isContactUpdate = Object.keys(updates).some(key => contactFields.includes(key));
-        
-        if (isContactUpdate && !isStageChange && !isAssigneeChange) {
-          const fieldsUpdated = Object.keys(updates).filter(k => contactFields.includes(k));
-          await supabase.from('activities').insert({
-            lead_id: id,
-            user_id: user.user.id,
-            type: 'contact_updated',
-            content: 'Informações de contato atualizadas',
-            metadata: { fields_updated: fieldsUpdated }
-          });
-        }
-        
-        // Log assignee change
-        if (isAssigneeChange && currentLead?.assigned_user_id !== updates.assigned_user_id) {
-          let content = 'Responsável removido';
-          if (updates.assigned_user_id) {
-            const { data: newAssignee } = await supabase
-              .from('users')
-              .select('name')
-              .eq('id', updates.assigned_user_id)
-              .single();
-            content = newAssignee?.name 
-              ? `Responsável alterado para ${newAssignee.name}`
-              : 'Responsável alterado';
-          }
-          
-          await supabase.from('activities').insert({
-            lead_id: id,
-            user_id: user.user.id,
-            type: 'assignee_changed',
-            content,
-            metadata: { 
-              old_assignee_id: currentLead?.assigned_user_id || null,
-              new_assignee_id: updates.assigned_user_id || null 
-            }
-          });
-        }
-        
-        // Log stage change
-        if (isStageChange && currentLead?.stage_id !== updates.stage_id) {
-          const { data: newStage } = await supabase
-            .from('stages')
-            .select('name')
-            .eq('id', updates.stage_id)
-            .single();
-            
-          const { data: oldStage } = currentLead?.stage_id ? await supabase
-            .from('stages')
-            .select('name')
-            .eq('id', currentLead.stage_id)
-            .single() : { data: null };
-
-          await supabase.from('activities').insert({
-            lead_id: id,
-            user_id: user.user.id,
-            type: 'stage_change',
-            content: `Estágio alterado para ${newStage?.name || 'Novo Estágio'}`,
-            metadata: { 
-              old_stage_id: currentLead?.stage_id || null,
-              new_stage_id: updates.stage_id,
-              old_stage_name: oldStage?.name || null,
-              new_stage_name: newStage?.name || null,
-              new_status: updates.deal_status || null
-            }
-          });
-        }
-      }
-      
       // Audit log: lead updated
       logAuditAction(
         'update',
@@ -484,18 +422,23 @@ export function useUpdateLead() {
       return data;
     },
     onSuccess: (data) => {
-      // Sincronização cirúrgica: apenas o necessário
+      // SincronizaÃ§Ã£o cirÃºrgica: apenas o necessÃ¡rio
       if (data?.id) {
         queryClient.invalidateQueries({ queryKey: ['lead', data.id] });
         queryClient.invalidateQueries({ queryKey: ['lead-history-v2', data.id] });
       }
       
-      // Invalida listas apenas para refletir as mudanças (usa refetch em background)
+      // Invalida listas apenas para refletir as mudanÃ§as (usa refetch em background)
       queryClient.invalidateQueries({ queryKey: ['leads'], refetchType: 'none' });
       queryClient.invalidateQueries({ queryKey: ['stages-with-leads'], refetchType: 'none' });
       queryClient.invalidateQueries({ queryKey: ['activities'], refetchType: 'none' });
     },
     onError: (error) => {
+      const rateLimitMessage = getClientRateLimitMessage(error);
+      if (rateLimitMessage) {
+        toast.error(rateLimitMessage);
+        return;
+      }
       toast.error('Erro ao atualizar lead: ' + error.message);
     },
   });
@@ -559,8 +502,12 @@ export function useAddLeadTag() {
   return useMutation({
     mutationFn: async ({ leadId, tagId }: { leadId: string; tagId: string }) => {
       const { data: user } = await supabase.auth.getUser();
+      enforceClientActionRateLimit(`lead:tag:add:${user.user?.id || 'anonymous'}:${leadId}`, [
+        { limit: 2, windowMs: 1000 },
+        { limit: 20, windowMs: 60_000 },
+      ]);
       
-      // Verificar se a tag já está associada ao lead
+      // Verificar se a tag jÃ¡ estÃ¡ associada ao lead
       const { data: existingTag } = await supabase
         .from('lead_tags')
         .select('id')
@@ -606,6 +553,11 @@ export function useAddLeadTag() {
       toast.success('Tag adicionada!');
     },
     onError: (error: any) => {
+      const rateLimitMessage = getClientRateLimitMessage(error);
+      if (rateLimitMessage) {
+        toast.error(rateLimitMessage);
+        return;
+      }
       if (error.message === 'TAG_ALREADY_EXISTS' || error.message?.includes('unique constraint')) {
         toast.info('Esta tag já está adicionada ao lead');
       } else {
@@ -621,6 +573,10 @@ export function useRemoveLeadTag() {
   return useMutation({
     mutationFn: async ({ leadId, tagId }: { leadId: string; tagId: string }) => {
       const { data: user } = await supabase.auth.getUser();
+      enforceClientActionRateLimit(`lead:tag:remove:${user.user?.id || 'anonymous'}:${leadId}`, [
+        { limit: 2, windowMs: 1000 },
+        { limit: 20, windowMs: 60_000 },
+      ]);
       
       // Get tag name before deleting
       const { data: tag } = await supabase
@@ -659,6 +615,11 @@ export function useRemoveLeadTag() {
       toast.success('Tag removida!');
     },
     onError: (error) => {
+      const rateLimitMessage = getClientRateLimitMessage(error);
+      if (rateLimitMessage) {
+        toast.error(rateLimitMessage);
+        return;
+      }
       toast.error('Erro ao remover tag: ' + error.message);
     },
   });

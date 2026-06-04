@@ -23,11 +23,10 @@ export interface UnifiedHistoryEvent {
 const timelineEventLabels: Record<string, string> = {
   lead_created: 'Lead criado',
   lead_assigned: 'Distribuído',
-  first_response: 'Tempo de resposta',
+  first_response: 'Primeiro contato',
   whatsapp_message_sent: 'Mensagem enviada',
   whatsapp_message_received: 'Mensagem recebida',
   call_initiated: 'Ligação iniciada',
-  stage_move_response: 'Primeiro contato (moveu lead)',
   stage_changed: 'Estágio alterado',
   note_created: 'Nota adicionada',
   tag_added: 'Tag adicionada',
@@ -131,7 +130,7 @@ function getTimelineEventDetails(event: LeadTimelineEvent): string | undefined {
     case 'lead_assigned':
       // Description already has the details from DB
       return undefined;
-    case 'stage_changed':
+    case 'stage_changed': {
       const from = metadata.old_stage_name;
       const to = metadata.new_stage_name;
       // Se teve estágio anterior real, mostrar a transição
@@ -139,7 +138,8 @@ function getTimelineEventDetails(event: LeadTimelineEvent): string | undefined {
         return `${from} → ${to}`;
       }
       return undefined;
-    case 'first_response':
+    }
+    case 'first_response': {
       const responseTime = metadata.response_seconds;
       if (responseTime !== undefined) {
         const minutes = Math.floor(responseTime / 60);
@@ -147,6 +147,7 @@ function getTimelineEventDetails(event: LeadTimelineEvent): string | undefined {
         return `Tempo: ${minutes}m ${seconds}s`;
       }
       return undefined;
+    }
     default:
       return undefined;
   }
@@ -157,10 +158,11 @@ function getActivityLabel(activity: Activity): string {
   const meta = (activity.metadata as Record<string, any>) || {};
   
   switch (activity.type) {
-    case 'automation_message':
+    case 'automation_message': {
       const channel = meta.channel || 'whatsapp';
       return `📤 Mensagem automática (${channel === 'whatsapp' ? 'WhatsApp' : channel})`;
-      
+    }
+
     case 'lead_created':
       return getLeadCreatedLabel(meta, 'activity');
       

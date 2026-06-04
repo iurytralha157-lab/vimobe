@@ -1,15 +1,15 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { ChevronDown, Search } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { ChevronDown, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { parsePhoneInput, formatPhoneFromParts, countries, type Country } from '@/lib/phone-utils';
+import { countries, formatPhoneFromParts, parsePhoneInput, type Country } from '@/lib/phone-utils';
 
 interface PhoneInputProps {
   value: string;
@@ -19,95 +19,114 @@ interface PhoneInputProps {
   className?: string;
 }
 
+function formatBrazilianLocalPhone(digits: string) {
+  const clean = digits.replace(/\D/g, '').slice(0, 11);
+  if (clean.length <= 2) return clean;
+
+  const ddd = clean.slice(0, 2);
+  const number = clean.slice(2);
+  if (number.length <= 4) return `(${ddd}) ${number}`;
+  if (number.length <= 8) return `(${ddd}) ${number.slice(0, 4)}-${number.slice(4)}`;
+  return `(${ddd}) ${number.slice(0, 5)}-${number.slice(5)}`;
+}
+
+function displayPhone(value: string, country: Country) {
+  const parsed = parsePhoneInput(value);
+  const localDigits = `${parsed.ddd}${parsed.number}`;
+
+  if (!value) return '';
+  if (country.code === '55') return formatBrazilianLocalPhone(localDigits);
+  return localDigits;
+}
+
+function buildPhoneValue(raw: string, selectedCountry: Country) {
+  const cleaned = raw.replace(/\D/g, '');
+  if (!cleaned) return { country: selectedCountry, value: '' };
+
+  const looksInternational = raw.trim().startsWith('+') || (
+    selectedCountry.code !== '55' &&
+    cleaned.startsWith(selectedCountry.code)
+  ) || (cleaned.startsWith('55') && cleaned.length >= 12);
+
+  if (looksInternational) {
+    const parsed = parsePhoneInput(cleaned);
+    const parsedCountry = countries.find((country) => country.code === parsed.countryCode) || selectedCountry;
+    return {
+      country: parsedCountry,
+      value: formatPhoneFromParts(parsedCountry.code, parsed.ddd, parsed.number),
+    };
+  }
+
+  if (selectedCountry.code === '55') {
+    const localDigits = cleaned.slice(0, 11);
+    return {
+      country: selectedCountry,
+      value: formatPhoneFromParts('55', localDigits.slice(0, 2), localDigits.slice(2)),
+    };
+  }
+
+  return {
+    country: selectedCountry,
+    value: formatPhoneFromParts(selectedCountry.code, '', cleaned),
+  };
+}
+
 export function PhoneInput({
   value,
   onChange,
-  placeholder = "00000-0000",
+  placeholder = '(00) 00000-0000',
   disabled = false,
   className,
 }: PhoneInputProps) {
+  const parsed = useMemo(() => parsePhoneInput(value), [value]);
+  const initialCountry = countries.find((country) => country.code === parsed.countryCode) || countries[0];
+  const [selectedCountry, setSelectedCountry] = useState<Country>(initialCountry);
+  const [phoneText, setPhoneText] = useState(displayPhone(value, initialCountry));
   const [countryPopoverOpen, setCountryPopoverOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  
-  // Parse the current value to get parts
-  const parsed = useMemo(() => parsePhoneInput(value), [value]);
-  const [selectedCountry, setSelectedCountry] = useState<Country>(
-    countries.find(c => c.code === parsed.countryCode) || countries[0]
-  );
-  const [ddd, setDdd] = useState(parsed.ddd);
-  const [number, setNumber] = useState(parsed.number);
 
-  // Update internal state when value changes externally
-  // Only update if values actually changed to prevent focus loss
   useEffect(() => {
-    const newParsed = parsePhoneInput(value);
-    const newCountry = countries.find(c => c.code === newParsed.countryCode) || countries[0];
-    
-    // Only update if values actually differ
-    if (newParsed.ddd !== ddd || newParsed.number !== number || newCountry.code !== selectedCountry.code) {
-      setSelectedCountry(newCountry);
-      setDdd(newParsed.ddd);
-      setNumber(newParsed.number);
-    }
+    const nextParsed = parsePhoneInput(value);
+    const nextCountry = countries.find((country) => country.code === nextParsed.countryCode) || countries[0];
+    setSelectedCountry(nextCountry);
+    setPhoneText(displayPhone(value, nextCountry));
   }, [value]);
-
-  // Format number with mask (XXXXX-XXXX or XXXX-XXXX)
-  const formatNumber = (num: string) => {
-    const cleaned = num.replace(/\D/g, '').slice(0, 9);
-    if (cleaned.length <= 4) return cleaned;
-    if (cleaned.length <= 8) {
-      return `${cleaned.slice(0, 4)}-${cleaned.slice(4)}`;
-    }
-    return `${cleaned.slice(0, 5)}-${cleaned.slice(5)}`;
-  };
-
-  // Handle changes and notify parent
-  const handleChange = (newCountry: Country, newDdd: string, newNumber: string) => {
-    const cleanDdd = newDdd.replace(/\D/g, '').slice(0, 3);
-    const cleanNumber = newNumber.replace(/\D/g, '').slice(0, 9);
-    
-    setSelectedCountry(newCountry);
-    setDdd(cleanDdd);
-    setNumber(cleanNumber);
-    
-    const fullNumber = formatPhoneFromParts(newCountry.code, cleanDdd, cleanNumber);
-    onChange(fullNumber);
-  };
-
-  const handleCountrySelect = (country: Country) => {
-    handleChange(country, ddd, number);
-    setCountryPopoverOpen(false);
-    setSearchQuery('');
-  };
-
-  const handleDddChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newDdd = e.target.value.replace(/\D/g, '').slice(0, 3);
-    handleChange(selectedCountry, newDdd, number);
-  };
-
-  const handleNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newNumber = e.target.value.replace(/\D/g, '').slice(0, 9);
-    handleChange(selectedCountry, ddd, newNumber);
-  };
 
   const filteredCountries = useMemo(() => {
     if (!searchQuery) return countries;
     const query = searchQuery.toLowerCase();
-    return countries.filter(
-      c => c.name.toLowerCase().includes(query) || c.code.includes(query)
+    return countries.filter((country) =>
+      country.name.toLowerCase().includes(query) || country.code.includes(query)
     );
   }, [searchQuery]);
 
+  const handlePhoneChange = (raw: string) => {
+    const next = buildPhoneValue(raw, selectedCountry);
+    setSelectedCountry(next.country);
+    setPhoneText(displayPhone(next.value, next.country));
+    onChange(next.value);
+  };
+
+  const handleCountrySelect = (country: Country) => {
+    setSelectedCountry(country);
+    setCountryPopoverOpen(false);
+    setSearchQuery('');
+
+    const parsedCurrent = parsePhoneInput(value);
+    const nextValue = formatPhoneFromParts(country.code, parsedCurrent.ddd, parsedCurrent.number);
+    setPhoneText(displayPhone(nextValue, country));
+    onChange(nextValue);
+  };
+
   return (
-    <div className={cn("flex items-center gap-1", className)}>
-      {/* Country Selector */}
+    <div className={cn('flex items-center gap-1', className)}>
       <Popover open={countryPopoverOpen} onOpenChange={setCountryPopoverOpen}>
         <PopoverTrigger asChild>
           <Button
             variant="outline"
             role="combobox"
             disabled={disabled}
-            className="w-[100px] justify-between px-2 font-normal"
+            className="w-[100px] justify-between px-2 font-normal shrink-0"
           >
             <span className="flex items-center gap-1 truncate">
               <span className="text-base">{selectedCountry.flag}</span>
@@ -121,9 +140,9 @@ export function PhoneInput({
             <div className="relative">
               <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Buscar país..."
+                placeholder="Buscar pais..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(event) => setSearchQuery(event.target.value)}
                 className="pl-8 h-8"
               />
             </div>
@@ -132,11 +151,12 @@ export function PhoneInput({
             <div className="p-1">
               {filteredCountries.map((country) => (
                 <button
-                  key={country.code + country.name}
+                  key={`${country.code}-${country.name}`}
+                  type="button"
                   onClick={() => handleCountrySelect(country)}
                   className={cn(
-                    "w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm hover:bg-accent text-left",
-                    selectedCountry.code === country.code && "bg-accent"
+                    'w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm hover:bg-accent text-left',
+                    selectedCountry.code === country.code && 'bg-accent'
                   )}
                 >
                   <span className="text-lg">{country.flag}</span>
@@ -149,27 +169,14 @@ export function PhoneInput({
         </PopoverContent>
       </Popover>
 
-      {/* DDD Input */}
-      <div className="relative">
-        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">(</span>
-        <Input
-          value={ddd}
-          onChange={handleDddChange}
-          placeholder="00"
-          disabled={disabled}
-          className="w-[52px] text-center px-4"
-          maxLength={3}
-        />
-        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">)</span>
-      </div>
-
-      {/* Number Input */}
       <Input
-        value={formatNumber(number)}
-        onChange={handleNumberChange}
+        value={phoneText}
+        onChange={(event) => handlePhoneChange(event.target.value)}
         placeholder={placeholder}
         disabled={disabled}
-        className="flex-1"
+        inputMode="tel"
+        autoComplete="tel"
+        className="min-w-0 flex-1"
       />
     </div>
   );

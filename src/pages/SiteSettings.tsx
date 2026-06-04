@@ -643,6 +643,7 @@ ${getWorkerCode()}`;
                       bucket="site-images"
                       path="sites"
                       disabled={!isAdmin}
+                      aspectRatio="banner"
                     />
 
                     <ImageUpload
@@ -659,6 +660,8 @@ ${getWorkerCode()}`;
                       bucket="site-images"
                       path="sites"
                       disabled={!isAdmin}
+                      aspectRatio="square"
+                      className="max-w-[180px]"
                     />
                   </div>
 
@@ -716,13 +719,13 @@ ${getWorkerCode()}`;
                     {site?.logo_url && (
                       <div className="p-4 bg-muted/50 rounded-lg flex flex-col">
                         <Label className="text-xs text-muted-foreground mb-2 block">Pré-visualização</Label>
-                        <div className="flex items-center justify-center flex-1 min-h-[80px] bg-background rounded border">
+                        <div className="flex items-center justify-center h-[96px] bg-background rounded border overflow-hidden">
                           <img 
                             src={site.logo_url} 
                             alt="Preview" 
                             style={{ 
-                              maxWidth: site.logo_width || 160, 
-                              maxHeight: site.logo_height || 50 
+                              maxWidth: Math.min(site.logo_width || 160, 180), 
+                              maxHeight: Math.min(site.logo_height || 50, 64) 
                             }}
                             className="object-contain"
                           />

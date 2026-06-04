@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+﻿import { useState, useEffect, useCallback, useRef } from 'react';
 import { maskCPF, maskRG, maskPhone } from '@/lib/masks';
 import { toast } from 'sonner';
 
@@ -140,7 +140,7 @@ export function CreateLeadDialog({
     saveTimerRef.current = setTimeout(() => {
       try {
         localStorage.setItem(draftKey, JSON.stringify({ formData, activeTab }));
-      } catch { /* quota exceeded — ignore */ }
+      } catch { /* quota exceeded â€” ignore */ }
     }, 500);
 
     return () => clearTimeout(saveTimerRef.current);
@@ -163,7 +163,7 @@ export function CreateLeadDialog({
               return;
             }
           }
-        } catch { /* corrupted data — ignore */ }
+        } catch { /* corrupted data â€” ignore */ }
       }
 
       setActiveTab('basic');
@@ -205,6 +205,18 @@ export function CreateLeadDialog({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (!formData.name.trim()) {
+      toast.error('Informe o nome do lead');
+      setActiveTab('basic');
+      return;
+    }
+
+    if (!formData.phone && !formData.email.trim()) {
+      toast.error('Informe pelo menos um telefone ou email');
+      setActiveTab('basic');
+      return;
+    }
+
     // Validate email format (only if provided)
     if (formData.email && !EMAIL_REGEX.test(formData.email.trim())) {
       toast.error('Email inválido. Use o formato nome@dominio.com');
@@ -241,7 +253,7 @@ export function CreateLeadDialog({
         faixa_valor_imovel: formData.faixa_valor_imovel || undefined,
         valor_interesse: formData.valor_interesse ? parseFloat(formData.valor_interesse) : undefined,
         deal_status: formData.deal_status || 'open',
-        is_own_resource: formData.is_own_resource,
+        is_own_resource: false,
       });
       
       // For Telecom: also create the telecom_customers record with all fields
@@ -302,6 +314,40 @@ export function CreateLeadDialog({
 
   const updateField = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const phoneDigits = formData.phone.replace(/\D/g, '');
+  const hasValidPhone = !formData.phone || phoneDigits.length >= 10;
+  const hasValidEmail = !formData.email.trim() || EMAIL_REGEX.test(formData.email.trim());
+  const hasContactChannel = (!!formData.phone && hasValidPhone) || (!!formData.email.trim() && hasValidEmail);
+  const hasRequiredLeadIdentity = !!formData.name.trim() && hasContactChannel;
+
+  const validateBasicStep = () => {
+    if (!formData.name.trim()) {
+      toast.error('Informe o nome do lead');
+      setActiveTab('basic');
+      return false;
+    }
+
+    if (!formData.phone && !formData.email.trim()) {
+      toast.error('Informe pelo menos um telefone ou email');
+      setActiveTab('basic');
+      return false;
+    }
+
+    if (formData.phone && !hasValidPhone) {
+      toast.error('Telefone inválido. Informe DDD + número (mín. 10 dígitos).');
+      setActiveTab('basic');
+      return false;
+    }
+
+    if (formData.email.trim() && !hasValidEmail) {
+      toast.error('Email inválido. Use o formato nome@dominio.com');
+      setActiveTab('basic');
+      return false;
+    }
+
+    return true;
   };
 
   return (
@@ -587,48 +633,27 @@ export function CreateLeadDialog({
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1.5">
-                          <Label className="text-sm font-medium">Fonte</Label>
-                          <Select 
-                            value={formData.source || "__none__"} 
-                            onValueChange={(v) => updateField('source', v === "__none__" ? '' : v)}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Como conheceu?" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="__none__">Não informado</SelectItem>
-                              <SelectItem value="site">Site</SelectItem>
-                              <SelectItem value="indicacao">Indicação</SelectItem>
-                              <SelectItem value="portais">Portais</SelectItem>
-                              <SelectItem value="whatsapp">WhatsApp</SelectItem>
-                              <SelectItem value="facebook">Facebook</SelectItem>
-                              <SelectItem value="instagram">Instagram</SelectItem>
-                              <SelectItem value="google">Google</SelectItem>
-                              <SelectItem value="outro">Outro</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label className="text-sm font-medium">Faixa de Imóvel</Label>
-                          <Select 
-                            value={formData.faixa_valor_imovel || "__none__"} 
-                            onValueChange={(v) => updateField('faixa_valor_imovel', v === "__none__" ? '' : v)}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Valor pretendido" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="__none__">Não informado</SelectItem>
-                              {faixaImovelOptions.map(opt => (
-                                <SelectItem key={opt.value} value={opt.value}>
-                                  {opt.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-sm font-medium">Fonte</Label>
+                        <Select
+                          value={formData.source || "__none__"}
+                          onValueChange={(v) => updateField('source', v === "__none__" ? '' : v)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Como conheceu?" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="__none__">Não informado</SelectItem>
+                            <SelectItem value="site">Site</SelectItem>
+                            <SelectItem value="indicacao">Indicação</SelectItem>
+                            <SelectItem value="portais">Portais</SelectItem>
+                            <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                            <SelectItem value="facebook">Facebook</SelectItem>
+                            <SelectItem value="instagram">Instagram</SelectItem>
+                            <SelectItem value="google">Google</SelectItem>
+                            <SelectItem value="outro">Outro</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
 
                       <div className="space-y-1.5">
@@ -754,67 +779,17 @@ export function CreateLeadDialog({
                         />
                       </div>
 
-                      <div className="grid gap-4 sm:grid-cols-2">
-                        <div className="space-y-2">
-                          <Label className="flex items-center gap-2">
-                            <DollarSign className="h-3.5 w-3.5" />
-                            Renda Familiar
-                          </Label>
-                          <Input
-                            value={formData.renda_familiar}
-                            onChange={(e) => updateField('renda_familiar', e.target.value)}
-                            placeholder="Ex: R$ 10.000"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Faixa de Imóvel</Label>
-                          <Select 
-                            value={formData.faixa_valor_imovel} 
-                            onValueChange={(v) => updateField('faixa_valor_imovel', v)}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecione a faixa" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {faixaImovelOptions.map(opt => (
-                                <SelectItem key={opt.value} value={opt.value}>
-                                  {opt.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
+                      <div className="space-y-2">
+                        <Label className="flex items-center gap-2">
+                          <DollarSign className="h-3.5 w-3.5" />
+                          Renda Familiar
+                        </Label>
+                        <Input
+                          value={formData.renda_familiar}
+                          onChange={(e) => updateField('renda_familiar', e.target.value)}
+                          placeholder="Ex: R$ 10.000"
+                        />
                       </div>
-
-                      {!isTelecom && (
-                        <div className="space-y-2">
-                          <Label className="flex items-center gap-2">
-                            <Home className="h-3.5 w-3.5" />
-                            Imóvel de Interesse
-                          </Label>
-                          <PropertyPickerDialog
-                            properties={properties.map((p: any) => ({
-                              id: p.id,
-                              code: p.code,
-                              title: p.title,
-                              bairro: p.bairro,
-                              cidade: p.cidade,
-                              preco: p.preco,
-                              imagem_principal: p.imagem_principal,
-                              tipo_de_imovel: p.tipo_de_imovel,
-                              tipo_de_negocio: p.tipo_de_negocio,
-                              commission_percentage: p.commission_percentage,
-                            }))}
-                            selectedPropertyId={formData.property_id || null}
-                            onSelect={(p) => {
-                              updateField('property_id', p.id);
-                              if (p.preco && !formData.valor_interesse) {
-                                updateField('valor_interesse', String(p.preco));
-                              }
-                            }}
-                          />
-                        </div>
-                      )}
 
                       <div className="space-y-2">
                         <Label>Valor de Interesse (R$)</Label>
@@ -825,47 +800,33 @@ export function CreateLeadDialog({
                           placeholder="Ex: 500000"
                         />
                       </div>
-                      
-                      <div className="flex items-center space-x-2 pt-2">
-                        <Checkbox 
-                          id="is_own_resource" 
-                          checked={formData.is_own_resource}
-                          onCheckedChange={(checked) => updateField('is_own_resource', !!checked)}
-                        />
-                        <div className="grid gap-1.5 leading-none">
-                          <Label
-                            htmlFor="is_own_resource"
-                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                          >
-                            Recurso Próprio
-                          </Label>
-                          <p className="text-[10px] text-muted-foreground">
-                            O cliente possui capital próprio para o fechamento do contrato.
-                          </p>
-                        </div>
-                      </div>
 
-                      <div className="grid gap-4 sm:grid-cols-3">
-                        <div className="sm:col-span-2 space-y-2">
-                          <Label className="flex items-center gap-2">
-                            <MapPin className="h-3.5 w-3.5" />
-                            Cidade
-                          </Label>
-                          <Input
-                            value={formData.cidade}
-                            onChange={(e) => updateField('cidade', e.target.value)}
-                            placeholder="Cidade"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>UF</Label>
-                          <Input
-                            value={formData.uf}
-                            onChange={(e) => updateField('uf', e.target.value)}
-                            placeholder="SP"
-                            maxLength={2}
-                          />
-                        </div>
+                      <div className="space-y-2">
+                        <Label className="flex items-center gap-2">
+                          <Home className="h-3.5 w-3.5" />
+                          Imóvel de Interesse
+                        </Label>
+                        <PropertyPickerDialog
+                          properties={properties.map((p: any) => ({
+                            id: p.id,
+                            code: p.code,
+                            title: p.title,
+                            bairro: p.bairro,
+                            cidade: p.cidade,
+                            preco: p.preco,
+                            imagem_principal: p.imagem_principal,
+                            tipo_de_imovel: p.tipo_de_imovel,
+                            tipo_de_negocio: p.tipo_de_negocio,
+                            commission_percentage: p.commission_percentage,
+                          }))}
+                          selectedPropertyId={formData.property_id || null}
+                          onSelect={(p) => {
+                            updateField('property_id', p.id);
+                            if (p.preco && !formData.valor_interesse) {
+                              updateField('valor_interesse', String(p.preco));
+                            }
+                          }}
+                        />
                       </div>
                     </>
                   )}
@@ -997,14 +958,17 @@ export function CreateLeadDialog({
                 type="button"
                 className="w-[60%]"
                 onClick={() => {
-                  if (activeTab === 'basic') setActiveTab('profile');
+                  if (activeTab === 'basic') {
+                    if (!validateBasicStep()) return;
+                    setActiveTab('profile');
+                  }
                   else if (activeTab === 'profile') setActiveTab('management');
                 }}
               >
                 Avançar
               </Button>
             ) : (
-              <Button type="submit" className="w-[60%]" disabled={createLead.isPending || upsertTelecomCustomer.isPending || !formData.name.trim()}>
+              <Button type="submit" className="w-[60%]" disabled={createLead.isPending || upsertTelecomCustomer.isPending || !hasRequiredLeadIdentity}>
                 {(createLead.isPending || upsertTelecomCustomer.isPending) && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                 {submitLabel}
               </Button>

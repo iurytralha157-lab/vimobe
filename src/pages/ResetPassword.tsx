@@ -150,8 +150,23 @@ export default function ResetPassword() {
 
     setLoading(true);
     try {
-      const { error } = await supabase.auth.updateUser({ password });
+      const { data, error } = await supabase.functions.invoke("change-password", {
+        body: {
+          password,
+          source: "recovery",
+        },
+      });
       if (error) throw error;
+      if (data?.allowed === false) {
+        const message = data.message || "Não foi possível alterar sua senha agora.";
+        setErrors({ password: message });
+        toast({
+          title: "Alteração bloqueada",
+          description: message,
+          variant: "destructive",
+        });
+        return;
+      }
 
       setSuccess(true);
       toast({

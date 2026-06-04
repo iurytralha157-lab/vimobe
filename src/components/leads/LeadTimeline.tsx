@@ -45,7 +45,7 @@ const eventConfig: Record<string, {
   },
   first_response: {
     icon: Zap,
-    label: 'Tempo de resposta',
+    label: 'Primeiro contato',
     color: 'text-yellow-600 dark:text-yellow-400',
     bgColor: 'bg-yellow-100 dark:bg-yellow-900/50'
   },
@@ -139,34 +139,38 @@ function getEventDetails(event: LeadTimelineEvent): string {
     case 'lead_assigned':
       return '';
     
-    case 'first_response':
+    case 'first_response': {
       const responseTime = metadata.response_seconds;
       if (responseTime !== undefined) {
-        return `Tempo: ${formatResponseTime(responseTime)}`;
+        return `Primeiro contato: ${formatResponseTime(responseTime)}`;
       }
       return '';
+    }
     
-    case 'stage_changed':
+    case 'stage_changed': {
       const from = metadata.old_stage_name;
       const to = metadata.new_stage_name;
       if (from && to) {
         return `${from} → ${to}`;
       }
       return '';
+    }
     
-    case 'sla_warning':
+    case 'sla_warning': {
       const warnSeconds = metadata.elapsed_seconds;
       if (warnSeconds !== undefined) {
         return `${Math.floor(warnSeconds / 60)} minutos sem resposta`;
       }
       return 'Lead em alerta de SLA';
+    }
     
-    case 'sla_overdue':
+    case 'sla_overdue': {
       const overdueSeconds = metadata.elapsed_seconds;
       if (overdueSeconds !== undefined) {
         return `${Math.floor(overdueSeconds / 60)} minutos sem resposta`;
       }
       return 'SLA de resposta estourado';
+    }
     
     default:
       return '';
@@ -203,7 +207,7 @@ export function LeadTimeline({ leadId }: LeadTimelineProps) {
           <div className="flex items-center gap-2">
             <Zap className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
             <span className="text-sm font-medium text-yellow-700 dark:text-yellow-300">
-              Tempo de resposta: {formatResponseTime((firstResponseEvent.metadata as any)?.response_seconds || 0)}
+              Primeiro contato: {formatResponseTime((firstResponseEvent.metadata as any)?.response_seconds || 0)}
             </span>
             {firstResponseEvent.is_automation && (
               <Badge variant="outline" className="text-xs gap-1">

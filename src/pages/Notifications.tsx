@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
+import { getNotificationRoute } from '@/lib/notification-routing';
 
 const typeIcons: Record<string, typeof Bell> = {
   lead: UserPlus,
@@ -61,9 +62,6 @@ export default function Notifications() {
   const isMobile = useIsMobile();
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
   const [categoryFilter, setCategoryFilter] = useState<CategoryKey>('all');
-
-  if (authLoading) return null;
-  if (!profile) return null;
 
   const { data: notifications = [], isLoading } = useNotifications();
   const markAsRead = useMarkNotificationRead();
@@ -113,19 +111,16 @@ export default function Notifications() {
 
   const unreadCount = notifications.filter(n => !n.is_read).length;
 
+  if (authLoading) return null;
+  if (!profile) return null;
+
   const handleNotificationClick = async (notification: Notification) => {
     if (!notification.is_read) {
       await markAsRead.mutateAsync(notification.id);
     }
 
-    if (notification.title?.includes('Atualize seu telefone')) {
-      navigate('/settings');
-      return;
-    }
-
-    if (notification.lead_id) {
-      navigate(`/crm/contacts?lead=${notification.lead_id}`);
-    }
+    const route = getNotificationRoute(notification);
+    if (route) navigate(route);
   };
 
   const handleMarkAllAsRead = async () => {

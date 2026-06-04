@@ -12,14 +12,11 @@ import {
   Star,
   Building2,
   CheckCircle,
-  LayoutGrid,
-  CloudDownload
+  LayoutGrid
 } from 'lucide-react';
 import { useInfiniteProperties, useUpdateProperty, useDeleteProperty, Property } from '@/hooks/use-properties';
 import { PropertyCard } from '@/components/properties/PropertyCard';
 import { PropertyPreviewDialog } from '@/components/properties/PropertyPreviewDialog';
-import { VistaImportDialog } from '@/components/properties/VistaImportDialog';
-import { ImoviewImportDialog } from '@/components/properties/ImoviewImportDialog';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -45,8 +42,6 @@ export default function Properties() {
   const [previewProperty, setPreviewProperty] = useState<Property | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [gridCols, setGridCols] = useState('4');
-  const [vistaOpen, setVistaOpen] = useState(false);
-  const [imoviewOpen, setImoviewOpen] = useState(false);
   const isMobile = useIsMobile();
   const { profile, isSuperAdmin } = useAuth();
   const isAdmin = profile?.role === 'admin' || isSuperAdmin;
@@ -148,14 +143,6 @@ export default function Properties() {
             )}
           </div>
           <div className="flex gap-2 w-full sm:w-auto">
-            <Button variant="outline" onClick={() => setVistaOpen(true)} className="flex-1 sm:flex-none">
-              <CloudDownload className="h-4 w-4 mr-2" />
-              {isMobile ? 'Vista' : 'Importar Vista'}
-            </Button>
-            <Button variant="outline" onClick={() => setImoviewOpen(true)} className="flex-1 sm:flex-none">
-              <CloudDownload className="h-4 w-4 mr-2" />
-              {isMobile ? 'Imoview' : 'Importar Imoview'}
-            </Button>
             <Button onClick={() => navigate('/properties/new')} className="flex-1 sm:flex-none">
               <Plus className="h-4 w-4 mr-2" />
               {isMobile ? 'Novo' : 'Novo Imóvel'}
@@ -292,9 +279,6 @@ export default function Properties() {
           onOpenChange={setPreviewOpen}
           formatPrice={formatPrice}
         />
-        {/* Vista Import Dialog */}
-        <VistaImportDialog open={vistaOpen} onOpenChange={setVistaOpen} />
-        <ImoviewImportDialog open={imoviewOpen} onOpenChange={setImoviewOpen} />
       </div>
     </AppLayout>
   );

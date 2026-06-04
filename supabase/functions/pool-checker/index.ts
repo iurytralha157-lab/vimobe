@@ -11,6 +11,8 @@ interface LeadToRedistribute {
   organization_id: string;
   assigned_user_id: string;
   assigned_at: string;
+  owner_last_activity_at: string | null;
+  redistribution_warning_sent_at: string | null;
   redistribution_count: number;
   pipeline_id: string;
 }
@@ -31,7 +33,7 @@ Deno.serve(async (req) => {
     // Get all pipelines with pool enabled
     const { data: pipelines, error: pipelineError } = await supabase
       .from("pipelines")
-      .select("id, organization_id, pool_enabled, pool_timeout_minutes, pool_max_redistributions")
+      .select("id, organization_id, pool_enabled, pool_timeout_minutes, pool_warning_minutes, pool_max_redistributions, pool_enabled_at")
       .eq("pool_enabled", true);
 
     if (pipelineError) {
@@ -56,31 +58,76 @@ Deno.serve(async (req) => {
 
     for (const pipeline of pipelines) {
       const timeoutMinutes = pipeline.pool_timeout_minutes || 10;
-      const maxRedistributions = pipeline.pool_max_redistributions || 3;
+      const warningMinutes = Math.max(0, Math.min(pipeline.pool_warning_minutes ?? 2, timeoutMinutes - 1));
+      const maxRedistributions = pipeline.pool_max_redistributions ?? 3;
       const cutoffTime = new Date(Date.now() - timeoutMinutes * 60 * 1000).toISOString();
+      const warningCutoffTime = new Date(Date.now() - Math.max(1, timeoutMinutes - warningMinutes) * 60 * 1000).toISOString();
 
-      // Pool activation date - only process leads assigned after this date
-      // This prevents legacy leads (without first_response_at) from being redistributed
-      const poolActivationDate = '2026-02-06T19:30:00.000Z';
+      // Only process leads assigned after redistribution was enabled.
+      const poolActivationDate = pipeline.pool_enabled_at || new Date().toISOString();
 
-      console.log(`Checking pipeline ${pipeline.id}: timeout=${timeoutMinutes}min, max=${maxRedistributions}, activation=${poolActivationDate}`);
+      console.log(`Checking pipeline ${pipeline.id}: timeout=${timeoutMinutes}min, warning=${warningMinutes}min, max=${maxRedistributions}, activation=${poolActivationDate}`);
+
+      if (warningMinutes > 0) {
+        const { data: warningLeads, error: warningError } = await supabase
+          .from("leads")
+          .select("id, name, organization_id, assigned_user_id, assigned_at, owner_last_activity_at, redistribution_warning_sent_at, redistribution_count, pipeline_id")
+          .eq("pipeline_id", pipeline.id)
+          .not("assigned_user_id", "is", null)
+          .not("assigned_at", "is", null)
+          .is("first_response_at", null)
+          .is("owner_last_activity_at", null)
+          .is("redistribution_warning_sent_at", null)
+          .gt("assigned_at", poolActivationDate)
+          .lt("assigned_at", warningCutoffTime)
+          .gte("assigned_at", cutoffTime);
+
+        if (warningError) {
+          console.error(`Error fetching warning leads for pipeline ${pipeline.id}:`, warningError);
+        } else {
+          for (const lead of (warningLeads || []) as LeadToRedistribute[]) {
+            await supabase.from("notifications").insert({
+              organization_id: lead.organization_id,
+              user_id: lead.assigned_user_id,
+              lead_id: lead.id,
+              type: "lead_redistribution_warning",
+              title: "Lead aguardando atendimento",
+              content: `O lead "${lead.name || "Sem nome"}" ainda não teve contato nem movimentação sua. Ele será redistribuído em aproximadamente ${warningMinutes} min se continuar parado.`,
+              is_read: false,
+            });
+
+            await supabase
+              .from("leads")
+              .update({ redistribution_warning_sent_at: new Date().toISOString() })
+              .eq("id", lead.id)
+              .is("redistribution_warning_sent_at", null);
+          }
+        }
+      }
 
       // Find leads that need redistribution:
       // - Have an assigned user
       // - Were assigned AFTER the pool activation date (prevents legacy data issues)
       // - Were assigned before the cutoff time
       // - Have no first_response_at (no contact via WhatsApp, Phone, or Email)
+      // - Have no owner_last_activity_at (the responsible user did not move/update the lead)
       // - Haven't exceeded max redistributions
-      const { data: leads, error: leadsError } = await supabase
+      let leadsQuery = supabase
         .from("leads")
-        .select("id, name, organization_id, assigned_user_id, assigned_at, redistribution_count, pipeline_id")
+        .select("id, name, organization_id, assigned_user_id, assigned_at, owner_last_activity_at, redistribution_warning_sent_at, redistribution_count, pipeline_id")
         .eq("pipeline_id", pipeline.id)
         .not("assigned_user_id", "is", null)
         .not("assigned_at", "is", null)
         .is("first_response_at", null)
+        .is("owner_last_activity_at", null)
         .gt("assigned_at", poolActivationDate)
-        .lt("assigned_at", cutoffTime)
-        .lt("redistribution_count", maxRedistributions);
+        .lt("assigned_at", cutoffTime);
+
+      if (maxRedistributions > 0) {
+        leadsQuery = leadsQuery.lt("redistribution_count", maxRedistributions);
+      }
+
+      const { data: leads, error: leadsError } = await leadsQuery;
 
       if (leadsError) {
         console.error(`Error fetching leads for pipeline ${pipeline.id}:`, leadsError);

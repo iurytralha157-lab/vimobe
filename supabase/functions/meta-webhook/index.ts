@@ -69,6 +69,28 @@ async function updateEvent(
   }
 }
 
+async function resolveLeadTarget(
+  supabase: any,
+  formConfig: any,
+  integration: any,
+): Promise<{ pipelineId: string | null; stageId: string | null }> {
+  let pipelineId = formConfig.pipeline_id || integration.pipeline_id || null;
+  let stageId = formConfig.stage_id || integration.stage_id || null;
+
+  if ((!pipelineId || !stageId) && formConfig.round_robin_id) {
+    const { data: roundRobin } = await supabase
+      .from("round_robins")
+      .select("target_pipeline_id,target_stage_id")
+      .eq("id", formConfig.round_robin_id)
+      .maybeSingle();
+
+    pipelineId = pipelineId || roundRobin?.target_pipeline_id || null;
+    stageId = stageId || roundRobin?.target_stage_id || null;
+  }
+
+  return { pipelineId, stageId };
+}
+
 async function handleMessaging(supabase: any, messagingItem: any, pageId: string, platform: string) {
   const senderId = messagingItem.sender.id;
   const recipientId = messagingItem.recipient.id;
@@ -242,7 +264,8 @@ async function processLeadgen(
     .from("meta_integrations")
     .select("*")
     .eq("page_id", pageId)
-    .eq("is_connected", true);
+    .eq("is_connected", true)
+    .order("created_at", { ascending: false });
 
   if (!integrations?.length) {
     return { status: "skipped", error: "no_connected_integration_for_page" };
@@ -290,8 +313,7 @@ async function processLeadgen(
       continue;
     }
 
-    const pipelineId = formConfig.pipeline_id || integration.pipeline_id;
-    const stageId = formConfig.stage_id || integration.stage_id;
+    const { pipelineId, stageId } = await resolveLeadTarget(supabase, formConfig, integration);
     if (!pipelineId || !stageId) {
       lastResult = {
         status: "failed",
@@ -301,8 +323,11 @@ async function processLeadgen(
       continue;
     }
 
-    const propertyId = formConfig?.property_id || null;
-    const autoTags = formConfig?.auto_tags || [];
+    const defaultValues = formConfig?.default_values || {};
+    const propertyId = formConfig?.property_id || defaultValues?.property_id || null;
+    const autoTags = Array.isArray(formConfig?.auto_tags) && formConfig.auto_tags.length > 0
+      ? formConfig.auto_tags
+      : (Array.isArray(defaultValues?.auto_tags) ? defaultValues.auto_tags : []);
     const fieldMapping = formConfig?.field_mapping || {};
 
     let valorInteresse: number | null = null;
@@ -427,6 +452,12 @@ async function processLeadgen(
       last_lead_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     }).eq("id", integration.id);
+
+    await supabase.from("meta_form_configs").update({
+      leads_received: (formConfig.leads_received || 0) + 1,
+      last_lead_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }).eq("id", formConfig.id);
 
     return { status: "processed", organization_id: integration.organization_id };
   }

@@ -14,7 +14,7 @@ function generateRandomPassword(length = 12): string {
   const all = upper + lower + numbers + special;
 
   // Ensure at least one of each
-  let pwd = [
+  const pwd = [
     upper[Math.floor(Math.random() * upper.length)],
     lower[Math.floor(Math.random() * lower.length)],
     numbers[Math.floor(Math.random() * numbers.length)],
@@ -204,7 +204,7 @@ Deno.serve(async (req) => {
     const contactWhatsapp = (whatsapp || phone || '').toString().trim() || null;
 
     // Check if email already exists in public.users
-    let { data: existingUser } = await supabaseAdmin
+    const { data: existingUser } = await supabaseAdmin
       .from('users')
       .select('id, organization_id, name')
       .eq('email', email)

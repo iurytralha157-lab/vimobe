@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+﻿import { Component, useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import type { ErrorInfo, ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { AppLayout } from '@/components/layout/AppLayout';
@@ -21,7 +22,6 @@ import {
   CircleDot,
   RefreshCw,
   Check, 
-  Pencil, 
   ChevronDown,
   Settings,
   Filter,
@@ -88,9 +88,9 @@ import { useCanEditCadences } from '@/hooks/use-can-edit-cadences';
 
 import { useHasPermission } from '@/hooks/use-organization-roles';
 import { notifyLeadMoved } from '@/hooks/use-lead-notifications';
-import { useRecordFirstResponseOnAction } from '@/hooks/use-first-response';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { enforceClientActionRateLimit, getClientRateLimitMessage } from '@/lib/client-action-rate-limit';
 
 // Helper to format currency compactly (pt-BR locale)
 const formatCompactCurrency = (value: number): string => {
@@ -106,18 +106,75 @@ const formatCompactCurrency = (value: number): string => {
   return `R$${value.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`;
 };
 
+type LeadDialogBoundaryProps = {
+  leadId?: string | null;
+  onClose: () => void;
+  children: ReactNode;
+};
+
+type LeadDialogBoundaryState = {
+  error: Error | null;
+  leadId?: string | null;
+};
+
+class LeadDialogErrorBoundary extends Component<LeadDialogBoundaryProps, LeadDialogBoundaryState> {
+  state: LeadDialogBoundaryState = { error: null, leadId: this.props.leadId };
+
+  static getDerivedStateFromError(error: Error): Partial<LeadDialogBoundaryState> {
+    return { error };
+  }
+
+  static getDerivedStateFromProps(
+    props: LeadDialogBoundaryProps,
+    state: LeadDialogBoundaryState
+  ): Partial<LeadDialogBoundaryState> | null {
+    if (props.leadId !== state.leadId) {
+      return { error: null, leadId: props.leadId };
+    }
+
+    return null;
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error('[LeadDialogErrorBoundary] Erro ao abrir lead', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.error) {
+      return (
+        <Dialog open onOpenChange={() => this.props.onClose()}>
+          <DialogContent className="max-w-md rounded-xl">
+            <DialogHeader>
+              <DialogTitle>Erro ao abrir lead</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3 text-sm text-muted-foreground">
+              <p>O card deste lead encontrou um dado incompleto ao carregar.</p>
+              <pre className="max-h-40 overflow-auto rounded-lg bg-muted p-3 text-xs text-foreground whitespace-pre-wrap">
+                {this.state.error.message}
+              </pre>
+              <Button onClick={this.props.onClose} className="w-full">Fechar</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 export default function Pipelines() {
   const location = useLocation();
   const navigate = useNavigate();
   const { profile, organization } = useAuth();
-  const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin';
-  const isTelecom = organization?.segment === 'telecom';
+  const isAdmin = profile.role === 'admin' || profile.role === 'super_admin';
+  const isTelecom = organization.segment === 'telecom';
   const newButtonLabel = isTelecom ? 'Novo Cliente' : 'Novo Lead';
   
   const [selectedLead, setSelectedLead] = useState<any | null>(null);
   const [newLeadDialogOpen, setNewLeadDialogOpen] = useState(false);
   const [newLeadStageId, setNewLeadStageId] = useState<string | null>(null);
-  // newLeadForm agora é gerenciado pelo CreateLeadDialog
+  // newLeadForm agora ? gerenciado pelo CreateLeadDialog
   const {
     filters: sharedFilters,
     datePreset,
@@ -162,8 +219,6 @@ export default function Pipelines() {
   const [selectedPipelineId, setSelectedPipelineId] = useState<string | null>(null);
   const [newPipelineDialogOpen, setNewPipelineDialogOpen] = useState(false);
   const [newPipelineName, setNewPipelineName] = useState('');
-  const [editingPipelineId, setEditingPipelineId] = useState<string | null>(null);
-  const [editingPipelineName, setEditingPipelineName] = useState('');
   const [newStageDialogOpen, setNewStageDialogOpen] = useState(false);
   const [newStageName, setNewStageName] = useState('');
   const [newStageColor, setNewStageColor] = useState('#6b7280');
@@ -210,7 +265,7 @@ export default function Pipelines() {
   // Set initial filter based on user role, permissions, AND team leadership
   // Wait for permission to load before deciding the filter
   useEffect(() => {
-    if (filterUser === null && profile?.id && !permissionLoading) {
+    if (filterUser === null && profile.id && !permissionLoading) {
       // For admin, super_admin, users with lead_view_all permission, OR team leaders: show all
       if (isAdmin || hasLeadViewAll || isTeamLeader) {
         setFilterUser('all');
@@ -241,26 +296,6 @@ export default function Pipelines() {
     }
   );
 
-  // Log de auditoria de filtros ativos
-  useEffect(() => {
-    const activeFilters = {
-      period: datePreset,
-      search: searchQuery,
-      tag: filterTag,
-      status: filterDealStatus,
-      source: filterSource,
-      campaign: filterCampaign,
-      adset: filterAdSet,
-      ad: filterAd,
-      responsible: filterUser
-    };
-    
-    const count = Object.values(activeFilters).filter(v => v && v !== 'all' && v !== '').length;
-    if (count > 0) {
-      console.log('Pipeline active filters:', activeFilters);
-    }
-  }, [datePreset, searchQuery, filterTag, filterDealStatus, filterSource, filterCampaign, filterAdSet, filterAd, filterUser]);
-
   // Combine base stages with leads data when available
   const stages = useMemo(() => {
     if (stagesWithLeads.length > 0) return stagesWithLeads;
@@ -269,16 +304,16 @@ export default function Pipelines() {
 
   const { data: users = [] } = useOrganizationUsers();
   const { data: allTags = [] } = useTags();
-  // createLead agora é gerenciado pelo CreateLeadDialog
+  // createLead agora ? gerenciado pelo CreateLeadDialog
   const assignLeadRoundRobin = useAssignLeadRoundRobin();
   const canEditPipeline = useCanEditCadences();
-  const { recordFirstResponse } = useRecordFirstResponseOnAction();
   const isMobile = useIsMobile();
+  const [activeMobileStageId, setActiveMobileStageId] = useState<string | null>(null);
   
   const allSources = useMemo(() => {
     const sources = new Set<string>();
     stages.forEach(stage => {
-      stage.leads?.forEach((lead: any) => {
+      stage.leads.forEach((lead: any) => {
         if (lead.source) sources.add(lead.source);
       });
     });
@@ -289,12 +324,12 @@ export default function Pipelines() {
   const isLoading = pipelinesLoading || baseStagesLoading;
   const isInitialLeadsLoading = leadsLoading && stagesWithLeads.length === 0;
 
-  // Handler para carregar mais leads de uma coluna específica
+  // Handler para carregar mais leads de uma coluna espec?fica
   const handleLoadMore = useCallback((stageId: string) => {
     if (!selectedPipelineId) return;
     
     const stage = stages.find(s => s.id === stageId);
-    const currentCount = stage?.leads?.length || 0;
+    const currentCount = stage.leads.length || 0;
     
     loadMoreLeads.mutate({
       pipelineId: selectedPipelineId,
@@ -316,20 +351,20 @@ export default function Pipelines() {
 
   // Real-time subscription for leads and tags updates
   useEffect(() => {
-    if (!profile?.organization_id) return;
+    if (!profile.organization_id) return;
 
     // Debounce timeout para evitar flickering visual
     let refetchTimeout: ReturnType<typeof setTimeout>;
     
     const debouncedRefetch = () => {
-      // NÃO refetch durante drag-and-drop ativo (evita race condition)
+      // NÃƒO refetch durante drag-and-drop ativo (evita race condition)
       if (isDraggingRef.current) return;
       
       clearTimeout(refetchTimeout);
       refetchTimeout = setTimeout(() => {
         if (isDraggingRef.current) return;
         refetch();
-      }, 2000); // Aumentado para 2s para garantir estabilidade pós-automações
+      }, 2000); // Aumentado para 2s para garantir estabilidade p?s-automa?es
     };
     
     const channel = supabase
@@ -349,13 +384,13 @@ export default function Pipelines() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [profile?.organization_id, refetch]);
+  }, [profile.organization_id, refetch]);
 
   // Manter selectedLead sincronizado com os dados mais recentes
   useEffect(() => {
     if (selectedLead && stages.length > 0) {
       for (const stage of stages) {
-        const updatedLead = stage.leads?.find((l: any) => l.id === selectedLead.id);
+        const updatedLead = stage.leads.find((l: any) => l.id === selectedLead.id);
         if (updatedLead) {
           // Compare key fields to avoid circular reference issues with JSON.stringify
           const hasChanged = 
@@ -378,12 +413,12 @@ export default function Pipelines() {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const leadId = params.get('lead_id') || params.get('lead');
-   const timestamp = params.get('t'); // Usar timestamp como dependência para forçar re-execução
+   const timestamp = params.get('t'); // Usar timestamp como depend?ncia para for?ar re-execu?o
     
     if (leadId && stages.length > 0) {
       // Find lead in any stage
       for (const stage of stages) {
-        const lead = stage.leads?.find((l: any) => l.id === leadId);
+        const lead = stage.leads.find((l: any) => l.id === leadId);
         if (lead) {
           setSelectedLead(lead);
           // Clear the URL param after opening
@@ -391,7 +426,7 @@ export default function Pipelines() {
           return;
         }
       }
-      // Lead não encontrado nos stages carregados - buscar diretamente no banco
+      // Lead n?o encontrado nos stages carregados - buscar diretamente no banco
       const fetchLead = async () => {
         try {
           const { data: lead, error } = await supabase
@@ -409,7 +444,7 @@ export default function Pipelines() {
             // Transformar tags para o formato esperado pelo LeadDetailDialog
             const formattedLead = {
               ...lead,
-              tags: lead.tags?.map((lt: any) => lt.tag) || []
+              tags: lead.tags.map((lt: any) => lt.tag) || []
             };
             setSelectedLead(formattedLead);
             navigate('/crm/pipelines', { replace: true });
@@ -421,7 +456,7 @@ export default function Pipelines() {
       
       fetchLead();
     }
-  }, [location.search, stages, navigate]); // timestamp implícito via location.search
+  }, [location.search, stages, navigate]); // timestamp impl?cito via location.search
 
   const queryClient = useQueryClient();
 
@@ -429,11 +464,20 @@ export default function Pipelines() {
     const { destination, source, draggableId } = result;
     
     if (!destination) return;
-    if (destination.droppableId === source.droppableId && destination.index === source.index) return;
+    if (
+      destination.droppableId === source.droppableId &&
+      destination.index === source.index
+    ) {
+      return;
+    }
 
     // Regra de Fechamento (Plenos Obras)
     const targetStage = stages.find(s => s.id === destination.droppableId);
-    if (targetStage?.name?.toLowerCase().includes('fechamento') || targetStage?.name?.toLowerCase().includes('contrato')) {
+    if (
+      destination.droppableId !== source.droppableId &&
+      targetStage &&
+      (targetStage.name.toLowerCase().includes('fechamento') || targetStage.name.toLowerCase().includes('contrato'))
+    ) {
       setPendingDragResult(result);
       setConfirmationDialogOpen(true);
       return;
@@ -447,28 +491,62 @@ export default function Pipelines() {
     isDraggingRef.current = true;
     
     const { destination, source, draggableId } = result;
-    if (!destination) return;
+    if (!destination) {
+      isDraggingRef.current = false;
+      return;
+    }
+
+    try {
+      enforceClientActionRateLimit(`lead:move:${profile?.id || 'anonymous'}:${draggableId}`, [
+        { limit: 2, windowMs: 1000 },
+        { limit: 30, windowMs: 60_000 },
+      ]);
+    } catch (error) {
+      const rateLimitMessage = getClientRateLimitMessage(error);
+      if (rateLimitMessage) toast.error(rateLimitMessage);
+      isDraggingRef.current = false;
+      return;
+    }
 
     const newStageId = destination.droppableId;
     const oldStageId = source.droppableId;
+    const isSameStage = newStageId === oldStageId;
     const oldStage = stages.find(s => s.id === oldStageId);
     const newStage = stages.find(s => s.id === newStageId);
+    const getLeadOrderDate = (lead: any) => {
+      const rawDate = lead?.stage_entered_at || lead?.created_at;
+      const time = rawDate ? new Date(rawDate).getTime() : NaN;
+      return Number.isFinite(time) ? time : Date.now();
+    };
+    const getStageEnteredAtForIndex = (leads: any[], targetIndex: number) => {
+      if (targetIndex <= 0) return new Date().toISOString();
+
+      const above = leads[targetIndex - 1];
+      const below = leads[targetIndex];
+      const aboveTime = getLeadOrderDate(above);
+      const belowTime = below ? getLeadOrderDate(below) : aboveTime - 2000;
+      const nextTime = Math.min(aboveTime - 1, Math.max(belowTime + 1, Math.floor((aboveTime + belowTime) / 2)));
+
+      return new Date(nextTime).toISOString();
+    };
     
     // IMMEDIATE optimistic update - move card visually first
     // Cache key must match useStagesWithLeads queryKey
-    const dateFromISO = dateRange?.from?.toISOString();
-    const dateToISO = dateRange?.to?.toISOString();
+    const dateFromISO = dateRange.from.toISOString();
+    const dateToISO = dateRange.to.toISOString();
     const effectiveFilterTag = filterTag !== 'all' ? filterTag : undefined;
     const effectiveFilterDealStatus = filterDealStatus !== 'all' ? filterDealStatus : undefined;
     const effectiveSearchQuery = searchQuery || undefined;
     const effectiveFilterCampaign = filterCampaign !== 'all' ? filterCampaign : undefined;
     const effectiveFilterAdSet = filterAdSet !== 'all' ? filterAdSet : undefined;
     const effectiveFilterAd = filterAd !== 'all' ? filterAd : undefined;
+    const effectiveFilterSource = filterSource !== 'all' ? filterSource : undefined;
+    const effectiveFilterUser = filterUser === 'all' ? undefined : (filterUser || undefined);
 
     const queryKey = [
       'stages-with-leads', 
       selectedPipelineId, 
-      filterUser, 
+      effectiveFilterUser, 
       dateFromISO, 
       dateToISO, 
       effectiveFilterTag, 
@@ -477,7 +555,7 @@ export default function Pipelines() {
       effectiveFilterCampaign,
       effectiveFilterAdSet,
       effectiveFilterAd,
-      filterSource
+      effectiveFilterSource
     ];
     const previousData = queryClient.getQueryData(queryKey);
     
@@ -500,32 +578,52 @@ export default function Pipelines() {
       if (leadIndex === -1) return old;
       
       const [movedLead] = newStages[sourceStageIndex].leads.splice(leadIndex, 1);
+      const targetIndex = Math.min(destination.index, newStages[destStageIndex].leads.length);
+      const nextStageEnteredAt = getStageEnteredAtForIndex(newStages[destStageIndex].leads, targetIndex);
       
-      // Atualiza o stage_id do lead (deal_status será aplicado depois se houver automação)
+      // Atualiza o stage_id do lead (deal_status sera aplicado depois se houver automacao)
       const updatedLead = {
         ...movedLead,
         stage_id: newStageId,
-        stage_entered_at: new Date().toISOString(),
+        stage_entered_at: nextStageEnteredAt,
         stage: newStages[destStageIndex],
       };
       
-      // Insere na posição correta na coluna de destino
-      newStages[destStageIndex].leads.splice(destination.index, 0, updatedLead);
+      // O banco ordena por stage_entered_at desc; calculamos a data para manter
+      // a posicao em que o card foi solto, inclusive dentro da mesma coluna.
+      newStages[destStageIndex].leads.splice(targetIndex, 0, updatedLead);
+      if (!isSameStage) {
+        newStages[sourceStageIndex].total_lead_count = Math.max((newStages[sourceStageIndex].total_lead_count || 0) - 1, 0);
+        newStages[destStageIndex].total_lead_count = (newStages[destStageIndex].total_lead_count || 0) + 1;
+      }
+      newStages[sourceStageIndex].has_more = (newStages[sourceStageIndex].total_lead_count || 0) > newStages[sourceStageIndex].leads.length;
+      newStages[destStageIndex].has_more = (newStages[destStageIndex].total_lead_count || 0) > newStages[destStageIndex].leads.length;
       
       return newStages;
     });
     
     try {
+      const currentStages = (queryClient.getQueryData(queryKey) as any[] | undefined) || stages;
+      const persistedStage = currentStages.find((stage: any) => stage.id === newStageId);
+      const persistedLead = persistedStage?.leads?.find((lead: any) => lead.id === draggableId);
+      const persistedStageEnteredAt = persistedLead?.stage_entered_at || new Date().toISOString();
+
       // Update lead stage in database first
       const updateResult = await supabase
         .from('leads')
         .update({ 
           stage_id: newStageId,
-          stage_entered_at: new Date().toISOString(),
+          stage_entered_at: persistedStageEnteredAt,
         })
         .eq('id', draggableId);
       
       if (updateResult.error) throw updateResult.error;
+
+      if (isSameStage) {
+        toast.success('Ordem do lead atualizada');
+        queryClient.invalidateQueries({ queryKey: ['stages-with-leads'], refetchType: 'none' });
+        return;
+      }
       
       // Fetch stage automations separately (don't block on failure)
       let automationsResult: any = { data: [] };
@@ -540,13 +638,40 @@ export default function Pipelines() {
       }
       
       // Apply deal_status from automation as a SECOND optimistic update
-      const statusAutomation = automationsResult.data?.find(
+      const automations = automationsResult.data || [];
+      const statusAutomation = automations.find(
         (a: any) => a.automation_type === 'change_deal_status_on_enter'
       );
-      const actionConfig = statusAutomation?.action_config as Record<string, unknown> | null;
+      const actionConfig = statusAutomation?.action_config as Record<string, unknown> | null | undefined;
       const newDealStatus = actionConfig?.deal_status as string | undefined;
+      const assigneeAutomation = automations.find(
+        (a: any) => a.automation_type === 'change_assignee_on_enter'
+      );
+      const assigneeConfig = assigneeAutomation?.action_config as Record<string, unknown> | null | undefined;
+      const newAssignedUserId = assigneeConfig?.target_user_id as string | undefined;
+
+      if (newDealStatus || newAssignedUserId) {
+        const automationUpdate: Record<string, unknown> = {};
+
+        if (newDealStatus) {
+          automationUpdate.deal_status = newDealStatus;
+          automationUpdate.won_at = newDealStatus === 'won' ? new Date().toISOString() : null;
+          automationUpdate.lost_at = newDealStatus === 'lost' ? new Date().toISOString() : null;
+        }
+
+        if (newAssignedUserId) {
+          automationUpdate.assigned_user_id = newAssignedUserId;
+        }
+
+        const automationResult = await supabase
+          .from('leads')
+          .update(automationUpdate)
+          .eq('id', draggableId);
+
+        if (automationResult.error) throw automationResult.error;
+      }
       
-      if (newDealStatus) {
+      if (newDealStatus || newAssignedUserId) {
         queryClient.setQueryData(queryKey, (old: any[] | undefined) => {
           if (!old) return old;
           return old.map(stage => ({
@@ -554,9 +679,12 @@ export default function Pipelines() {
             leads: (stage.leads || []).map((l: any) => 
               l.id === draggableId ? {
                 ...l,
-                deal_status: newDealStatus,
-                won_at: newDealStatus === 'won' ? new Date().toISOString() : l.won_at,
-                lost_at: newDealStatus === 'lost' ? new Date().toISOString() : l.lost_at,
+                ...(newDealStatus ? {
+                  deal_status: newDealStatus,
+                  won_at: newDealStatus === 'won' ? new Date().toISOString() : null,
+                  lost_at: newDealStatus === 'lost' ? new Date().toISOString() : null,
+                } : {}),
+                ...(newAssignedUserId ? { assigned_user_id: newAssignedUserId } : {}),
               } : l
             ),
           }));
@@ -566,20 +694,7 @@ export default function Pipelines() {
       // Invalidar cache de activities
       queryClient.invalidateQueries({ queryKey: ['activities', draggableId] });
       queryClient.invalidateQueries({ queryKey: ['lead-timeline', draggableId] });
-      
-      // Registrar first response ao mover lead (stage_move)
-      const movedLeadForResponse = stages.find(s => s.id === oldStageId)?.leads?.find((l: any) => l.id === draggableId);
-      if (movedLeadForResponse) {
-        recordFirstResponse({
-          leadId: draggableId,
-          organizationId: profile?.organization_id || movedLeadForResponse.organization_id || '',
-          channel: 'stage_move',
-          actorUserId: profile?.id || null,
-          firstResponseAt: movedLeadForResponse.first_response_at,
-        });
-      }
-      
-      // Toast dinâmico baseado nas automações
+      // Toast din?mico baseado nas automa?es
       if (newDealStatus) {
         const statusLabels: Record<string, string> = {
           won: 'Ganho',
@@ -588,44 +703,23 @@ export default function Pipelines() {
         };
         const statusLabel = statusLabels[newDealStatus] || newDealStatus;
         toast.success(`Lead alterado para ${statusLabel}`, {
-          description: `Movido para ${newStage?.name}`
+          description: `Movido para ${newStage.name}`
+        });
+      } else if (newAssignedUserId) {
+        toast.success(`Lead movido para ${newStage.name}`, {
+          description: 'Responsável atualizado pela automação da coluna'
         });
       } else {
-        toast.success(`Lead movido para ${newStage?.name}`);
+        toast.success(`Lead movido para ${newStage.name}`);
       }
       
-      // Registrar atividade de gamificação (sempre registrar stage_change para capturar vendas e propostas)
-      await supabase.from('activities').insert({
-        lead_id: draggableId,
-        user_id: profile?.id,
-        type: 'stage_change',
-        content: `Lead movido para ${newStage?.name} via Pipeline`,
-        metadata: {
-          old_stage_id: oldStageId,
-          new_stage_id: newStageId,
-          old_stage_name: oldStage?.name,
-          new_stage_name: newStage?.name,
-          new_status: newDealStatus || null
-        }
-      });
-
-      // Disparar automações de fluxo (automations table) para mudança de etapa
-      supabase.functions.invoke('automation-trigger', {
-        body: {
-          event_type: 'lead_stage_changed',
-          data: {
-            lead_id: draggableId,
-            old_stage_id: oldStageId,
-            new_stage_id: newStageId,
-          },
-        },
-      }).catch(err => console.error('Erro ao disparar automação de etapa:', err));
+      // Hist?rico e automa?es visuais s?o disparados pelos triggers do banco.
       
       // Notificar partes interessadas para Telecom
-      if (isTelecom && profile?.organization_id && selectedPipelineId) {
+      if (isTelecom && profile.organization_id && selectedPipelineId) {
         // Buscar dados do lead para obter nome e assigned_user_id
         const sourceStage = stages.find(s => s.id === oldStageId);
-        const movedLead = sourceStage?.leads?.find((l: any) => l.id === draggableId);
+        const movedLead = sourceStage.leads.find((l: any) => l.id === draggableId);
         
         if (movedLead) {
           notifyLeadMoved({
@@ -633,29 +727,30 @@ export default function Pipelines() {
             leadName: movedLead.name,
             organizationId: profile.organization_id,
             pipelineId: selectedPipelineId,
-            fromStage: oldStage?.name || 'Desconhecido',
-            toStage: newStage?.name || 'Desconhecido',
+            fromStage: oldStage.name || 'Desconhecido',
+            toStage: newStage.name || 'Desconhecido',
             assignedUserId: movedLead.assigned_user_id,
-          }).catch(err => console.error('Erro ao notificar movimentação:', err));
+          }).catch(err => console.error('Erro ao notificar movimenta?o:', err));
         }
       }
       
-      // Forçar refetch para garantir sincronização com banco (trigger pode ter alterado outros campos)
-      await refetch();
+      // For?ar refetch para garantir sincroniza?o com banco (trigger pode ter alterado outros campos)
+      queryClient.invalidateQueries({ queryKey: ['stages-with-leads'], refetchType: 'none' });
       
     } catch (error: any) {
       // Rollback em caso de erro
       queryClient.setQueryData(queryKey, previousData);
-      toast.error('Erro ao mover lead: ' + error.message);
+      const rateLimitMessage = getClientRateLimitMessage(error);
+      toast.error(rateLimitMessage || 'Erro ao mover lead: ' + error.message);
     } finally {
-      // Liberar flag após delay para evitar flash visual da subscription
+      // Liberar flag ap?s delay para evitar flash visual da subscription
       setTimeout(() => {
         isDraggingRef.current = false;
       }, 500);
     }
-  }, [stages, dateRange, filterTag, filterDealStatus, searchQuery, filterCampaign, filterAdSet, filterAd, selectedPipelineId, filterUser, queryClient, recordFirstResponse, refetch, isTelecom, profile]);
+  }, [stages, dateRange, filterTag, filterDealStatus, searchQuery, filterCampaign, filterAdSet, filterAd, filterSource, selectedPipelineId, filterUser, queryClient, isTelecom, profile]);
 
-  // handleCreateLead agora é gerenciado pelo CreateLeadDialog
+  // handleCreateLead agora ? gerenciado pelo CreateLeadDialog
 
   const handleManualRefresh = useCallback(async () => {
     setIsRefreshing(true);
@@ -667,7 +762,7 @@ export default function Pipelines() {
     }
   }, [refetch]);
 
-  const openNewLeadDialog = (stageId?: string) => {
+  const openNewLeadDialog = (stageId: string) => {
     setNewLeadStageId(stageId || null);
     setNewLeadDialogOpen(true);
   };
@@ -717,7 +812,7 @@ export default function Pipelines() {
       setIsServerSearching(true);
       try {
         // Search ALL leads in this pipeline matching the query
-        let query = (supabase as any)
+        const query = (supabase as any)
           .from('leads')
           .select(`
             id, name, phone, email, source, created_at,
@@ -781,9 +876,9 @@ export default function Pipelines() {
       if (searchInput) {
         const lowerSearch = searchInput.toLowerCase();
         stageLeads = stageLeads.filter((lead: any) => {
-          const nameMatch = lead.name?.toLowerCase().includes(lowerSearch);
-          const phoneMatch = lead.phone?.includes(lowerSearch);
-          const emailMatch = lead.email?.toLowerCase().includes(lowerSearch);
+          const nameMatch = lead.name.toLowerCase().includes(lowerSearch);
+          const phoneMatch = lead.phone.includes(lowerSearch);
+          const emailMatch = lead.email.toLowerCase().includes(lowerSearch);
           return nameMatch || phoneMatch || emailMatch;
         });
       }
@@ -804,15 +899,36 @@ export default function Pipelines() {
     });
   }, [stages, searchInput, deferredSearch, serverSearchResults]);
 
+  useEffect(() => {
+    if (!isMobile || filteredStages.length === 0) return;
+    const activeExists = activeMobileStageId && filteredStages.some((stage: any) => stage.id === activeMobileStageId);
+    if (!activeExists) {
+      setActiveMobileStageId(filteredStages[0].id);
+    }
+  }, [isMobile, filteredStages, activeMobileStageId]);
+
+  const visibleStages = useMemo(() => {
+    if (!isMobile) return filteredStages;
+    const activeStage = filteredStages.find((stage: any) => stage.id === activeMobileStageId);
+    return activeStage ? [activeStage] : filteredStages.slice(0, 1);
+  }, [isMobile, filteredStages, activeMobileStageId]);
+
   // Compute VGV from filteredStages so badge always matches visible leads
   const stageVGVMap = useMemo(() => {
     const map = new Map<string, { openVGV: number }>();
     for (const stage of filteredStages) {
       let openVGV = 0;
       for (const lead of stage.leads || []) {
-        if (lead.deal_status !== 'won' && lead.deal_status !== 'lost') {
-          openVGV += lead.valor_interesse || lead.interest_property?.preco || lead.interest_plan?.price || 0;
+        if (!lead || lead.deal_status === 'won' || lead.deal_status === 'lost') {
+          continue;
         }
+        const propertyPrice = lead.interest_property && typeof lead.interest_property === 'object'
+          ? Number(lead.interest_property.preco || 0)
+          : 0;
+        const planPrice = lead.interest_plan && typeof lead.interest_plan === 'object'
+          ? Number(lead.interest_plan.price || 0)
+          : 0;
+        openVGV += Number(lead.valor_interesse || 0) || propertyPrice || planPrice || 0;
       }
       if (openVGV > 0) map.set(stage.id, { openVGV });
     }
@@ -823,7 +939,7 @@ export default function Pipelines() {
     const map = new Map<string, { total: number; visible: number; remaining: number; canLoadMore: boolean }>();
 
     for (const stage of filteredStages) {
-      const visible = stage.leads?.length || 0;
+      const visible = stage.leads.length || 0;
       // Use total_lead_count returned from useStagesWithLeads instead of redundant queries
       const total = stage.total_lead_count ?? visible;
       const remaining = Math.max(total - visible, 0);
@@ -832,7 +948,7 @@ export default function Pipelines() {
         total,
         visible,
         remaining,
-        canLoadMore: remaining > 0,
+        canLoadMore: visible > 0 && remaining > 0,
       });
     }
 
@@ -866,15 +982,15 @@ export default function Pipelines() {
   
   const handleDeletePipeline = async (pipelineId: string) => {
     if (pipelines.length <= 1) {
-      toast.error('Você precisa ter pelo menos uma pipeline');
+      toast.error('Voc? precisa ter pelo menos uma pipeline');
       return;
     }
     
     try {
       await deletePipeline.mutateAsync(pipelineId);
       const remaining = pipelines.filter(p => p.id !== pipelineId);
-      setSelectedPipelineId(remaining[0]?.id || null);
-      toast.success('Pipeline excluída!');
+      setSelectedPipelineId(remaining[0].id || null);
+      toast.success('Pipeline exclu?da!');
     } catch (error: any) {
       toast.error('Erro ao excluir: ' + error.message);
     }
@@ -929,39 +1045,18 @@ export default function Pipelines() {
                 </DropdownMenuContent>
               </DropdownMenu>
 
-              {isAdmin && selectedPipelineId && (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-8 w-8 text-muted-foreground hover:text-primary transition-colors"
-                        onClick={() => {
-                          setEditingPipelineId(selectedPipelineId);
-                          setEditingPipelineName(currentPipeline?.name || '');
-                        }}
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Editar pipeline</TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              )}
-
               <div className="hidden lg:block h-6 w-px bg-border/60 mx-1" />
 
               {canEditPipeline && (
                 <Button
                   variant="outline"
-                  size="sm"
-                  className="h-8 gap-2 text-[11px] font-bold uppercase tracking-wider border-border/60 hover:border-primary/50 transition-colors"
+                  size="icon"
+                  className="h-8 w-8 border-border/60 hover:border-primary/50 transition-colors"
                   onClick={() => setStagesEditorOpen(true)}
                   disabled={!selectedPipelineId}
+                  title="Configurar colunas"
                 >
                   <Settings className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">Configurar Colunas</span>
                 </Button>
               )}
             </div>
@@ -971,14 +1066,14 @@ export default function Pipelines() {
                 variant="outline"
                 size="icon"
                 className={cn(
-                  "h-8 w-8 border-border/60 hover:border-primary/50 transition-colors", 
+                  "h-8 w-8 ml-1 border-border/60 hover:border-primary/50 transition-colors", 
                   isRefreshing && "text-primary border-primary bg-primary/5"
                 )}
                 onClick={handleManualRefresh}
                 disabled={isRefreshing}
                 title="Atualizar pipeline"
               >
-                <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
+                <RefreshCw className={cn("h-3.5 w-3.5", isRefreshing && "animate-spin")} />
               </Button>
 
               <SharedFilters
@@ -1048,22 +1143,48 @@ export default function Pipelines() {
         {stages.length === 0 && (
           <Card>
             <CardContent className="py-12 text-center">
-              <h3 className="font-medium mb-2">Nenhum estágio configurado</h3>
+              <h3 className="font-medium mb-2">Nenhum est?gio configurado</h3>
               <p className="text-muted-foreground">
-                Configure os estágios do pipeline nas configurações
+                Configure os est?gios do pipeline nas configura?es
               </p>
             </CardContent>
           </Card>
         )}
 
+        {isMobile && filteredStages.length > 0 && (
+          <div className="px-1 pb-3">
+            <Select value={activeMobileStageId || filteredStages[0].id} onValueChange={setActiveMobileStageId}>
+              <SelectTrigger className="h-10 rounded-xl bg-card border-border/70">
+                <SelectValue placeholder="Selecionar coluna" />
+              </SelectTrigger>
+              <SelectContent>
+                {filteredStages.map((stage: any) => (
+                  <SelectItem key={stage.id} value={stage.id}>
+                    <span className="inline-flex items-center gap-2">
+                      <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: stage.color }} />
+                      <span>{stage.name}</span>
+                      <span className="text-muted-foreground">
+                          ({stageCountMetaMap.get(stage.id)?.total ?? stage.total_lead_count ?? stage.leads.length ?? 0})
+                      </span>
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
         {/* Kanban Board with Drag and Drop */}
         <DragDropContext onDragEnd={handleDragEnd}>
-          <div className={cn("flex-1 overflow-x-auto overflow-y-auto min-h-0 scrollbar-thin", isMobile ? "pb-3" : "pb-2")}>
-            <div className="flex gap-3 h-full min-w-max px-1">
-              {filteredStages.map((stage: any) => (
+          <div className={cn("flex-1 min-h-0 scrollbar-thin", isMobile ? "overflow-y-auto overflow-x-hidden pb-24" : "overflow-x-auto overflow-y-auto pb-2")}>
+            <div className={cn("flex gap-3 h-full px-1", isMobile ? "min-w-0" : "min-w-max")}>
+              {visibleStages.map((stage: any) => (
                 <div 
                   key={stage.id}
-                  className="w-[280px] sm:w-72 flex-shrink-0 flex flex-col rounded-lg overflow-hidden h-full"
+                  className={cn(
+                    "flex-shrink-0 flex flex-col rounded-lg overflow-hidden h-full",
+                    isMobile ? "w-full min-w-0" : "w-[280px] sm:w-72"
+                  )}
                   style={{ backgroundColor: `${stage.color}08` }}
                 >
                   {/* Column Header */}
@@ -1106,10 +1227,10 @@ export default function Pipelines() {
                         className="text-xs shrink-0"
                         style={{ backgroundColor: `${stage.color}20`, color: stage.color }}
                       >
-                      {stageCountMetaMap.get(stage.id)?.total ?? stage.total_lead_count ?? stage.leads?.length ?? 0}
+                        {stageCountMetaMap.get(stage.id)?.total ?? stage.total_lead_count ?? stage.leads.length ?? 0}
                       </Badge>
                       {/* VGV Badge */}
-                      {stageVGVMap.get(stage.id)?.openVGV ? (
+                      {(stageVGVMap.get(stage.id)?.openVGV || 0) > 0 ? (
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
@@ -1121,7 +1242,7 @@ export default function Pipelines() {
                               </Badge>
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p className="text-xs">VGV em aberto neste estágio</p>
+                              <p className="text-xs">VGV em aberto neste est?gio</p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
@@ -1148,14 +1269,14 @@ export default function Pipelines() {
                   </div>
 
                   {/* Droppable Area with internal scroll */}
-                  <div className="flex-1 overflow-hidden">
+                  <div className="flex-1 overflow-hidden flex flex-col min-h-0">
                     <Droppable droppableId={stage.id}>
                       {(provided, snapshot) => (
                         <div 
                           ref={provided.innerRef}
                           {...provided.droppableProps}
                           className={cn(
-                            "h-full overflow-y-auto px-2 pb-2 space-y-2 pt-2 scrollbar-thin",
+                            "flex-1 min-h-0 overflow-y-auto px-2 pb-2 space-y-2 pt-2 scrollbar-thin",
                             snapshot.isDraggingOver && "bg-accent/30"
                           )}
                         >
@@ -1164,40 +1285,40 @@ export default function Pipelines() {
                               <div key={i} className="bg-background/50 animate-pulse rounded-lg h-24 w-full" />
                             ))
                           ) : (
-                            stage.leads?.map((lead: any, index: number) => (
+                            stage.leads.map((lead: any, index: number) => (
                               <LeadCard 
                                 key={lead.id} 
                                 lead={lead} 
                                 index={index}
                                 onClick={() => setSelectedLead(lead)}
                                 onAssignNow={(leadId) => assignLeadRoundRobin.mutate(leadId)}
-                                isDragDisabled={isDragDisabled}
+                                isDragDisabled={isDragDisabled || isMobile}
                               />
                             ))
                           )}
                           {provided.placeholder}
-                          
-                          
-                          {/* Botão Carregar Mais */}
-                          {stageCountMetaMap.get(stage.id)?.canLoadMore && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="w-full text-xs text-muted-foreground hover:text-foreground mt-2"
-                              onClick={() => handleLoadMore(stage.id)}
-                              disabled={loadMoreLeads.isPending}
-                            >
-                              {loadMoreLeads.isPending && loadMoreLeads.variables?.stageId === stage.id ? (
-                                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                              ) : (
-                                <ChevronDown className="h-3 w-3 mr-1" />
-                              )}
-                              Carregar mais ({stageCountMetaMap.get(stage.id)?.remaining ?? 0} restantes)
-                            </Button>
-                          )}
                         </div>
                       )}
                     </Droppable>
+                    {/* Botao Carregar Mais fora da lista arrastavel */}
+                    {stageCountMetaMap.get(stage.id)?.canLoadMore && (
+                      <div className="px-2 pb-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="w-full text-xs text-muted-foreground hover:text-foreground"
+                          onClick={() => handleLoadMore(stage.id)}
+                          disabled={loadMoreLeads.isPending}
+                        >
+                          {loadMoreLeads.isPending && loadMoreLeads.variables.stageId === stage.id ? (
+                            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                          ) : (
+                            <ChevronDown className="h-3 w-3 mr-1" />
+                          )}
+                            Carregar mais ({stageCountMetaMap.get(stage.id)?.remaining ?? 0} restantes)
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -1220,14 +1341,16 @@ export default function Pipelines() {
         </DragDropContext>
 
         {/* Lead Detail Dialog */}
-        <LeadDetailDialog 
-          lead={selectedLead}
-          stages={stages}
-          onClose={() => setSelectedLead(null)} 
-          allTags={allTags}
-          allUsers={users}
-          refetchStages={refetch}
-        />
+        <LeadDialogErrorBoundary leadId={selectedLead?.id} onClose={() => setSelectedLead(null)}>
+          <LeadDetailDialog 
+            lead={selectedLead}
+            stages={stages}
+            onClose={() => setSelectedLead(null)} 
+            allTags={allTags}
+            allUsers={users}
+            refetchStages={refetch}
+          />
+        </LeadDialogErrorBoundary>
 
         {/* Stage Settings Dialog */}
         <StageSettingsDialog
@@ -1260,7 +1383,7 @@ export default function Pipelines() {
                 <Input
                   value={newPipelineName}
                   onChange={(e) => setNewPipelineName(e.target.value)}
-                  placeholder="Ex: Locação, Vendas..."
+                  placeholder="Ex: Loca?o, Vendas..."
                   required
                   autoFocus
                 />
@@ -1307,7 +1430,7 @@ export default function Pipelines() {
                 <Input
                   value={newStageName}
                   onChange={(e) => setNewStageName(e.target.value)}
-                  placeholder="Ex: Qualificado, Em Negociação..."
+                  placeholder="Ex: Qualificado, Em Negocia?o..."
                   required
                   autoFocus
                 />
@@ -1364,7 +1487,7 @@ export default function Pipelines() {
               name: s.name,
               color: s.color,
               position: s.position,
-              lead_count: s.leads?.length || 0,
+              lead_count: s.leads.length || 0,
             }))}
             onStagesUpdated={() => refetch()}
           />
@@ -1373,11 +1496,11 @@ export default function Pipelines() {
       <Dialog open={confirmationDialogOpen} onOpenChange={setConfirmationDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Confirmação de Contrato</DialogTitle>
+            <DialogTitle>Confirma?o de Contrato</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <p className="text-sm text-muted-foreground">
-              Você está movendo este lead para a etapa de Contrato/Fechamento.
+              Voc? est? movendo este lead para a etapa de Contrato/Fechamento.
             </p>
             <div className="flex items-center space-x-2">
               <input 
@@ -1412,3 +1535,8 @@ export default function Pipelines() {
     </AppLayout>
   );
 }
+
+
+
+
+

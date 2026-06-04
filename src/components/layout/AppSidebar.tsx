@@ -1,4 +1,4 @@
-import { LayoutDashboard, Kanban, Building2, Shuffle, Shield, Settings, HelpCircle, ChevronDown, ChevronLeft, ChevronRight, Users, MessageSquare, Calendar, DollarSign, FileText, Receipt, TrendingUp, BarChart3, Zap, Package, MapPin, UserCheck, Globe, PieChart, Trophy, History as HistoryIcon, CreditCard, HardHat, Workflow, Compass, ShoppingCart, Inbox } from 'lucide-react';
+import { LayoutDashboard, Kanban, Building2, Shuffle, HelpCircle, ChevronDown, ChevronLeft, ChevronRight, Users, MessageSquare, Calendar, DollarSign, FileText, Receipt, TrendingUp, BarChart3, Zap, Package, MapPin, UserCheck, Globe, PieChart, Trophy, History as HistoryIcon, CreditCard, HardHat, Workflow, Compass, ShoppingCart, Inbox } from 'lucide-react';
 import { WhatsAppIcon } from '@/components/icons/WhatsAppIcon';
 import { AnimatedIcon } from '@/components/icons/AnimatedIcon';
 import GLOBE_JSON from '@/components/icons/globe-icon.json';
@@ -190,14 +190,10 @@ const allNavItems: NavItem[] = [{
 
 const bottomItems: NavItem[] = [{
   icon: Globe,
-  labelKey: 'mySite',
+  labelKey: 'site',
   path: '/settings/site',
   adminOnly: true,
   module: 'site'
-}, {
-  icon: Settings,
-  labelKey: 'settings',
-  path: '/settings'
 }];
 
 function SidebarIcon({ item, size = 20, className }: { item: NavItem; size?: number; className?: string }) {
@@ -219,7 +215,7 @@ function SidebarIcon({ item, size = 20, className }: { item: NavItem; size?: num
   if (item.icon === Shuffle) {
     return <AnimatedIcon icon={MANAGEMENT_JSON} size={size + 4} className={cn("flex-shrink-0", className)} trigger="hover" />;
   }
-  if (item.labelKey === 'mySite') {
+  if (item.labelKey === 'site' || item.labelKey === 'mySite') {
     return <AnimatedIcon icon={GLOBE_JSON} size={size + 6} trigger="hover" className={cn("flex-shrink-0", className)} />;
   }
 
@@ -317,20 +313,13 @@ export const AppSidebar = React.memo(function AppSidebar() {
   // Filter bottom items based on user role and modules
   // While modules are loading, hide module-dependent items to prevent flash
   const computedBottomItems = useMemo(() => {
-    let items = bottomItems.filter(item => {
+    const items = bottomItems.filter(item => {
       if (item.adminOnly && profile?.role !== 'admin' && !isSuperAdmin) return false;
       // If modules are still loading and this item requires a module, hide it
       if (modulesLoading && item.module) return false;
       if (item.module && !hasModule(item.module as any)) return false;
       return true;
     });
-    if (isSuperAdmin) {
-      items = [{
-        icon: Shield,
-        labelKey: 'systemSettings',
-        path: '/admin/settings'
-      }, ...items];
-    }
     return items;
   }, [isSuperAdmin, profile?.role, hasModule, modulesLoading]);
   const getLabel = (labelKey: string): string => {

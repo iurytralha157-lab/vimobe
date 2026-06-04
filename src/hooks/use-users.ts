@@ -29,51 +29,29 @@ export function useUpdateUser() {
   
   return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<User> & { id: string }) => {
-      // Fetch old data for audit log
-      const { data: oldUser } = await supabase
-        .from('users')
-        .select('name, role, organization_id, is_active')
-        .eq('id', id)
-        .single();
-      
-      const { error } = await supabase
-        .from('users')
-        .update(updates)
-        .eq('id', id);
-      
+      const { data, error } = await supabase.functions.invoke('update-organization-user', {
+        body: { userId: id, updates },
+      });
+
       if (error) throw error;
-      
-      // Sync with user_roles table if role changed
-      if (updates.role) {
-        // Remove old roles first (admin/user, keep super_admin)
-        await supabase
-          .from('user_roles')
-          .delete()
-          .eq('user_id', id)
-          .in('role', ['admin', 'user']);
-        
-        // Add new role
-        await supabase
-          .from('user_roles')
-          .insert({ 
-            user_id: id, 
-            role: updates.role as 'admin' | 'user'
-          });
-      }
-      
-      // Audit log: user updated
+      if (!data?.success) throw new Error(data?.error || 'Erro ao atualizar usuário');
+
       logAuditAction(
         'update',
         'user',
         id,
-        oldUser || undefined,
+        undefined,
         updates as Record<string, unknown>,
-        oldUser?.organization_id || undefined
+        data.user?.organization_id || undefined
       ).catch(console.error);
-      
-      return { id, ...updates };
+
+      return data.user as User;
     },
-    onSuccess: () => {
+    onSuccess: (updatedUser) => {
+      queryClient.setQueryData(['organization-users'], (current: User[] | undefined) => {
+        if (!Array.isArray(current)) return current;
+        return current.map(user => user.id === updatedUser.id ? { ...user, ...updatedUser } : user);
+      });
       queryClient.invalidateQueries({ queryKey: ['organization-users'] });
       toast.success('Usuário atualizado!');
     },

@@ -54,7 +54,9 @@ export function useScheduleEventAssignees(eventId: string | undefined) {
             content: ev.title,
           });
         }
-      } catch {}
+      } catch {
+        // noop
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["schedule_assignees", eventId] });

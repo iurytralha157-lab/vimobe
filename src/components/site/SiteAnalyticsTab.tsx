@@ -1,10 +1,10 @@
-import { useMemo, useState } from 'react';
+﻿import { useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useSiteAnalytics, useSiteAnalyticsDetailed } from '@/hooks/use-site-analytics';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Eye, MousePointerClick, Monitor, ArrowUpRight, ArrowDownRight, Minus, BarChart3, TrendingUp, Star, FileText, Users, Route, ExternalLink } from 'lucide-react';
-import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LeadJourneyDashboard } from './LeadJourneyDashboard';
 import { DateFilterPopover } from '@/components/ui/date-filter-popover';
@@ -69,6 +69,29 @@ export function SiteAnalyticsTab() {
   const { data, isLoading } = useSiteAnalytics(dateFrom, dateTo);
   const { data: detailed } = useSiteAnalyticsDetailed(dateFrom, dateTo);
 
+  const chartData = useMemo(() => {
+    const dailyViews = new Map(
+      (detailed?.dailyViews || []).map(d => [new Date(d.date).toISOString().slice(0, 10), d.views])
+    );
+
+    const start = new Date(dateFrom);
+    const end = new Date(dateTo);
+    start.setHours(0, 0, 0, 0);
+    end.setHours(0, 0, 0, 0);
+
+    const days: Array<{ date: string; fullDate: string; views: number }> = [];
+    for (const cursor = new Date(start); cursor <= end; cursor.setDate(cursor.getDate() + 1)) {
+      const key = cursor.toISOString().slice(0, 10);
+      days.push({
+        date: cursor.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
+        fullDate: cursor.toLocaleDateString('pt-BR'),
+        views: dailyViews.get(key) || 0,
+      });
+    }
+
+    return days;
+  }, [detailed?.dailyViews, dateFrom, dateTo]);
+
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -93,11 +116,6 @@ export function SiteAnalyticsTab() {
   };
 
   const hasData = stats.uniqueSessions > 0 || stats.totalPages > 0 || (detailed?.totalSessions ?? 0) > 0;
-
-  const chartData = (detailed?.dailyViews || []).map(d => ({
-    date: new Date(d.date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
-    views: d.views,
-  }));
 
   return (
     <Tabs defaultValue="overview" className="space-y-6">
@@ -136,6 +154,14 @@ export function SiteAnalyticsTab() {
         )}
 
 
+        <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
+          <MetricCard label="Sessões" value={stats.uniqueSessions} previous={stats.prevViews} icon={Users} />
+          <MetricCard label="Páginas vistas" value={stats.totalPages} previous={stats.prevPages} icon={Eye} />
+          <MetricCard label="Conversão" value={detailed?.conversionRate ?? 0} previous={stats.prevConversions} suffix="%" icon={TrendingUp} />
+          <MetricCard label="Leads do site" value={detailed?.siteLeads ?? 0} previous={stats.prevConversions} icon={MousePointerClick} />
+        </div>
+
+        <div className="hidden">
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
@@ -216,9 +242,9 @@ export function SiteAnalyticsTab() {
             </CardContent>
           </Card>
         </div>
+        </div>
 
-        {chartData.length > 0 && (
-          <Card>
+        <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
                 <TrendingUp className="w-4 h-4 text-primary" />
@@ -228,30 +254,46 @@ export function SiteAnalyticsTab() {
             <CardContent>
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={chartData}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                    <XAxis dataKey="date" className="text-xs" tick={{ fontSize: 11 }} />
-                    <YAxis className="text-xs" tick={{ fontSize: 11 }} />
-                    <Tooltip
-                      contentStyle={{ borderRadius: 8, fontSize: 12 }}
-                      labelStyle={{ fontWeight: 600 }}
+                  <AreaChart data={chartData} margin={{ top: 8, right: 12, left: -18, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="siteVisitsGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis
+                      dataKey="date"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
                     />
-                    <Line
+                    <YAxis
+                      axisLine={false}
+                      tickLine={false}
+                      allowDecimals={false}
+                      tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+                    />
+                    <Tooltip
+                      cursor={{ stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1, strokeDasharray: '4 4' }}
+                      content={<SiteVisitsTooltip />}
+                    />
+                    <Area
                       type="monotone"
                       dataKey="views"
-                      name="Visitas no site"
-                      className="stroke-primary"
+                      name="Visitas"
                       stroke="hsl(var(--primary))"
-                      strokeWidth={2}
-                      dot={{ r: 3 }}
-                      activeDot={{ r: 5 }}
+                      strokeWidth={2.5}
+                      fill="url(#siteVisitsGradient)"
+                      fillOpacity={1}
+                      dot={{ r: 3, fill: 'hsl(var(--background))', stroke: 'hsl(var(--primary))', strokeWidth: 2 }}
+                      activeDot={{ r: 5, fill: 'hsl(var(--primary))', stroke: 'hsl(var(--background))', strokeWidth: 2 }}
                     />
-                  </LineChart>
+                  </AreaChart>
                 </ResponsiveContainer>
               </div>
             </CardContent>
-          </Card>
-        )}
+        </Card>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {(detailed?.topProperties?.length ?? 0) > 0 && (
@@ -342,6 +384,60 @@ export function SiteAnalyticsTab() {
   );
 }
 
+function SiteVisitsTooltip({ active, payload, label }: {
+  active?: boolean;
+  payload?: Array<{ value?: number; payload?: { fullDate?: string } }>;
+  label?: string;
+}) {
+  if (!active || !payload?.length) return null;
+
+  const value = Number(payload[0]?.value || 0);
+  const title = payload[0]?.payload?.fullDate || label;
+
+  return (
+    <div className="min-w-[140px] rounded-xl border border-border bg-popover/95 p-3 text-popover-foreground shadow-xl backdrop-blur-md">
+      <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">{title}</p>
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-2">
+          <span className="h-2 w-2 rounded-full bg-primary" />
+          <span className="text-xs text-muted-foreground">Visitas</span>
+        </div>
+        <span className="text-xs font-semibold tabular-nums text-foreground">{value}</span>
+      </div>
+    </div>
+  );
+}
+
+function MetricCard({ label, value, previous, suffix = '', icon: Icon }: {
+  label: string;
+  value: number;
+  previous: number;
+  suffix?: string;
+  icon: typeof Users;
+}) {
+  return (
+    <Card className="overflow-hidden">
+      <CardContent className="p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[11px] font-medium uppercase text-muted-foreground">{label}</p>
+            <div className="mt-2 flex items-center gap-2">
+              <span className="text-2xl font-bold leading-none">{value}{suffix}</span>
+              {getTrendIcon(value, previous)}
+            </div>
+            <p className={`text-xs font-medium mt-2 ${getTrendColor(value, previous)}`}>
+              Anterior: {previous}{suffix}
+            </p>
+          </div>
+          <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+            <Icon className="h-4 w-4 text-primary" />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 function StatBlock({ label, current, previous, suffix = '', hideArrow = false }: {
   label: string;
   current: number;
@@ -368,4 +464,3 @@ function StatBlock({ label, current, previous, suffix = '', hideArrow = false }:
     </div>
   );
 }
-

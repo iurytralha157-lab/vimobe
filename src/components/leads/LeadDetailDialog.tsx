@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+﻿import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { ExternalLink } from 'lucide-react';
 import { PropertyPickerDialog } from '@/components/properties/PropertyPickerDialog';
@@ -53,6 +53,7 @@ import { useFloatingChat } from '@/contexts/FloatingChatContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { LeadHistory } from '@/components/leads/LeadHistory';
 import { LeadTrackingSection } from '@/components/leads/LeadTrackingSection';
+import { LeadJourneySection } from '@/components/leads/LeadJourneySection';
 
 import { LeadMessagesTab } from '@/components/leads/LeadMessagesTab';
 import { LeadTimeline } from '@/components/leads/LeadTimeline';
@@ -171,6 +172,7 @@ export function LeadDetailDialog({
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const leadId = lead?.id ?? null;
   const [lostReasonLocal, setLostReasonLocal] = useState(lead?.lost_reason || '');
   const [lostReasonDialogOpen, setLostReasonDialogOpen] = useState(false);
   const [feedback, setFeedback] = useState('');
@@ -178,15 +180,15 @@ export function LeadDetailDialog({
   const handleSaveFeedback = async () => {
     if (!feedback.trim()) return;
     try {
-      // Registrar no histórico como uma nota
+      // Registrar no hist?rico como uma nota
       await createActivityMutation.mutateAsync({
         lead_id: lead.id,
         type: 'note',
         content: feedback,
       });
       
-      // Também podemos salvar como o feedback mais recente no lead
-      // (Isso requer a coluna 'feedback' que você solicitou via SQL)
+      // Tamb?m podemos salvar como o feedback mais recente no lead
+      // (Isso requer a coluna 'feedback' que voc? solicitou via SQL)
       try {
         await updateLead.mutateAsync({
           id: lead.id,
@@ -270,7 +272,7 @@ export function LeadDetailDialog({
         uf: lead.uf || '',
         cep: lead.cep || '',
         valor_interesse: valorStr,
-        commission_percentage: lead.commission_percentage?.toString() || '',
+        commission_percentage: lead.commission_percentage != null ? lead.commission_percentage.toString() : '',
         property_id: lead.interest_property_id || lead.property_id || '',
         message: lead.message || '',
         renda_familiar: lead.renda_familiar || '',
@@ -282,7 +284,7 @@ export function LeadDetailDialog({
         is_own_resource: (lead as any).is_own_resource || false
       });
     }
-  }, [lead?.id, lead?.valor_interesse]); // Re-sync if ID or value changes (e.g. from Plan selection)
+  }, [leadId, lead?.valor_interesse]); // Re-sync if ID or value changes (e.g. from Plan selection)
 
   // Separate effect to initialize lost_reason when lead first loads
   useEffect(() => {
@@ -293,14 +295,14 @@ export function LeadDetailDialog({
   const {
     data: leadTasks = [],
     isLoading: leadTasksLoading
-  } = useLeadTasks(lead?.id);
+  } = useLeadTasks(leadId || undefined);
   const {
     data: cadenceTemplates = []
   } = useCadenceTemplates();
   const {
     data: activities = [],
     isLoading: activitiesLoading
-  } = useActivities(lead?.id);
+  } = useActivities(leadId || undefined);
   const {
     data: properties = []
   } = useProperties();
@@ -308,12 +310,12 @@ export function LeadDetailDialog({
     data: scheduleEvents = [],
     isLoading: scheduleEventsLoading
   } = useScheduleEvents({
-    leadId: lead?.id
+    leadId: leadId || undefined
   });
   const {
     data: leadMeta,
     isLoading: leadMetaLoading
-  } = useLeadMeta(lead?.id);
+  } = useLeadMeta(leadId);
   const completeCadenceTask = useCompleteCadenceTask();
   const updateLead = useUpdateLead();
   const addTag = useAddLeadTag();
@@ -327,18 +329,18 @@ export function LeadDetailDialog({
   const createActivityMutation = useCreateActivity();
   const { data: servicePlans = [] } = useServicePlans();
   const isTelecom = organization?.segment === 'telecom';
-  const { data: telecomCustomer } = useTelecomCustomerByLead(isTelecom ? lead?.id : null);
-  const { data: attachments = [] } = useLeadAttachments(lead?.id);
+  const { data: telecomCustomer } = useTelecomCustomerByLead(isTelecom ? leadId : null);
+  const { data: attachments = [] } = useLeadAttachments(leadId);
   const createAttachment = useCreateLeadAttachment();
   
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !lead?.id) return;
+    if (!file || !lead.id) return;
     
     setIsUploading(true);
     try {
-      const { data: userData } = await supabase.from('users').select('organization_id').eq('id', profile?.id).single();
-      const organizationId = userData?.organization_id || organization?.id;
+      const { data: userData } = await supabase.from('users').select('organization_id').eq('id', profile.id).single();
+      const organizationId = userData.organization_id || organization.id;
       
       if (!organizationId) throw new Error("Organização não encontrada");
 
@@ -360,7 +362,7 @@ export function LeadDetailDialog({
         .from("whatsapp-media")
         .getPublicUrl(filePath);
         
-      console.log('Arquivo carregado. URL pública:', urlData.publicUrl);
+      console.log('Arquivo carregado. URL p?blica:', urlData.publicUrl);
         
       await createAttachment.mutateAsync({
         lead_id: lead.id,
@@ -372,7 +374,7 @@ export function LeadDetailDialog({
         file_size: file.size
       });
 
-      // Registrar no histórico de forma independente para evitar que erro aqui cancele o processo principal
+      // Registrar no hist?rico de forma independente para evitar que erro aqui cancele o processo principal
       try {
         await createActivityMutation.mutateAsync({
           lead_id: lead.id,
@@ -381,7 +383,7 @@ export function LeadDetailDialog({
           metadata: { file_url: urlData.publicUrl }
         });
       } catch (historyError) {
-        console.warn('Documento salvo, mas erro ao registrar no histórico:', historyError);
+        console.warn('Documento salvo, mas erro ao registrar no hist?rico:', historyError);
       }
       
       toast.success('Documento enviado com sucesso!');
@@ -402,15 +404,15 @@ export function LeadDetailDialog({
     createActivityMutation.mutate({
       lead_id: lead.id,
       type: 'call_initiated',
-      content: 'Ligação iniciada',
+      content: 'Liga?o iniciada',
       metadata: { phone: lead.phone, channel: 'phone' },
     });
 
     recordFirstResponse({
       leadId: lead.id,
-      organizationId: lead.organization_id || profile?.organization_id || '',
+      organizationId: lead.organization_id || profile.organization_id || '',
       channel: 'phone',
-      actorUserId: profile?.id || null,
+      actorUserId: profile.id || null,
       firstResponseAt: lead.first_response_at,
     });
     
@@ -426,14 +428,7 @@ export function LeadDetailDialog({
   
   const handleQuickEmail = () => {
     if (!lead.email) return;
-    recordFirstResponse({
-      leadId: lead.id,
-      organizationId: lead.organization_id || profile?.organization_id || '',
-      channel: 'email',
-      actorUserId: profile?.id || null,
-      firstResponseAt: lead.first_response_at,
-    });
-    const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&tf=1&to=${encodeURIComponent(lead.email)}`;
+    const gmailUrl = `https://mail.google.com/mail/view=cm&fs=1&tf=1&to=${encodeURIComponent(lead.email)}`;
     window.open(gmailUrl, '_blank');
     setQuickActionOutcomeType('email');
     setQuickActionOutcomeOpen(true);
@@ -456,7 +451,7 @@ export function LeadDetailDialog({
         phone_to: lead.phone,
         direction: 'outbound',
         notes: notes,
-        organization_id: lead.organization_id || profile?.organization_id
+        organization_id: lead.organization_id || profile.organization_id
       });
     }
 
@@ -472,22 +467,35 @@ export function LeadDetailDialog({
   };
   if (!lead || !localLead) return null;
 
-  const currentStage = lead.stage || stages.find(s => s.id === lead.stage_id);
-  const currentStageIndex = stages.findIndex(s => s.id === lead.stage_id);
+  const currentStage = localLead.stage || stages.find(s => s.id === localLead.stage_id);
+  const currentStageIndex = stages.findIndex(s => s.id === localLead.stage_id);
+  const assigneeName = localLead.assignee?.name || '';
+  const assigneeEmail = localLead.assignee?.email || '';
+  const interestValue = Number(lead.valor_interesse || 0);
+  const leadTags = Array.isArray(lead.tags) ? lead.tags : [];
+  const safeAllTags = Array.isArray(allTags) ? allTags.filter(Boolean) : [];
+  const safeAllUsers = Array.isArray(allUsers) ? allUsers.filter(Boolean) : [];
+  const safeLeadTasks = Array.isArray(leadTasks) ? leadTasks.filter(Boolean) : [];
+  const safeCadenceTemplates = Array.isArray(cadenceTemplates) ? cadenceTemplates.filter(Boolean) : [];
+  const originLabels = {
+    title: t?.leads?.origin?.title || 'Origem',
+    source: t?.leads?.origin?.source || 'Fonte',
+    createdAt: t?.leads?.origin?.createdAt || 'Criado em'
+  };
 
   // Find cadence template for this lead's stage
-  const stageTemplate = cadenceTemplates.find(t => t.stage_key === currentStage?.stage_key);
-  const templateTasks = stageTemplate?.tasks || [];
+  const stageTemplate = safeCadenceTemplates.find(t => t.stage_key === currentStage?.stage_key);
+  const templateTasks = Array.isArray(stageTemplate?.tasks) ? stageTemplate.tasks.filter(Boolean) : [];
 
   // Map lead tasks by a key to check if completed
-  const leadTasksMap = new Map(leadTasks.map(t => [`${t.title}-${t.day_offset}-${t.type}`, t]));
-  const completedTasksCount = leadTasks.filter(t => t.is_done).length;
+  const leadTasksMap = new Map(safeLeadTasks.map(t => [`${t.title || ''}-${t.day_offset || 0}-${t.type || ''}`, t]));
+  const completedTasksCount = safeLeadTasks.filter(t => t.is_done).length;
   const totalTasksCount = templateTasks.length;
-  const leadTagIds = (lead.tags || []).map((t: any) => t.id);
-  const availableTags = allTags.filter(t => !leadTagIds.includes(t.id));
+  const leadTagIds = leadTags.map((t: any) => t.id);
+  const availableTags = safeAllTags.filter(t => !leadTagIds.includes(t.id));
   const handleAddTag = async (tagId: string) => {
     // Optimistic update
-    const tagToAdd = allTags.find(t => t.id === tagId);
+    const tagToAdd = safeAllTags.find(t => t.id === tagId);
     if (tagToAdd && lead) {
       // Logic for optimistic UI could go here if we wanted to manage local state
     }
@@ -517,7 +525,7 @@ export function LeadDetailDialog({
   const handleAssignUser = async (userId: string | null) => {
     // UI Otimista
     const previousLead = { ...localLead };
-    const selectedUser = userId ? allUsers.find(u => u.id === userId) : null;
+    const selectedUser = userId ? safeAllUsers.find(u => u.id === userId) : null;
     
     const updatedLead = {
       ...localLead,
@@ -576,7 +584,7 @@ export function LeadDetailDialog({
 
           if (isOutsideSchedule) {
             const confirmAssign = window.confirm(
-              `Atenção: Este usuário está fora do seu horário de escala (${availability.start_time?.slice(0, 5)} - ${availability.end_time?.slice(0, 5)}). Deseja atribuir mesmo assim?`
+              `Atenção: Este usuário está fora do seu horário de escala (${availability.start_time.slice(0, 5)} - ${availability.end_time.slice(0, 5)}). Deseja atribuir mesmo assim`
             );
             if (!confirmAssign) {
               setLocalLead(previousLead);
@@ -586,7 +594,7 @@ export function LeadDetailDialog({
           }
         } else {
           const confirmAssign = window.confirm(
-            'Atenção: Este usuário não tem escala ativa para hoje. Deseja atribuir mesmo assim?'
+            'Atenção: Este usuário não tem escala ativa para hoje. Deseja atribuir mesmo assim'
           );
           if (!confirmAssign) {
             setLocalLead(previousLead);
@@ -607,7 +615,7 @@ export function LeadDetailDialog({
       setIsUpdatingAssignee(false);
     }
   };
-  const handleToggleCadenceTask = async (task: any, outcome?: string, outcomeNotes?: string) => {
+  const handleToggleCadenceTask = async (task: any, outcome: string, outcomeNotes: string) => {
     await completeCadenceTask.mutateAsync({
       leadId: lead.id,
       templateTaskId: task.id,
@@ -618,20 +626,16 @@ export function LeadDetailDialog({
       outcome,
       outcomeNotes
     });
-
-    // Registrar first response ao concluir tarefa de cadência (se ainda não foi registrado)
-    const channel = task.type === 'call' ? 'phone'
-      : task.type === 'email' ? 'email'
-      : task.type === 'message' ? 'whatsapp'
-      : 'stage_move';
-
-    await recordFirstResponse({
-      leadId: lead.id,
-      organizationId: lead.organization_id || profile?.organization_id || '',
-      channel,
-      actorUserId: profile?.id || null,
-      firstResponseAt: lead.first_response_at,
-    });
+    const firstContactChannel = task.type === 'call' ? 'phone' : task.type === 'message' ? 'whatsapp' : null;
+    if (firstContactChannel) {
+      await recordFirstResponse({
+        leadId: lead.id,
+        organizationId: lead.organization_id || profile.organization_id || '',
+        channel: firstContactChannel,
+        actorUserId: profile.id || null,
+        firstResponseAt: lead.first_response_at,
+      });
+    }
   };
   
   // Handle outcome dialog confirmation
@@ -640,7 +644,7 @@ export function LeadDetailDialog({
     await handleToggleCadenceTask(taskForOutcome, outcome, notes);
     setOutcomeDialogOpen(false);
     
-    // Se agendou visita/reunião, abrir o formulário de agenda automaticamente
+    // Se agendou visita/reuni?o, abrir o formul?rio de agenda automaticamente
     if (outcome === 'scheduled') {
       setEditingScheduleEvent(null);
       setScheduleDefaultType('visit');
@@ -666,13 +670,13 @@ export function LeadDetailDialog({
 
     // Se for tarefa de mensagem com mensagem recomendada e tem telefone
     if (task.type === 'message' && task.recommended_message && lead.phone) {
-      // Substituir variáveis na mensagem
+      // Substituir vari?veis na mensagem
       const message = task.recommended_message.replace(/{nome}/gi, lead.name || '').replace(/{empresa}/gi, lead.empresa || '').replace(/{email}/gi, lead.email || '');
       recordFirstResponse({
         leadId: lead.id,
-        organizationId: lead.organization_id || profile?.organization_id || '',
+        organizationId: lead.organization_id || profile.organization_id || '',
         channel: 'whatsapp',
-        actorUserId: profile?.id || null,
+        actorUserId: profile.id || null,
         firstResponseAt: lead.first_response_at,
       });
       openNewChatWithMessage(lead.phone, message, lead.id, lead.name);
@@ -693,15 +697,15 @@ export function LeadDetailDialog({
       const message = selectedTask.recommended_message.replace(/{nome}/gi, lead.name || '').replace(/{empresa}/gi, lead.empresa || '').replace(/{email}/gi, lead.email || '');
       recordFirstResponse({
         leadId: lead.id,
-        organizationId: lead.organization_id || profile?.organization_id || '',
+        organizationId: lead.organization_id || profile.organization_id || '',
         channel: 'whatsapp',
-        actorUserId: profile?.id || null,
+        actorUserId: profile.id || null,
         firstResponseAt: lead.first_response_at,
       });
       openNewChatWithMessage(lead.phone, message, lead.id, lead.name);
     }
     
-    // Após roteiro, abrir dialog de outcome se for call/message/email
+    // Ap?s roteiro, abrir dialog de outcome se for call/message/email
     if (['call', 'message', 'email'].includes(selectedTask.type)) {
       setTaskForOutcome(selectedTask);
       setOutcomeDialogOpen(true);
@@ -710,6 +714,33 @@ export function LeadDetailDialog({
     }
     setRoteiroDialogOpen(false);
     setSelectedTask(null);
+  };
+  const resetContactEditForm = () => {
+    setEditForm({
+      name: lead.name || '',
+      phone: lead.phone || '',
+      email: lead.email || '',
+      cargo: lead.cargo || '',
+      empresa: lead.empresa || '',
+      endereco: lead.endereco || '',
+      numero: lead.numero || '',
+      complemento: lead.complemento || '',
+      bairro: lead.bairro || '',
+      cidade: lead.cidade || '',
+      uf: lead.uf || '',
+      cep: lead.cep || '',
+      valor_interesse: lead.valor_interesse ? lead.valor_interesse.toString() : '',
+      commission_percentage: lead.commission_percentage != null ? lead.commission_percentage.toString() : '',
+      property_id: lead.interest_property_id || lead.property_id || '',
+      message: lead.message || '',
+      renda_familiar: lead.renda_familiar || '',
+      trabalha: lead.trabalha || false,
+      profissao: lead.profissao || '',
+      faixa_valor_imovel: lead.faixa_valor_imovel || '',
+      finalidade_compra: lead.finalidade_compra || '',
+      procura_financiamento: lead.procura_financiamento || false,
+      is_own_resource: (lead as any).is_own_resource || false
+    });
   };
   const handleSaveContact = async () => {
     try {
@@ -767,13 +798,18 @@ export function LeadDetailDialog({
     }
   };
   const handleMoveToStage = async (stageId: string) => {
-    if (stageId === lead.stage_id) return;
+    if (stageId === localLead.stage_id) return;
     
-    // Close popover immediately for better UX
     setStagePopoverOpen(false);
+    const previousLead = { ...localLead };
+    const stage = stages.find(s => s.id === stageId);
+    setLocalLead({
+      ...localLead,
+      stage_id: stageId,
+      stage: stage || localLead.stage,
+    });
     
     try {
-      const stage = stages.find(s => s.id === stageId);
       const isProposal = stage?.name?.toLowerCase().includes('proposta');
       
       await updateLead.mutateAsync({
@@ -793,7 +829,7 @@ export function LeadDetailDialog({
       refetchStages();
       toast.success('Lead movido!');
     } catch (error) {
-      // Error handled by mutation
+      setLocalLead(previousLead);
     }
   };
   
@@ -802,7 +838,7 @@ export function LeadDetailDialog({
     const previousStatus = lead.deal_status;
     if (newStatus === previousStatus) return;
 
-    // Intercept "lost" → ask for reason via dialog
+    // Intercept "lost" -> ask for reason via dialog
     if (newStatus === 'lost') {
       setLostReasonDialogOpen(true);
       return;
@@ -831,7 +867,7 @@ export function LeadDetailDialog({
     await dealStatusChange.mutateAsync({
       leadId: lead.id,
       newStatus: newStatus as 'open' | 'won' | 'lost',
-      organizationId: profile?.organization_id || organization?.id || '',
+      organizationId: profile.organization_id || organization.id || '',
       userId: lead.assigned_user_id,
       propertyId: lead.property_id,
       valorInteresse: lead.valor_interesse,
@@ -847,7 +883,7 @@ export function LeadDetailDialog({
     await dealStatusChange.mutateAsync({
       leadId: lead.id,
       newStatus: 'lost',
-      organizationId: profile?.organization_id || organization?.id || '',
+      organizationId: profile.organization_id || organization.id || '',
       userId: lead.assigned_user_id,
       propertyId: lead.property_id,
       valorInteresse: lead.valor_interesse,
@@ -860,7 +896,7 @@ export function LeadDetailDialog({
     refetchStages();
   };
   
-  // Mostrar todas as atividades importantes no histórico recente
+  // Mostrar todas as atividades importantes no hist?rico recente
   const taskActivities = activities.filter((a: any) => 
     ['call', 'message', 'email', 'note', 'task_completed', 'lead_created', 'stage_change', 'assignee_changed', 'status_change', 'lead_reentry'].includes(a.type)
   );
@@ -874,11 +910,6 @@ export function LeadDetailDialog({
     label: 'Atividades',
     icon: Activity
   }, {
-    id: 'schedule',
-    label: 'Agenda',
-    icon: Calendar,
-    badge: scheduleEvents.length > 0 ? scheduleEvents.length.toString() : null
-  }, {
     id: 'contact',
     label: isTelecom ? 'Cliente' : 'Contato',
     icon: isTelecom ? UserCheck : Contact
@@ -886,6 +917,11 @@ export function LeadDetailDialog({
     id: 'deal',
     label: 'Negócio',
     icon: Handshake
+  }, {
+    id: 'schedule',
+    label: 'Agenda',
+    icon: Calendar,
+    badge: scheduleEvents.length > 0 ? scheduleEvents.length.toString() : null
   }, {
     id: 'history',
     label: 'Histórico',
@@ -901,7 +937,7 @@ export function LeadDetailDialog({
           <X className="h-4 w-4" />
         </button>
 
-        {/* Row 1 — Avatar + Nome + Tags */}
+        {/* Row 1 - Avatar + Nome + Tags */}
         <div className="flex items-center gap-2.5 mb-3 pr-10">
           <Avatar className="h-11 w-11 shrink-0 border-2 border-primary/20">
             <AvatarImage src={lead.whatsapp_picture} alt={lead.name} />
@@ -917,7 +953,7 @@ export function LeadDetailDialog({
             </div>
             {/* Tags inline */}
             <div className="flex items-center gap-1 mt-1 flex-wrap">
-              {lead.tags?.slice(0, 3).map((tag: any) => (
+              {leadTags.slice(0, 3).map((tag: any) => (
                 <Badge
                   key={tag.id}
                   className="flex items-center gap-1 pr-1 py-0 text-[10px] rounded-full h-5 leading-none"
@@ -934,9 +970,9 @@ export function LeadDetailDialog({
                   </button>
                 </Badge>
               ))}
-              {lead.tags?.length > 3 && (
+              {leadTags.length > 3 && (
                 <Badge variant="secondary" className="text-[10px] py-0 h-5">
-                  +{lead.tags.length - 3}
+                  +{leadTags.length - 3}
                 </Badge>
               )}
               <Popover open={tagPopoverOpen} onOpenChange={setTagPopoverOpen}>
@@ -957,7 +993,7 @@ export function LeadDetailDialog({
           </div>
         </div>
 
-        {/* Row 2 — Ações rápidas */}
+        {/* Row 2 - Ações rápidas */}
         <div className="flex items-center gap-2 mb-3">
           {lead.phone && (
             <>
@@ -978,12 +1014,12 @@ export function LeadDetailDialog({
           )}
         </div>
 
-        {/* Row 3 — Estágio + Deal Status lado a lado */}
+        {/* Row 3 - Estágio + Deal Status lado a lado */}
         <div className="flex items-center gap-2 flex-wrap">
           {lead.is_own_resource && (
             <Badge variant="secondary" className="bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border-none px-2 rounded-full text-[10px] font-bold">
               <DollarSign className="h-3 w-3 mr-0.5" />
-              Recurso Próprio
+              Recurso Pr?prio
             </Badge>
           )}
           {/* Stage pill */}
@@ -992,7 +1028,7 @@ export function LeadDetailDialog({
             <PopoverTrigger asChild>
               <button className="flex-1 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-medium min-w-0 overflow-hidden">
                 <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse shrink-0" />
-                <span className="truncate">{currentStage?.name || 'Sem estágio'}</span>
+                <span className="truncate">{currentStage.name || 'Sem estágio'}</span>
                 <ChevronDown className="h-3 w-3 shrink-0 ml-auto" />
               </button>
             </PopoverTrigger>
@@ -1093,7 +1129,7 @@ export function LeadDetailDialog({
                 <TelecomSummaryCard customer={telecomCustomer} onEdit={() => setActiveTab('contact')} />
               )}
               
-              {/* Cadência Section */}
+              {/* Cad?ncia Section */}
               <div className="rounded-xl bg-gradient-to-br from-card to-muted/30 border p-4 shadow-sm">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
@@ -1150,7 +1186,7 @@ export function LeadDetailDialog({
                   </div>
                 ) : (
                   <div className="text-center py-6 border border-dashed rounded-xl">
-                    <p className="text-xs text-muted-foreground">Nenhuma cadência</p>
+                    <p className="text-xs text-muted-foreground">Nenhuma cad?ncia</p>
                   </div>
                 )}
               </div>
@@ -1277,17 +1313,17 @@ export function LeadDetailDialog({
                       </AccordionContent>
                     </AccordionItem>
 
-                    {/* Endereço */}
+                    {/* Endere?o */}
                     <AccordionItem value="address" className="border rounded-xl px-3">
                       <AccordionTrigger className="py-3 text-sm font-medium hover:no-underline">
                         <span className="flex items-center gap-2">
                           <MapPin className="h-4 w-4 text-primary" />
-                          Endereço
+                          Endere?o
                         </span>
                       </AccordionTrigger>
                       <AccordionContent>
                         <div className="space-y-3">
-                          <Input value={editForm.endereco} onChange={e => setEditForm({ ...editForm, endereco: e.target.value })} placeholder="Endereço" onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)} />
+                          <Input value={editForm.endereco} onChange={e => setEditForm({ ...editForm, endereco: e.target.value })} placeholder="Endere?o" onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)} />
                           <div className="grid grid-cols-3 gap-2">
                             <Input value={editForm.numero} onChange={e => setEditForm({ ...editForm, numero: e.target.value })} placeholder="Nº" onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)} />
                             <Input value={editForm.complemento} onChange={e => setEditForm({ ...editForm, complemento: e.target.value })} placeholder="Compl." className="col-span-2" onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)} />
@@ -1329,7 +1365,7 @@ export function LeadDetailDialog({
                               </Select>
                             </div>
                             <div className="space-y-1.5">
-                              <Label className="text-xs text-muted-foreground">Trabalha?</Label>
+                              <Label className="text-xs text-muted-foreground">Trabalha</Label>
                               <Select value={editForm.trabalha ? 'sim' : 'nao'} onValueChange={v => setEditForm({ ...editForm, trabalha: v === 'sim' })}>
                                 <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                                 <SelectContent>
@@ -1342,7 +1378,7 @@ export function LeadDetailDialog({
                           <div className="grid grid-cols-2 gap-3">
                             <div className="space-y-1.5">
                               <Label className="text-xs text-muted-foreground">Profissão</Label>
-                              <Input value={editForm.profissao} onChange={e => setEditForm({ ...editForm, profissao: e.target.value })} placeholder="Ex: Engenheiro, Médico..." onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)} />
+                              <Input value={editForm.profissao} onChange={e => setEditForm({ ...editForm, profissao: e.target.value })} placeholder="Ex: Engenheiro, M?dico..." onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)} />
                             </div>
                             <div className="space-y-1.5">
                               <Label className="text-xs text-muted-foreground">Faixa do Imóvel</Label>
@@ -1366,7 +1402,7 @@ export function LeadDetailDialog({
                               <Input value={editForm.finalidade_compra} onChange={e => setEditForm({ ...editForm, finalidade_compra: e.target.value })} placeholder="Ex: Moradia, Investimento..." onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)} />
                             </div>
                             <div className="space-y-1.5">
-                              <Label className="text-xs text-muted-foreground">Procura Financiamento?</Label>
+                              <Label className="text-xs text-muted-foreground">Procura Financiamento</Label>
                               <Select value={editForm.procura_financiamento ? 'sim' : 'nao'} onValueChange={v => setEditForm({ ...editForm, procura_financiamento: v === 'sim' })}>
                                 <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                                 <SelectContent>
@@ -1426,7 +1462,7 @@ export function LeadDetailDialog({
               {!isEditingContact && (lead.endereco || lead.bairro || lead.cidade) && <div className="rounded-xl bg-gradient-to-br from-card to-muted/30 border p-4">
                   <Label className="text-sm font-medium flex items-center gap-2 mb-3">
                     <MapPin className="h-4 w-4 text-primary" />
-                    Endereço
+                    Endere?o
                   </Label>
                   <div className="flex items-center gap-3 p-2.5 rounded-lg bg-background/50">
                     <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
@@ -1454,10 +1490,10 @@ export function LeadDetailDialog({
                   <PopoverTrigger asChild>
                     <button className="w-full flex items-center gap-3 p-3 rounded-xl border hover:border-primary/30 hover:bg-accent/30 transition-all">
                       <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center relative overflow-hidden">
-                        {localLead.assignee?.name ? (
+                        {assigneeName ? (
                           <>
                             <span className="text-sm font-semibold text-primary">
-                              {localLead.assignee.name.split(' ').map((n: string) => n[0]).join('').substring(0, 2)}
+                              {assigneeName.split(' ').map((n: string) => n[0]).join('').substring(0, 2)}
                             </span>
                             {isUpdatingAssignee && (
                               <div className="absolute inset-0 bg-background/50 flex items-center justify-center">
@@ -1468,8 +1504,8 @@ export function LeadDetailDialog({
                         ) : <User className="h-5 w-5 text-muted-foreground" />}
                       </div>
                       <div className="flex-1 text-left min-w-0">
-                        <p className="font-medium truncate">{localLead.assignee?.name || 'Sem responsável'}</p>
-                        {localLead.assignee?.email && <p className="text-xs text-muted-foreground truncate">{localLead.assignee.email}</p>}
+                        <p className="font-medium truncate">{assigneeName || 'Sem responsável'}</p>
+                        {assigneeEmail && <p className="text-xs text-muted-foreground truncate">{assigneeEmail}</p>}
                       </div>
                       <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
                     </button>
@@ -1482,7 +1518,7 @@ export function LeadDetailDialog({
                       </div>
                       <CommandList className="max-h-[450px] p-1 overflow-y-auto">
                         <CommandEmpty className="py-6 text-center text-sm text-muted-foreground">
-                          Nenhum usuário encontrado.
+                          Nenhum usu?rio encontrado.
                         </CommandEmpty>
                         <CommandGroup heading="Ações">
                           <CommandItem 
@@ -1502,44 +1538,49 @@ export function LeadDetailDialog({
                           </CommandItem>
                         </CommandGroup>
                         
-                        <CommandGroup heading="Usuários">
-                          {allUsers.map(user => (
-                            <CommandItem 
-                              key={user.id} 
-                              onSelect={() => {
-                                handleAssignUser(user.id);
-                                setAssigneePopoverOpen(false);
-                              }}
-                              className={cn(
-                                "flex items-center gap-3 px-3 py-2.5 cursor-pointer transition-all rounded-lg my-0.5",
-                                user.id === localLead.assigned_user_id && "bg-primary/10 shadow-sm"
-                              )}
-                            >
-                              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 border border-primary/5">
-                                {user.avatar_url ? (
-                                  <Avatar className="h-10 w-10 rounded-lg">
-                                    <AvatarImage src={user.avatar_url} />
-                                    <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
-                                      {user.name?.split(' ').map((n: string) => n[0]).join('').substring(0, 2)}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                ) : (
-                                  <span className="text-sm font-semibold text-primary">
-                                    {user.name?.split(' ').map((n: string) => n[0]).join('').substring(0, 2)}
-                                  </span>
+                        <CommandGroup heading="Usu?rios">
+                          {safeAllUsers.map(user => {
+                            const displayName = user.name || user.email || 'Usuário';
+                            const initials = displayName.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase();
+
+                            return (
+                              <CommandItem 
+                                key={user.id} 
+                                onSelect={() => {
+                                  handleAssignUser(user.id);
+                                  setAssigneePopoverOpen(false);
+                                }}
+                                className={cn(
+                                  "flex items-center gap-3 px-3 py-2.5 cursor-pointer transition-all rounded-lg my-0.5",
+                                  user.id === localLead.assigned_user_id && "bg-primary/10 shadow-sm"
                                 )}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="font-semibold truncate text-sm">{user.name}</p>
-                                {user.email && <p className="text-[11px] text-muted-foreground truncate opacity-70">{user.email}</p>}
-                              </div>
-                              {user.id === localLead.assigned_user_id && (
-                                <div className="h-6 w-6 rounded-full bg-primary/20 flex items-center justify-center ml-auto">
-                                  <Check className="h-4 w-4 text-primary shrink-0" />
+                              >
+                                <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 border border-primary/5">
+                                  {user.avatar_url ? (
+                                    <Avatar className="h-10 w-10 rounded-lg">
+                                      <AvatarImage src={user.avatar_url} alt={displayName} />
+                                      <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
+                                        {initials}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                  ) : (
+                                    <span className="text-sm font-semibold text-primary">
+                                      {initials}
+                                    </span>
+                                  )}
                                 </div>
-                              )}
-                            </CommandItem>
-                          ))}
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-semibold truncate text-sm">{displayName}</p>
+                                  {user.email && <p className="text-[11px] text-muted-foreground truncate opacity-70">{user.email}</p>}
+                                </div>
+                                {user.id === localLead.assigned_user_id && (
+                                  <div className="h-6 w-6 rounded-full bg-primary/20 flex items-center justify-center ml-auto">
+                                    <Check className="h-4 w-4 text-primary shrink-0" />
+                                  </div>
+                                )}
+                              </CommandItem>
+                            );
+                          })}
                         </CommandGroup>
                       </CommandList>
                     </Command>
@@ -1556,18 +1597,18 @@ export function LeadDetailDialog({
                   <div className="h-7 w-7 rounded-lg bg-primary/20 flex items-center justify-center">
                     <Target className="h-3.5 w-3.5 text-primary" />
                   </div>
-                  <Label className="text-sm font-medium">{t.leads.origin.title}</Label>
+                  <Label className="text-sm font-medium">{originLabels.title}</Label>
                 </div>
                 <div className="space-y-1">
                   <div className="flex items-center justify-between p-2 rounded-lg">
-                    <span className="text-sm text-muted-foreground">{t.leads.origin.source}</span>
+                    <span className="text-sm text-muted-foreground">{originLabels.source}</span>
                     <div className="flex items-center gap-1.5">
                       <SourceIcon className="h-3.5 w-3.5 text-primary" />
                       <span className="text-sm font-medium">{sourceLabels[lead.source] || lead.source}</span>
                     </div>
                   </div>
                   <div className="flex items-center justify-between p-2 rounded-lg">
-                    <span className="text-sm text-muted-foreground">{t.leads.origin.createdAt}</span>
+                    <span className="text-sm text-muted-foreground">{originLabels.createdAt}</span>
                     <span className="text-sm font-medium">
                       {lead.created_at ? format(new Date(lead.created_at), 'dd/MM/yy HH:mm', {
                     locale: dateLocale
@@ -1579,6 +1620,7 @@ export function LeadDetailDialog({
 
               {/* Rastreamento / Tracking Section */}
               <LeadTrackingSection leadMeta={leadMeta} isLoading={leadMetaLoading} />
+              <LeadJourneySection leadId={lead.id} />
 
             </div>
             )
@@ -1666,7 +1708,7 @@ export function LeadDetailDialog({
                     <Select value={lead.interest_plan_id || 'none'} onValueChange={value => {
                       const newValue = value === 'none' ? null : value;
                       const selectedPlan = servicePlans.find((p: any) => p.id === value);
-                      const planPrice = selectedPlan?.price || null;
+                      const planPrice = selectedPlan.price || null;
                       setEditForm({
                         ...editForm,
                         valor_interesse: planPrice ? planPrice.toString() : editForm.valor_interesse
@@ -1720,10 +1762,10 @@ export function LeadDetailDialog({
                       ...editForm,
                       valor_interesse: e.target.value
                     })} onBlur={() => {
-                      if (editForm.valor_interesse !== (lead.valor_interesse?.toString() || '')) {
+                      if (editForm.valor_interesse !== (lead.valor_interesse != null ? lead.valor_interesse.toString() : '')) {
                         updateLead.mutateAsync({
                           id: lead.id,
-                          valor_interesse: editForm.valor_interesse ? parseFloat(editForm.valor_interesse) : null
+                              valor_interesse: editForm.valor_interesse ? parseFloat(editForm.valor_interesse) : null
                         } as any);
                       }
                     }} placeholder="0,00" className="pl-9 rounded-xl" />
@@ -1732,7 +1774,7 @@ export function LeadDetailDialog({
               </div>
 
               {/* Deal Status Summary Card */}
-              {lead.deal_status === 'won' && lead.valor_interesse > 0 && (
+              {lead.deal_status === 'won' && interestValue > 0 && (
                 <div className="rounded-xl bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-950/30 dark:to-emerald-900/30 border border-emerald-200 dark:border-emerald-800 p-4">
                   <div className="flex items-center gap-3">
                     <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center">
@@ -1740,7 +1782,7 @@ export function LeadDetailDialog({
                     </div>
                     <div>
                       <p className="text-xl font-bold text-emerald-700 dark:text-emerald-300">
-                        R$ {lead.valor_interesse.toLocaleString('pt-BR')}
+                        R$ {interestValue.toLocaleString('pt-BR')}
                       </p>
                       <p className="text-sm text-emerald-600 dark:text-emerald-400">Negócio Fechado!</p>
                     </div>
@@ -1748,7 +1790,7 @@ export function LeadDetailDialog({
                 </div>
               )}
               
-              {lead.deal_status !== 'won' && lead.valor_interesse > 0 && (
+              {lead.deal_status !== 'won' && interestValue > 0 && (
                 <div className="rounded-xl bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20 p-4">
                   <div className="flex items-center gap-3">
                     <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
@@ -1756,7 +1798,7 @@ export function LeadDetailDialog({
                     </div>
                     <div>
                       <p className="text-xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-                        R$ {lead.valor_interesse.toLocaleString('pt-BR')}
+                        R$ {interestValue.toLocaleString('pt-BR')}
                       </p>
                       <p className="text-sm text-muted-foreground">Valor de interesse</p>
                     </div>
@@ -1782,7 +1824,10 @@ export function LeadDetailDialog({
       {/* Sticky Footer - Save/Cancel buttons */}
       {isEditingContact && activeTab === 'contact' && (
         <div className="border-t bg-background p-3 flex gap-2 shrink-0">
-          <Button variant="outline" className="flex-1 rounded-xl" onClick={() => setIsEditingContact(false)}>
+          <Button variant="outline" className="flex-1 rounded-xl" onClick={() => {
+            resetContactEditForm();
+            setIsEditingContact(false);
+          }}>
             Cancelar
           </Button>
           <Button className="flex-1 rounded-xl" onClick={handleSaveContact}>
@@ -1808,9 +1853,9 @@ export function LeadDetailDialog({
         
         <DialogHeader className="mb-5 relative">
           {/* Breadcrumb */}
-          <div className="flex items-center gap-2 mb-3">
+          <div className="flex items-center gap-2 mb-3 flex-wrap">
             <Badge variant="outline" className="text-xs font-normal bg-background/50 backdrop-blur-sm">
-              {currentStage?.name || 'Sem estágio'}
+              {currentStage.name || 'Sem estágio'}
             </Badge>
             <span className="text-muted-foreground/50">•</span>
             <div className="flex items-center gap-1.5">
@@ -1859,6 +1904,33 @@ export function LeadDetailDialog({
                 </SelectItem>
               </SelectContent>
             </Select>
+            {leadTags.map((tag: any) => (
+              <Badge
+                key={tag.id}
+                className="flex items-center gap-1 pr-1.5 py-1 rounded-full text-[11px]"
+                style={{ backgroundColor: tag.color, color: '#FFFFFF', borderColor: tag.color }}
+              >
+                {tag.name}
+                <button onClick={() => handleRemoveTag(tag.id)} className="ml-0.5 hover:bg-black/10 rounded-full p-0.5 transition-colors">
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            ))}
+            <Popover open={tagPopoverOpen} onOpenChange={setTagPopoverOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-7 px-2 rounded-full text-xs text-muted-foreground hover:text-foreground border border-dashed border-border hover:border-primary/30 hover:bg-primary/5 transition-all">
+                  <Plus className="h-3 w-3 mr-1" />
+                  Tag
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-64 p-0" align="start">
+                <TagSelectorPopoverContent
+                  availableTags={availableTags}
+                  onAddTag={handleAddTag}
+                  onClose={() => setTagPopoverOpen(false)}
+                />
+              </PopoverContent>
+            </Popover>
           </div>
           
           <div className="flex items-center gap-4">
@@ -1880,7 +1952,7 @@ export function LeadDetailDialog({
                 {lead.first_response_seconds != null && (
                   <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-gradient-to-r from-amber-500/10 via-yellow-500/10 to-orange-500/10 border border-yellow-500/20 text-amber-600 dark:text-amber-400 whitespace-nowrap shrink-0">
                     <Zap className="h-3 w-3" />
-                    Resp: {formatResponseTime(lead.first_response_seconds)}
+                    Primeiro contato: {formatResponseTime(lead.first_response_seconds)}
                     {lead.first_response_is_automation && (
                       <span className="text-[9px] ml-0.5 opacity-70 flex items-center gap-0.5">
                         <Bot className="h-2.5 w-2.5" />
@@ -1900,7 +1972,7 @@ export function LeadDetailDialog({
                   <PopoverTrigger asChild>
                     <button className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded-md hover:bg-accent relative overflow-hidden">
                       <User className="h-3.5 w-3.5" />
-                      <span>{localLead.assignee?.name || 'Sem responsável'}</span>
+                      <span>{assigneeName || 'Sem responsável'}</span>
                       {isUpdatingAssignee ? (
                         <Loader2 className="h-3 w-3 animate-spin text-primary" />
                       ) : (
@@ -1934,32 +2006,37 @@ export function LeadDetailDialog({
                             </div>
                             <span className="text-muted-foreground text-sm font-medium">Sem responsável</span>
                           </CommandItem>
-                          {allUsers.map((user: any) => (
-                            <CommandItem
-                              key={user.id}
-                              onSelect={() => {
-                                handleAssignUser(user.id);
-                                setAssigneePopoverOpen(false);
-                              }}
-                              className={cn(
-                                "flex items-center gap-2.5 px-3 py-2.5 cursor-pointer transition-all rounded-lg my-0.5",
-                                localLead.assigned_user_id === user.id && "bg-primary/10 shadow-sm"
-                              )}
-                            >
-                              <Avatar className="h-8 w-8 shrink-0 border border-primary/5 shadow-sm">
-                                <AvatarImage src={user.avatar_url} alt={user.name} />
-                                <AvatarFallback className="text-[10px] bg-primary/10 text-primary font-bold">
-                                  {user.name?.[0]?.toUpperCase()}
-                                </AvatarFallback>
-                              </Avatar>
-                              <span className="text-sm font-medium truncate">{user.name}</span>
-                              {localLead.assigned_user_id === user.id && (
-                                <div className="h-5 w-5 rounded-full bg-primary/20 flex items-center justify-center ml-auto">
-                                  <Check className="h-3.5 w-3.5 text-primary shrink-0" />
-                                </div>
-                              )}
-                            </CommandItem>
-                          ))}
+                          {safeAllUsers.map((user: any) => {
+                            const displayName = user.name || user.email || 'Usuário';
+                            const initial = displayName[0]?.toUpperCase() || 'U';
+
+                            return (
+                              <CommandItem
+                                key={user.id}
+                                onSelect={() => {
+                                  handleAssignUser(user.id);
+                                  setAssigneePopoverOpen(false);
+                                }}
+                                className={cn(
+                                  "flex items-center gap-2.5 px-3 py-2.5 cursor-pointer transition-all rounded-lg my-0.5",
+                                  localLead.assigned_user_id === user.id && "bg-primary/10 shadow-sm"
+                                )}
+                              >
+                                <Avatar className="h-8 w-8 shrink-0 border border-primary/5 shadow-sm">
+                                  <AvatarImage src={user.avatar_url} alt={displayName} />
+                                  <AvatarFallback className="text-[10px] bg-primary/10 text-primary font-bold">
+                                    {initial}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <span className="text-sm font-medium truncate">{displayName}</span>
+                                {localLead.assigned_user_id === user.id && (
+                                  <div className="h-5 w-5 rounded-full bg-primary/20 flex items-center justify-center ml-auto">
+                                    <Check className="h-3.5 w-3.5 text-primary shrink-0" />
+                                  </div>
+                                )}
+                              </CommandItem>
+                            );
+                          })}
                         </CommandGroup>
                       </CommandList>
                     </Command>
@@ -1988,38 +2065,6 @@ export function LeadDetailDialog({
           </div>
         </DialogHeader>
 
-
-        {/* Tags - Premium */}
-        <div className="flex flex-wrap items-center gap-2">
-          {lead.tags?.map((tag: any) => <Badge key={tag.id} className="flex items-center gap-1.5 pr-1.5 py-1 rounded-full shadow-sm transition-all hover:shadow-md hover:-translate-y-0.5" style={{
-          backgroundColor: tag.color,
-          color: '#FFFFFF',
-          borderColor: tag.color
-        }}>
-              <div className="h-2 w-2 rounded-full shadow-sm" style={{
-            backgroundColor: tag.color
-          }} />
-              {tag.name}
-              <button onClick={() => handleRemoveTag(tag.id)} className="ml-0.5 hover:bg-black/10 rounded-full p-0.5 transition-colors">
-                <X className="h-3 w-3" />
-              </button>
-            </Badge>)}
-          <Popover open={tagPopoverOpen} onOpenChange={setTagPopoverOpen}>
-            <PopoverTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-7 px-3 rounded-full text-xs text-muted-foreground hover:text-foreground border border-dashed border-border hover:border-primary/30 hover:bg-primary/5 transition-all">
-                <Plus className="h-3 w-3 mr-1" />
-                Tag
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-64 p-0" align="start">
-              <TagSelectorPopoverContent
-                availableTags={availableTags}
-                onAddTag={handleAddTag}
-                onClose={() => setTagPopoverOpen(false)}
-              />
-            </PopoverContent>
-          </Popover>
-        </div>
 
         {/* Pipeline Timeline - Stage Stepper */}
         <div className="mt-3 overflow-hidden">
@@ -2070,7 +2115,7 @@ export function LeadDetailDialog({
       <ScrollArea className="flex-1">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           {/* Premium Tabs */}
-          <div className="border-b px-6 bg-muted">
+          <div className="sticky top-0 z-30 border-b px-6 bg-muted/95 backdrop-blur">
             <TabsList className="h-12 bg-transparent justify-start gap-1 -mb-px p-0">
               {tabs.map(tab => {
               const Icon = tab.icon;
@@ -2148,7 +2193,7 @@ export function LeadDetailDialog({
                 ) : (
                   <div className="text-center py-10 border border-dashed rounded-xl bg-muted/20">
                     <ListTodo className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                    <p className="font-medium text-muted-foreground">Nenhuma cadência configurada</p>
+                    <p className="font-medium text-muted-foreground">Nenhuma cad?ncia configurada</p>
                   </div>
                 )}
               </div>
@@ -2228,14 +2273,17 @@ export function LeadDetailDialog({
                       </div>
                       <h3 className="font-medium text-sm">Dados do contato</h3>
                     </div>
-                    {!isEditingContact ? <Button variant="ghost" size="sm" onClick={() => {
+                      {!isEditingContact ? <Button variant="ghost" size="sm" onClick={() => {
                         setActiveTab('contact');
                         setIsEditingContact(true);
                       }} className="h-8 px-3 rounded-full">
                         <FileEdit className="h-3.5 w-3.5 mr-1" />
                         Editar
                       </Button> : <div className="flex gap-2">
-                        <Button variant="ghost" size="sm" onClick={() => setIsEditingContact(false)} className="h-8 px-3 rounded-full">
+                        <Button variant="ghost" size="sm" onClick={() => {
+                          resetContactEditForm();
+                          setIsEditingContact(false);
+                        }} className="h-8 px-3 rounded-full">
                           Cancelar
                         </Button>
                         <Button size="sm" onClick={handleSaveContact} className="h-8 px-3 rounded-full">
@@ -2318,7 +2366,7 @@ export function LeadDetailDialog({
                               </Select>
                             </div>
                             <div className="space-y-1.5">
-                              <Label className="text-xs text-muted-foreground">Trabalha?</Label>
+                              <Label className="text-xs text-muted-foreground">Trabalha</Label>
                               <Select value={editForm.trabalha ? 'sim' : 'nao'} onValueChange={v => setEditForm({
                                 ...editForm,
                                 trabalha: v === 'sim'
@@ -2337,7 +2385,7 @@ export function LeadDetailDialog({
                               <Input value={editForm.profissao} onChange={e => setEditForm({
                                 ...editForm,
                                 profissao: e.target.value
-                              })} placeholder="Ex: Engenheiro, Médico..." />
+                              })} placeholder="Ex: Engenheiro, M?dico..." />
                             </div>
                             <div className="space-y-1.5">
                               <Label className="text-xs text-muted-foreground">Faixa do Imóvel</Label>
@@ -2367,7 +2415,7 @@ export function LeadDetailDialog({
                               })} placeholder="Ex: Moradia, Investimento..." />
                             </div>
                             <div className="space-y-1.5">
-                              <Label className="text-xs text-muted-foreground">Procura Financiamento?</Label>
+                              <Label className="text-xs text-muted-foreground">Procura Financiamento</Label>
                               <Select value={editForm.procura_financiamento ? 'sim' : 'nao'} onValueChange={v => setEditForm({
                                 ...editForm,
                                 procura_financiamento: v === 'sim'
@@ -2389,7 +2437,7 @@ export function LeadDetailDialog({
                               onCheckedChange={(checked) => setEditForm({ ...editForm, is_own_resource: !!checked })}
                             />
                             <Label htmlFor="is_own_resource_edit" className="text-xs font-medium cursor-pointer">
-                              Possui Recurso Próprio para Fechamento
+                              Possui Recurso Pr?prio para Fechamento
                             </Label>
                           </div>
                         </div>
@@ -2449,14 +2497,14 @@ export function LeadDetailDialog({
                           </div>
                           <h3 className="font-medium text-sm">Documentação</h3>
                         </div>
-                        {(profile?.role === 'admin' || profile?.id === lead.assigned_user_id) && (
+                        {(profile.role === 'admin' || profile.id === lead.assigned_user_id) && (
                           <>
                             <Button 
                               variant="outline" 
                               size="sm" 
                               className="h-8 gap-1.5 px-3"
                               disabled={isUploading}
-                              onClick={() => fileInputRef.current?.click()}
+                              onClick={() => fileInputRef.current.click()}
                             >
                               {isUploading ? (
                                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -2507,7 +2555,7 @@ export function LeadDetailDialog({
                                       {truncateFileName(doc.file_name)}
                                     </p>
                                     <p className="text-[10px] text-muted-foreground">
-                                      {format(new Date(doc.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                                      {format(new Date(doc.created_at), "dd/MM/yyyy '?s' HH:mm", { locale: ptBR })}
                                     </p>
                                   </div>
                                   <div className="flex items-center gap-1 shrink-0 ml-auto">
@@ -2558,6 +2606,7 @@ export function LeadDetailDialog({
                       </div>
                     </div>
                     <LeadTrackingSection leadMeta={leadMeta} isLoading={leadMetaLoading} />
+                    <LeadJourneySection leadId={lead.id} />
                   </div>
                 </div>
               </div>
@@ -2632,7 +2681,7 @@ export function LeadDetailDialog({
                     <Select value={lead.interest_plan_id || 'none'} onValueChange={value => {
                       const newValue = value === 'none' ? '' : value;
                       const selectedPlan = servicePlans.find((p: any) => p.id === value);
-                      const planPrice = selectedPlan?.price || null;
+                      const planPrice = selectedPlan.price || null;
                       setEditForm({
                         ...editForm,
                         valor_interesse: planPrice ? planPrice.toString() : editForm.valor_interesse
@@ -2665,7 +2714,7 @@ export function LeadDetailDialog({
                       selectedPropertyId={lead.interest_property_id || editForm.property_id || null}
                       onSelect={(p) => {
                         const propertyPrice = p.preco || null;
-                        const propertyCommission = (p as any)?.commission_percentage || null;
+                        const propertyCommission = (p as any).commission_percentage || null;
                         setEditForm({
                           ...editForm,
                           property_id: p.id,
@@ -2765,7 +2814,7 @@ export function LeadDetailDialog({
               </div>
 
               {/* Deal Status Summary Card */}
-              {lead.deal_status === 'won' && lead.valor_interesse > 0 && (
+              {lead.deal_status === 'won' && interestValue > 0 && (
                 <div className="rounded-xl bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-950/30 dark:to-emerald-900/30 border border-emerald-200 dark:border-emerald-800 p-4">
                   <div className="flex items-center gap-3">
                     <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center">
@@ -2773,7 +2822,7 @@ export function LeadDetailDialog({
                     </div>
                     <div>
                       <p className="text-xl font-bold text-emerald-700 dark:text-emerald-300">
-                        R$ {lead.valor_interesse.toLocaleString('pt-BR')}
+                        R$ {interestValue.toLocaleString('pt-BR')}
                       </p>
                       <p className="text-sm text-emerald-600 dark:text-emerald-400">Negócio Fechado!</p>
                     </div>
@@ -2781,7 +2830,7 @@ export function LeadDetailDialog({
                 </div>
               )}
               
-              {lead.deal_status !== 'won' && lead.valor_interesse > 0 && (
+              {lead.deal_status !== 'won' && interestValue > 0 && (
                 <div className="rounded-xl bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20 p-4">
                   <div className="flex items-center gap-3">
                     <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
@@ -2789,7 +2838,7 @@ export function LeadDetailDialog({
                     </div>
                     <div>
                       <p className="text-xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-                        R$ {lead.valor_interesse.toLocaleString('pt-BR')}
+                        R$ {interestValue.toLocaleString('pt-BR')}
                       </p>
                       <p className="text-sm text-muted-foreground">Valor de interesse</p>
                     </div>
@@ -2813,14 +2862,17 @@ export function LeadDetailDialog({
     </div>);
 
   // Roteiro Dialog
-  const RoteiroDialog = () => <Dialog open={roteiroDialogOpen} onOpenChange={setRoteiroDialogOpen}>
+  const RoteiroDialog = () => {
+    if (!selectedTask) return null;
+
+    return <Dialog open={roteiroDialogOpen} onOpenChange={setRoteiroDialogOpen}>
       <DialogContent className="w-[90%] sm:max-w-md sm:w-full rounded-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <div className="h-8 w-8 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
               <Lightbulb className="h-4 w-4 text-amber-600" />
             </div>
-            {selectedTask?.title}
+            {selectedTask.title || 'Roteiro'}
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
@@ -2828,12 +2880,12 @@ export function LeadDetailDialog({
             <div className="flex items-start gap-3">
               <Lightbulb className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
               <p className="text-sm text-amber-800 dark:text-amber-200 whitespace-pre-wrap leading-relaxed">
-                {selectedTask?.observation}
+                {selectedTask.observation}
               </p>
             </div>
           </div>
           
-          {selectedTask?.recommended_message && <div className="p-4 bg-primary/5 rounded-xl border border-primary/20">
+          {selectedTask.recommended_message && <div className="p-4 bg-primary/5 rounded-xl border border-primary/20">
               <div className="flex items-start gap-3">
                 <MessageCircle className="h-5 w-5 text-primary mt-0.5 shrink-0" />
                 <div>
@@ -2850,7 +2902,7 @@ export function LeadDetailDialog({
               <Check className="h-4 w-4 mr-2" />
               Marcar como feito
             </Button>
-            {selectedTask?.recommended_message && lead.phone && <Button variant="outline" className="flex-1" onClick={() => handleRoteiroAction('message')}>
+            {selectedTask.recommended_message && lead.phone && <Button variant="outline" className="flex-1" onClick={() => handleRoteiroAction('message')}>
                 <MessageCircle className="h-4 w-4 mr-2" />
                 Enviar mensagem
               </Button>}
@@ -2858,18 +2910,21 @@ export function LeadDetailDialog({
         </div>
       </DialogContent>
     </Dialog>;
+  };
 
   // Outcome Dialog component (for cadence tasks)
   const OutcomeDialogComponent = () => (
     <>
-      <TaskOutcomeDialog
-        open={outcomeDialogOpen}
-        onOpenChange={setOutcomeDialogOpen}
-        taskType={taskForOutcome?.type || 'call'}
-        taskTitle={taskForOutcome?.title || ''}
-        onConfirm={handleOutcomeConfirm}
-        isLoading={completeCadenceTask.isPending}
-      />
+      {taskForOutcome && (
+        <TaskOutcomeDialog
+          open={outcomeDialogOpen}
+          onOpenChange={setOutcomeDialogOpen}
+          taskType={taskForOutcome.type || 'call'}
+          taskTitle={taskForOutcome.title || ''}
+          onConfirm={handleOutcomeConfirm}
+          isLoading={completeCadenceTask.isPending}
+        />
+      )}
       {/* Quick Action Outcome Dialog (for phone/email buttons) */}
       <TaskOutcomeDialog
         open={quickActionOutcomeOpen}
@@ -2935,7 +2990,7 @@ export function LeadDetailDialog({
           open={lostReasonDialogOpen}
           onOpenChange={setLostReasonDialogOpen}
           onConfirm={handleConfirmLostReason}
-          leadName={lead?.name}
+          leadName={lead.name}
           loading={dealStatusChange.isPending}
         />
       </>
@@ -2955,7 +3010,7 @@ export function LeadDetailDialog({
         open={lostReasonDialogOpen}
         onOpenChange={setLostReasonDialogOpen}
         onConfirm={handleConfirmLostReason}
-        leadName={lead?.name}
+        leadName={lead.name}
         loading={dealStatusChange.isPending}
       />
       <Dialog open={historyEventDialogOpen} onOpenChange={setHistoryEventDialogOpen}>
@@ -2985,7 +3040,7 @@ export function LeadDetailDialog({
               </div>
 
               <div className="bg-muted/30 p-4 rounded-xl border italic text-sm text-foreground/90 whitespace-pre-wrap">
-                {selectedHistoryEvent.content || selectedHistoryEvent.metadata?.outcome_notes || "Nenhum detalhe adicional disponível."}
+                {selectedHistoryEvent.content || selectedHistoryEvent.metadata.outcome_notes || "Nenhum detalhe adicional disponível."}
               </div>
 
               {selectedHistoryEvent.actor && (
@@ -3023,3 +3078,4 @@ export function LeadDetailDialog({
     </>
   );
 }
+

@@ -342,7 +342,7 @@ export function TagsTab() {
                       value={percentage} 
                       className="h-2"
                       style={{ 
-                        // @ts-ignore - custom property for progress color
+                        // @ts-expect-error - custom property for progress color
                         '--progress-color': tag.color 
                       } as React.CSSProperties}
                     />

@@ -1,5 +1,4 @@
-import { useState, useRef, useEffect, SyntheticEvent } from "react";
-import { supabase } from "@/integrations/supabase/client";
+﻿import { useState, useRef, useEffect, SyntheticEvent } from "react";
 import { Check, CheckCheck, Clock, Mic, Play, Pause, FileText, Download, AlertCircle, RefreshCw, Loader2, Image as ImageIcon, Video, Volume2, Link2 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -21,20 +20,25 @@ import {
 interface MessageBubbleProps {
   content: string | null;
   messageType: string;
-  mediaUrl?: string | null;
-  mediaMimeType?: string | null;
-  mediaStatus?: 'pending' | 'ready' | 'failed' | null;
-  mediaError?: string | null;
-  mediaSize?: number | null;
+  mediaUrl: string | null;
+  mediaMimeType: string | null;
+  mediaStatus: 'pending' | 'ready' | 'failed' | null;
+  mediaError: string | null;
+  mediaSize: number | null;
   fromMe: boolean;
-  status?: string;
+  status: string;
   sentAt: string;
-  senderName?: string | null;
-  isGroup?: boolean;
-  onRetryMedia?: () => void;
-  messageId?: string;
-  leadId?: string;
-  leadName?: string;
+  senderName: string | null;
+  isGroup: boolean;
+  onRetryMedia: () => void;
+  messageId: string;
+  leadId: string;
+  leadName: string;
+  reactions: Array<{
+    emoji: string;
+    senderName: string | null;
+    fromMe: boolean;
+  }>;
 }
 
 // Generate pseudo-random waveform bars based on a seed
@@ -66,8 +70,27 @@ const checkOggOpusSupport = (): boolean => {
 // Fetch audio as blob URL to bypass format detection issues
 const fetchAsBlobUrl = async (url: string): Promise<string> => {
   const response = await fetch(url);
+  if (!response.ok) throw new Error(`Media request failed: ${response.status}`);
   const blob = await response.blob();
   return URL.createObjectURL(blob);
+};
+
+const previewUrl = (url: string | null | undefined, length = 60) =>
+  url ? `${url.substring(0, length)}...` : "";
+
+const AUDIO_PLAYBACK_RATES = [1, 1.5, 2] as const;
+const AUDIO_PLAYBACK_RATE_EVENT = "vimob:whatsapp-audio-rate";
+let sharedAudioPlaybackRate: typeof AUDIO_PLAYBACK_RATES[number] = 1;
+
+const toSafeText = (value: unknown): string => {
+  if (value === null || value === undefined) return "";
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return "[conteúdo indisponível]";
+  }
 };
 
 export function MessageBubble({
@@ -87,8 +110,10 @@ export function MessageBubble({
   messageId,
   leadId,
   leadName,
+  reactions = [],
 }: MessageBubbleProps) {
   const createAttachment = useCreateLeadAttachment();
+  const safeContent = toSafeText(content);
   const [attachConfirmOpen, setAttachConfirmOpen] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [imageLoading, setImageLoading] = useState(true);
@@ -100,13 +125,42 @@ export function MessageBubble({
   const [audioError, setAudioError] = useState<string | null>(null);
   const [audioReady, setAudioReady] = useState(false);
   const [mediaChecked, setMediaChecked] = useState(false);
-  const [playbackRate, setPlaybackRate] = useState(1);
+  const [playbackRate, setPlaybackRate] = useState(sharedAudioPlaybackRate);
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [blobAttempted, setBlobAttempted] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
   
   // Waveform bars generated from mediaUrl or sentAt as seed
   const waveformBars = generateWaveform(mediaUrl || sentAt, 28);
+
+  useEffect(() => {
+    setMediaChecked(false);
+    setBlobAttempted(false);
+    setAudioError(null);
+    setAudioReady(false);
+    setAudioProgress(0);
+    setCurrentTime(0);
+    setIsPlaying(false);
+
+    if (messageType === "image" || messageType === "sticker") {
+      setImageError(false);
+      setImageLoading(!!mediaUrl);
+    }
+  }, [mediaUrl, messageType, messageId]);
+
+  useEffect(() => {
+    const handlePlaybackRateChange = (event: Event) => {
+      const nextRate = (event as CustomEvent<number>).detail;
+      if (!AUDIO_PLAYBACK_RATES.includes(nextRate as typeof AUDIO_PLAYBACK_RATES[number])) return;
+      setPlaybackRate(nextRate as typeof AUDIO_PLAYBACK_RATES[number]);
+      if (audioRef.current) {
+        audioRef.current.playbackRate = nextRate;
+      }
+    };
+
+    window.addEventListener(AUDIO_PLAYBACK_RATE_EVENT, handlePlaybackRateChange);
+    return () => window.removeEventListener(AUDIO_PLAYBACK_RATE_EVENT, handlePlaybackRateChange);
+  }, []);
 
   // Debug: Check media URL accessibility
   useEffect(() => {
@@ -142,11 +196,13 @@ export function MessageBubble({
   }, [blobUrl]);
 
   const formatTime = (date: string) => {
-    return format(new Date(date), "HH:mm");
+    const parsed = new Date(date);
+    if (Number.isNaN(parsed.getTime())) return "";
+    return format(parsed, "HH:mm");
   };
 
   const formatDuration = (seconds: number) => {
-    if (!seconds || isNaN(seconds)) return "0:00";
+    if (!seconds || !Number.isFinite(seconds) || isNaN(seconds)) return "0:00";
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, '0')}`;
@@ -179,22 +235,24 @@ export function MessageBubble({
 
   const isValidMediaUrl = (url: string | null | undefined): boolean => {
     if (!url) return false;
+    if (messageType === "sticker" && url.includes("a.whatsapp.net")) return false;
     if (url.includes("mmg.whatsapp.net")) return false;
     if (url.includes("pps.whatsapp.net")) return false;
     if (url.includes(".enc")) return false;
+    if (url.startsWith("data:")) return true;
     return url.startsWith("http://") || url.startsWith("https://");
   };
 
-  const playbackRates = [1, 1.5, 2];
-  
   const cyclePlaybackRate = () => {
-    const currentIndex = playbackRates.indexOf(playbackRate);
-    const nextIndex = (currentIndex + 1) % playbackRates.length;
-    const newRate = playbackRates[nextIndex];
+    const currentIndex = AUDIO_PLAYBACK_RATES.indexOf(playbackRate as typeof AUDIO_PLAYBACK_RATES[number]);
+    const nextIndex = (currentIndex + 1) % AUDIO_PLAYBACK_RATES.length;
+    const newRate = AUDIO_PLAYBACK_RATES[nextIndex];
+    sharedAudioPlaybackRate = newRate;
     setPlaybackRate(newRate);
     if (audioRef.current) {
       audioRef.current.playbackRate = newRate;
     }
+    window.dispatchEvent(new CustomEvent(AUDIO_PLAYBACK_RATE_EVENT, { detail: newRate }));
   };
 
   const handleAudioPlay = () => {
@@ -214,18 +272,22 @@ export function MessageBubble({
 
   const handleAudioTimeUpdate = () => {
     if (audioRef.current) {
-      const progress = (audioRef.current.currentTime / audioRef.current.duration) * 100;
+      const duration = audioRef.current.duration;
+      const progress = Number.isFinite(duration) && duration > 0
+        ? (audioRef.current.currentTime / duration) * 100
+        : 0;
       setAudioProgress(progress || 0);
-      setCurrentTime(audioRef.current.currentTime);
+      setCurrentTime(Number.isFinite(audioRef.current.currentTime) ? audioRef.current.currentTime : 0);
     }
   };
 
   const handleAudioLoadedMetadata = () => {
     if (audioRef.current) {
-      setAudioDuration(audioRef.current.duration);
+      const duration = audioRef.current.duration;
+      setAudioDuration(Number.isFinite(duration) && duration > 0 ? duration : 0);
       setAudioReady(true);
       console.log('[Audio Ready]', {
-        url: mediaUrl?.substring(0, 60) + '...',
+        url: previewUrl(mediaUrl),
         duration: audioRef.current.duration
       });
     }
@@ -233,11 +295,11 @@ export function MessageBubble({
 
   const handleAudioError = async (e: SyntheticEvent<HTMLAudioElement>) => {
     const audio = e.currentTarget;
-    const errorCode = audio.error?.code;
-    const errorMsg = audio.error?.message;
+    const errorCode = audio.error.code;
+    const errorMsg = audio.error.message;
     
     console.error('[Audio Error]', {
-      url: mediaUrl?.substring(0, 60) + '...',
+      url: previewUrl(mediaUrl),
       code: errorCode,
       message: errorMsg,
       mimeType: mediaMimeType,
@@ -275,7 +337,7 @@ export function MessageBubble({
 
   const handleImageError = (e: SyntheticEvent<HTMLImageElement>) => {
     console.error('[Image Error]', {
-      url: mediaUrl?.substring(0, 60) + '...',
+      url: previewUrl(mediaUrl),
       naturalWidth: e.currentTarget.naturalWidth,
       naturalHeight: e.currentTarget.naturalHeight
     });
@@ -285,7 +347,7 @@ export function MessageBubble({
 
   const handleImageLoad = () => {
     setImageLoading(false);
-    console.log('[Image Loaded]', { url: mediaUrl?.substring(0, 60) + '...' });
+    console.log('[Image Loaded]', { url: previewUrl(mediaUrl) });
   };
 
   const handleWaveformClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -297,10 +359,41 @@ export function MessageBubble({
     }
   };
 
-  const handleDownloadMedia = () => {
-    if (mediaUrl) {
-      window.open(mediaUrl, '_blank');
+  const handleDownloadMedia = async (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    if (!mediaUrl) return;
+
+    const fileName = getAttachmentFileName();
+    try {
+      const response = await fetch(mediaUrl);
+      if (!response.ok) throw new Error(`Media download failed: ${response.status}`);
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(objectUrl);
+    } catch {
+      const link = document.createElement("a");
+      link.href = mediaUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
     }
+  };
+
+  const getAttachmentFileName = () => {
+    if (safeContent) return safeContent;
+    const parsed = new Date(sentAt);
+    const timestamp = Number.isNaN(parsed.getTime()) ? "sem-data" : format(parsed, 'yyyyMMdd-HHmm');
+    if (messageType === 'audio') return `Audio-${timestamp}`;
+    if (messageType === 'image') return `Imagem-${timestamp}`;
+    if (messageType === 'video') return `Video-${timestamp}`;
+    return `Documento-${timestamp}`;
   };
 
   const renderMediaPending = () => {
@@ -421,7 +514,7 @@ export function MessageBubble({
             <div className="flex items-center justify-end gap-1">
               <span className={cn(
                 "text-[11px]",
-                fromMe ? "text-primary-foreground/60" : "text-chatBubble-foreground/60"
+                fromMe ? "text-primary-foreground/60" : "text-white/55"
               )}>
                 {formatTime(sentAt)}
               </span>
@@ -509,13 +602,13 @@ export function MessageBubble({
             <div className="flex items-center justify-between">
               <span className={cn(
                 "text-[11px]",
-                fromMe ? "text-primary-foreground/60" : "text-chatBubble-foreground/60"
+                fromMe ? "text-primary-foreground/60" : "text-white/55"
               )}>
                 {formatDuration(currentTime)}
               </span>
               <span className={cn(
                 "text-[11px]",
-                fromMe ? "text-primary-foreground/60" : "text-chatBubble-foreground/60"
+                fromMe ? "text-primary-foreground/60" : "text-white/55"
               )}>
                 {formatDuration(audioDuration)}
               </span>
@@ -525,8 +618,20 @@ export function MessageBubble({
           {/* Message timestamp and status */}
           <div className={cn(
             "flex items-center gap-1 shrink-0",
-            fromMe ? "text-primary-foreground/60" : "text-chatBubble-foreground/60"
+            fromMe ? "text-primary-foreground/60" : "text-white/55"
           )}>
+            {leadId && isValidMediaUrl(mediaUrl) && (
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setAttachConfirmOpen(true);
+                }}
+                className="hover:text-primary transition-colors p-0.5"
+                title="Anexar ao Lead"
+              >
+                <Link2 className="w-3.5 h-3.5" />
+              </button>
+            )}
             <span className="text-[11px]">{formatTime(sentAt)}</span>
             {getStatusIcon()}
           </div>
@@ -539,7 +644,7 @@ export function MessageBubble({
               setIsPlaying(false);
               // Don't reset progress - keep it at the end
               setAudioProgress(100);
-              setCurrentTime(audioDuration);
+              setCurrentTime(Number.isFinite(audioDuration) ? audioDuration : 0);
             }}
             onTimeUpdate={handleAudioTimeUpdate}
             onLoadedMetadata={handleAudioLoadedMetadata}
@@ -570,18 +675,18 @@ export function MessageBubble({
   };
 
   const renderMedia = () => {
+    const hasValidMedia = isValidMediaUrl(mediaUrl);
+
     // Check media status for proper state handling
-    if (mediaStatus === 'pending') {
+    if (mediaStatus === 'pending' && !hasValidMedia) {
       return renderMediaPending();
     }
     
-    if (mediaStatus === 'failed') {
+    if (mediaStatus === 'failed' && !hasValidMedia) {
       return renderMediaFailed();
     }
 
     // For 'ready' status or legacy messages (null status), check URL validity
-    const hasValidMedia = isValidMediaUrl(mediaUrl);
-    
     // If no valid URL but status is null (legacy), show as failed for retry
     if (!hasValidMedia && mediaStatus === null && messageType !== 'text' && messageType !== 'sticker') {
       // Legacy message with expired/invalid URL - treat as failed
@@ -604,7 +709,7 @@ export function MessageBubble({
                 )}
                 <img
                   src={mediaUrl!}
-                  alt={content || "Imagem"}
+                alt={safeContent || "Imagem"}
                   className="w-full h-auto max-h-[400px] object-cover"
                   onError={handleImageError}
                   onLoad={handleImageLoad}
@@ -693,7 +798,7 @@ export function MessageBubble({
                 ? "bg-primary-foreground/10 hover:bg-primary-foreground/20" 
                 : "bg-muted hover:bg-muted/80"
             )}
-            onClick={() => hasValidMedia && window.open(mediaUrl!, "_blank")}
+            onClick={(e) => hasValidMedia && handleDownloadMedia(e)}
           >
             {/* Icon - fixed width */}
             <div className={cn(
@@ -709,7 +814,7 @@ export function MessageBubble({
             {/* Content area - 90% */}
             <div className="min-w-0 flex-[9]">
               <p className="text-sm font-medium truncate">
-                {content || "Documento"}
+                {safeContent || "Documento"}
               </p>
             </div>
             
@@ -730,7 +835,7 @@ export function MessageBubble({
                 )}
                 <span className={cn(
                   "text-[11px] leading-none whitespace-nowrap",
-                  fromMe ? "text-primary-foreground/60" : "text-chatBubble-foreground/60"
+                  fromMe ? "text-primary-foreground/60" : "text-white/55"
                 )}>
                   {formatTime(sentAt)}
                 </span>
@@ -741,18 +846,58 @@ export function MessageBubble({
         );
 
       case "sticker":
-        return (
-          <div className="text-4xl">🎭</div>
-        );
+        if (hasValidMedia && !imageError) {
+          return (
+            <div className="relative max-w-[160px] max-h-[160px] p-1">
+              <img
+                src={mediaUrl!}
+                alt={safeContent || "Figurinha"}
+                className="max-w-[150px] max-h-[150px] object-contain"
+                onError={handleImageError}
+                onLoad={handleImageLoad}
+              />
+              {renderMediaTimestamp()}
+            </div>
+          );
+        }
+        return renderMediaFailed();
 
       default:
         return null;
     }
   };
 
-  const isMediaMessage = messageType !== "text";
+  const isMediaMessage = messageType !== "text" && messageType !== "reaction";
   const isMediaWithOverlayTimestamp = (messageType === "image" || messageType === "video") && isValidMediaUrl(mediaUrl) && !imageError;
   const isAudioMessage = messageType === "audio";
+  const hasReactions = reactions.length > 0;
+
+  const renderReactions = () => {
+    if (!hasReactions) return null;
+    return (
+      <div className={cn(
+        "absolute -bottom-2 right-2 z-10 flex"
+      )}>
+        <div className={cn(
+          "inline-flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-sm leading-none shadow-md backdrop-blur-sm",
+          fromMe
+            ? "border-primary-foreground/20 bg-background/95 text-foreground"
+            : "border-white/10 bg-background/95 text-foreground"
+        )}>
+          {reactions.slice(0, 4).map((reaction, index) => (
+            <span key={`${toSafeText(reaction.emoji)}-${index}`} title={toSafeText(reaction.senderName) || undefined}>
+              {toSafeText(reaction.emoji)}
+            </span>
+          ))}
+          {reactions.length > 4 && (
+            <span className="text-[10px] text-muted-foreground">+{reactions.length - 4}</span>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  if (messageType === "reaction") return null;
 
   return (
     <div 
@@ -762,46 +907,50 @@ export function MessageBubble({
       )}
     >
       <div className={cn(
-        "max-w-[85%] sm:max-w-[75%] rounded-2xl relative overflow-hidden transition-all duration-200 shadow-sm",
-        fromMe 
-          ? "bg-primary text-primary-foreground rounded-tr-none" 
-          : "bg-chatBubble text-chatBubble-foreground rounded-tl-none",
-        (messageType === "image" || messageType === "video") && !content ? "p-[3px]" : "px-3 py-2"
+        "max-w-[85%] sm:max-w-[75%] flex flex-col",
+        fromMe ? "items-end" : "items-start"
       )}>
-        {/* Sender name for groups or sent messages with sender info */}
-        {!fromMe && senderName && (
-          <p className="text-xs font-semibold text-primary mb-0.5">{senderName}</p>
-        )}
-        {fromMe && senderName && (
-          <p className="text-[11px] font-medium mb-0.5 opacity-70">{senderName}</p>
-        )}
+        <div className={cn(
+          "rounded-2xl relative overflow-visible transition-all duration-200 shadow-sm",
+          fromMe 
+            ? "bg-primary text-primary-foreground rounded-tr-none" 
+            : "bg-[#242424] text-white border border-white/5 rounded-tl-none",
+          (messageType === "image" || messageType === "video") && !content ? "p-[3px]" : "px-3 py-2"
+        )}>
+          {/* Sender name for groups or sent messages with sender info */}
+          {!fromMe && senderName && (
+            <p className="text-xs font-semibold text-primary mb-0.5">{toSafeText(senderName)}</p>
+          )}
+          {fromMe && senderName && (
+            <p className="text-[11px] font-medium mb-0.5 opacity-70">{toSafeText(senderName)}</p>
+          )}
 
-        {/* Media content */}
-        {isMediaMessage && renderMedia()}
+          {/* Media content */}
+          {isMediaMessage && renderMedia()}
 
-        {/* Text content */}
-        {content && messageType === "text" && (
-          <MessageText content={content} fromMe={fromMe} />
-        )}
+          {/* Text content */}
+          {safeContent && messageType === "text" && (
+            <MessageText content={safeContent} fromMe={fromMe} />
+          )}
 
 
-        {/* Inline timestamp for text messages and non-overlay media (except audio which has its own) */}
-        {(!isMediaWithOverlayTimestamp && !isAudioMessage) && (
-          <span className={cn(
-            "float-right -mt-4 ml-2 flex items-center gap-0.5",
-            fromMe ? "text-primary-foreground/60" : "text-chatBubble-foreground/60"
-          )}>
-            <span className="text-[11px] leading-none">{formatTime(sentAt)}</span>
-            {getStatusIcon()}
-          </span>
-        )}
+          {/* Inline timestamp for text messages and non-overlay media (except audio which has its own) */}
+          {(!isMediaWithOverlayTimestamp && !isAudioMessage) && (
+            <span className={cn(
+              "float-right -mt-4 ml-2 flex items-center gap-0.5",
+              fromMe ? "text-primary-foreground/60" : "text-white/55"
+            )}>
+              <span className="text-[11px] leading-none">{formatTime(sentAt)}</span>
+              {getStatusIcon()}
+            </span>
+          )}
 
-        <AlertDialog open={attachConfirmOpen} onOpenChange={setAttachConfirmOpen}>
+          <AlertDialog open={attachConfirmOpen} onOpenChange={setAttachConfirmOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Anexar ao Lead?</AlertDialogTitle>
+              <AlertDialogTitle>Anexar ao Lead</AlertDialogTitle>
               <AlertDialogDescription>
-                Deseja anexar este arquivo de mídia à documentação do lead <strong>{leadName}</strong>?
+                Deseja anexar este arquivo de mídia à documentação do lead <strong>{leadName}</strong>
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -809,7 +958,7 @@ export function MessageBubble({
               <AlertDialogAction
                 onClick={async () => {
                   if (leadId && mediaUrl) {
-                    const fileName = content || (messageType === 'audio' ? 'Áudio' : messageType === 'image' ? 'Imagem' : 'Documento');
+                    const fileName = getAttachmentFileName();
                     
                     await createAttachment.mutateAsync({
                       lead_id: leadId,
@@ -820,19 +969,6 @@ export function MessageBubble({
                       message_id: messageId,
                     });
 
-                    // Adicionar ao histórico também quando anexado via chat
-                    try {
-                      const { data: { user } } = await supabase.auth.getUser();
-                      await (supabase as any).from('activities').insert({
-                        lead_id: leadId,
-                        user_id: user?.id,
-                        type: 'note',
-                        content: `Documento anexado via chat: ${fileName}`,
-                        metadata: { file_url: mediaUrl, message_id: messageId }
-                      });
-                    } catch (e) {
-                      console.error('Error adding activity for chat attachment:', e);
-                    }
                   }
                   setAttachConfirmOpen(false);
                 }}
@@ -841,7 +977,9 @@ export function MessageBubble({
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
-        </AlertDialog>
+          </AlertDialog>
+          {renderReactions()}
+        </div>
       </div>
     </div>
   );
@@ -852,7 +990,8 @@ export function MessageBubble({
 // via useMentionNames. Word mentions (@Joao) keep highlight styling.
 function MessageText({ content, fromMe }: { content: string; fromMe: boolean }) {
   const mentionRegex = /(@\d{7,}|@[\w\u00C0-\u017F]+(?:\s[\w\u00C0-\u017F]+){0,2})/g;
-  const parts = content.split(mentionRegex);
+  const mentionTokenRegex = /^(@\d{7,}|@[\w\u00C0-\u017F]+(?:\s[\w\u00C0-\u017F]+){0,2})$/;
+  const parts = content.split(mentionRegex).filter((part): part is string => typeof part === "string" && part.length > 0);
 
   const digitMentions = parts
     .filter((p) => /^@\d{7,}$/.test(p))
@@ -864,7 +1003,7 @@ function MessageText({ content, fromMe }: { content: string; fromMe: boolean }) 
       {parts.length === 1
         ? content
         : parts.map((part, index) => {
-            if (!part.match(mentionRegex)) return part;
+            if (!mentionTokenRegex.test(part)) return part;
             const isDigit = /^@\d{7,}$/.test(part);
             const display = isDigit ? `@${names[part.slice(1)] ?? part.slice(1)}` : part;
             return (

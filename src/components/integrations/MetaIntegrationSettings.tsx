@@ -1,31 +1,34 @@
-import { useState, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle 
-} from "@/components/ui/card";
+﻿import { useEffect, useMemo, useState } from "react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import {
+  AlertCircle,
+  Check,
+  ExternalLink,
+  Facebook,
+  FilePlus2,
+  Loader2,
+  MoreVertical,
+  Plug,
+  Plus,
+  RefreshCw,
+  Search,
+  Settings,
+  Trash2,
+  Unplug,
+} from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,657 +38,572 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import { Skeleton } from "@/components/ui/skeleton";
-import { 
-  Facebook,
-  Instagram,
-  Link, 
-  Unlink, 
-  Settings2, 
-  AlertCircle,
-  CheckCircle2,
-  Users,
-  RefreshCw,
-  ChevronDown,
-  FileText,
-} from "lucide-react";
-import { toast } from "sonner";
-import { usePipelines } from "@/hooks/use-stages";
-import { useStages } from "@/hooks/use-stages";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
-  useMetaIntegrations,
-  useMetaGetAuthUrl,
-  useMetaConnectPage,
-  useMetaUpdatePage,
-  useMetaDisconnectPage,
-  useMetaTogglePage,
-  useMetaAdAccounts,
-  useMetaUpdateAdAccounts,
-  MetaPage,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { cn } from "@/lib/utils";
+import {
   MetaIntegration,
+  MetaPage,
+  useMetaConnectPage,
+  useMetaDisconnectPage,
+  useMetaGetAuthUrl,
+  useMetaIntegrations,
 } from "@/hooks/use-meta-integration";
-import { MetaFormManager } from "./MetaFormManager";
-import { MetaWebhookHealthBanner } from "./MetaWebhookHealthBanner";
-import { useLanguage } from "@/contexts/LanguageContext";
+import {
+  MetaForm,
+  MetaFormConfig,
+  useAllMetaFormConfigs,
+  useDeleteFormConfig,
+  useFetchPageForms,
+  useToggleFormConfig,
+} from "@/hooks/use-meta-forms";
+import { MetaFormConfigDialog } from "./MetaFormConfigDialog";
 
-interface OAuthData {
-  success: boolean;
+interface OAuthPayload {
   pages?: MetaPage[];
-  userToken?: string;
-  adAccountId?: string;
-  error?: string;
+  user_token?: string;
+  facebook_user_id?: string;
+  facebook_user_name?: string;
 }
 
-export function MetaIntegrationSettings() {
-  const { t } = useLanguage();
-  const meta = t.settings.integrations.meta;
+interface AccountGroup {
+  key: string;
+  name: string;
+  facebookUserId?: string | null;
+  facebookUserName?: string | null;
+  userToken?: string;
+  integrations: MetaIntegration[];
+  pages: MetaPage[];
+  isNew?: boolean;
+}
 
-  const STATUS_OPTIONS = [
-    { value: "novo", label: meta.statusNew },
-    { value: "contatado", label: meta.statusContacted },
-    { value: "qualificado", label: meta.statusQualified },
-    { value: "negociando", label: meta.statusNegotiating },
-  ];
+const getPagePicture = (page?: MetaPage | null) => page?.picture?.data?.url || "";
 
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [availablePages, setAvailablePages] = useState<MetaPage[]>([]);
-  const [userToken, setUserToken] = useState("");
-  const [adAccountId, setAdAccountId] = useState("");
-  const [showPageSelector, setShowPageSelector] = useState(false);
-  const [showEditDialog, setShowEditDialog] = useState(false);
-  const [editingPage, setEditingPage] = useState<string | null>(null);
-  const [editingIntegrationId, setEditingIntegrationId] = useState<string | null>(null);
-  const [selectedAdAccountIds, setSelectedAdAccountIds] = useState<string[]>([]);
-  const [expandedIntegrations, setExpandedIntegrations] = useState<Set<string>>(new Set());
-  
-  // Form state
-  const [selectedPageId, setSelectedPageId] = useState("");
-  const [selectedPipelineId, setSelectedPipelineId] = useState("");
-  const [selectedStageId, setSelectedStageId] = useState("");
-  const [selectedStatus, setSelectedStatus] = useState("novo");
+const buildConfigForm = (config: MetaFormConfig): MetaForm => ({
+  id: config.form_id,
+  name: config.form_name || config.form_id,
+  status: config.is_active ? "ACTIVE" : "INACTIVE",
+});
 
-  const { data: integrations, isLoading: loadingIntegrations } = useMetaIntegrations();
-  const { data: pipelines, isLoading: loadingPipelines } = usePipelines();
-  const { data: stages } = useStages(selectedPipelineId || undefined);
-  const { data: availableAdAccounts } = useMetaAdAccounts(userToken, editingIntegrationId || undefined);
+export function MetaIntegrationSettings({
+  oauthPayload,
+}: {
+  oauthPayload?: OAuthPayload | null;
+}) {
+  const [accountModalOpen, setAccountModalOpen] = useState(false);
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [accountSearch, setAccountSearch] = useState("");
+  const [formSearch, setFormSearch] = useState("");
+  const [selectedAccountKey, setSelectedAccountKey] = useState("");
+  const [selectedIntegration, setSelectedIntegration] = useState<MetaIntegration | null>(null);
+  const [forms, setForms] = useState<MetaForm[]>([]);
+  const [configDialogOpen, setConfigDialogOpen] = useState(false);
+  const [editingForm, setEditingForm] = useState<MetaForm | null>(null);
+  const [editingConfig, setEditingConfig] = useState<MetaFormConfig | undefined>();
+  const [newOAuth, setNewOAuth] = useState<OAuthPayload | null>(null);
+  const [disconnectTarget, setDisconnectTarget] = useState<AccountGroup | null>(null);
 
+  const { data: integrations = [], isLoading, refetch: refetchIntegrations } = useMetaIntegrations();
+  const { data: configs = [], refetch: refetchConfigs } = useAllMetaFormConfigs();
   const getAuthUrl = useMetaGetAuthUrl();
   const connectPage = useMetaConnectPage();
-  const updatePage = useMetaUpdatePage();
   const disconnectPage = useMetaDisconnectPage();
-  const togglePage = useMetaTogglePage();
+  const fetchForms = useFetchPageForms();
+  const toggleForm = useToggleFormConfig();
+  const deleteForm = useDeleteFormConfig();
 
-  // Handle OAuth callback data from URL
   useEffect(() => {
-    const oauthData = searchParams.get("meta_oauth_data");
-    const igOauthData = searchParams.get("ig_oauth_data");
+    if (oauthPayload !== undefined) return;
 
-    if (oauthData) {
-      try {
-        const decoded = JSON.parse(atob(decodeURIComponent(oauthData))) as OAuthData;
-        console.log("OAuth callback data:", decoded);
-        
-        if (decoded.success && decoded.pages && decoded.userToken) {
-          setAvailablePages(decoded.pages);
-          setUserToken(decoded.userToken);
-          if (decoded.adAccountId) {
-            setAdAccountId(decoded.adAccountId);
-          }
-          setShowPageSelector(true);
-          toast.success("Autenticação realizada com sucesso!");
-        } else if (decoded.error) {
-          toast.error(decoded.error);
-        }
-        
-        setSearchParams({});
-      } catch (e) {
-        console.error("Failed to parse OAuth data:", e);
-        setSearchParams({});
-      }
-    }
+    const params = new URLSearchParams(window.location.search);
+    const raw = params.get("meta_oauth_data");
+    if (!raw) return;
 
-    if (igOauthData) {
-      try {
-        const decoded = JSON.parse(atob(decodeURIComponent(igOauthData))) as {
-          success: boolean;
-          username?: string;
-          instagram_user_id?: string;
-          error?: string;
-        };
-        if (decoded.success) {
-          toast.success(`Instagram conectado: @${decoded.username || decoded.instagram_user_id}`);
-        } else if (decoded.error) {
-          toast.error(`Erro Instagram: ${decoded.error}`);
-        }
-        setSearchParams({});
-      } catch (e) {
-        console.error("Failed to parse IG OAuth data:", e);
-        setSearchParams({});
-      }
-    }
-  }, [searchParams, setSearchParams]);
-
-  const handleConnect = async (includeInstagram = false) => {
     try {
-      setIsConnecting(true);
-      
-      // Get current URL as return URL
-      const returnUrl = window.location.href.split('?')[0];
-      const result = await getAuthUrl.mutateAsync({ returnUrl, includeInstagram });
-      
-      // Redirect to Facebook OAuth (same window - will redirect back)
-      window.location.href = result.auth_url;
-    } catch (error) {
-      toast.error(meta.errorStarting);
-      setIsConnecting(false);
-    }
-  };
+      const decoded = decodeURIComponent(raw);
+      const payload = JSON.parse(decoded);
 
-  const handleConnectPage = async () => {
-    if (!selectedPageId || !selectedPipelineId || !selectedStageId) {
-      toast.error(meta.fillAllFields);
-      return;
-    }
-
-    await connectPage.mutateAsync({
-      pageId: selectedPageId,
-      userToken,
-      pipelineId: selectedPipelineId,
-      stageId: selectedStageId,
-      defaultStatus: selectedStatus,
-      adAccountId: adAccountId,
-      selectedAdAccountIds: selectedAdAccountIds,
-    });
-
-    setShowPageSelector(false);
-    resetForm();
-  };
-
-  const handleUpdatePage = async () => {
-    if (!editingPage || !selectedPipelineId || !selectedStageId) {
-      toast.error(meta.fillAllFields);
-      return;
-    }
-
-    await updatePage.mutateAsync({
-      pageId: editingPage,
-      pipelineId: selectedPipelineId,
-      stageId: selectedStageId,
-      defaultStatus: selectedStatus,
-      selectedAdAccountIds: selectedAdAccountIds,
-    });
-
-    setShowEditDialog(false);
-    setEditingPage(null);
-    resetForm();
-  };
-
-  const openEditDialog = (integration: MetaIntegration) => {
-    setEditingPage(integration.page_id);
-    setEditingIntegrationId(integration.id);
-    setSelectedPipelineId("");
-    setSelectedStageId("");
-    setSelectedStatus("novo");
-    setSelectedAdAccountIds(integration.selected_ad_accounts || []);
-    setShowEditDialog(true);
-  };
-
-  const resetForm = () => {
-    setSelectedPageId("");
-    setSelectedPipelineId("");
-    setSelectedStageId("");
-    setSelectedStatus("novo");
-    setAdAccountId("");
-    setSelectedAdAccountIds([]);
-    setEditingIntegrationId(null);
-  };
-
-  const toggleExpanded = (integrationId: string) => {
-    setExpandedIntegrations(prev => {
-      const next = new Set(prev);
-      if (next.has(integrationId)) {
-        next.delete(integrationId);
-      } else {
-        next.add(integrationId);
+      if (window.opener && !window.opener.closed) {
+        window.opener.postMessage({ type: "META_OAUTH_SUCCESS", data: payload }, window.location.origin);
+        window.close();
+        return;
       }
-      return next;
-    });
+
+      setNewOAuth(payload);
+      setSelectedAccountKey("new-oauth");
+      setWizardOpen(true);
+      toast.success("Conta do Facebook conectada. Escolha a página para continuar.");
+    } catch (error) {
+      console.error("Invalid Meta OAuth payload", error);
+    } finally {
+      params.delete("meta_oauth_data");
+      window.history.replaceState({}, "", `${window.location.pathname}${params.toString() ? `?${params}` : ""}`);
+    }
+  }, [oauthPayload]);
+
+  useEffect(() => {
+    if (!oauthPayload) return;
+    setNewOAuth(oauthPayload);
+    setSelectedAccountKey("new-oauth");
+    setWizardOpen(true);
+    setAccountModalOpen(false);
+    toast.success("Conta do Facebook conectada. Escolha a página para continuar.");
+  }, [oauthPayload]);
+
+  useEffect(() => {
+    if (oauthPayload !== undefined) return;
+
+    const handleMessage = (event: MessageEvent) => {
+      if (!event.data || event.data.type !== "META_OAUTH_SUCCESS") return;
+      setNewOAuth(event.data.data || null);
+      setSelectedAccountKey("new-oauth");
+      setWizardOpen(true);
+      setAccountModalOpen(false);
+      toast.success("Conta do Facebook conectada. Escolha a página para continuar.");
+    };
+
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, [oauthPayload]);
+
+  const accounts = useMemo<AccountGroup[]>(() => {
+    const grouped = new Map<string, AccountGroup>();
+
+    for (const integration of integrations) {
+      const key = integration.facebook_user_id || integration.facebook_user_name || integration.access_token || integration.page_id || integration.id;
+      const current = grouped.get(key) || {
+        key,
+        name: integration.facebook_user_name || integration.page_name || "Conta Facebook",
+        facebookUserId: integration.facebook_user_id,
+        facebookUserName: integration.facebook_user_name,
+        integrations: [],
+        pages: [],
+      };
+      current.integrations.push(integration);
+      grouped.set(key, current);
+    }
+
+    if (newOAuth?.pages?.length) {
+      grouped.set("new-oauth", {
+        key: "new-oauth",
+        name: newOAuth.facebook_user_name || "Nova conta Facebook",
+        facebookUserId: newOAuth.facebook_user_id,
+        facebookUserName: newOAuth.facebook_user_name,
+        userToken: newOAuth.user_token,
+        integrations: [],
+        pages: newOAuth.pages,
+        isNew: true,
+      });
+    }
+
+    return Array.from(grouped.values());
+  }, [integrations, newOAuth]);
+
+  const selectedAccount = accounts.find((account) => account.key === selectedAccountKey) || accounts[0];
+  const configuredByFormId = useMemo(() => new Map(configs.map((config) => [config.form_id, config])), [configs]);
+  const integrationById = useMemo(() => new Map(integrations.map((integration) => [integration.id, integration])), [integrations]);
+
+  const filteredAccounts = accounts.filter((account) =>
+    account.name.toLowerCase().includes(accountSearch.toLowerCase())
+  );
+
+  const filteredForms = forms.filter((form) =>
+    form.name.toLowerCase().includes(formSearch.toLowerCase()) || form.id.includes(formSearch)
+  );
+
+  const openOAuth = async () => {
+    const returnUrl = `${window.location.origin}${window.location.pathname}${window.location.search}`;
+    const result = await getAuthUrl.mutateAsync({ returnUrl });
+    const popup = window.open(result.auth_url, "meta_oauth", "width=600,height=720");
+    if (!popup) window.location.href = result.auth_url;
   };
 
-  const filteredStages = stages?.filter(s => s.pipeline_id === selectedPipelineId) || [];
+  const disconnectAccount = async (account: AccountGroup) => {
+    for (const integration of account.integrations) {
+      if (integration.page_id) await disconnectPage.mutateAsync(integration.page_id);
+    }
+    await refetchIntegrations();
+    setDisconnectTarget(null);
+  };
 
-  if (loadingIntegrations) {
-    return (
-      <div className="space-y-4">
-        <Skeleton className="h-32 w-full" />
-        <Skeleton className="h-48 w-full" />
-      </div>
-    );
-  }
+  const loadFormsForIntegration = async (integration: MetaIntegration) => {
+    if (!integration.page_id || !integration.access_token) {
+      toast.error("Página sem token válido para buscar formulários.");
+      return;
+    }
+    setSelectedIntegration(integration);
+    const result = await fetchForms.mutateAsync({ pageId: integration.page_id, accessToken: integration.access_token });
+    setForms(result.forms || []);
+  };
 
-  const hasConnectedPages = integrations && integrations.length > 0;
+  const connectAndLoadPage = async (page: MetaPage) => {
+    if (!selectedAccount?.userToken) return;
+
+    const result = await connectPage.mutateAsync({
+      pageId: page.id,
+      userToken: selectedAccount.userToken,
+      facebookUserId: selectedAccount.facebookUserId || undefined,
+      facebookUserName: selectedAccount.facebookUserName || selectedAccount.name,
+      pagePictureUrl: getPagePicture(page),
+    });
+
+    await refetchIntegrations();
+    const refreshed = await refetchIntegrations();
+    const integration = (refreshed.data || []).find((item) => item.page_id === page.id);
+    if (integration) {
+      await loadFormsForIntegration(integration);
+    } else if (result?.success) {
+      toast.success("Página conectada. Reabra o wizard se os formulários não aparecerem agora.");
+    }
+  };
+
+  const handleSelectPage = async (page: MetaPage | MetaIntegration) => {
+    setForms([]);
+    setFormSearch("");
+
+    if ("page_id" in page) {
+      await loadFormsForIntegration(page);
+      return;
+    }
+
+    const existing = integrations.find((integration) => integration.page_id === page.id);
+    if (existing) {
+      await loadFormsForIntegration(existing);
+      return;
+    }
+
+    await connectAndLoadPage(page);
+  };
+
+  const openConfig = (form: MetaForm, config?: MetaFormConfig, integration?: MetaIntegration | null) => {
+    const ownerIntegration = integration || selectedIntegration || (config ? integrationById.get(config.integration_id) : null) || null;
+    if (!ownerIntegration?.id) {
+      toast.error("Selecione uma página antes de configurar o formulário.");
+      return;
+    }
+    setSelectedIntegration(ownerIntegration);
+    setEditingForm(form);
+    setEditingConfig(config);
+    setConfigDialogOpen(true);
+  };
+
+  const closeConfigDialog = (open: boolean) => {
+    setConfigDialogOpen(open);
+    if (!open) {
+      refetchConfigs();
+      setEditingConfig(undefined);
+      setEditingForm(null);
+    }
+  };
+
+  const pageItems = selectedAccount
+    ? selectedAccount.isNew
+      ? selectedAccount.pages
+      : selectedAccount.integrations
+    : [];
 
   return (
-    <div className="space-y-4">
-      <MetaWebhookHealthBanner />
-      {/* Header Card */}
-      <Card>
-        <CardContent className="p-3">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-muted shrink-0 flex gap-1">
-              <Facebook className="h-5 w-5 text-blue-600" />
-              <Instagram className="h-5 w-5 text-pink-600" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-semibold text-sm leading-tight">{meta.title}</p>
-              <p className="text-xs text-muted-foreground truncate">{meta.description}</p>
-            </div>
-            <div className="flex gap-1.5 shrink-0">
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-8 text-xs px-2"
-                onClick={() => handleConnect(false)}
-                disabled={isConnecting || getAuthUrl.isPending}
-                title="Conecta Páginas do Facebook + Contas de Anúncios + Lead Ads (independente do Instagram)"
-              >
-                <Facebook className="h-3.5 w-3.5 text-blue-600" />
-                <span className="hidden sm:inline ml-1">{hasConnectedPages ? meta.addPage : "Facebook"}</span>
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-8 text-xs px-2"
-                onClick={() => handleConnect(true)}
-                disabled={isConnecting || getAuthUrl.isPending}
-                title="Conexão com Instagram — exige conta Business vinculada"
-              >
-                <Instagram className="h-3.5 w-3.5 text-pink-600" />
-                <span className="hidden sm:inline ml-1">Instagram</span>
-              </Button>
-            </div>
-          </div>
-          {hasConnectedPages ? (
-            <div className="flex items-center gap-1.5 mt-2 pl-1">
-              <CheckCircle2 className="h-3.5 w-3.5 text-orange-500 shrink-0" />
-              <span className="text-xs text-orange-600 font-medium">
-                {integrations.length} {meta.pagesConnected}
-              </span>
-            </div>
-          ) : (
-            <div className="flex items-center gap-1.5 mt-2 pl-1">
-              <AlertCircle className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-              <span className="text-xs text-muted-foreground">{meta.noPageConnected}</span>
-            </div>
-          )}
-          <p className="text-[11px] text-muted-foreground mt-2 pl-1">
-            As permissões do Instagram agora são opcionais e independentes da integração de Páginas/Facebook.
-          </p>
-        </CardContent>
-      </Card>
+    <div className="space-y-5">
+      <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+        <div className="relative w-full xl:max-w-sm">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={formSearch}
+            onChange={(event) => setFormSearch(event.target.value)}
+            placeholder="Buscar formulário configurado"
+            className="pl-9"
+          />
+        </div>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Button variant="outline" className="gap-2" onClick={() => setAccountModalOpen(true)}>
+            <Settings className="h-4 w-4" />
+            Gerenciar contas do Facebook
+          </Button>
+          <Button className="gap-2" onClick={() => setWizardOpen(true)}>
+            <Plus className="h-4 w-4" />
+            Adicionar formulário
+          </Button>
+        </div>
+      </div>
 
-      {/* Connected Pages */}
-      {hasConnectedPages && (
-        <div className="space-y-3">
-          {integrations.map((integration) => (
-            <Collapsible
-              key={integration.id}
-              open={expandedIntegrations.has(integration.id)}
-              onOpenChange={() => toggleExpanded(integration.id)}
+      <div className="overflow-hidden rounded-xl border bg-card">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Conta Facebook</TableHead>
+              <TableHead>Página Facebook</TableHead>
+              <TableHead>Nome do formulário</TableHead>
+              <TableHead>Criado por</TableHead>
+              <TableHead>Data de configuração</TableHead>
+              <TableHead className="w-12 text-right">Ações</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {isLoading ? (
+              <TableRow><TableCell colSpan={6} className="h-28 text-center"><Loader2 className="mx-auto h-5 w-5 animate-spin" /></TableCell></TableRow>
+            ) : configs.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="h-40 text-center text-muted-foreground">
+                  Nenhum formulário Meta configurado ainda.
+                </TableCell>
+              </TableRow>
+            ) : (
+              configs
+                .filter((config) => (config.form_name || config.form_id).toLowerCase().includes(formSearch.toLowerCase()))
+                .map((config) => {
+                  const integration = integrationById.get(config.integration_id);
+                  return (
+                    <TableRow
+                      key={config.id}
+                      className="cursor-pointer"
+                      onClick={() => openConfig(buildConfigForm(config), config, integration)}
+                    >
+                      <TableCell>{integration?.facebook_user_name || "Conta Facebook"}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-7 w-7">
+                            <AvatarImage src={integration?.page_picture_url || undefined} />
+                            <AvatarFallback>{integration?.page_name?.[0] || "F"}</AvatarFallback>
+                          </Avatar>
+                          <span>{integration?.page_name || "Página conectada"}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{config.form_name || config.form_id}</span>
+                          <Badge variant={config.is_active ? "default" : "secondary"}>{config.is_active ? "Ativo" : "Inativo"}</Badge>
+                          {!config.round_robin_id && <Badge variant="outline">Sem fila vinculada</Badge>}
+                        </div>
+                      </TableCell>
+                      <TableCell>{config.created_by_name || "-"}</TableCell>
+                      <TableCell>{format(new Date(config.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}</TableCell>
+                      <TableCell className="text-right" onClick={(event) => event.stopPropagation()}>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon"><MoreVertical className="h-4 w-4" /></Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => openConfig(buildConfigForm(config), config, integration)}>
+                              <Settings className="mr-2 h-4 w-4" />Editar configuração
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => toggleForm.mutate({ formId: config.form_id, integrationId: config.integration_id, isActive: !config.is_active })}>
+                              {config.is_active ? <Unplug className="mr-2 h-4 w-4" /> : <Plug className="mr-2 h-4 w-4" />}
+                              {config.is_active ? "Desativar" : "Ativar"} formulário
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem className="text-destructive" onClick={() => deleteForm.mutate({ formId: config.form_id, integrationId: config.integration_id })}>
+                              <Trash2 className="mr-2 h-4 w-4" />Excluir configuração
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      <Dialog open={accountModalOpen} onOpenChange={setAccountModalOpen}>
+        <DialogContent className="sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Facebook className="h-5 w-5 text-blue-600" />Gerenciar contas do Facebook</DialogTitle>
+            <DialogDescription>Conecte ou desconecte contas usadas para buscar páginas e formulários.</DialogDescription>
+          </DialogHeader>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input className="pl-9" value={accountSearch} onChange={(event) => setAccountSearch(event.target.value)} placeholder="Buscar conta" />
+          </div>
+          <ScrollArea className="max-h-72 pr-3">
+            <div className="space-y-2">
+              {filteredAccounts.map((account) => (
+                <div key={account.key} className="flex items-center justify-between rounded-lg border p-3">
+                  <div>
+                    <p className="font-medium">{account.name}</p>
+                    <p className="text-xs text-muted-foreground">{account.integrations.length || account.pages.length} páginas disponíveis</p>
+                  </div>
+                  {account.integrations.length > 0 && (
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => setDisconnectTarget(account)}
+                      disabled={disconnectPage.isPending}
+                    >
+                      Desconectar
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </ScrollArea>
+          <DialogFooter className="items-center justify-between sm:justify-between">
+            <p className="text-sm text-muted-foreground">Existem {accounts.filter((a) => !a.isNew).length} contas conectadas</p>
+            <Button onClick={openOAuth} disabled={getAuthUrl.isPending}>{getAuthUrl.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Conectar nova conta</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={!!disconnectTarget} onOpenChange={(open) => !open && setDisconnectTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Desconectar conta?</AlertDialogTitle>
+            <AlertDialogDescription>
+              A conta {disconnectTarget?.name} será desconectada das páginas e formulários Meta vinculados.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => disconnectTarget && disconnectAccount(disconnectTarget)}
             >
-              <Card>
-                <CardContent className="p-3 space-y-2.5">
-                  {/* Row 1: Identity & Status */}
-                  <div className="flex items-center gap-2.5">
-                    <div className="p-1.5 rounded-lg bg-blue-500/10 shrink-0">
-                      <Facebook className="h-4 w-4 text-blue-500" />
+              Desconectar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <Dialog open={wizardOpen} onOpenChange={setWizardOpen}>
+        <DialogContent className="w-[96vw] sm:max-w-6xl p-0 overflow-hidden">
+          <div className="grid min-h-[520px] grid-cols-1 lg:grid-cols-[340px_1fr]">
+            <aside className="border-r bg-muted/20 p-4 space-y-3">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2"><Plug className="h-5 w-5 text-primary" />Criar nova integração</DialogTitle>
+                <DialogDescription>Escolha uma conta, uma página e o formulário que será configurado.</DialogDescription>
+              </DialogHeader>
+              <Button className="w-full gap-2 bg-blue-600 text-white hover:bg-blue-700" onClick={openOAuth}><ExternalLink className="h-4 w-4" />Conectar nova conta</Button>
+              <div className="space-y-2">
+                <p className="text-xs font-medium uppercase text-muted-foreground">Contas Facebook</p>
+                {accounts.map((account) => (
+                  <button
+                    key={account.key}
+                    type="button"
+                    className={cn("flex w-full items-center justify-between rounded-lg border p-2.5 text-left hover:bg-muted", selectedAccount?.key === account.key && "border-primary bg-primary/10")}
+                    onClick={() => {
+                      setSelectedAccountKey(account.key);
+                      setSelectedIntegration(null);
+                      setForms([]);
+                    }}
+                  >
+                    <div>
+                      <p className="font-medium">{account.name}</p>
+                      <p className="text-xs text-muted-foreground">{account.isNew ? "Nova conexão" : "Conta conectada"}</p>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-sm leading-tight truncate">{integration.page_name}</p>
-                      <div className="flex items-center gap-1.5 mt-0.5">
-                        <Users className="h-3 w-3 text-muted-foreground shrink-0" />
-                        <span className="text-xs text-muted-foreground">
-                          {integration.leads_received || 0} {meta.leadsReceived}
-                        </span>
-                        {integration.last_error && (
-                          <AlertCircle className="h-3 w-3 text-destructive shrink-0" />
-                        )}
+                    {selectedAccount?.key === account.key && <Check className="h-4 w-4 text-primary" />}
+                  </button>
+                ))}
+              </div>
+            </aside>
+
+            <main className="p-4 space-y-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold">Páginas e formulários</h3>
+                  <p className="text-sm text-muted-foreground">Selecione uma página para carregar os formulários ativos.</p>
+                </div>
+              </div>
+
+              {!selectedAccount ? (
+                <Alert><AlertCircle className="h-4 w-4" /><AlertDescription>Conecte ou selecione uma conta do Facebook para continuar.</AlertDescription></Alert>
+              ) : (
+                <div className="grid grid-cols-1 xl:grid-cols-[320px_1fr] gap-4">
+                  <div className="rounded-xl border bg-card p-2.5 space-y-2">
+                    <p className="text-xs font-medium uppercase text-muted-foreground">Páginas</p>
+                    <ScrollArea className="h-[370px] pr-2">
+                      <div className="space-y-2">
+                        {pageItems.map((page: any) => {
+                          const pageId = page.page_id || page.id;
+                          const name = page.page_name || page.name;
+                          const picture = page.page_picture_url || getPagePicture(page);
+                          const active = selectedIntegration?.page_id === pageId;
+                          return (
+                            <button key={pageId} type="button" className={cn("flex w-full items-center justify-between rounded-lg border p-2.5 text-left hover:bg-muted", active && "border-primary bg-primary/10")} onClick={() => handleSelectPage(page)}>
+                              <div className="flex min-w-0 items-center gap-3">
+                                <Avatar className="h-10 w-10"><AvatarImage src={picture || undefined} /><AvatarFallback>{name?.[0] || "F"}</AvatarFallback></Avatar>
+                                <span className="truncate font-medium">{name}</span>
+                              </div>
+                              {active && <Check className="h-4 w-4 text-primary" />}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </ScrollArea>
+                  </div>
+
+                  <div className="rounded-xl border bg-card p-2.5 space-y-3">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <p className="font-medium">Formulários</p>
+                        <p className="text-xs text-muted-foreground">{selectedIntegration ? `${forms.length} formulários encontrados em ${selectedIntegration.page_name}` : "Escolha uma página"}</p>
+                      </div>
+                      <div className="relative sm:w-72">
+                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input className="pl-9" value={formSearch} onChange={(event) => setFormSearch(event.target.value)} placeholder="Buscar formulário" />
                       </div>
                     </div>
-                    <Badge
-                      variant={integration.is_connected ? "default" : "secondary"}
-                      className="text-xs shrink-0"
-                    >
-                      {integration.is_connected ? t.common.active : t.common.inactive}
-                    </Badge>
-                  </div>
-
-                  {/* Row 2: Info & Toggle */}
-                  <div className="flex items-center justify-between gap-2 py-1.5 border-y border-border/50">
-                    <span className="text-xs text-muted-foreground truncate flex-1">
-                      {meta.pipelineConfigured}
-                      {integration.last_sync_at && (
-                        <span className="ml-2">· {new Date(integration.last_sync_at).toLocaleDateString()}</span>
+                    <ScrollArea className="h-[370px] pr-2">
+                      {fetchForms.isPending || connectPage.isPending ? (
+                        <div className="flex h-40 items-center justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>
+                      ) : !selectedIntegration ? (
+                        <div className="flex h-40 items-center justify-center text-sm text-muted-foreground">Selecione uma página para ver os formulários.</div>
+                      ) : filteredForms.length === 0 ? (
+                        <div className="flex h-40 items-center justify-center text-sm text-muted-foreground">Nenhum formulário encontrado.</div>
+                      ) : (
+                        <div className="divide-y rounded-lg border">
+                          {filteredForms.map((form) => {
+                            const existing = configuredByFormId.get(form.id);
+                            return (
+                              <div key={form.id} className="flex items-center justify-between gap-3 p-3">
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <span className="truncate font-medium">{form.name}</span>
+                                    {existing && <Badge variant="secondary">Configurado</Badge>}
+                                  </div>
+                                  <p className="text-xs text-muted-foreground">ID {form.id}</p>
+                                </div>
+                                <Button variant={existing ? "outline" : "default"} size="sm" onClick={() => openConfig(form, existing, selectedIntegration)}>
+                                  <FilePlus2 className="mr-2 h-4 w-4" />{existing ? "Editar" : "Integrar"}
+                                </Button>
+                              </div>
+                            );
+                          })}
+                        </div>
                       )}
-                    </span>
-                    <Switch
-                      checked={integration.is_connected}
-                      onCheckedChange={(checked) =>
-                        togglePage.mutate({ pageId: integration.page_id!, isActive: checked })
-                      }
-                      className="shrink-0"
-                    />
+                    </ScrollArea>
                   </div>
-
-                  {/* Row 3: Actions */}
-                  <div className="flex items-center gap-1.5">
-                    <CollapsibleTrigger asChild>
-                      <Button variant="outline" size="sm" className="flex-1 h-8 text-xs px-2 min-w-0">
-                        <FileText className="h-3.5 w-3.5 shrink-0" />
-                        <span className="truncate">{meta.forms}</span>
-                        <ChevronDown className={`h-3.5 w-3.5 shrink-0 transition-transform ${expandedIntegrations.has(integration.id) ? 'rotate-180' : ''}`} />
-                      </Button>
-                    </CollapsibleTrigger>
-
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-8 w-8 shrink-0"
-                      onClick={() => openEditDialog(integration)}
-                    >
-                      <Settings2 className="h-3.5 w-3.5" />
-                    </Button>
-
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="outline" size="icon" className="h-8 w-8 shrink-0 text-destructive hover:text-destructive">
-                          <Unlink className="h-3.5 w-3.5" />
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>{meta.disconnectPage}</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            {meta.disconnectConfirm}
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() => disconnectPage.mutate(integration.page_id!)}
-                          >
-                            {meta.disconnect}
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </div>
-                </CardContent>
-
-                <CollapsibleContent>
-                  <div className="border-t px-3 py-3 bg-muted/30">
-                    <MetaFormManager integration={integration} />
-                  </div>
-                </CollapsibleContent>
-              </Card>
-            </Collapsible>
-          ))}
-        </div>
-      )}
-
-      {/* Page Selector Sheet */}
-      <Sheet open={showPageSelector} onOpenChange={setShowPageSelector}>
-        <SheetContent side="right" className="w-[90%] sm:w-[650px] sm:max-w-[650px] p-6 flex flex-col overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle>{meta.connectPage}</SheetTitle>
-            <SheetDescription>
-              {meta.changeDestination}
-            </SheetDescription>
-          </SheetHeader>
-          
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>{meta.facebookPage}</Label>
-              <Select value={selectedPageId} onValueChange={setSelectedPageId}>
-                <SelectTrigger>
-                  <SelectValue placeholder={meta.selectPage} />
-                </SelectTrigger>
-                <SelectContent>
-                  {availablePages.map((page) => (
-                    <SelectItem key={page.id} value={page.id}>
-                      {page.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            {availableAdAccounts && availableAdAccounts.length > 0 && (
-              <div className="space-y-2">
-                <Label>Contas de Anúncios para Sincronizar</Label>
-                <div className="grid grid-cols-1 gap-2 max-h-40 overflow-y-auto p-2 border rounded-md">
-                  {availableAdAccounts.map((account: any) => (
-                    <div key={account.id} className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        id={account.id}
-                        checked={selectedAdAccountIds.includes(account.id)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelectedAdAccountIds([...selectedAdAccountIds, account.id]);
-                          } else {
-                            setSelectedAdAccountIds(selectedAdAccountIds.filter(id => id !== account.id));
-                          }
-                        }}
-                        className="h-4 w-4 rounded border-gray-300"
-                      />
-                      <label htmlFor={account.id} className="text-sm font-medium leading-none cursor-pointer">
-                        {account.name} <span className="text-[10px] text-muted-foreground">({account.id})</span>
-                      </label>
-                    </div>
-                  ))}
                 </div>
-                <p className="text-[10px] text-muted-foreground">Selecione as contas que deseja monitorar no Dashboard.</p>
-              </div>
-            )}
-
-            <div className="space-y-2">
-              <Label>{meta.defaultPipeline}</Label>
-              <Select value={selectedPipelineId} onValueChange={(v) => {
-                setSelectedPipelineId(v);
-                setSelectedStageId("");
-              }}>
-                <SelectTrigger>
-                  <SelectValue placeholder={meta.selectPipeline} />
-                </SelectTrigger>
-                <SelectContent>
-                  {pipelines?.map((pipeline) => (
-                    <SelectItem key={pipeline.id} value={pipeline.id}>
-                      {pipeline.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                {meta.pipelineNote}
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <Label>{meta.initialStage}</Label>
-              <Select 
-                value={selectedStageId} 
-                onValueChange={setSelectedStageId}
-                disabled={!selectedPipelineId}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={meta.selectStage} />
-                </SelectTrigger>
-                <SelectContent>
-                  {filteredStages.map((stage) => (
-                    <SelectItem key={stage.id} value={stage.id}>
-                      {stage.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>{meta.leadStatus}</Label>
-              <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {STATUS_OPTIONS.map((status) => (
-                    <SelectItem key={status.value} value={status.value}>
-                      {status.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+              )}
+            </main>
           </div>
+        </DialogContent>
+      </Dialog>
 
-          <div className="flex gap-2 pt-4">
-            <Button variant="outline" className="w-[40%] rounded-xl" onClick={() => setShowPageSelector(false)}>
-              {t.common.cancel}
-            </Button>
-            <Button 
-              className="w-[60%] rounded-xl"
-              onClick={handleConnectPage}
-              disabled={connectPage.isPending || !selectedPageId || !selectedPipelineId || !selectedStageId}
-            >
-              {connectPage.isPending ? (
-                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-              ) : null}
-              {meta.connectButton}
-            </Button>
-          </div>
-        </SheetContent>
-      </Sheet>
-
-      {/* Edit Sheet */}
-      <Sheet open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <SheetContent side="right" className="w-[90%] sm:w-[650px] sm:max-w-[650px] p-6 flex flex-col overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle>{meta.editPage}</SheetTitle>
-            <SheetDescription>
-              {meta.changeDestination}
-            </SheetDescription>
-          </SheetHeader>
-          
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>{meta.defaultPipeline}</Label>
-              <Select value={selectedPipelineId} onValueChange={(v) => {
-                setSelectedPipelineId(v);
-                setSelectedStageId("");
-              }}>
-                <SelectTrigger>
-                  <SelectValue placeholder={meta.selectPipeline} />
-                </SelectTrigger>
-                <SelectContent>
-                  {pipelines?.map((pipeline) => (
-                    <SelectItem key={pipeline.id} value={pipeline.id}>
-                      {pipeline.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>{meta.initialStage}</Label>
-              <Select 
-                value={selectedStageId} 
-                onValueChange={setSelectedStageId}
-                disabled={!selectedPipelineId}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={meta.selectStage} />
-                </SelectTrigger>
-                <SelectContent>
-                  {filteredStages.map((stage) => (
-                    <SelectItem key={stage.id} value={stage.id}>
-                      {stage.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {availableAdAccounts && availableAdAccounts.length > 0 && (
-              <div className="space-y-2">
-                <Label>Contas de Anúncios para Sincronizar</Label>
-                <div className="grid grid-cols-1 gap-2 max-h-40 overflow-y-auto p-2 border rounded-md">
-                  {availableAdAccounts.map((account: any) => (
-                    <div key={account.id} className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        id={`edit-${account.id}`}
-                        checked={selectedAdAccountIds.includes(account.id)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelectedAdAccountIds([...selectedAdAccountIds, account.id]);
-                          } else {
-                            setSelectedAdAccountIds(selectedAdAccountIds.filter(id => id !== account.id));
-                          }
-                        }}
-                        className="h-4 w-4 rounded border-gray-300"
-                      />
-                      <label htmlFor={`edit-${account.id}`} className="text-sm font-medium leading-none cursor-pointer">
-                        {account.name} <span className="text-[10px] text-muted-foreground">({account.id})</span>
-                      </label>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div className="space-y-2">
-              <Label>{meta.leadStatus}</Label>
-              <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {STATUS_OPTIONS.map((status) => (
-                    <SelectItem key={status.value} value={status.value}>
-                      {status.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="flex gap-2 pt-4">
-            <Button variant="outline" className="w-[40%] rounded-xl" onClick={() => setShowEditDialog(false)}>
-              {t.common.cancel}
-            </Button>
-            <Button 
-              className="w-[60%] rounded-xl"
-              onClick={handleUpdatePage}
-              disabled={updatePage.isPending || !selectedPipelineId || !selectedStageId}
-            >
-              {updatePage.isPending ? (
-                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-              ) : null}
-              {t.common.save}
-            </Button>
-          </div>
-        </SheetContent>
-      </Sheet>
+      <MetaFormConfigDialog
+        open={configDialogOpen}
+        onOpenChange={closeConfigDialog}
+        form={editingForm}
+        config={editingConfig}
+        integrationId={selectedIntegration?.id || editingConfig?.integration_id || ""}
+        pageName={selectedIntegration?.page_name || integrationById.get(editingConfig?.integration_id || "")?.page_name}
+      />
     </div>
   );
 }

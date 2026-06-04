@@ -47,7 +47,9 @@ serve(async (req) => {
         if (s.returnUrl) returnUrl = s.returnUrl;
         if (s.organizationId) organizationId = s.organizationId;
       }
-    } catch (_e) {}
+    } catch (_e) {
+      // noop
+    }
 
     if (error) return redirectWithData(returnUrl, { success: false, error });
     if (!code) return redirectWithData(returnUrl, { success: false, error: "Codigo nao recebido" });

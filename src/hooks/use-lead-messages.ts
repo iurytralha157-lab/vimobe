@@ -9,6 +9,8 @@ export interface LeadMessage {
   media_url: string | null;
   media_mime_type: string | null;
   media_status: string | null;
+  media_error: string | null;
+  media_size: number | null;
   sent_at: string;
   status: string | null;
   sender_name: string | null;

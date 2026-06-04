@@ -14,23 +14,73 @@ const META_APP_SECRET = Deno.env.get("META_APP_SECRET") || "";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 
+function generateSuccessPage(payload: Record<string, unknown>, returnUrl: string): Response {
+  const encodedData = encodeURIComponent(JSON.stringify(payload));
+  const safeReturnUrl = JSON.stringify(`${returnUrl}${returnUrl.includes("?") ? "&" : "?"}meta_oauth_data=${encodedData}`);
+
+  const html = `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="content-type" content="text/html; charset=utf-8" />
+  <title>Facebook conectado</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; background: #0f0f10; color: #fff; }
+    .box { text-align: center; max-width: 420px; padding: 32px; }
+    .icon { width: 56px; height: 56px; margin: 0 auto 16px; border-radius: 18px; display: grid; place-items: center; background: #1877f2; font-weight: 800; font-size: 30px; }
+    p { color: #b9b9b9; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <div class="icon">f</div>
+    <h2>Conta conectada</h2>
+    <p>Voltando para o Vimob para concluir a configuracao.</p>
+  </div>
+  <script>
+    const payload = ${JSON.stringify(payload)};
+    if (window.opener) {
+      window.opener.postMessage({ type: 'META_OAUTH_SUCCESS', data: payload }, '*');
+      window.close();
+    } else {
+      window.location.href = ${safeReturnUrl};
+    }
+  </script>
+</body>
+</html>`;
+
+  return new Response(html, {
+    status: 200,
+    headers: {
+      ...corsHeaders,
+      "content-type": "text/html; charset=utf-8",
+      "cache-control": "no-store",
+      "x-content-type-options": "nosniff",
+    },
+  });
+}
+
 // Redirect to frontend with success data
-function redirectWithSuccess(pages: any[], userToken: string, returnUrl: string, adAccountId?: string | null): Response {
+function redirectWithSuccess(pages: any[], userToken: string, returnUrl: string, adAccountId?: string | null, facebookUser?: any): Response {
   const data = {
     success: true,
     pages: pages,
+    user_token: userToken,
     userToken: userToken,
-    adAccountId: adAccountId
+    adAccountId: adAccountId,
+    facebook_user_id: facebookUser?.id || null,
+    facebook_user_name: facebookUser?.name || null,
   };
-  const encodedData = encodeURIComponent(btoa(JSON.stringify(data)));
-  const redirectUrl = `${returnUrl}?meta_oauth_data=${encodedData}`;
-  
-  console.log("Redirecting to:", returnUrl);
-  
+  const encodedData = encodeURIComponent(JSON.stringify(data));
+  const separator = returnUrl.includes("?") ? "&" : "?";
+  const redirectUrl = `${returnUrl}${separator}meta_oauth_data=${encodedData}`;
+
   return new Response(null, {
     status: 302,
     headers: {
-      "Location": redirectUrl,
+      ...corsHeaders,
+      Location: redirectUrl,
+      "cache-control": "no-store",
     },
   });
 }
@@ -41,15 +91,16 @@ function redirectWithError(error: string, returnUrl: string): Response {
     success: false,
     error: error
   };
-  const encodedData = encodeURIComponent(btoa(JSON.stringify(data)));
-  const redirectUrl = `${returnUrl}?meta_oauth_data=${encodedData}`;
-  
-  console.log("Redirecting with error to:", returnUrl);
-  
+  const encodedData = encodeURIComponent(JSON.stringify(data));
+  const separator = returnUrl.includes("?") ? "&" : "?";
+  const redirectUrl = `${returnUrl}${separator}meta_oauth_data=${encodedData}`;
+
   return new Response(null, {
     status: 302,
     headers: {
-      "Location": redirectUrl,
+      ...corsHeaders,
+      Location: redirectUrl,
+      "cache-control": "no-store",
     },
   });
 }
@@ -184,12 +235,21 @@ serve(async (req) => {
         return redirectWithError(longLivedData.error.message, returnUrl);
       }
 
-      console.log("Long-lived token obtained, fetching pages...");
+      console.log("Long-lived token obtained, fetching user and pages...");
+
+      let facebookUser: any = null;
+      try {
+        const meResponse = await fetch(`https://graph.facebook.com/v19.0/me?fields=id,name&access_token=${longLivedData.access_token}`);
+        const meData = await meResponse.json();
+        if (!meData.error) facebookUser = meData;
+      } catch (meError) {
+        console.warn("Could not fetch Facebook user profile:", meError);
+      }
       
       // Get pages the user manages
       const pagesUrl = `https://graph.facebook.com/v19.0/me/accounts?` +
         `access_token=${longLivedData.access_token}` +
-        `&fields=id,name,access_token`;
+        `&fields=id,name,access_token,picture`;
 
       const pagesResponse = await fetch(pagesUrl);
       const pagesData = await pagesResponse.json();
@@ -203,6 +263,9 @@ serve(async (req) => {
         id: page.id,
         name: page.name,
         access_token: page.access_token,
+        picture: page.picture,
+        facebook_user_id: facebookUser?.id || null,
+        facebook_user_name: facebookUser?.name || null,
       }));
       
       console.log(`Found ${pages.length} pages, fetching ad accounts...`);
@@ -227,7 +290,7 @@ serve(async (req) => {
       }
 
       console.log(`Found ${pages.length} pages, redirecting back...`);
-      return redirectWithSuccess(pages, longLivedData.access_token, returnUrl, ad_account_id);
+      return redirectWithSuccess(pages, longLivedData.access_token, returnUrl, ad_account_id, facebookUser);
       
     } catch (error: unknown) {
       console.error("OAuth callback error:", error);
@@ -282,7 +345,22 @@ serve(async (req) => {
     }
 
     const body = await req.json();
-    const { action, code, redirect_uri, page_id, pipeline_id, stage_id, default_status, access_token, is_active, return_url } = body;
+    const {
+      action,
+      code,
+      redirect_uri,
+      page_id,
+      pipeline_id,
+      stage_id,
+      default_status,
+      access_token,
+      is_active,
+      return_url,
+      ad_account_id,
+      facebook_user_id,
+      facebook_user_name,
+      page_picture_url,
+    } = body;
 
     switch (action) {
       case "get_auth_url": {
@@ -430,7 +508,7 @@ serve(async (req) => {
         // Get pages the user manages
         const pagesUrl = `https://graph.facebook.com/v19.0/me/accounts?` +
           `access_token=${longLivedData.access_token}` +
-          `&fields=id,name,access_token`;
+          `&fields=id,name,access_token,picture`;
 
         const pagesResponse = await fetch(pagesUrl);
         const pagesData = await pagesResponse.json();
@@ -442,9 +520,14 @@ serve(async (req) => {
           });
         }
 
+        const meResponse = await fetch(`https://graph.facebook.com/v19.0/me?fields=id,name&access_token=${longLivedData.access_token}`);
+        const meData = await meResponse.json();
+
         return new Response(JSON.stringify({ 
           pages: pagesData.data || [],
-          user_token: longLivedData.access_token
+          user_token: longLivedData.access_token,
+          facebook_user_id: meData?.id || null,
+          facebook_user_name: meData?.name || null,
         }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
@@ -454,7 +537,7 @@ serve(async (req) => {
         // First, get the page access token from user token (code contains user_token in this case)
         const pagesUrl = `https://graph.facebook.com/v19.0/me/accounts?` +
           `access_token=${code}` +
-          `&fields=id,name,access_token`;
+          `&fields=id,name,access_token,picture`;
 
         const pagesResponse = await fetch(pagesUrl);
         const pagesData = await pagesResponse.json();
@@ -473,6 +556,20 @@ serve(async (req) => {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
         }
+
+        let resolvedFacebookUserId = facebook_user_id || null;
+        let resolvedFacebookUserName = facebook_user_name || null;
+        if (!resolvedFacebookUserId || !resolvedFacebookUserName) {
+          try {
+            const meResponse = await fetch(`https://graph.facebook.com/v19.0/me?fields=id,name&access_token=${code}`);
+            const meData = await meResponse.json();
+            resolvedFacebookUserId = resolvedFacebookUserId || meData?.id || null;
+            resolvedFacebookUserName = resolvedFacebookUserName || meData?.name || null;
+          } catch (meError) {
+            console.warn("Could not resolve Facebook user for page connection:", meError);
+          }
+        }
+        const resolvedPagePictureUrl = page_picture_url || page.picture?.data?.url || null;
 
         // NEW: If ad_account_id is not provided, try to fetch it automatically
         let ad_account_id = body.ad_account_id;
@@ -595,9 +692,12 @@ serve(async (req) => {
             access_token: page.access_token,
             ad_account_id: ad_account_id || null,
             selected_ad_accounts: body.selected_ad_accounts || [],
-            pipeline_id,
-            stage_id,
-            default_status: default_status || "novo",
+            pipeline_id: pipeline_id || null,
+            stage_id: stage_id || null,
+            default_status: default_status || null,
+            facebook_user_id: resolvedFacebookUserId,
+            facebook_user_name: resolvedFacebookUserName,
+            page_picture_url: resolvedPagePictureUrl,
             is_connected: true,
             updated_at: new Date().toISOString()
           }, {
@@ -613,9 +713,12 @@ serve(async (req) => {
               page_id: page.id,
               page_name: page.name,
               access_token: page.access_token,
-              pipeline_id,
-              stage_id,
-              default_status: default_status || "novo",
+              pipeline_id: pipeline_id || null,
+              stage_id: stage_id || null,
+              default_status: default_status || null,
+              facebook_user_id: resolvedFacebookUserId,
+              facebook_user_name: resolvedFacebookUserName,
+              page_picture_url: resolvedPagePictureUrl,
               is_connected: true
             });
 

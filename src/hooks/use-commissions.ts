@@ -40,35 +40,39 @@ export interface Commission {
 }
 
 export function useCommissionRules() {
-  const { profile } = useAuth();
+  const { profile, organization } = useAuth();
+  const organizationId = organization?.id || profile?.organization_id;
 
   return useQuery({
-    queryKey: ['commission-rules', profile?.organization_id],
+    queryKey: ['commission-rules', organizationId],
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from('commission_rules')
         .select('*')
+        .eq('organization_id', organizationId)
         .order('name');
 
       if (error) throw error;
       return data as CommissionRule[];
     },
-    enabled: !!profile?.organization_id,
+    enabled: !!organizationId,
   });
 }
 
 export function useCreateCommissionRule() {
   const queryClient = useQueryClient();
-  const { profile } = useAuth();
+  const { profile, organization } = useAuth();
   const { toast } = useToast();
 
   return useMutation({
     mutationFn: async (data: Partial<CommissionRule>) => {
+      const organizationId = organization?.id || profile?.organization_id;
       const { data: result, error } = await (supabase as any)
         .from('commission_rules')
         .insert({
           ...data,
-          organization_id: profile?.organization_id,
+          percentage: data.commission_type === 'percentage' ? data.commission_value : 0,
+          organization_id: organizationId,
         })
         .select()
         .single();
@@ -92,9 +96,13 @@ export function useUpdateCommissionRule() {
 
   return useMutation({
     mutationFn: async ({ id, ...data }: Partial<CommissionRule> & { id: string }) => {
+      const payload = {
+        ...data,
+        percentage: data.commission_type === 'percentage' ? data.commission_value : 0,
+      };
       const { data: result, error } = await (supabase as any)
         .from('commission_rules')
-        .update(data)
+        .update(payload)
         .eq('id', id)
         .select()
         .single();

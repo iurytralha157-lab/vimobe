@@ -2,8 +2,9 @@ import { GamificationSettings } from '@/components/gamification/GamificationSett
 import { MissionManager } from '@/components/gamification/MissionManager';
 import { ManualEntryForm } from '@/components/gamification/ManualEntryForm';
 import { SeasonsManager } from '@/components/gamification/SeasonsManager';
+import { GamificationParticipants } from '@/components/gamification/GamificationParticipants';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Settings, Target, ClipboardCheck, Flag } from 'lucide-react';
+import { Settings, Target, ClipboardCheck, Flag, Users } from 'lucide-react';
 
 export default function GamificationAdmin() {
   return (
@@ -23,6 +24,10 @@ export default function GamificationAdmin() {
             <Target className="h-4 w-4" />
             Missões
           </TabsTrigger>
+          <TabsTrigger value="participants" className="gap-2">
+            <Users className="h-4 w-4" />
+            Participantes
+          </TabsTrigger>
           <TabsTrigger value="seasons" className="gap-2">
             <Flag className="h-4 w-4" />
             Temporadas
@@ -39,6 +44,10 @@ export default function GamificationAdmin() {
 
         <TabsContent value="missions">
           <MissionManager />
+        </TabsContent>
+
+        <TabsContent value="participants">
+          <GamificationParticipants />
         </TabsContent>
 
         <TabsContent value="seasons">

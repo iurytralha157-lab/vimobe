@@ -32,12 +32,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { 
-  Users, 
-  Shield, 
   Plus, 
   Trash2, 
   Loader2,
-  Pencil
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -98,6 +95,7 @@ export function TeamTab() {
 
   const handleUpdateUserRole = async (userId: string, role: 'admin' | 'user') => {
     await updateUser.mutateAsync({ id: userId, role });
+    await queryClient.invalidateQueries({ queryKey: ['organization-users'] });
   };
 
   const handleDeleteUser = async () => {
@@ -190,11 +188,8 @@ export function TeamTab() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                {t.settings.users.title}
-              </CardTitle>
-              <CardDescription>{t.settings.users.description}</CardDescription>
+              <CardTitle className="text-xl font-semibold text-foreground">{t.settings.users.title}</CardTitle>
+              <CardDescription className="mt-0.5 text-sm text-muted-foreground">{t.settings.users.description}</CardDescription>
             </div>
             {isAdmin && (
               <Sheet open={userDialogOpen} onOpenChange={(open) => {

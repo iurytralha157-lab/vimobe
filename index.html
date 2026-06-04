@@ -18,7 +18,14 @@
           
           if ('serviceWorker' in navigator) {
             const regs = await navigator.serviceWorker.getRegistrations();
-            for (let r of regs) await r.unregister();
+            for (let r of regs) {
+              try {
+                r.active?.postMessage({ type: 'CLEAR_CACHES' });
+                await r.update();
+              } catch (e) {
+                console.warn('[VersionCheck] Service Worker update failed', e);
+              }
+            }
           }
           
           if ('caches' in window) {
@@ -83,6 +90,7 @@
     
     <!-- PWA Meta Tags -->
     <meta name="theme-color" content="#ff482a">
+    <link rel="manifest" href="/manifest.json">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">

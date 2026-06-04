@@ -68,6 +68,8 @@ function MessageBubbleWrapper({ msg, leadName, leadId }: { msg: LeadMessage; lea
       mediaUrl={msg.media_url}
       mediaMimeType={msg.media_mime_type}
       mediaStatus={msg.media_status as any}
+      mediaError={msg.media_error}
+      mediaSize={msg.media_size}
       fromMe={msg.from_me}
       status={msg.status || undefined}
       sentAt={msg.sent_at}

@@ -10,10 +10,11 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue, SelectSeparator } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent } from "@/components/ui/dropdown-menu";
-import { Search, Send, Phone, MessageSquare, User, Loader2, MoreVertical, Archive, Trash2, Users, Paperclip, Tag, UserPlus, ArrowLeft, Mic, ExternalLink, Zap, Plus, Instagram, Facebook } from "lucide-react";
+import { Search, Send, Phone, MessageSquare, User, Loader2, MoreVertical, Archive, Trash2, Users, Paperclip, Tag, UserPlus, ArrowLeft, Mic, ExternalLink, Zap, Plus } from "lucide-react";
 import { StartAutomationDialog } from "@/components/whatsapp/StartAutomationDialog";
 import { WhatsAppIcon } from "@/components/icons/WhatsAppIcon";
 import { MessageBubble } from "@/components/whatsapp/MessageBubble";
+import { MessageErrorBoundary } from "@/components/whatsapp/MessageErrorBoundary";
 import { DateSeparator, shouldShowDateSeparator } from "@/components/whatsapp/DateSeparator";
 import { CreateLeadDialog } from "@/components/conversations/CreateLeadDialog";
 import { ConversationHeader } from "@/components/whatsapp/ConversationHeader";
@@ -33,6 +34,72 @@ import { AudioRecorderButton } from "@/components/whatsapp/AudioRecorderButton";
 import { useMetaConversations, useMetaMessages, useSendMetaMessage } from "@/hooks/use-meta-conversations";
 import { useMetaIntegrations } from "@/hooks/use-meta-integration";
 
+const MAX_IMAGE_DIMENSION = 1600;
+const IMAGE_QUALITY = 0.82;
+
+const mimeExtension = (mimetype: string, fallback = "bin") => {
+  const clean = mimetype.split(";")[0].toLowerCase();
+  const map: Record<string, string> = {
+    "image/jpeg": "jpg",
+    "image/png": "png",
+    "image/webp": "webp",
+    "image/gif": "gif",
+    "audio/ogg": "ogg",
+    "audio/webm": "webm",
+    "audio/mpeg": "mp3",
+    "video/mp4": "mp4",
+    "application/pdf": "pdf",
+  };
+  return map[clean] || fallback;
+};
+
+const fileToBase64 = (file: Blob) => new Promise<string>((resolve, reject) => {
+  const reader = new FileReader();
+  reader.onload = () => resolve(String(reader.result).split(",")[1] || "");
+  reader.onerror = reject;
+  reader.readAsDataURL(file);
+});
+
+const getConversationAvatarUrl = (conversation?: WhatsAppConversation | null) =>
+  conversation?.lead?.whatsapp_avatar_url || conversation?.contact_picture || undefined;
+
+async function compressImageFile(file: File): Promise<File> {
+  if (!file.type.startsWith("image/") || file.type === "image/gif") return file;
+
+  const imageUrl = URL.createObjectURL(file);
+  try {
+    const image = new Image();
+    image.decoding = "async";
+    const loaded = new Promise<void>((resolve, reject) => {
+      image.onload = () => resolve();
+      image.onerror = reject;
+    });
+    image.src = imageUrl;
+    await loaded;
+
+    const scale = Math.min(1, MAX_IMAGE_DIMENSION / Math.max(image.width, image.height));
+    if (scale >= 1 && file.size < 900_000) return file;
+
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(image.width * scale));
+    canvas.height = Math.max(1, Math.round(image.height * scale));
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return file;
+    ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+    const targetType = file.type === "image/png" ? "image/webp" : file.type;
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, targetType, IMAGE_QUALITY));
+    if (!blob || blob.size >= file.size) return file;
+
+    const baseName = file.name.replace(/\.[^.]+$/, "");
+    return new File([blob], `${baseName}.${mimeExtension(targetType, "webp")}`, { type: targetType });
+  } catch (error) {
+    console.warn("Image compression skipped:", error);
+    return file;
+  } finally {
+    URL.revokeObjectURL(imageUrl);
+  }
+}
 
 export default function Conversations() {
   const isMobile = useIsMobile();
@@ -47,7 +114,9 @@ export default function Conversations() {
   const [hideGroups, setHideGroups] = useState(() => {
     return localStorage.getItem("whatsapp-hide-groups") === "true";
   });
-  const [showArchived, setShowArchived] = useState(false);
+  const [showArchived, setShowArchived] = useState(() => {
+    return localStorage.getItem("whatsapp-show-archived") === "true";
+  });
   const [showAutomationDialog, setShowAutomationDialog] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -79,11 +148,19 @@ export default function Conversations() {
     data: metaIntegrations
   } = useMetaIntegrations();
 
+  const selectedLeadId = activePlatform === "whatsapp"
+    ? selectedConversation?.lead_id || selectedConversation?.lead?.id || null
+    : selectedConversation?.lead?.id || null;
+
   const {
     data: whatsappMessages,
     isLoading: loadingWhatsAppMessages,
     isFetching: fetchingWhatsAppMessages
-  } = useWhatsAppMessages(activePlatform === 'whatsapp' ? selectedConversation?.id || null : null, null, messageLimit);
+  } = useWhatsAppMessages(
+    activePlatform === 'whatsapp' ? selectedConversation?.id || null : null,
+    activePlatform === 'whatsapp' ? selectedLeadId : null,
+    messageLimit
+  );
 
   const {
     data: metaMessages,
@@ -93,6 +170,34 @@ export default function Conversations() {
   const messages = activePlatform === 'whatsapp' ? whatsappMessages : metaMessages;
   const loadingMessages = activePlatform === 'whatsapp' ? loadingWhatsAppMessages : loadingMetaMessages;
   const fetchingMessages = activePlatform === 'whatsapp' ? fetchingWhatsAppMessages : false;
+  const reactionMessages = useMemo(() => {
+    if (activePlatform !== "whatsapp") return [];
+    return (messages || []).filter((message: any) => message.message_type === "reaction");
+  }, [activePlatform, messages]);
+  const reactionsByMessageId = useMemo(() => {
+    const map = new Map<string, Array<{ emoji: string; senderName?: string | null; fromMe?: boolean }>>();
+    for (const message of reactionMessages as any[]) {
+      const targetId =
+        message.reaction_to_message_id ||
+        message.metadata?.reaction_to_message_id ||
+        message.metadata?.target_message_id ||
+        message.metadata?.targetMessageId;
+      const emoji = message.reaction_emoji || message.content;
+      if (!targetId || !emoji) continue;
+      const list = map.get(targetId) || [];
+      list.push({
+        emoji,
+        senderName: message.reaction_sender_name || message.sender_name,
+        fromMe: message.from_me,
+      });
+      map.set(targetId, list);
+    }
+    return map;
+  }, [reactionMessages]);
+  const visibleMessages = useMemo(() => {
+    if (activePlatform !== "whatsapp") return messages || [];
+    return (messages || []).filter((message: any) => message.message_type !== "reaction");
+  }, [activePlatform, messages]);
 
   const sendMessage = useSendWhatsAppMessage();
   const sendMetaMessage = useSendMetaMessage();
@@ -136,6 +241,10 @@ export default function Conversations() {
   useEffect(() => {
     localStorage.setItem("whatsapp-hide-groups", String(hideGroups));
   }, [hideGroups]);
+
+  useEffect(() => {
+    localStorage.setItem("whatsapp-show-archived", String(showArchived));
+  }, [showArchived]);
   // Scroll to bottom only when new messages arrive (not on every re-render)
   useEffect(() => {
     const currentLength = messages?.length || 0;
@@ -203,7 +312,8 @@ export default function Conversations() {
     if (activePlatform === 'whatsapp') {
       await sendMessage.mutateAsync({
         conversation: selectedConversation,
-        text: textToSend
+        text: textToSend,
+        sendSessionId: selectedSessionId === "all" ? undefined : selectedSessionId,
       });
     } else {
       await sendMetaMessage.mutateAsync({
@@ -230,7 +340,9 @@ export default function Conversations() {
       mediaType: "audio",
       base64,
       mimetype,
-      filename: "audio.ogg"
+      filename: `audio.${mimeExtension(mimetype, "webm")}`,
+      previewMediaUrl: `data:${mimetype || "audio/webm"};base64,${base64}`,
+      sendSessionId: selectedSessionId === "all" ? undefined : selectedSessionId,
     });
     
     toast({
@@ -243,47 +355,38 @@ export default function Conversations() {
     const file = e.target.files?.[0];
     if (!file || !selectedConversation) return;
     try {
-      // Convert file to base64 for Evolution API
-      const reader = new FileReader();
-      const base64Promise = new Promise<string>((resolve, reject) => {
-        reader.onload = () => {
-          const result = reader.result as string;
-          // Remove data:mime;base64, prefix
-          const base64 = result.split(',')[1];
-          resolve(base64);
-        };
-        reader.onerror = reject;
-      });
-      reader.readAsDataURL(file);
-      const base64Content = await base64Promise;
+      const processedFile = await compressImageFile(file);
+      const base64Content = await fileToBase64(processedFile);
 
       // Also upload to Supabase Storage for local storage
-      const fileExt = file.name.split('.').pop();
+      const fileExt = processedFile.name.split('.').pop() || mimeExtension(processedFile.type);
       const fileName = `${crypto.randomUUID()}.${fileExt}`;
       const filePath = `uploads/${fileName}`;
       const {
         error: uploadError
-      } = await supabase.storage.from("whatsapp-media").upload(filePath, file);
+      } = await supabase.storage.from("whatsapp-media").upload(filePath, processedFile);
       if (uploadError) {
         console.error("Storage upload error:", uploadError);
       }
-      const {
-        data: urlData
-      } = supabase.storage.from("whatsapp-media").getPublicUrl(filePath);
+      const publicMediaUrl = uploadError
+        ? undefined
+        : supabase.storage.from("whatsapp-media").getPublicUrl(filePath).data.publicUrl;
 
       // Determine media type
       let mediaType = "document";
-      if (file.type.startsWith("image/")) mediaType = "image";else if (file.type.startsWith("video/")) mediaType = "video";else if (file.type.startsWith("audio/")) mediaType = "audio";
+      if (processedFile.type.startsWith("image/")) mediaType = "image";else if (processedFile.type.startsWith("video/")) mediaType = "video";else if (processedFile.type.startsWith("audio/")) mediaType = "audio";
 
-      // Send message with media (base64 for Evolution, URL for display)
+      // Send message with public URL when available, and base64 as fallback.
       await sendMessage.mutateAsync({
         conversation: selectedConversation,
-        text: file.name,
-        mediaUrl: urlData.publicUrl,
+        text: processedFile.name,
+        mediaUrl: publicMediaUrl,
         mediaType,
         base64: base64Content,
-        mimetype: file.type,
-        filename: file.name
+        mimetype: processedFile.type || file.type || "application/octet-stream",
+        filename: processedFile.name,
+        previewMediaUrl: `data:${processedFile.type || file.type || "application/octet-stream"};base64,${base64Content}`,
+        sendSessionId: selectedSessionId === "all" ? undefined : selectedSessionId,
       });
       toast({
         title: "Arquivo enviado",
@@ -321,6 +424,7 @@ export default function Conversations() {
   const formatConversationTime = (date: string | null) => {
     if (!date) return "";
     const d = new Date(date);
+    if (Number.isNaN(d.getTime())) return "";
     if (isToday(d)) return format(d, "HH:mm");
     if (isYesterday(d)) return "Ontem";
     return format(d, "dd/MM");
@@ -364,7 +468,7 @@ export default function Conversations() {
                     <ArrowLeft className="w-5 h-5" />
                   </Button>
                   <Avatar className="h-9 w-9 shrink-0">
-                    <AvatarImage src={selectedConversation.contact_picture || undefined} />
+                    <AvatarImage src={getConversationAvatarUrl(selectedConversation)} />
                     <AvatarFallback className="text-sm bg-muted text-muted-foreground">
                       {selectedConversation.is_group ? <Users className="w-4 h-4" /> : (selectedConversation.contact_name || selectedConversation.contact_phone)?.[0] || "?"}
                     </AvatarFallback>
@@ -377,8 +481,8 @@ export default function Conversations() {
                   </div>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
-                  {selectedConversation.lead && <Button variant="ghost" size="sm" className="h-8 text-xs px-2" asChild>
-                      <Link to={`/crm/pipelines?lead=${selectedConversation.lead.id}`}>
+                  {selectedLeadId && <Button variant="ghost" size="sm" className="h-8 text-xs px-2" asChild>
+                      <Link to={`/crm/pipelines?lead=${selectedLeadId}`}>
                         <User className="w-3.5 h-3.5" />
                       </Link>
                     </Button>}
@@ -423,14 +527,14 @@ export default function Conversations() {
                     )}
                     {loadingMessages ? <div className="flex items-center justify-center py-12">
                         <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-                      </div> : messages?.length === 0 ? <div className="flex flex-col items-center justify-center py-12 text-center">
+                      </div> : visibleMessages.length === 0 ? <div className="flex flex-col items-center justify-center py-12 text-center">
                         <MessageSquare className="w-8 h-8 text-muted-foreground mb-2" />
                         <p className="text-sm text-muted-foreground">Nenhuma mensagem</p>
-                      </div> : messages?.map((msg, index) => {
-                        const previousMsg = index > 0 ? messages[index - 1] : null;
+                      </div> : visibleMessages.map((msg: any, index: number) => {
+                        const previousMsg = index > 0 ? visibleMessages[index - 1] : null;
                         const showSeparator = shouldShowDateSeparator(msg.sent_at, previousMsg?.sent_at || null);
                         return (
-                          <div key={msg.id}>
+                          <MessageErrorBoundary key={msg.id} messageId={msg.id}>
                             {showSeparator && <DateSeparator date={new Date(msg.sent_at)} />}
                             <MessageBubble 
                               content={msg.content} 
@@ -445,8 +549,12 @@ export default function Conversations() {
                               senderName={msg.sender_name} 
                               isGroup={selectedConversation.is_group} 
                               onRetryMedia={() => retryMediaDownload(msg.id)} 
+                              messageId={msg.id}
+                              leadId={selectedLeadId || ""}
+                              leadName={selectedConversation.lead?.name || selectedConversation.contact_name || undefined}
+                              reactions={reactionsByMessageId.get(msg.message_id) || reactionsByMessageId.get(msg.id) || []}
                             />
-                          </div>
+                          </MessageErrorBoundary>
                         );
                       })}
                     <div ref={messagesEndRef} />
@@ -470,7 +578,7 @@ export default function Conversations() {
                       <button type="button" onClick={() => fileInputRef.current?.click()}>
                         <Paperclip className="w-5 h-5" />
                       </button>
-                      {selectedConversation?.lead?.id && (
+                      {selectedLeadId && (
                         <button type="button" onClick={() => setShowAutomationDialog(true)} title="Iniciar Automação">
                           <Zap className="w-5 h-5" />
                         </button>
@@ -494,24 +602,6 @@ export default function Conversations() {
                     >
                       <WhatsAppIcon variant="logo" size={14} />
                       <span className="text-[10px] font-medium">WhatsApp</span>
-                    </Button>
-                    <Button 
-                      variant={activePlatform === 'instagram' ? 'secondary' : 'ghost'} 
-                      size="sm" 
-                      className={cn("flex-1 gap-1.5 h-8", activePlatform === 'instagram' && "bg-background shadow-sm")}
-                      onClick={() => setActivePlatform('instagram')}
-                    >
-                      <Instagram size={13} className="text-pink-500" />
-                      <span className="text-[10px] font-medium">Instagram</span>
-                    </Button>
-                    <Button 
-                      variant={activePlatform === 'facebook' ? 'secondary' : 'ghost'} 
-                      size="sm" 
-                      className={cn("flex-1 gap-1.5 h-8", activePlatform === 'facebook' && "bg-background shadow-sm")}
-                      onClick={() => setActivePlatform('facebook')}
-                    >
-                      <Facebook size={13} className="text-blue-600" />
-                      <span className="text-[10px] font-medium">Facebook</span>
                     </Button>
                   </div>
 
@@ -634,11 +724,11 @@ export default function Conversations() {
         </div>
 
         <CreateLeadDialog open={createLeadOpen} onOpenChange={setCreateLeadOpen} contactPhone={createLeadContact.phone} contactName={createLeadContact.name} />
-        {selectedConversation?.lead?.id && (
+        {selectedLeadId && (
           <StartAutomationDialog
             open={showAutomationDialog}
             onOpenChange={setShowAutomationDialog}
-            leadId={selectedConversation.lead.id}
+            leadId={selectedLeadId}
             conversationId={selectedConversation.id}
             contactName={selectedConversation.lead?.name || selectedConversation.contact_name || undefined}
           />
@@ -663,24 +753,6 @@ export default function Conversations() {
                 >
                   <WhatsAppIcon variant="logo" size={14} />
                   <span className="text-[10px] font-medium">WhatsApp</span>
-                </Button>
-                <Button 
-                  variant={activePlatform === 'instagram' ? 'secondary' : 'ghost'} 
-                  size="sm" 
-                  className={cn("flex-1 gap-1.5 h-8", activePlatform === 'instagram' && "bg-background shadow-sm")}
-                  onClick={() => setActivePlatform('instagram')}
-                >
-                  <Instagram size={13} className="text-pink-500" />
-                  <span className="text-[10px] font-medium">Instagram</span>
-                </Button>
-                <Button 
-                  variant={activePlatform === 'facebook' ? 'secondary' : 'ghost'} 
-                  size="sm" 
-                  className={cn("flex-1 gap-1.5 h-8", activePlatform === 'facebook' && "bg-background shadow-sm")}
-                  onClick={() => setActivePlatform('facebook')}
-                >
-                  <Facebook size={13} className="text-blue-600" />
-                  <span className="text-[10px] font-medium">Facebook</span>
                 </Button>
               </div>
 
@@ -794,7 +866,7 @@ export default function Conversations() {
                   </div>
                 ) : metaConversations?.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-                    <Instagram className="w-8 h-8 text-muted-foreground mb-2 opacity-20" />
+                    <MessageSquare className="w-8 h-8 text-muted-foreground mb-2 opacity-20" />
                     <p className="text-sm text-muted-foreground">Nenhuma conversa no Instagram/Meta</p>
                     <p className="text-xs text-muted-foreground mt-1">Conecte sua conta nas configurações para começar.</p>
                   </div>
@@ -827,11 +899,11 @@ export default function Conversations() {
               <ConversationHeader
                 contactName={selectedConversation.lead?.name || selectedConversation.contact_name}
                 contactPhone={selectedConversation.contact_phone}
-                contactPicture={selectedConversation.contact_picture}
+                contactPicture={getConversationAvatarUrl(selectedConversation)}
                 contactPresence={selectedConversation.contact_presence}
                 isGroup={selectedConversation.is_group}
                 isArchived={!!selectedConversation.archived_at}
-                leadId={selectedConversation.lead?.id}
+                leadId={selectedLeadId}
                 leadTags={selectedConversation.lead?.tags}
                 pipelineName={selectedConversation.lead?.pipeline?.name}
                 stageName={selectedConversation.lead?.stage?.name}
@@ -864,14 +936,14 @@ export default function Conversations() {
                   <div className="p-4 space-y-2 bg-secondary">
                     {loadingMessages ? <div className="flex items-center justify-center py-12">
                         <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-                      </div> : messages?.length === 0 ? <div className="flex flex-col items-center justify-center py-12">
+                      </div> : visibleMessages.length === 0 ? <div className="flex flex-col items-center justify-center py-12">
                         <MessageSquare className="w-8 h-8 text-muted-foreground mb-2" />
                         <p className="text-sm text-muted-foreground">Nenhuma mensagem</p>
-                      </div> : messages?.map((msg, index) => {
-                        const previousMsg = index > 0 ? messages[index - 1] : null;
+                      </div> : visibleMessages.map((msg: any, index: number) => {
+                        const previousMsg = index > 0 ? visibleMessages[index - 1] : null;
                         const showSeparator = shouldShowDateSeparator(msg.sent_at, previousMsg?.sent_at || null);
                         return (
-                          <div key={msg.id}>
+                          <MessageErrorBoundary key={msg.id} messageId={msg.id}>
                             {showSeparator && <DateSeparator date={new Date(msg.sent_at)} />}
                             <MessageBubble 
                               content={msg.content} 
@@ -886,8 +958,12 @@ export default function Conversations() {
                               senderName={msg.sender_name} 
                               isGroup={selectedConversation.is_group} 
                               onRetryMedia={() => retryMediaDownload(msg.id)} 
+                              messageId={msg.id}
+                              leadId={selectedLeadId || ""}
+                              leadName={selectedConversation.lead?.name || selectedConversation.contact_name || undefined}
+                              reactions={reactionsByMessageId.get(msg.message_id) || reactionsByMessageId.get(msg.id) || []}
                             />
-                          </div>
+                          </MessageErrorBoundary>
                         );
                       })}
                     <div ref={messagesEndRef} />
@@ -912,7 +988,7 @@ export default function Conversations() {
                       <button type="button" onClick={() => fileInputRef.current?.click()}>
                         <Paperclip className="w-5 h-5" />
                       </button>
-                      {selectedConversation?.lead?.id && (
+                      {selectedLeadId && (
                         <button type="button" onClick={() => setShowAutomationDialog(true)} title="Iniciar Automação">
                           <Zap className="w-5 h-5" />
                         </button>
@@ -964,22 +1040,22 @@ export default function Conversations() {
         </main>
 
         {/* Lead Side Panel - Desktop only */}
-        {selectedConversation?.lead?.id && showLeadPanel && (
+        {selectedLeadId && showLeadPanel && (
           <ConversationLeadPanel
-            leadId={selectedConversation.lead.id}
+            leadId={selectedLeadId}
             onClose={() => setShowLeadPanel(false)}
-            contactPicture={selectedConversation.contact_picture}
+            contactPicture={getConversationAvatarUrl(selectedConversation)}
             className="w-[300px] min-w-[300px] max-w-[300px] shrink-0 animate-in slide-in-from-right-5 duration-300"
           />
         )}
       </div>
 
       <CreateLeadDialog open={createLeadOpen} onOpenChange={setCreateLeadOpen} contactPhone={createLeadContact.phone} contactName={createLeadContact.name} />
-      {selectedConversation?.lead?.id && (
+      {selectedLeadId && (
         <StartAutomationDialog
           open={showAutomationDialog}
           onOpenChange={setShowAutomationDialog}
-          leadId={selectedConversation.lead.id}
+          leadId={selectedLeadId}
           conversationId={selectedConversation.id}
           contactName={selectedConversation.lead?.name || selectedConversation.contact_name || undefined}
         />
@@ -1014,52 +1090,43 @@ function ConversationItem({
   const leadTags = conversation.lead?.tags || [];
   const leadTagIds = leadTags.map(lt => lt.tag.id);
   const unassignedTags = availableTags.filter(t => !leadTagIds.includes(t.id));
-  return <div className={cn("w-full text-left p-2.5 flex items-center gap-2.5 hover:bg-muted/50 transition-colors group", isSelected && "bg-muted")}>
+  const displayName = conversation.lead?.name || (conversation.contact_name && conversation.contact_name !== conversation.contact_phone ? conversation.contact_name : formatPhoneForDisplay(conversation.contact_phone || ""));
+  const formatPreviewMessage = (message: string | null) => {
+    if (!message) return "Sem mensagens";
+    const trimmed = message.trim();
+    if (/^[a-f0-9-]{36}\.(png|jpg|jpeg|gif|webp|mp4|mp3|ogg|opus|pdf|doc|docx|xls|xlsx|csv|avi|mov|aac|m4a|wav|heic)$/i.test(trimmed) || /^\S+\.(png|jpg|jpeg|gif|webp|mp4|mp3|ogg|opus|pdf|doc|docx|xls|xlsx|csv|avi|mov|aac|m4a|wav|heic)$/i.test(trimmed)) {
+      const ext = trimmed.split('.').pop()?.toLowerCase() || '';
+      if (['png','jpg','jpeg','gif','webp','heic'].includes(ext)) return 'Foto';
+      if (['mp4','avi','mov'].includes(ext)) return 'Vídeo';
+      if (['mp3','ogg','opus','aac','m4a','wav'].includes(ext)) return 'Áudio';
+      return 'Documento';
+    }
+    return message;
+  };
+
+  return <div className={cn("w-full text-left p-2 grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-1.5 hover:bg-muted/50 transition-colors group overflow-hidden", isSelected && "bg-muted")}>
       <button type="button" onClick={onClick} className="flex items-center gap-2.5 flex-1 min-w-0">
         <Avatar className="h-9 w-9 shrink-0 relative">
-          <AvatarImage src={conversation.contact_picture || undefined} />
+          <AvatarImage src={getConversationAvatarUrl(conversation)} />
           <AvatarFallback className="text-xs bg-muted text-muted-foreground">
-            {conversation.is_group ? <Users className="w-4 h-4" /> : (conversation.contact_name || conversation.contact_phone)?.[0]?.toUpperCase() || "?"}
+            {conversation.is_group ? <Users className="w-4 h-4" /> : displayName?.[0]?.toUpperCase() || "?"}
           </AvatarFallback>
         </Avatar>
         
-        <div className="flex-1 w-0">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1 min-w-0 flex-1">
+        <div className="flex-1 w-0 min-w-0">
+          <div className="flex items-center justify-between gap-1.5">
+            <div className="flex items-center gap-1.5 min-w-0 flex-1 overflow-hidden">
               <span className="truncate font-sans font-semibold text-xs text-foreground">
-                {conversation.lead?.name || (conversation.contact_name && conversation.contact_name !== conversation.contact_phone ? conversation.contact_name : formatPhoneForDisplay(conversation.contact_phone || ""))}
+                {displayName}
               </span>
               {conversation.is_group && <Badge variant="outline" className="text-[9px] h-4 px-1 shrink-0">
                   Grupo
                 </Badge>}
-            </div>
-            <span className="text-[10px] text-muted-foreground shrink-0 ml-1">
-              {formatTime(conversation.last_message_at)}
-            </span>
-          </div>
-          
-          {/* Mensagem ou Presença */}
-          <div className="flex items-center justify-between mt-0.5">
-            {conversation.contact_presence === 'composing' ? <span className="text-[11px] text-primary truncate flex-1 text-left animate-pulse">
-                digitando...
-              </span> : conversation.contact_presence === 'recording' ? <span className="text-[11px] text-primary truncate flex-1 text-left animate-pulse">
-                🎤 gravando áudio...
-              </span> : <span className="text-[11px] text-muted-foreground truncate flex-1 text-left">
-                {conversation.last_message || "Sem mensagens"}
-              </span>}
-            {conversation.unread_count > 0 && <Badge className="h-5 min-w-5 px-1.5 text-[10px] ml-2">
-                {conversation.unread_count}
-              </Badge>}
-          </div>
-          
-          {/* Tags do lead */}
-          {leadTags.length > 0 && (
-            <div className="flex items-center gap-1 mt-1 flex-wrap">
-              {leadTags.slice(0, 2).map((lt, idx) => (
-                <Badge 
-                  key={lt.tag.id} 
-                  variant="secondary" 
-                  className="text-[9px] px-1.5 py-0 h-4 font-medium border-0" 
+              {leadTags.slice(0, 2).map(lt => (
+                <Badge
+                  key={lt.tag.id}
+                  variant="secondary"
+                  className="text-[8px] px-1.5 py-0 h-4 font-medium border-0 truncate max-w-[54px] shrink-0"
                   style={{
                     backgroundColor: lt.tag.color,
                     color: '#FFFFFF',
@@ -1069,30 +1136,49 @@ function ConversationItem({
                 </Badge>
               ))}
               {leadTags.length > 2 && (
-                <span className="text-[9px] text-muted-foreground">
+                <span className="text-[9px] text-muted-foreground shrink-0">
                   +{leadTags.length - 2}
                 </span>
               )}
             </div>
-          )}
+          </div>
+          
+          {/* Mensagem ou Presença */}
+          <div className="flex items-center justify-between mt-0">
+            {conversation.contact_presence === 'composing' ? <span className="text-[11px] text-primary truncate flex-1 text-left animate-pulse">
+                digitando...
+              </span> : conversation.contact_presence === 'recording' ? <span className="text-[11px] text-primary truncate flex-1 text-left animate-pulse">
+                🎤 gravando áudio...
+              </span> : <span className="text-[11px] text-muted-foreground truncate flex-1 text-left">
+                {formatPreviewMessage(conversation.last_message)}
+              </span>}
+          </div>
+          
         </div>
       </button>
 
-      {/* Botão para ver lead */}
-      {onViewLead && (
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="h-7 w-7 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
-          onClick={(e) => {
-            e.stopPropagation();
-            onViewLead();
-          }}
-          title="Ver lead no pipeline"
-        >
-          <ExternalLink className="w-3.5 h-3.5" />
-        </Button>
-      )}
+      <div className="flex items-center justify-end gap-1.5 shrink-0 self-center min-w-[54px] max-w-[104px] overflow-hidden">
+        {conversation.unread_count > 0 && <Badge className="h-5 min-w-5 px-1.5 text-[10px]">
+            {conversation.unread_count}
+          </Badge>}
+        {onViewLead && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+            onClick={(e) => {
+              e.stopPropagation();
+              onViewLead();
+            }}
+            title="Ver lead no pipeline"
+          >
+            <ExternalLink className="w-3.5 h-3.5" />
+          </Button>
+        )}
+        <span className="text-[10px] text-muted-foreground whitespace-nowrap shrink-0">
+          {formatTime(conversation.last_message_at)}
+        </span>
+      </div>
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>

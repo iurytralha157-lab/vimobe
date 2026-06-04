@@ -58,7 +58,8 @@ export const ptBR = {
     plans: 'Planos',
     coverage: 'Localidades',
     telecomCustomers: 'Clientes',
-    mySite: 'Meu Site',
+    mySite: 'Site',
+    site: 'Site',
     gamification: 'Arena Imobiliária',
     arena: 'Arena Imobiliária',
     history: 'Histórico',
@@ -81,7 +82,7 @@ export const ptBR = {
     title: 'Configurações',
     myProfile: 'Meu Perfil',
     company: 'Empresa',
-    usersTab: 'Usuários',
+    usersTab: 'Gestão de Usuários',
     meta: 'Meta',
     
     // Profile tab
@@ -126,7 +127,7 @@ export const ptBR = {
 
     // Users tab
     users: {
-      title: 'Usuários',
+      title: 'Gestão de Usuários',
       description: 'Gerencie os membros da sua equipe',
       newUser: 'Novo Corretor',
       createUser: 'Criar Usuário',

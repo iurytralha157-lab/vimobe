@@ -129,7 +129,7 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
 
   const parseFile = async (file: File) => {
     try {
-      let jsonData: Record<string, string>[] = [];
+      const jsonData: Record<string, string>[] = [];
 
       if (file.name.endsWith('.csv')) {
         const text = await file.text();

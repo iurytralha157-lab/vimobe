@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+﻿import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -24,8 +24,6 @@ export interface StageAutomation {
 }
 
 export type AutomationType = 
-  | 'move_after_inactivity' 
-  | 'send_whatsapp_on_enter' 
   | 'alert_on_inactivity'
   | 'change_assignee_on_enter'
   | 'change_deal_status_on_enter';
@@ -129,7 +127,7 @@ export function useCreateStageAutomation() {
     },
     onError: (error) => {
       console.error('Error creating automation:', error);
-      toast.error('Erro ao criar automação');
+      toast.error('Erro ao criar Automação');
     }
   });
 }
@@ -181,7 +179,7 @@ export function useUpdateStageAutomation() {
     },
     onError: (error) => {
       console.error('Error updating automation:', error);
-      toast.error('Erro ao atualizar automação');
+      toast.error('Erro ao atualizar Automação');
     }
   });
 }
@@ -204,7 +202,7 @@ export function useDeleteStageAutomation() {
     },
     onError: (error) => {
       console.error('Error deleting automation:', error);
-      toast.error('Erro ao excluir automação');
+      toast.error('Erro ao excluir Automação');
     }
   });
 }
@@ -230,23 +228,17 @@ export function useToggleStageAutomation() {
     },
     onError: (error) => {
       console.error('Error toggling automation:', error);
-      toast.error('Erro ao alterar status da automação');
+      toast.error('Erro ao alterar status da Automação');
     }
   });
 }
 
-export const AUTOMATION_TYPE_LABELS: Record<AutomationType, string> = {
-  'move_after_inactivity': 'Mover após inatividade',
-  'send_whatsapp_on_enter': 'Enviar WhatsApp ao entrar',
-  'alert_on_inactivity': 'Alertar sobre inatividade',
+export const AUTOMATION_TYPE_LABELS: Record<AutomationType, string> = {  'alert_on_inactivity': 'Alertar sobre inatividade',
   'change_assignee_on_enter': 'Mudar responsável ao entrar',
   'change_deal_status_on_enter': 'Alterar status (Ganho/Perdido)'
 };
 
-export const AUTOMATION_TYPE_DESCRIPTIONS: Record<AutomationType, string> = {
-  'move_after_inactivity': 'Move o lead automaticamente para outro estágio após X dias sem atividade',
-  'send_whatsapp_on_enter': 'Envia uma mensagem automática via WhatsApp quando o lead entra neste estágio',
-  'alert_on_inactivity': 'Cria uma notificação para o corretor quando o lead ficar X dias sem atividade',
+export const AUTOMATION_TYPE_DESCRIPTIONS: Record<AutomationType, string> = {  'alert_on_inactivity': 'Cria uma notificação para o corretor quando o lead ficar X dias sem atividade',
   'change_assignee_on_enter': 'Muda o responsável do lead automaticamente quando ele entra neste estágio',
   'change_deal_status_on_enter': 'Altera o status do deal (Aberto, Ganho ou Perdido) quando o lead entra'
 };

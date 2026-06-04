@@ -42,20 +42,23 @@ export interface FinancialEntry {
 }
 
 export function useFinancialCategories() {
-  const { profile } = useAuth();
+  const { profile, organization } = useAuth();
+  const organizationId = organization?.id || profile?.organization_id;
 
   return useQuery({
-    queryKey: ['financial-categories', profile?.organization_id],
+    queryKey: ['financial-categories', organizationId],
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from('financial_categories')
         .select('*')
+        .eq('organization_id', organizationId)
+        .eq('is_active', true)
         .order('name');
 
       if (error) throw error;
       return data as FinancialCategory[];
     },
-    enabled: !!profile?.organization_id,
+    enabled: !!organizationId,
   });
 }
 
@@ -91,10 +94,11 @@ export function useCreateFinancialCategory() {
 }
 
 export function useFinancialEntries(filters?: { type?: string; status?: string; startDate?: string; endDate?: string }) {
-  const { profile } = useAuth();
+  const { profile, organization } = useAuth();
+  const organizationId = organization?.id || profile?.organization_id;
 
   return useQuery({
-    queryKey: ['financial-entries', profile?.organization_id, filters],
+    queryKey: ['financial-entries', organizationId, filters],
     queryFn: async () => {
       let query = supabase
         .from('financial_entries')
@@ -102,6 +106,7 @@ export function useFinancialEntries(filters?: { type?: string; status?: string; 
           *,
           contract:contracts(contract_number)
         `)
+        .eq('organization_id', organizationId)
         .order('due_date', { ascending: true });
 
       if (filters?.type) {
@@ -121,7 +126,7 @@ export function useFinancialEntries(filters?: { type?: string; status?: string; 
       if (error) throw error;
       return data as unknown as FinancialEntry[];
     },
-    enabled: !!profile?.organization_id,
+    enabled: !!organizationId,
   });
 }
 
@@ -235,6 +240,7 @@ export function useMarkEntryAsPaid() {
           status: 'paid',
           paid_date: new Date().toISOString().split('T')[0], // Corrigido: usa paid_date (date) ao invés de paid_at
           paid_value,
+          paid_amount: paid_value,
         } as never)
         .eq('id', id)
         .select()
@@ -298,10 +304,11 @@ export function useDeleteFinancialEntry() {
 }
 
 export function useFinancialDashboard() {
-  const { profile } = useAuth();
+  const { profile, organization } = useAuth();
+  const organizationId = organization?.id || profile?.organization_id;
 
   return useQuery({
-    queryKey: ['financial-dashboard', profile?.organization_id],
+    queryKey: ['financial-dashboard', organizationId],
     queryFn: async () => {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -309,8 +316,11 @@ export function useFinancialDashboard() {
       const days60 = new Date(today); days60.setDate(days60.getDate() + 60);
       const days90 = new Date(today); days90.setDate(days90.getDate() + 90);
       const last30 = new Date(today); last30.setDate(last30.getDate() - 30);
-      const sixMonthsAgo = new Date(today); sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
       const yearStart = new Date(today.getFullYear(), 0, 1);
+      const historyStart = new Date(Math.min(
+        new Date(today.getFullYear(), today.getMonth() - 5, 1).getTime(),
+        yearStart.getTime()
+      ));
 
       const [
         { data: receivablesData },
@@ -320,12 +330,12 @@ export function useFinancialDashboard() {
         { data: wonLeadsData },
         { data: contractsData },
       ] = await Promise.all([
-        supabase.from('financial_entries').select('amount, due_date').eq('type', 'receivable').eq('status', 'pending'),
-        supabase.from('financial_entries').select('amount, due_date').eq('type', 'payable').eq('status', 'pending'),
-        supabase.from('financial_entries').select('amount, type, paid_date').eq('status', 'paid').gte('paid_date', sixMonthsAgo.toISOString().split('T')[0]),
-        supabase.from('commissions').select('amount, status'),
-        supabase.from('leads').select('id, valor_interesse, won_at').eq('deal_status', 'won').gt('valor_interesse', 0),
-        supabase.from('contracts').select('id, value, commission_value, status, signing_date').in('status', ['active', 'signed', 'completed']),
+        supabase.from('financial_entries').select('amount, due_date').eq('organization_id', organizationId).eq('type', 'receivable').eq('status', 'pending'),
+        supabase.from('financial_entries').select('amount, due_date').eq('organization_id', organizationId).eq('type', 'payable').eq('status', 'pending'),
+        supabase.from('financial_entries').select('amount, type, paid_date').eq('organization_id', organizationId).eq('status', 'paid').gte('paid_date', historyStart.toISOString().split('T')[0]),
+        supabase.from('commissions').select('amount, status').eq('organization_id', organizationId),
+        supabase.from('leads').select('id, valor_interesse, won_at').eq('organization_id', organizationId).eq('deal_status', 'won').gt('valor_interesse', 0),
+        supabase.from('contracts').select('id, value, commission_value, status, signing_date').eq('organization_id', organizationId).in('status', ['active', 'signed', 'completed']),
       ]);
 
       const receivables = (receivablesData as any[]) || [];
@@ -407,6 +417,6 @@ export function useFinancialDashboard() {
         defaultRate: receivable30 > 0 ? (overdueReceivables / (receivable30 + overdueReceivables)) * 100 : 0,
       };
     },
-    enabled: !!profile?.organization_id,
+    enabled: !!organizationId,
   });
 }

@@ -75,18 +75,20 @@ export function getDateRangeFromPreset(preset: DatePreset): { from: Date; to: Da
   switch (preset) {
     case "today":
       return { from: startOfDay(now), to: endOfDay(now) };
-    case "yesterday":
+    case "yesterday": {
       const yesterday = subDays(now, 1);
       return { from: startOfDay(yesterday), to: endOfDay(yesterday) };
+    }
     case "last7days":
       return { from: startOfDay(subDays(now, 6)), to: endOfDay(now) };
     case "last30days":
       return { from: startOfDay(subDays(now, 29)), to: endOfDay(now) };
     case "thisMonth":
       return { from: startOfMonth(now), to: endOfDay(now) };
-    case "lastMonth":
+    case "lastMonth": {
       const lastMonth = subMonths(now, 1);
       return { from: startOfMonth(lastMonth), to: endOfMonth(lastMonth) };
+    }
     case "thisQuarter":
       return { from: startOfQuarter(now), to: endOfDay(now) };
     case "thisYear":

@@ -27,6 +27,7 @@ const ACTION_ICONS: Record<string, any> = {
   proposal_sent: FileText,
   contract_signed: Trophy,
   visit_confirmed: Users2,
+  lead_created: Star,
   lead_created_manual: Star,
   property_created: Star,
 };

@@ -67,8 +67,10 @@ const initialFormData = {
   description: '',
   price: 0,
   billing_cycle: 'monthly',
+  trial_enabled: false,
   trial_days: 0,
   max_users: 10,
+  max_whatsapp_sessions: 1,
   max_leads: null as number | null,
   modules: ['dashboard', 'leads', 'contacts'],
   is_active: true,
@@ -90,8 +92,10 @@ export default function AdminPlans() {
         description: plan.description || '',
         price: plan.price,
         billing_cycle: plan.billing_cycle,
+        trial_enabled: plan.trial_enabled ?? plan.trial_days > 0,
         trial_days: plan.trial_days,
         max_users: plan.max_users,
+        max_whatsapp_sessions: plan.max_whatsapp_sessions ?? 1,
         max_leads: plan.max_leads,
         modules: plan.modules || [],
         is_active: plan.is_active,
@@ -193,7 +197,11 @@ export default function AdminPlans() {
                       <Users className="h-4 w-4 text-muted-foreground" />
                       <span>Até {plan.max_users} usuários</span>
                     </div>
-                    {plan.trial_days > 0 && (
+                    <div className="flex items-center gap-2">
+                      <Package className="h-4 w-4 text-muted-foreground" />
+                      <span>Até {plan.max_whatsapp_sessions ?? 1} WhatsApps</span>
+                    </div>
+                    {plan.trial_enabled && plan.trial_days > 0 && (
                       <div className="flex items-center gap-2">
                         <Clock className="h-4 w-4 text-muted-foreground" />
                         <span>{plan.trial_days} dias de trial</span>
@@ -306,10 +314,24 @@ export default function AdminPlans() {
                   </Select>
                 </div>
 
+                <div className="flex items-center gap-2 col-span-2">
+                  <Switch
+                    checked={formData.trial_enabled}
+                    onCheckedChange={(checked) => setFormData({
+                      ...formData,
+                      trial_enabled: checked,
+                      trial_days: checked ? formData.trial_days : 0,
+                    })}
+                  />
+                  <Label>Permitir teste/trial neste plano</Label>
+                </div>
+
                 <div className="space-y-2">
                   <Label>Dias de Trial</Label>
                   <Input
                     type="number"
+                    min={0}
+                    disabled={!formData.trial_enabled}
                     value={formData.trial_days}
                     onChange={(e) => setFormData({ ...formData, trial_days: parseInt(e.target.value) || 0 })}
                   />
@@ -321,6 +343,16 @@ export default function AdminPlans() {
                     type="number"
                     value={formData.max_users}
                     onChange={(e) => setFormData({ ...formData, max_users: parseInt(e.target.value) || 1 })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Máximo de WhatsApps</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={formData.max_whatsapp_sessions}
+                    onChange={(e) => setFormData({ ...formData, max_whatsapp_sessions: parseInt(e.target.value) || 0 })}
                   />
                 </div>
               </div>

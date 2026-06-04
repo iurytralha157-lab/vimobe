@@ -61,7 +61,7 @@ export function StorageUsageCard({
             <Progress 
               value={percentage} 
               className="h-2"
-              // @ts-ignore - custom styling
+              // @ts-expect-error - custom styling
               indicatorClassName={getProgressColor(percentage)}
             />
             <div className="flex justify-between text-xs text-muted-foreground">

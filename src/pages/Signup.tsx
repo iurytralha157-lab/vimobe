@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Progress } from '@/components/ui/progress';
 import { LoadingButton } from '@/components/ui/loading-button';
-import { Building2, ArrowRight, ArrowLeft, Eye, EyeOff, CheckCircle2, Loader2, Mail, User, Lock, ShieldAlert, Check } from 'lucide-react';
+import { Building2, ArrowRight, ArrowLeft, Eye, EyeOff, CheckCircle2, Loader2, Mail, User, Lock, ShieldAlert, Check, CreditCard } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { usePasswordStrength, type PasswordStrength } from "@/hooks/use-password-strength";
 import { getFriendlyErrorMessage } from '@/lib/error-handler';
@@ -29,6 +29,18 @@ const steps = [
   { id: 2, title: 'Empresa' },
   { id: 3, title: 'Confirmar' },
 ];
+
+interface SignupPlan {
+  id: string;
+  name: string;
+  description: string | null;
+  price: number;
+  billing_cycle: string | null;
+  trial_days: number | null;
+  max_users: number | null;
+  max_whatsapp_sessions: number | null;
+  modules: string[] | null;
+}
 
 const STRENGTH_COLORS: Record<PasswordStrength['level'], string> = {
   'very-weak': 'bg-red-500',
@@ -54,6 +66,8 @@ export default function Signup() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [status, setStatus] = useState<'form' | 'creating' | 'success' | 'error'>('form');
+  const [plans, setPlans] = useState<SignupPlan[]>([]);
+  const [plansLoading, setPlansLoading] = useState(true);
 
   const [accountData, setAccountData] = useState({
     name: '',
@@ -65,10 +79,52 @@ export default function Signup() {
     organizationName: '',
     segment: 'imobiliario',
     teamSize: '1-5',
+    planId: '',
   });
 
   const passwordStrength = usePasswordStrength(accountData.password);
   const progress = (currentStep / steps.length) * 100;
+  const selectedPlan = plans.find((plan) => plan.id === orgData.planId) || null;
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadPlans = async () => {
+      setPlansLoading(true);
+      const { data, error } = await supabase
+        .from('admin_subscription_plans')
+        .select('id, name, description, price, billing_cycle, trial_days, max_users, max_whatsapp_sessions, modules')
+        .eq('is_active', true)
+        .order('price', { ascending: true });
+
+      if (!mounted) return;
+
+      if (error) {
+        console.error('Error loading signup plans:', error);
+        setPlans([]);
+        setPlansLoading(false);
+        return;
+      }
+
+      const normalizedPlans = (data || []).map((plan: any) => ({
+        ...plan,
+        price: Number(plan.price || 0),
+      })) as SignupPlan[];
+
+      setPlans(normalizedPlans);
+      setOrgData((prev) => ({
+        ...prev,
+        planId: prev.planId || normalizedPlans[0]?.id || '',
+      }));
+      setPlansLoading(false);
+    };
+
+    loadPlans();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const canProceed = () => {
     switch (currentStep) {
@@ -77,7 +133,7 @@ export default function Signup() {
                accountData.email.includes('@') && 
                passwordStrength.isValid;
       case 2:
-        return orgData.organizationName.trim().length >= 2;
+        return orgData.organizationName.trim().length >= 2 && !!orgData.planId;
       default:
         return true;
     }
@@ -109,6 +165,7 @@ export default function Signup() {
           organizationName: orgData.organizationName,
           segment: orgData.segment,
           teamSize: orgData.teamSize,
+          planId: orgData.planId || undefined,
         },
       });
 
@@ -126,7 +183,11 @@ export default function Signup() {
       setStatus('success');
 
       setTimeout(() => {
-        navigate('/');
+        if (data?.requires_payment && data?.checkout_token) {
+          navigate(`/checkout/${data.checkout_token}`);
+        } else {
+          navigate('/');
+        }
       }, 2000);
     } catch (error: any) {
       console.error('Signup error:', error);
@@ -353,6 +414,42 @@ export default function Signup() {
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="space-y-2">
+                  <Label>Plano</Label>
+                  {plansLoading ? (
+                    <div className="h-10 rounded-md border bg-muted/40 flex items-center px-3 text-sm text-muted-foreground">
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Carregando planos...
+                    </div>
+                  ) : (
+                    <Select value={orgData.planId} onValueChange={(v) => setOrgData({ ...orgData, planId: v })}>
+                      <SelectTrigger><SelectValue placeholder="Selecione um plano" /></SelectTrigger>
+                      <SelectContent>
+                        {plans.map(plan => (
+                          <SelectItem key={plan.id} value={plan.id}>
+                            {plan.name} - {plan.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+                {selectedPlan && (
+                  <div className="rounded-lg border bg-muted/30 p-3 text-sm space-y-2">
+                    <div className="flex items-center gap-2 font-medium">
+                      <CreditCard className="h-4 w-4 text-primary" />
+                      {selectedPlan.name}
+                    </div>
+                    <div className="text-muted-foreground">
+                      {selectedPlan.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                      {selectedPlan.billing_cycle === 'monthly' ? '/mês' : selectedPlan.billing_cycle === 'yearly' ? '/ano' : ''}
+                      {(selectedPlan.trial_days || 0) > 0 && ` com ${selectedPlan.trial_days} dias de teste`}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      Até {selectedPlan.max_users || 1} usuários e {selectedPlan.max_whatsapp_sessions || 1} WhatsApps.
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -366,6 +463,7 @@ export default function Signup() {
                     <p><span className="font-medium text-foreground">E-mail:</span> {accountData.email}</p>
                     <p><span className="font-medium text-foreground">Empresa:</span> {orgData.organizationName}</p>
                     <p><span className="font-medium text-foreground">Segmento:</span> {SEGMENTS.find(s => s.value === orgData.segment)?.label}</p>
+                    <p><span className="font-medium text-foreground">Plano:</span> {selectedPlan?.name || 'Não selecionado'}</p>
                   </div>
                 </div>
                 <div className="p-4 bg-primary/5 rounded-lg">
@@ -373,7 +471,7 @@ export default function Signup() {
                   <ul className="text-sm text-muted-foreground space-y-1">
                     <li>✓ Conta de administrador</li>
                     <li>✓ Pipeline de vendas padrão</li>
-                    <li>✓ Módulos configurados por segmento</li>
+                    <li>✓ Módulos, usuários e WhatsApps configurados pelo plano</li>
                   </ul>
                 </div>
               </div>

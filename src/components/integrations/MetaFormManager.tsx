@@ -131,6 +131,7 @@ export function MetaFormManager({ integration }: MetaFormManagerProps) {
         form={editingForm?.form || null}
         config={editingForm?.config}
         integrationId={integration.id}
+        pageName={integration.page_name}
       />
     </div>
   );

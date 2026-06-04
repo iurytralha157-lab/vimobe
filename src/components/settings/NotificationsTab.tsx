@@ -1,45 +1,62 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { usePushNotifications } from '@/hooks/usePushNotifications';
+import { useWebPush } from '@/hooks/use-web-push';
+import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { Bell, BellOff, Loader2 } from 'lucide-react';
+import { Bell, BellOff } from 'lucide-react';
 import { toast } from 'sonner';
 
 export const NotificationsTab = () => {
-  const { isSupported, permission, subscription, subscribeUser, unsubscribeUser } = usePushNotifications();
+  const { user, profile } = useAuth();
+  const { isSupported, permission, isSubscribed, subscribe, unsubscribe } = useWebPush();
 
   const handleToggle = async () => {
-    if (subscription) {
-      await unsubscribeUser();
-      toast.success('Notificações desativadas');
-    } else {
-      const sub = await subscribeUser();
-      if (sub) {
-        toast.success('Notificações ativadas com sucesso!');
-      } else if (permission === 'denied') {
-        toast.error('Permissão de notificação negada. Por favor, ative nas configurações do navegador.');
-      }
+    if (isSubscribed) {
+      await unsubscribe();
+      toast.success('Notificacoes desativadas');
+      return;
+    }
+
+    const enabled = await subscribe();
+    if (enabled) {
+      toast.success('Notificacoes ativadas com sucesso!');
+    } else if (permission === 'denied') {
+      toast.error('Permissao de notificacao negada. Ative nas configuracoes do navegador.');
     }
   };
 
   const handleTestNotification = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      let organizationId = profile?.organization_id || '';
+      if (!organizationId) {
+        const { data: userData } = await supabase
+          .from('users')
+          .select('organization_id')
+          .eq('id', user.id)
+          .maybeSingle();
+        organizationId = userData?.organization_id || '';
+      }
+
+      if (!organizationId) {
+        toast.error('Nao encontramos a organizacao para enviar o teste.');
+        return;
+      }
+
       const { notificationService } = await import('@/services/NotificationService');
-      const { success, error } = await notificationService.send({
-        templateSlug: 'test_push',
-        organizationId: user.user_metadata?.organization_id || '', // Fallback or get from profile
+      const { error } = await notificationService.send({
+        eventKey: 'test_push',
+        organizationId,
         userId: user.id,
         variables: {}
       });
 
       if (error) throw error;
-      toast.success('Solicitação de teste enviada!');
+      toast.success('Solicitacao de teste enviada!');
     } catch (err) {
       console.error('Erro ao testar push:', err);
-      toast.error('Erro ao enviar notificação de teste.');
+      toast.error('Erro ao enviar notificacao de teste.');
     }
   };
 
@@ -47,9 +64,9 @@ export const NotificationsTab = () => {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Notificações Push</CardTitle>
+          <CardTitle>Notificacoes Push</CardTitle>
           <CardDescription>
-            Seu navegador não suporta notificações push nativas.
+            Seu navegador nao suporta notificacoes push nativas.
           </CardDescription>
         </CardHeader>
       </Card>
@@ -59,45 +76,45 @@ export const NotificationsTab = () => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Notificações Push</CardTitle>
+        <CardTitle>Notificacoes Push</CardTitle>
         <CardDescription>
-          Receba notificações em tempo real diretamente no seu dispositivo.
+          Receba notificacoes em tempo real diretamente no seu dispositivo.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex items-center justify-between p-4 border rounded-lg">
           <div className="flex items-center gap-3">
-            {subscription ? (
+            {isSubscribed ? (
               <Bell className="h-5 w-5 text-success" />
             ) : (
               <BellOff className="h-5 w-5 text-muted-foreground" />
             )}
             <div>
               <p className="font-medium">
-                {subscription ? 'Notificações Ativas' : 'Notificações Inativas'}
+                {isSubscribed ? 'Notificacoes Ativas' : 'Notificacoes Inativas'}
               </p>
               <p className="text-sm text-muted-foreground">
-                {permission === 'denied' 
-                  ? 'Permissão negada no navegador' 
-                  : subscription 
-                    ? 'Você está inscrito para receber notificações neste dispositivo.' 
-                    : 'Clique no botão para ativar as notificações.'}
+                {permission === 'denied'
+                  ? 'Permissao negada no navegador'
+                  : isSubscribed
+                    ? 'Voce esta inscrito para receber notificacoes neste dispositivo.'
+                    : 'Clique no botao para ativar as notificacoes.'}
               </p>
             </div>
           </div>
           <div className="flex gap-2">
-            <Button 
+            <Button
               variant="outline"
               onClick={handleTestNotification}
-              disabled={!subscription}
+              disabled={!isSubscribed}
             >
               Testar
             </Button>
-            <Button 
-              variant={subscription ? "destructive" : "default"}
+            <Button
+              variant={isSubscribed ? "destructive" : "default"}
               onClick={handleToggle}
             >
-              {subscription ? 'Desativar' : 'Ativar'}
+              {isSubscribed ? 'Desativar' : 'Ativar'}
             </Button>
           </div>
         </div>

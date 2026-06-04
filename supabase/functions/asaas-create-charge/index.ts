@@ -104,6 +104,22 @@ Deno.serve(async (req) => {
         }),
       });
 
+      await supabase.from('asaas_payments').upsert({
+        organization_id: org.id,
+        asaas_payment_id: payment.id,
+        asaas_customer_id: asaasCustomerId,
+        asaas_subscription_id: payment.subscription || null,
+        status: payment.status,
+        billing_type: payment.billingType || billing_type,
+        value: payment.value || value,
+        net_value: payment.netValue || null,
+        due_date: payment.dueDate || dueDate,
+        payment_date: payment.paymentDate || payment.clientPaymentDate || null,
+        invoice_url: payment.invoiceUrl || null,
+        raw_event: { source: 'asaas-create-charge', payment },
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'asaas_payment_id' });
+
       if (billing_type === 'PIX') {
         const qr = await asaasFetch(`/payments/${payment.id}/pixQrCode`);
         result = {
@@ -164,6 +180,9 @@ Deno.serve(async (req) => {
       const sub = await asaasFetch('/subscriptions', { method: 'POST', body: JSON.stringify(subPayload) });
       await supabase.from('organizations').update({
         asaas_subscription_id: sub.id,
+        subscription_status: ['ACTIVE', 'CONFIRMED', 'RECEIVED'].includes(String(sub.status || '').toUpperCase()) ? 'active' : 'pending_payment',
+        is_active: ['ACTIVE', 'CONFIRMED', 'RECEIVED'].includes(String(sub.status || '').toUpperCase()),
+        next_billing_date: sub.nextDueDate || null,
       }).eq('id', org.id);
 
       result = {

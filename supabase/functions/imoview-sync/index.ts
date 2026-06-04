@@ -268,10 +268,10 @@ Deno.serve(async (req) => {
             // Map finalidade
             let tipoNegocio = "Venda";
             const finalidade = String(item.finalidade || item.destinacao || "").toLowerCase();
-            if (finalidade.includes("locac") || finalidade.includes("alugu")) {
-              tipoNegocio = "Aluguel";
-            } else if (finalidade.includes("venda") && finalidade.includes("locac")) {
+            if (finalidade.includes("venda") && (finalidade.includes("locac") || finalidade.includes("alugu"))) {
               tipoNegocio = "Venda e Aluguel";
+            } else if (finalidade.includes("locac") || finalidade.includes("alugu")) {
+              tipoNegocio = "Aluguel";
             }
 
             let preco: number | null = null;

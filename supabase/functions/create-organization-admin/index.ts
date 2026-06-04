@@ -74,6 +74,8 @@ Deno.serve(async (req) => {
       whatsapp, 
       phone,
       cnpj,
+      creci,
+      planId,
       address,
       city,
       neighborhood,
@@ -98,14 +100,46 @@ Deno.serve(async (req) => {
       });
     }
 
+    let plan: any = null;
+    if (planId) {
+      const { data: selectedPlan, error: planError } = await supabaseAdmin
+        .from('admin_subscription_plans')
+        .select('*')
+        .eq('id', planId)
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (planError) throw planError;
+      if (!selectedPlan) {
+        return new Response(JSON.stringify({ error: 'Plano selecionado nÃ£o encontrado ou inativo' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      plan = selectedPlan;
+    }
+
+    const trialDays = Number(plan?.trial_days || 0);
+    const hasTrial = Boolean(plan?.trial_enabled) && trialDays > 0;
+    const trialEndsAt = hasTrial
+      ? new Date(Date.now() + trialDays * 24 * 60 * 60 * 1000).toISOString()
+      : null;
+
     // 1. Create the organization with segment
     const { data: org, error: orgError } = await supabaseAdmin
       .from('organizations')
       .insert({
         name,
         segment,
+        plan_id: plan?.id || null,
+        max_users: Number(plan?.max_users || 10),
+        subscription_value: Number(plan?.price || 0),
+        subscription_status: plan ? (hasTrial ? 'trial' : 'pending_payment') : 'trial',
+        subscription_type: plan ? (hasTrial ? 'trial' : plan.billing_cycle || 'monthly') : 'trial',
+        trial_ends_at: trialEndsAt,
         whatsapp: whatsapp || null,
         cnpj: cnpj || null,
+        creci: creci || null,
         endereco: address || null,
         cidade: city || null,
         bairro: neighborhood || null,
@@ -176,25 +210,28 @@ Deno.serve(async (req) => {
         role: 'admin',
       }, { onConflict: 'user_id,role' });
 
-    // 4. Create modules based on segment
-    // Note: 'automations' and 'site' are always disabled by default - super admin must enable them manually
-    let enabledModules: string[] = [];
-    let disabledModules: string[] = [];
+    // 4. Create modules based on selected plan, falling back to segment defaults
+    const allKnownModules = [
+      'crm', 'dashboard', 'leads', 'contacts', 'pipelines', 'financial', 'whatsapp',
+      'properties', 'plans', 'coverage', 'telecom', 'agenda', 'cadences', 'tags',
+      'round_robin', 'reports', 'automations', 'performance', 'gamification',
+      'webhooks', 'site', 'ai_agent', 'campaigns', 'engineering', 'api'
+    ];
+    let fallbackModules: string[] = [];
 
     if (segment === 'telecom') {
-      enabledModules = ['crm', 'financial', 'whatsapp', 'agenda', 'plans', 'coverage', 'telecom', 'tags', 'round_robin', 'reports'];
-      disabledModules = ['properties', 'cadences', 'automations', 'performance', 'webhooks', 'site'];
+      fallbackModules = ['crm', 'financial', 'whatsapp', 'agenda', 'plans', 'coverage', 'telecom', 'tags', 'round_robin', 'reports'];
     } else if (segment === 'imobiliario') {
-      enabledModules = ['crm', 'financial', 'properties', 'whatsapp', 'agenda', 'cadences', 'tags', 'round_robin', 'reports'];
-      disabledModules = ['plans', 'coverage', 'telecom', 'automations', 'performance', 'webhooks', 'site'];
+      fallbackModules = ['crm', 'financial', 'properties', 'whatsapp', 'agenda', 'cadences', 'tags', 'round_robin', 'reports'];
     } else if (segment === 'engenharia') {
-      enabledModules = ['crm', 'financial', 'engineering', 'whatsapp', 'agenda', 'tags', 'round_robin', 'reports'];
-      disabledModules = ['properties', 'plans', 'coverage', 'telecom', 'cadences', 'automations', 'performance', 'webhooks', 'site'];
+      fallbackModules = ['crm', 'financial', 'engineering', 'whatsapp', 'agenda', 'tags', 'round_robin', 'reports'];
     } else {
-      // servicos - basic modules
-      enabledModules = ['crm', 'financial', 'whatsapp', 'agenda', 'tags', 'round_robin', 'reports'];
-      disabledModules = ['properties', 'plans', 'coverage', 'telecom', 'cadences', 'automations', 'performance', 'webhooks', 'site'];
+      fallbackModules = ['crm', 'financial', 'whatsapp', 'agenda', 'tags', 'round_robin', 'reports'];
     }
+
+    const planModules = Array.isArray(plan?.modules) ? plan.modules : [];
+    const enabledModules = Array.from(new Set((planModules.length ? planModules : fallbackModules) as string[]));
+    const disabledModules = allKnownModules.filter(module => !enabledModules.includes(module));
 
     const allModuleRecords = [
       ...enabledModules.map(module => ({

@@ -2,6 +2,9 @@ import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useFloatingChat } from "@/contexts/FloatingChatContext";
+import { toast } from "@/hooks/use-toast";
+import { MessageCircle } from "lucide-react";
 
 /**
  * Unified WhatsApp Realtime Bus.
@@ -19,7 +22,18 @@ import { useAuth } from "@/contexts/AuthContext";
 export function WhatsAppRealtimeBus() {
   const queryClient = useQueryClient();
   const { profile } = useAuth();
+  const { state: floatingChatState, openConversation } = useFloatingChat();
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const floatingChatStateRef = useRef(floatingChatState);
+  const openConversationRef = useRef(openConversation);
+
+  useEffect(() => {
+    floatingChatStateRef.current = floatingChatState;
+  }, [floatingChatState]);
+
+  useEffect(() => {
+    openConversationRef.current = openConversation;
+  }, [openConversation]);
 
   useEffect(() => {
     if (!profile?.organization_id) return;
@@ -32,6 +46,53 @@ export function WhatsAppRealtimeBus() {
         queryClient.invalidateQueries({ queryKey: ["whatsapp-conversations"] });
         debounceRef.current = null;
       }, 800);
+    };
+
+    const signMessageMediaUrl = async (msg: any) => {
+      if (!msg?.media_storage_path) return msg;
+
+      const { data, error } = await supabase.storage
+        .from("whatsapp-media")
+        .createSignedUrl(msg.media_storage_path, 60 * 60);
+
+      if (error || !data?.signedUrl) {
+        console.warn("[WhatsAppRealtimeBus] Could not sign media URL", {
+          messageId: msg.id,
+          storagePath: msg.media_storage_path,
+          error,
+        });
+        return msg;
+      }
+
+      return { ...msg, media_url: data.signedUrl };
+    };
+
+    const getWhatsAppPreview = (msg: any, displayName: string) => {
+      const type = String(msg?.message_type || "text").toLowerCase();
+      if (type === "audio") return `${displayName} te enviou um audio`;
+      if (type === "image" || type === "sticker") return `${displayName} te enviou uma imagem`;
+      if (type === "video") return `${displayName} te enviou um video`;
+      if (type === "document") return `${displayName} te enviou um arquivo`;
+      return msg?.content || `${displayName} te enviou uma mensagem`;
+    };
+
+    const findCachedConversation = (conversationId: string) =>
+      queryClient
+        .getQueriesData({ queryKey: ["whatsapp-conversations"] })
+        .flatMap(([, data]) => (Array.isArray(data) ? data : []))
+        .find((c: any) => c?.id === conversationId);
+
+    const fetchConversationForNotification = async (conversationId: string) => {
+      const cached = findCachedConversation(conversationId);
+      if (cached?.lead || cached?.contact_name) return cached;
+
+      const { data } = await supabase
+        .from("whatsapp_conversations")
+        .select("*, lead:leads!whatsapp_conversations_lead_id_fkey(id, name, whatsapp_avatar_url)")
+        .eq("id", conversationId)
+        .maybeSingle();
+
+      return data || cached;
     };
 
     // Sound is handled by use-notifications via the notifications table.
@@ -114,7 +175,7 @@ export function WhatsAppRealtimeBus() {
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "whatsapp_messages" },
         async (payload) => {
-          const msg = payload.new as any;
+          const msg = await signMessageMediaUrl(payload.new as any);
           if (!msg?.conversation_id) return;
 
           // Fan-out: paginated cache for the active conversation
@@ -143,13 +204,50 @@ export function WhatsAppRealtimeBus() {
           debouncedInvalidateConversations();
 
           // Lead messages cache — invalidate by conversation->lead lookup
-          const conv = queryClient
-            .getQueriesData({ queryKey: ["whatsapp-conversations"] })
-            .flatMap(([, data]) => (Array.isArray(data) ? data : []))
-            .find((c: any) => c?.id === msg.conversation_id);
+          const conv = await fetchConversationForNotification(msg.conversation_id);
+
+          if (!msg.from_me) {
+            const floating = floatingChatStateRef.current;
+            const isSameFloatingConversation =
+              floating.isOpen &&
+              !floating.isMinimized &&
+              floating.activeConversation?.id === msg.conversation_id;
+
+            if (!isSameFloatingConversation) {
+              const displayName =
+                conv?.lead?.name ||
+                (conv?.contact_name && conv.contact_name !== conv.contact_phone ? conv.contact_name : null) ||
+                "Nova mensagem";
+              const preview = getWhatsAppPreview(msg, displayName);
+
+              toast({
+                title: <span className="block max-w-[250px] truncate">{displayName}</span>,
+                description: <span className="line-clamp-2">{preview}</span>,
+                duration: 4200,
+                className: "border-0 bg-background/92 p-4 pr-8 shadow-2xl backdrop-blur-xl",
+                action: conv ? (
+                  <button
+                    type="button"
+                    className="inline-flex h-8 items-center gap-1.5 rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground hover:bg-primary/90"
+                    onClick={() => openConversationRef.current(conv)}
+                  >
+                    <MessageCircle className="h-3.5 w-3.5" />
+                    Abrir
+                  </button>
+                ) : undefined,
+              });
+            }
+          }
+
           if (conv?.lead_id) {
             queryClient.invalidateQueries({
               queryKey: ["lead-messages", conv.lead_id],
+            });
+            queryClient.invalidateQueries({
+              predicate: (q) =>
+                Array.isArray(q.queryKey) &&
+                q.queryKey[0] === "whatsapp-messages" &&
+                q.queryKey.includes(conv.lead_id),
             });
           }
         },
@@ -157,8 +255,8 @@ export function WhatsAppRealtimeBus() {
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "whatsapp_messages" },
-        (payload) => {
-          const msg = payload.new as any;
+        async (payload) => {
+          const msg = await signMessageMediaUrl(payload.new as any);
           if (!msg?.conversation_id) return;
           updateInPaginated(msg.conversation_id, msg);
           updateLegacyCache(msg.conversation_id, (msgs) => {
@@ -170,6 +268,22 @@ export function WhatsAppRealtimeBus() {
                 : m,
             );
           });
+
+          const conv = queryClient
+            .getQueriesData({ queryKey: ["whatsapp-conversations"] })
+            .flatMap(([, data]) => (Array.isArray(data) ? data : []))
+            .find((c: any) => c?.id === msg.conversation_id);
+          if (conv?.lead_id) {
+            queryClient.invalidateQueries({
+              queryKey: ["lead-messages", conv.lead_id],
+            });
+            queryClient.invalidateQueries({
+              predicate: (q) =>
+                Array.isArray(q.queryKey) &&
+                q.queryKey[0] === "whatsapp-messages" &&
+                q.queryKey.includes(conv.lead_id),
+            });
+          }
         },
       )
       .on(

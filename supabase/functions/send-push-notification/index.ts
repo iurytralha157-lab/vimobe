@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import webpush from "https://esm.sh/web-push";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -26,7 +27,10 @@ interface WebPushSubscription {
 // Importa a chave privada VAPID
 function getVapidKeys() {
   const privateKey = Deno.env.get("VAPID_PRIVATE_KEY");
-  const publicKey = Deno.env.get("VITE_VAPID_PUBLIC_KEY") || "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEWjUfBw5nc02KFFL6pr1jM51bHv0CllEuy5ypnldeYLMhYSbQbKlWHK7T9VK1CF2xVgH_9HOc3tavj0iuT1mEzA";
+  const publicKey =
+    Deno.env.get("VAPID_PUBLIC_KEY") ||
+    Deno.env.get("VITE_VAPID_PUBLIC_KEY") ||
+    "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEWjUfBw5nc02KFFL6pr1jM51bHv0CllEuy5ypnldeYLMhYSbQbKlWHK7T9VK1CF2xVgH_9HOc3tavj0iuT1mEzA";
   
   if (!privateKey) {
     throw new Error("VAPID_PRIVATE_KEY not configured");
@@ -64,7 +68,7 @@ function base64UrlDecode(str: string): Uint8Array {
 // Parse PEM private key
 function parsePrivateKey(pem: string): Uint8Array {
   // Remove PEM headers if present
-  let keyData = pem
+  const keyData = pem
     .replace(/-----BEGIN (EC )?PRIVATE KEY-----/g, '')
     .replace(/-----END (EC )?PRIVATE KEY-----/g, '')
     .replace(/\s/g, '');
@@ -134,18 +138,7 @@ async function sendWebPushNotification(
   try {
     const subscription: WebPushSubscription = JSON.parse(subscriptionJson);
     const { privateKey, publicKey } = getVapidKeys();
-    
-    // Ensure we use the raw uncompressed public key (65 bytes) for the header
-    const rawPublicKey = getRawPublicKey(publicKey);
 
-    // Extract audience from endpoint
-    const endpointUrl = new URL(subscription.endpoint);
-    const audience = `${endpointUrl.protocol}//${endpointUrl.host}`;
-
-    // Create VAPID JWT
-    const jwt = await createVapidJwt(audience, "mailto:suporte@vimob.com.br", privateKey);
-
-    // Prepare payload
     const payload = JSON.stringify({
       title,
       body,
@@ -156,37 +149,27 @@ async function sendWebPushNotification(
 
     console.log(`[WebPush] Sending to endpoint: ${subscription.endpoint.substring(0, 50)}...`);
 
-    // Send the push message
-    const response = await fetch(subscription.endpoint, {
-      method: "POST",
-      headers: {
-        "Authorization": `vapid t=${jwt}, k=${rawPublicKey}`,
-        "Content-Type": "application/octet-stream",
-        "Content-Encoding": "aes128gcm",
-        "TTL": priority === 'high' ? "86400" : "3600",
-        "Urgency": priority === 'high' ? "high" : "normal",
-      },
-      body: new TextEncoder().encode(payload),
+    webpush.setVapidDetails(
+      Deno.env.get("VAPID_MAILTO") || "mailto:suporte@vimob.com.br",
+      publicKey,
+      privateKey
+    );
+
+    await webpush.sendNotification(subscription, payload, {
+      TTL: priority === 'high' ? 86400 : 3600,
+      urgency: priority === 'high' ? "high" : "normal",
     });
 
-    if (response.status === 201 || response.status === 200) {
-      console.log("[WebPush] Sent successfully");
-      return { success: true };
-    }
+    console.log("[WebPush] Sent successfully");
+    return { success: true };
 
-    // Handle specific error codes
-    if (response.status === 404 || response.status === 410) {
+  } catch (error: any) {
+    if (error?.statusCode === 404 || error?.statusCode === 410) {
       console.log("[WebPush] Subscription expired/invalid");
       return { success: false, error: "invalid_token" };
     }
-
-    const errorText = await response.text();
-    console.error(`[WebPush] Error ${response.status}:`, errorText);
-    return { success: false, error: `HTTP ${response.status}: ${errorText}` };
-
-  } catch (error) {
     console.error("[WebPush] Error:", error);
-    return { success: false, error: String(error) };
+    return { success: false, error: error?.body || error?.message || String(error) };
   }
 }
 

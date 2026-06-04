@@ -63,9 +63,38 @@ Deno.serve(async (req) => {
     let result;
 
     switch (action) {
-      case 'create':
+      case 'create': {
         // Check if user already exists
         const { email, password, name, organization_id, role } = data;
+
+        if (!organization_id) {
+          throw new Error('Organizacao e obrigatoria para criar usuario');
+        }
+
+        const { data: orgLimit, error: orgLimitError } = await supabaseAdmin
+          .from('organizations')
+          .select('max_users')
+          .eq('id', organization_id)
+          .single();
+
+        if (orgLimitError) {
+          throw new Error(`Falha ao verificar limite da organizacao: ${orgLimitError.message}`);
+        }
+
+        const { count: activeUsersCount, error: activeUsersError } = await supabaseAdmin
+          .from('organization_members')
+          .select('id', { count: 'exact', head: true })
+          .eq('organization_id', organization_id)
+          .eq('is_active', true);
+
+        if (activeUsersError) {
+          throw new Error(`Falha ao verificar usuarios ativos: ${activeUsersError.message}`);
+        }
+
+        const maxUsers = Number(orgLimit?.max_users || 0);
+        if (maxUsers > 0 && (activeUsersCount || 0) >= maxUsers) {
+          throw new Error(`Limite do plano atingido: maximo de ${maxUsers} usuarios.`);
+        }
         
         // Use listUsers to find by email
         const { data: { users: existingUsers }, error: listError } = await supabaseAdmin.auth.admin.listUsers();
@@ -127,8 +156,9 @@ Deno.serve(async (req) => {
           result = { success: true, message: 'User created successfully', user: createData.user };
         }
         break;
+      }
 
-      case 'delete':
+      case 'delete': {
         // Delete user from auth.users (cascades to public.users and user_roles)
         const { error: deleteAuthError } = await supabaseAdmin.auth.admin.deleteUser(userId);
         if (deleteAuthError) {
@@ -136,8 +166,9 @@ Deno.serve(async (req) => {
         }
         result = { success: true, message: 'User deleted successfully' };
         break;
+      }
 
-      case 'update':
+      case 'update': {
         if (!userId) {
           throw new Error('User ID is required for update action');
         }
@@ -176,8 +207,9 @@ Deno.serve(async (req) => {
 
         result = { success: true, message: 'Usuário atualizado com sucesso' };
         break;
+      }
 
-      case 'reset_password':
+      case 'reset_password': {
         // Reset user password via admin API
         const { password: newPassword } = data;
         if (!newPassword) {
@@ -191,6 +223,7 @@ Deno.serve(async (req) => {
         }
         result = { success: true, message: 'Password reset successfully' };
         break;
+      }
 
       default:
         throw new Error(`Unknown action: ${action}`);

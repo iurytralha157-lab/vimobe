@@ -37,6 +37,22 @@ export function parsePhoneInput(phone: string): { countryCode: string; ddd: stri
   if (!phone) return { countryCode: '55', ddd: '', number: '' };
   
   const cleaned = phone.replace(/\D/g, '');
+
+  if (cleaned.startsWith('55') && (cleaned.length === 12 || cleaned.length === 13)) {
+    return {
+      countryCode: '55',
+      ddd: cleaned.slice(2, 4),
+      number: cleaned.slice(4),
+    };
+  }
+
+  if (cleaned.length === 10 || cleaned.length === 11) {
+    return {
+      countryCode: '55',
+      ddd: cleaned.slice(0, 2),
+      number: cleaned.slice(2),
+    };
+  }
   
   // Try to match country codes (sorted by length descending to match longer codes first)
   const sortedCountries = [...countries].sort((a, b) => b.code.length - a.code.length);
@@ -68,15 +84,6 @@ export function parsePhoneInput(phone: string): { countryCode: string; ddd: stri
     }
   }
   
-  // Default: assume Brazilian format without country code
-  if (cleaned.length >= 10) {
-    return {
-      countryCode: '55',
-      ddd: cleaned.slice(0, 2),
-      number: cleaned.slice(2),
-    };
-  }
-  
   return { countryCode: '55', ddd: '', number: cleaned };
 }
 
@@ -88,7 +95,7 @@ export function formatPhoneFromParts(countryCode: string, ddd: string, number: s
   const cleanDdd = ddd.replace(/\D/g, '');
   const cleanNumber = number.replace(/\D/g, '');
   
-  if (!cleanNumber) return '';
+  if (!cleanDdd && !cleanNumber) return '';
   
   return `${cleanCountry}${cleanDdd}${cleanNumber}`;
 }
@@ -127,7 +134,7 @@ export function normalizePhone(phone: string): string {
  */
 export function formatPhoneForWhatsApp(phone: string): string {
   // Remove all non-digit characters
-  let cleaned = phone.replace(/\D/g, "");
+  const cleaned = phone.replace(/\D/g, "");
   
   // If empty, return as is
   if (!cleaned) return cleaned;
@@ -161,6 +168,20 @@ export function formatPhoneForWhatsApp(phone: string): string {
   
   // For any other length, return as is
   return cleaned;
+}
+
+export function isValidWhatsAppPhone(phone?: string | null): boolean {
+  if (!phone) return false;
+
+  const digits = formatPhoneForWhatsApp(phone).replace(/\D/g, '');
+
+  if (!digits) return false;
+
+  if (digits.startsWith('55')) {
+    return digits.length === 12 || digits.length === 13;
+  }
+
+  return digits.length >= 10 && digits.length <= 15;
 }
 
 /**

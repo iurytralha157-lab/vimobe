@@ -23,6 +23,8 @@ export interface RoundRobinMember {
 export interface RoundRobin {
   id: string;
   organization_id: string;
+  created_by?: string | null;
+  created_by_user?: { id: string; name: string | null; email: string | null } | null;
   name: string;
   is_active: boolean | null;
   last_assigned_index: number | null;
@@ -36,6 +38,9 @@ export interface RoundRobin {
   ai_agent_id: string | null;
   settings: {
     enable_redistribution?: boolean;
+    redistribution_timeout_minutes?: number;
+    redistribution_warning_minutes?: number;
+    redistribution_max_attempts?: number;
     preserve_position?: boolean;
     require_checkin?: boolean;
     reentry_behavior?: 'redistribute' | 'keep_assignee';
@@ -70,6 +75,7 @@ export function useRoundRobins() {
       if (error) throw error;
       
       const rrIds = (roundRobins || []).map(rr => rr.id);
+      const creatorIds = [...new Set((roundRobins || []).map((rr: any) => rr.created_by).filter(Boolean))];
       
       // Get rules
       const { data: rules } = await supabase
@@ -89,6 +95,13 @@ export function useRoundRobins() {
         .from('assignments_log')
         .select('round_robin_id, assigned_user_id')
         .in('round_robin_id', rrIds.length > 0 ? rrIds : ['no-rr']);
+
+      const { data: creators } = creatorIds.length > 0
+        ? await supabase
+            .from('users')
+            .select('id, name, email')
+            .in('id', creatorIds)
+        : { data: [] };
       
       // Count by round robin
       const countsByRR = (assignments || []).reduce((acc, a) => {
@@ -124,9 +137,16 @@ export function useRoundRobins() {
         } as RoundRobinMember);
         return acc;
       }, {} as Record<string, RoundRobinMember[]>);
+
+      const creatorsById = (creators || []).reduce((acc, user) => {
+        acc[user.id] = user;
+        return acc;
+      }, {} as Record<string, { id: string; name: string | null; email: string | null }>);
       
       return (roundRobins || []).map(rr => ({
         ...rr,
+        created_by: (rr as any).created_by || null,
+        created_by_user: (rr as any).created_by ? creatorsById[(rr as any).created_by] || null : null,
         strategy: (rr as any).strategy || 'simple',
         leads_distributed: countsByRR[rr.id] || (rr as any).leads_distributed || 0,
         target_pipeline_id: (rr as any).target_pipeline_id || null,

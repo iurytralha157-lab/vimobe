@@ -50,9 +50,27 @@ export function PropertyCard({
 }: PropertyCardProps) {
   const isSold = property.status === 'vendido';
   const isPublic = property.status !== 'privado';
+  const propertyType = (property.tipo_de_imovel || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const isLand = propertyType === 'terreno' || propertyType === 'lote';
+  const displayArea = isLand ? property.area_total : (property.area_util || property.area_total);
+  const dealType = (property.tipo_de_negocio || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const displayPrice = dealType === 'aluguel' || dealType === 'locacao' || dealType === 'temporada'
+    ? property.valor_locacao || property.preco
+    : property.preco;
   
   return (
-    <Card className="overflow-hidden card-hover group">
+    <Card
+      className="overflow-hidden card-hover group cursor-pointer"
+      role="button"
+      tabIndex={0}
+      onClick={() => onPreview(property)}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onPreview(property);
+        }
+      }}
+    >
       <div className="aspect-[4/3] bg-muted relative">
         {property.imagem_principal ? (
           <img src={property.imagem_principal} alt={property.title || ''} className="w-full h-full object-cover" />
@@ -75,15 +93,20 @@ export function PropertyCard({
         )}
         
         {/* Top left badges */}
-        <div className="absolute top-2 left-2 flex flex-col gap-1">
+        <div className="absolute top-0 left-0 flex flex-col items-start gap-1">
+          {property.code && (
+            <div className="rounded-br-md bg-primary px-4 py-2 font-mono text-xs font-semibold text-primary-foreground shadow-sm">
+              {property.code}
+            </div>
+          )}
           {property.destaque && (
-            <Badge className="bg-warning text-warning-foreground">
+            <Badge className="ml-2 bg-warning text-warning-foreground">
               <Star className="h-3 w-3 mr-1" />
               Destaque
             </Badge>
           )}
           {!isPublic && (
-            <Badge variant="secondary" className="bg-muted/90 text-muted-foreground">
+            <Badge variant="secondary" className="ml-2 bg-muted/90 text-muted-foreground">
               <Lock className="h-3 w-3 mr-1" />
               Privado
             </Badge>
@@ -92,11 +115,6 @@ export function PropertyCard({
         
         {/* Top right badges */}
         <div className="absolute top-2 right-2 flex gap-1">
-          <Badge 
-            variant={property.tipo_de_negocio === 'Venda' ? 'default' : 'secondary'}
-          >
-            {property.tipo_de_negocio}
-          </Badge>
           {property.status === 'inativo' && (
             <Badge variant="outline" className="bg-background">Inativo</Badge>
           )}
@@ -114,16 +132,21 @@ export function PropertyCard({
       </div>
       <CardContent className="p-4">
         <div className="flex items-start justify-between mb-2">
-          <Badge variant="outline" className="font-mono text-xs">
-            {property.code}
+          <Badge variant={property.tipo_de_negocio === 'Venda' ? 'default' : 'secondary'}>
+            {property.tipo_de_negocio}
           </Badge>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-6 w-6">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6"
+                onClick={(event) => event.stopPropagation()}
+              >
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent align="end" onClick={(event) => event.stopPropagation()}>
               <DropdownMenuItem onClick={() => onPreview(property)}>
                 <Eye className="h-4 w-4 mr-2" />
                 Visualizar
@@ -202,16 +225,16 @@ export function PropertyCard({
               <span>{property.vagas}</span>
             </div>
           )}
-          {property.area_util != null && property.area_util > 0 && (
+          {displayArea != null && displayArea > 0 && (
             <div className="flex items-center gap-1">
               <Ruler className="h-3 w-3" />
-              <span>{property.area_util}m²</span>
+              <span>{displayArea}m²{isLand ? ' total' : ''}</span>
             </div>
           )}
         </div>
 
         <p className={`text-lg font-bold ${isSold ? 'text-muted-foreground line-through' : 'text-primary'}`}>
-          {formatPrice(property.preco, property.tipo_de_negocio)}
+          {formatPrice(displayPrice, property.tipo_de_negocio)}
         </p>
       </CardContent>
     </Card>

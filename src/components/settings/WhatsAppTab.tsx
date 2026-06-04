@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+﻿import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -16,22 +16,15 @@ import {
   Plus,
   Smartphone,
   QrCode,
-  Trash2,
   LogOut,
   Users,
   RefreshCw,
+  Trash2,
   CheckCircle,
   XCircle,
   Loader2,
-  Bell,
-  History,
-  Tag,
-  UsersRound,
-  ImageIcon } from
+  Bell } from
 "lucide-react";
-import { LabelsManagerSheet } from "@/components/whatsapp/LabelsManagerSheet";
-import { GroupsManagerSheet } from "@/components/whatsapp/GroupsManagerSheet";
-import { useHistorySync, useSyncContactsAvatars } from "@/hooks/use-whatsapp-contacts";
 import {
   useWhatsAppSessions,
   useCreateWhatsAppSession,
@@ -44,7 +37,7 @@ import {
   useRevokeSessionAccess,
   useToggleNotificationSession,
   WhatsAppSession,
-  EVOLUTION_GO_CREATION_ENABLED } from
+  WHATSAPP_LEGACY_EVOLUTION_ENABLED } from
   "@/hooks/use-whatsapp-sessions";
 import { useOrganizationUsers } from "@/hooks/use-users";
 import { useAuth } from "@/contexts/AuthContext";
@@ -63,21 +56,16 @@ export function WhatsAppTab() {
   const getConnectionStatus = useGetConnectionStatus();
   const logoutSession = useLogoutSession();
   const toggleNotification = useToggleNotificationSession();
-  const historySync = useHistorySync();
-  const syncAvatars = useSyncContactsAvatars();
   const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin';
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [qrDialogOpen, setQrDialogOpen] = useState(false);
   const [accessDialogOpen, setAccessDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [instanceName, setInstanceName] = useState("");
-  const [newProvider, setNewProvider] = useState<"evolution" | "evolution_go">(EVOLUTION_GO_CREATION_ENABLED ? "evolution_go" : "evolution");
   const [selectedSession, setSelectedSession] = useState<WhatsAppSession | null>(null);
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [isRefreshingQr, setIsRefreshingQr] = useState(false);
   const [verifyingSessionId, setVerifyingSessionId] = useState<string | null>(null);
-  const [labelsSession, setLabelsSession] = useState<WhatsAppSession | null>(null);
-  const [groupsSession, setGroupsSession] = useState<WhatsAppSession | null>(null);
 
   // Refs para evitar stale closures no polling
   const selectedSessionRef = useRef(selectedSession);
@@ -88,16 +76,17 @@ export function WhatsAppTab() {
     qrDialogOpenRef.current = qrDialogOpen;
   }, [selectedSession, qrDialogOpen]);
 
-  // Função de check separada para usar no polling
+  // Funcao de check separada para usar no polling
   const checkConnection = useCallback(async (session: WhatsAppSession): Promise<boolean | null> => {
     try {
       const isGo = session.provider === "evolution_go";
+      if (!isGo) {
+        return false;
+      }
       const { data, error } = await supabase.functions.invoke(
-        isGo ? "evolution-go-proxy" : "evolution-proxy",
+        "evolution-go-proxy",
         {
-          body: isGo
-            ? { action: "instance.status", session_id: session.id, instance_id: session.instance_id ?? undefined }
-            : { action: "getConnectionStatus", instanceName: session.instance_name },
+          body: { action: "instance.status", session_id: session.id, instance_id: session.instance_id ?? undefined },
         },
       );
 
@@ -149,31 +138,7 @@ export function WhatsAppTab() {
   }, []);
 
 
-  // Verificar conexão manualmente
-  const handleVerifyConnection = async (session: WhatsAppSession) => {
-    setVerifyingSessionId(session.id);
-
-    try {
-      // Direct call to ensure we get the latest status
-      const isConnected = await checkConnection(session);
-
-      if (isConnected === true) {
-        toast({ title: "✅ Conectado!", description: "WhatsApp está online" });
-      } else if (isConnected === false) {
-        toast({ title: "⚠️ Desconectado", description: "WhatsApp não está conectado" });
-      } else {
-        toast({ title: "⚠️ Não foi possível verificar", description: "Tente novamente em alguns segundos" });
-      }
-
-      queryClient.invalidateQueries({ queryKey: ["whatsapp-sessions"] });
-    } catch (error) {
-      console.error("Error verifying connection:", error);
-      toast({ title: "Erro", description: "Não foi possível verificar a conexão", variant: "destructive" });
-    } finally {
-      setVerifyingSessionId(null);
-    }
-  };
-  // Polling para verificar conexão automaticamente quando o QR dialog está aberto
+  // Polling para verificar conexao automaticamente quando o QR dialog esta aberto
   useEffect(() => {
     if (!qrDialogOpen || !selectedSession) return;
 
@@ -197,7 +162,7 @@ export function WhatsAppTab() {
     return () => clearInterval(pollInterval);
   }, [qrDialogOpen, selectedSession?.id, checkConnection, queryClient]);
 
-  // Fechar o diálogo de QR Code automaticamente se o status mudar para conectado (via Realtime)
+  // Fechar o dialogo de QR Code automaticamente se o status mudar para conectado (via Realtime)
   useEffect(() => {
     if (qrDialogOpen && selectedSession) {
       const currentSession = sessions?.find(s => s.id === selectedSession.id);
@@ -218,7 +183,7 @@ export function WhatsAppTab() {
     try {
       const result = await createSession.mutateAsync({
         displayName: instanceName.trim(),
-        provider: newProvider,
+        provider: "evolution_go",
       });
       setCreateDialogOpen(false);
       setInstanceName("");
@@ -236,6 +201,9 @@ export function WhatsAppTab() {
     setIsRefreshingQr(true);
     try {
       const isGo = session.provider === "evolution_go";
+      if (!isGo) {
+        throw new Error("Evolution legada esta desativada. Crie uma nova conexao Evolution Go.");
+      }
       
       let lastQr = null;
       let attempt = 0;
@@ -248,16 +216,12 @@ export function WhatsAppTab() {
         }
 
         
-        const data = await getQRCode.mutateAsync(
-          isGo
-            ? {
-                provider: "evolution_go",
-                instanceName: session.instance_name,
-                sessionId: session.id,
-                instanceId: session.instance_id,
-              }
-            : session.instance_name,
-        );
+        const data = await getQRCode.mutateAsync({
+          provider: "evolution_go",
+          instanceName: session.instance_name,
+          sessionId: session.id,
+          instanceId: session.instance_id,
+        });
         
         lastQr = (data as any)?.qrcode || (data as any)?.base64;
         attempt++;
@@ -273,7 +237,7 @@ export function WhatsAppTab() {
         }
       } else {
         toast({ 
-          title: "Atenção", 
+          title: "Atenção",
           description: "O QR Code ainda não está pronto. Clique em Atualizar em alguns instantes.",
           variant: "default" 
         });
@@ -290,16 +254,15 @@ export function WhatsAppTab() {
   const checkConnectionStatus = async (session: WhatsAppSession) => {
     try {
       const isGo = session.provider === "evolution_go";
-      const data = await getConnectionStatus.mutateAsync(
-        isGo
-          ? {
-              provider: "evolution_go",
-              instanceName: session.instance_name,
-              sessionId: session.id,
-              instanceId: session.instance_id,
-            }
-          : session.instance_name,
-      );
+      if (!isGo) {
+        throw new Error("Evolution legada esta desativada. Crie uma nova conexao Evolution Go.");
+      }
+      const data = await getConnectionStatus.mutateAsync({
+        provider: "evolution_go",
+        instanceName: session.instance_name,
+        sessionId: session.id,
+        instanceId: session.instance_id,
+      });
       if (data?.state === "open" || data?.connected === true) {
         toast({ title: "Conectado!", description: "WhatsApp conectado com sucesso" });
         setQrDialogOpen(false);
@@ -325,14 +288,15 @@ export function WhatsAppTab() {
               action: "instance.connect",
               session_id: session.id,
               instance_id: session.instance_id ?? undefined,
-              body: { webhookUrl, subscribe: ["ALL"], immediate: true },
+              body: {
+                webhookUrl: `${webhookUrl}?session_id=${session.id}&instance_id=${session.instance_id ?? ""}`,
+                subscribe: ["ALL"],
+                immediate: true,
+              },
             },
           });
         } else {
-          // Recreate or Ensure instance exists for standard provider
-          await supabase.functions.invoke("evolution-proxy", {
-            body: { action: "createInstance", instanceName: session.instance_name },
-          });
+          throw new Error("Evolution legada esta desativada. Crie uma nova conexao Evolution Go.");
         }
         // Small delay to allow instance to boot
         await new Promise(r => setTimeout(r, 3000));
@@ -348,6 +312,29 @@ export function WhatsAppTab() {
   const handleOpenAccessDialog = (session: WhatsAppSession) => {
     setSelectedSession(session);
     setAccessDialogOpen(true);
+  };
+
+  const handleVerifyConnection = async (session: WhatsAppSession) => {
+    setVerifyingSessionId(session.id);
+    try {
+      const connected = await checkConnection(session);
+      if (connected) {
+        toast({ title: "Conectado", description: "WhatsApp está online." });
+      } else {
+        toast({ title: "Desconectado", description: "Essa conexão ainda não está online.", variant: "destructive" });
+      }
+      queryClient.invalidateQueries({ queryKey: ["whatsapp-sessions"] });
+    } catch (error) {
+      console.error("Error verifying WhatsApp connection:", error);
+      toast({ title: "Erro", description: "Não foi possível verificar a conexão.", variant: "destructive" });
+    } finally {
+      setVerifyingSessionId(null);
+    }
+  };
+
+  const handleOpenDeleteDialog = (session: WhatsAppSession) => {
+    setSelectedSession(session);
+    setDeleteDialogOpen(true);
   };
 
   const handleDeleteSession = async () => {
@@ -388,7 +375,7 @@ export function WhatsAppTab() {
               Conexões WhatsApp
             </CardTitle>
             <CardDescription className="text-xs sm:text-sm mt-0.5">
-              Gerencie suas conexões via Evolution API
+              Gerencie suas conexões via Evolution Go
             </CardDescription>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -440,7 +427,7 @@ export function WhatsAppTab() {
                     <div className="shrink-0">{getStatusBadge(session.status)}</div>
                   </div>
 
-                  {/* Row 2: Responsável + notificação toggle */}
+                  {/* Row 2: Responsavel + notificacao toggle */}
                   <div className="flex items-center justify-between gap-2 py-1.5 border-y border-border/50">
                     <div className="flex items-center gap-1.5 min-w-0 flex-1">
                       {(session as any).is_notification_session &&
@@ -450,7 +437,7 @@ export function WhatsAppTab() {
                         </Badge>
                   }
                       <span className="text-xs text-muted-foreground truncate">
-                        {session.owner?.name || "—"}
+                        {session.owner?.name || "-"}
                       </span>
                     </div>
                     {isAdmin &&
@@ -475,104 +462,45 @@ export function WhatsAppTab() {
                       </TooltipProvider>
                 }
                   </div>
-
                   {/* Row 3: Action buttons */}
-                  <div className="flex items-center gap-1.5">
-                    {session.status !== "connected" ?
-                <Button variant="outline" size="sm" className="flex-1 h-8 text-xs px-2 min-w-0" onClick={() => handleOpenQRDialog(session)}>
-                        <QrCode className="w-3.5 h-3.5 mr-1 shrink-0" />
-                        QR Code
-                      </Button> :
-
-                <Button variant="outline" size="sm" className="flex-1 h-8 text-xs px-2 min-w-0" onClick={() => handleLogout(session)}>
-                        <LogOut className="w-3.5 h-3.5 mr-1 shrink-0" />
+                  <div className="flex items-center justify-end gap-2">
+                    <Button variant="outline" size="sm" className="h-8 gap-1.5 px-3 text-xs" onClick={() => handleOpenAccessDialog(session)}>
+                      <Users className="w-3.5 h-3.5" />
+                      Usuários
+                    </Button>
+                    {session.status !== "connected" ? (
+                      <>
+                        <Button variant="outline" size="sm" className="h-8 gap-1.5 px-3 text-xs" onClick={() => handleOpenQRDialog(session)}>
+                          <QrCode className="w-3.5 h-3.5" />
+                          QR Code
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                          onClick={() => handleVerifyConnection(session)}
+                          disabled={verifyingSessionId === session.id}
+                          aria-label="Verificar conexão"
+                        >
+                          <RefreshCw className={`w-3.5 h-3.5 ${verifyingSessionId === session.id ? "animate-spin" : ""}`} />
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                          onClick={() => handleOpenDeleteDialog(session)}
+                          aria-label="Apagar conexão"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </>
+                    ) : (
+                      <Button variant="destructive" size="sm" className="h-8 gap-1.5 px-3 text-xs" onClick={() => handleLogout(session)}>
+                        <LogOut className="w-3.5 h-3.5" />
                         Desconectar
                       </Button>
-                }
-                    <Button variant="outline" size="sm" className="flex-1 h-8 text-xs px-2 min-w-0" onClick={() => handleVerifyConnection(session)} disabled={verifyingSessionId === session.id}>
-                      <RefreshCw className={`w-3.5 h-3.5 mr-1 shrink-0 ${verifyingSessionId === session.id ? "animate-spin" : ""}`} />
-                      Verificar
-                    </Button>
-                    <Button variant="outline" size="sm" className="h-8 w-8 p-0 shrink-0" onClick={() => handleOpenAccessDialog(session)}>
-                      <Users className="w-3.5 h-3.5" />
-                    </Button>
-                    {(session as any).provider === "evolution_go" && session.status === "connected" && (
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-8 w-8 p-0 shrink-0"
-                              disabled={historySync.isPending}
-                              onClick={() => {
-                                historySync.mutate({ sessionId: session.id }, {
-                                  onSuccess: () => toast({ title: "Sincronização iniciada", description: "O histórico será carregado em background." }),
-                                  onError: (e: any) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
-                                });
-                              }}
-                            >
-                              {historySync.isPending && historySync.variables?.sessionId === session.id
-                                ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                : <History className="w-3.5 h-3.5" />}
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Sincronizar histórico de conversas</TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
                     )}
-                    {(session as any).provider === "evolution_go" && session.status === "connected" && (
-                      <>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button variant="outline" size="sm" className="h-8 w-8 p-0 shrink-0" onClick={() => setLabelsSession(session)}>
-                                <Tag className="w-3.5 h-3.5" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>Etiquetas</TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button variant="outline" size="sm" className="h-8 w-8 p-0 shrink-0" onClick={() => setGroupsSession(session)}>
-                                <UsersRound className="w-3.5 h-3.5" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>Grupos</TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="h-8 w-8 p-0 shrink-0"
-                                disabled={syncAvatars.isPending}
-                                onClick={() => {
-                                  syncAvatars.mutate(session.id, {
-                                    onSuccess: (d: any) => toast({ title: "Avatares sincronizados", description: `${d?.updated || 0} contatos atualizados` }),
-                                    onError: (e: any) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
-                                  });
-                                }}
-                              >
-                                {syncAvatars.isPending && syncAvatars.variables === session.id
-                                  ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                  : <ImageIcon className="w-3.5 h-3.5" />}
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>Sincronizar avatares</TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </>
-                    )}
-                    <Button variant="outline" size="sm" className="h-8 w-8 p-0 shrink-0 text-destructive hover:text-destructive" onClick={() => {setSelectedSession(session);setDeleteDialogOpen(true);}}>
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </Button>
-                  </div>
-                </CardContent>
+                  </div></CardContent>
               </Card>
           )}
           </div>
@@ -588,23 +516,18 @@ export function WhatsAppTab() {
               </SheetDescription>
             </SheetHeader>
             <div className="space-y-4 py-4">
-              {EVOLUTION_GO_CREATION_ENABLED && (
-                <div className="space-y-2">
+              <div className="space-y-2">
                   <Label>Provedor</Label>
-                  <Select value={newProvider} onValueChange={(v) => setNewProvider(v as any)}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="evolution_go">Evolution Go (Novo, recomendado)</SelectItem>
-                      <SelectItem value="evolution">Evolution (Legado)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground">
-                    Evolution Go é a nova versão em Go, mais rápida e estável. Use para conexões novas.
-                  </p>
-                </div>
-              )}
+                  <div className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm">
+                    <Badge variant="secondary">Evolution Go</Badge>
+                    <span className="text-muted-foreground">Novas conexoes usam apenas Evo Go.</span>
+                  </div>
+                  {!WHATSAPP_LEGACY_EVOLUTION_ENABLED && (
+                    <p className="text-xs text-muted-foreground">
+                      Evolution legada esta desativada para novas conexoes.
+                    </p>
+                  )}
+              </div>
               <div className="space-y-2">
                 <Label>Nome da Instância</Label>
                 <Input
@@ -682,29 +605,13 @@ export function WhatsAppTab() {
           session={selectedSession}
           users={users || []} />
 
-
-        <LabelsManagerSheet
-          open={!!labelsSession}
-          onOpenChange={(o) => !o && setLabelsSession(null)}
-          sessionId={labelsSession?.id || null}
-          sessionName={labelsSession?.display_name || labelsSession?.instance_name}
-        />
-
-        <GroupsManagerSheet
-          open={!!groupsSession}
-          onOpenChange={(o) => !o && setGroupsSession(null)}
-          sessionId={groupsSession?.id || null}
-          sessionName={groupsSession?.display_name || groupsSession?.instance_name}
-        />
-
-        {/* Delete Confirmation Dialog */}
         <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
           <DialogContent className="w-[95%] max-w-[400px] rounded-lg">
             <DialogHeader>
-              <DialogTitle>Excluir Conexão</DialogTitle>
+              <DialogTitle>Apagar conexão</DialogTitle>
               <DialogDescription>
-                Tem certeza que deseja excluir a conexão "{selectedSession?.instance_name}"? 
-                Esta ação não pode ser desfeita.
+                Tem certeza que deseja apagar a conexão "{selectedSession?.display_name || selectedSession?.instance_name}"?
+                As conversas e mensagens salvas serão preservadas no histórico.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter className="flex flex-row justify-end gap-3 sm:gap-2 pt-2">
@@ -716,13 +623,13 @@ export function WhatsAppTab() {
                 onClick={handleDeleteSession}
                 disabled={deleteSession.isPending}
                 className="flex-1 sm:flex-none">
-
                 {deleteSession.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                Excluir
+                Apagar
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
 
       </CardContent>
     </Card>);
@@ -841,3 +748,5 @@ function AccessControlDialog({
     </Sheet>);
 
 }
+
+

@@ -106,18 +106,6 @@ Deno.serve(async (req) => {
     // 4. Send the message via Evolution API
     const formattedPhone = targetPhone.replace(/\D/g, "");
     
-    // Fetch organization name to add context if it's not already in the message
-    const { data: org } = await supabase
-      .from("organizations")
-      .select("name")
-      .eq("id", organization_id)
-      .single();
-    
-    let finalMessage = message;
-    if (org?.name && !message.includes(org.name)) {
-      finalMessage = `${message}\n\n🏢 *Organização:* ${org.name}`;
-    }
-
     const response = await fetch(`${EVOLUTION_API_URL}/message/sendText/${instanceName}`, {
       method: "POST",
       headers: {
@@ -126,7 +114,7 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         number: formattedPhone,
-        text: finalMessage,
+        text: message,
       }),
     });
 

@@ -18,7 +18,7 @@ Deno.serve(async (req) => {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    const { name, email, password, organizationName, segment = 'imobiliario', teamSize } = await req.json();
+    const { name, email, password, organizationName, segment = 'imobiliario', teamSize, planId } = await req.json();
 
     if (!name || !email || !password || !organizationName) {
       return new Response(JSON.stringify({ error: 'Campos obrigatórios: nome, email, senha e nome da empresa' }), {
@@ -44,10 +44,56 @@ Deno.serve(async (req) => {
       });
     }
 
+    let plan: any = null;
+    if (planId) {
+      const { data: selectedPlan, error: planError } = await supabaseAdmin
+        .from('admin_subscription_plans')
+        .select('*')
+        .eq('id', planId)
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (planError) throw planError;
+      if (!selectedPlan) {
+        return new Response(JSON.stringify({ error: 'Plano selecionado nÃ£o encontrado ou inativo' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      plan = selectedPlan;
+    } else {
+      const { data: defaultPlan, error: defaultPlanError } = await supabaseAdmin
+        .from('admin_subscription_plans')
+        .select('*')
+        .eq('is_active', true)
+        .order('price', { ascending: true })
+        .limit(1)
+        .maybeSingle();
+
+      if (defaultPlanError) throw defaultPlanError;
+      plan = defaultPlan;
+    }
+
+    const trialDays = Number(plan?.trial_days || 0);
+    const hasTrial = Boolean(plan?.trial_enabled) && trialDays > 0;
+    const now = new Date();
+    const trialEndsAt = hasTrial
+      ? new Date(now.getTime() + trialDays * 24 * 60 * 60 * 1000).toISOString()
+      : null;
+
     // 1. Create organization
     const { data: org, error: orgError } = await supabaseAdmin
       .from('organizations')
-      .insert({ name: organizationName, segment })
+      .insert({
+        name: organizationName,
+        segment,
+        plan_id: plan?.id || null,
+        max_users: Number(plan?.max_users || 10),
+        subscription_value: Number(plan?.price || 0),
+        subscription_status: hasTrial ? 'trial' : 'pending_payment',
+        subscription_type: hasTrial ? 'trial' : plan?.billing_cycle || 'monthly',
+        trial_ends_at: trialEndsAt,
+      })
       .select()
       .single();
 
@@ -105,22 +151,21 @@ Deno.serve(async (req) => {
       { onConflict: 'user_id,role' }
     );
 
-    // 5. Create modules based on segment
-    // Self-signup accounts: NO financial, NO whatsapp (chat), NO meta integration
-    // Only CRM core + webhooks
-    let enabledModules: string[] = [];
-    let disabledModules: string[] = [];
-
-    if (segment === 'telecom') {
-      enabledModules = ['crm', 'agenda', 'plans', 'coverage', 'telecom', 'tags', 'round_robin', 'reports', 'webhooks'];
-      disabledModules = ['financial', 'whatsapp', 'properties', 'cadences', 'automations', 'performance', 'site', 'ai_agent'];
-    } else if (segment === 'imobiliario') {
-      enabledModules = ['crm', 'properties', 'agenda', 'cadences', 'tags', 'round_robin', 'reports', 'webhooks'];
-      disabledModules = ['financial', 'whatsapp', 'plans', 'coverage', 'telecom', 'automations', 'performance', 'site', 'ai_agent'];
-    } else {
-      enabledModules = ['crm', 'agenda', 'tags', 'round_robin', 'reports', 'webhooks'];
-      disabledModules = ['financial', 'whatsapp', 'properties', 'plans', 'coverage', 'telecom', 'cadences', 'automations', 'performance', 'site', 'ai_agent'];
-    }
+    // 5. Create modules based on selected plan, with a segment fallback only when no plan exists
+    const allKnownModules = [
+      'crm', 'dashboard', 'leads', 'contacts', 'pipelines', 'financial', 'whatsapp',
+      'properties', 'plans', 'coverage', 'telecom', 'agenda', 'cadences', 'tags',
+      'round_robin', 'reports', 'automations', 'performance', 'gamification',
+      'webhooks', 'site', 'ai_agent', 'campaigns', 'engineering', 'api'
+    ];
+    const planModules = Array.isArray(plan?.modules) ? plan.modules : [];
+    const fallbackModules = segment === 'telecom'
+      ? ['crm', 'agenda', 'plans', 'coverage', 'telecom', 'tags', 'round_robin', 'reports', 'webhooks']
+      : segment === 'imobiliario'
+        ? ['crm', 'properties', 'agenda', 'cadences', 'tags', 'round_robin', 'reports', 'webhooks']
+        : ['crm', 'agenda', 'tags', 'round_robin', 'reports', 'webhooks'];
+    const enabledModules = Array.from(new Set((planModules.length ? planModules : fallbackModules) as string[]));
+    const disabledModules = allKnownModules.filter(m => !enabledModules.includes(m));
 
     await supabaseAdmin.from('organization_modules').insert([
       ...enabledModules.map(m => ({ organization_id: org.id, module_name: m, is_enabled: true })),
@@ -165,6 +210,8 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({
       success: true,
       organization: org,
+      checkout_token: org.checkout_token,
+      requires_payment: !hasTrial && Number(plan?.price || 0) > 0,
       user: { id: userId, email, name },
     }), {
       status: 200,

@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+﻿import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { formatResponseTime } from '@/hooks/use-lead-timeline';
@@ -24,7 +24,7 @@ export interface UnifiedHistoryEvent {
   firstResponseSeconds?: number | null;
 }
 
-// Types that only exist in activities (never in timeline) — no deduplication needed
+// Types that only exist in activities (never in timeline) â€” no deduplication needed
 const ACTIVITY_ONLY_TYPES = new Set([
   'call',
   'email',
@@ -33,9 +33,11 @@ const ACTIVITY_ONLY_TYPES = new Set([
   'task_completed',
   'contact_updated',
   'automation_message',
+  'commission_created',
+  'commission_updated',
 ]);
 
-// Types where timeline is authoritative — skip activity duplicate
+// Types where timeline is authoritative â€” skip activity duplicate
 const TIMELINE_AUTHORITY_TYPES = new Set([
   'lead_created',
   'lead_assigned',
@@ -90,7 +92,7 @@ function buildLabel(type: string, metadata: Record<string, any>, source: 'timeli
       return 'Estágio alterado';
     }
     case 'first_response':
-      return 'Tempo de resposta';
+      return 'Primeiro contato';
     case 'whatsapp_message_sent':
       return 'Mensagem enviada (WhatsApp)';
     case 'whatsapp_message_received':
@@ -143,6 +145,10 @@ function buildLabel(type: string, metadata: Record<string, any>, source: 'timeli
       if (from && to) return `Status: ${statusMap[from] || from} → ${statusMap[to] || to}`;
       return 'Status alterado';
     }
+    case 'commission_created':
+      return 'Comissão registrada';
+    case 'commission_updated':
+      return 'Comissão atualizada';
     case 'whatsapp':
       return 'Mensagem WhatsApp';
     case 'assignment':
@@ -181,7 +187,7 @@ function buildContent(type: string, metadata: Record<string, any>): string | und
     case 'first_response': {
       const secs = metadata?.response_seconds;
       if (secs !== undefined && secs !== null) {
-        return `Tempo de resposta: ${formatResponseTime(Number(secs))}`;
+        return `Primeiro contato: ${formatResponseTime(Number(secs))}`;
       }
       return undefined;
     }
@@ -278,7 +284,7 @@ export function useLeadHistory(leadId: string | null) {
         (usersData || []).forEach((u: any) => userMap.set(u.id, u));
       }
 
-      // ── Deduplication fingerprint for activities (handles backend double-writes) ──
+      // â”€â”€ Deduplication fingerprint for activities (handles backend double-writes) â”€â”€
       function getActivityFingerprint(a: any): string {
         const meta = a.metadata || {};
         const ts = Math.floor(new Date(a.created_at).getTime() / 2000); // 2-second window

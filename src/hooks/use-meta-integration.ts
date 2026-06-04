@@ -20,12 +20,18 @@ export interface MetaIntegration {
   leads_received: number | null;
   selected_ad_accounts: string[] | null;
   ad_account_id: string | null;
+  facebook_user_id?: string | null;
+  facebook_user_name?: string | null;
+  page_picture_url?: string | null;
 }
 
 export interface MetaPage {
   id: string;
   name: string;
   access_token: string;
+  picture?: { data?: { url?: string } };
+  facebook_user_id?: string;
+  facebook_user_name?: string;
 }
 
 // Fetch connected pages for organization
@@ -130,14 +136,20 @@ export function useMetaConnectPage() {
       defaultStatus,
       adAccountId,
       selectedAdAccountIds,
+      facebookUserId,
+      facebookUserName,
+      pagePictureUrl,
     }: {
       pageId: string;
       userToken: string;
-      pipelineId: string;
-      stageId: string;
-      defaultStatus: string;
+      pipelineId?: string | null;
+      stageId?: string | null;
+      defaultStatus?: string | null;
       adAccountId?: string;
       selectedAdAccountIds?: string[];
+      facebookUserId?: string;
+      facebookUserName?: string;
+      pagePictureUrl?: string;
     }) => {
       const { data: sessionData } = await supabase.auth.getSession();
       
@@ -153,11 +165,14 @@ export function useMetaConnectPage() {
             action: "connect_page",
             page_id: pageId,
             code: userToken,
-            pipeline_id: pipelineId,
-            stage_id: stageId,
-            default_status: defaultStatus,
+            pipeline_id: pipelineId || null,
+            stage_id: stageId || null,
+            default_status: defaultStatus || null,
             ad_account_id: adAccountId,
             selected_ad_accounts: selectedAdAccountIds,
+            facebook_user_id: facebookUserId,
+            facebook_user_name: facebookUserName,
+            page_picture_url: pagePictureUrl,
           }),
         }
       );
@@ -171,6 +186,7 @@ export function useMetaConnectPage() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["meta-integrations"] });
+      queryClient.invalidateQueries({ queryKey: ["meta-form-configs"] });
       if (data.success && data.messenger_active === false) {
         toast.success("A página foi conectada para leads. Mensagens do Messenger exigem permissão adicional.");
       } else {

@@ -47,7 +47,9 @@ async function fetchName(digits: string): Promise<string> {
       .not("contact_name", "is", null)
       .limit(1);
     if (data?.[0]?.contact_name) return data[0].contact_name as string;
-  } catch {}
+  } catch {
+    // noop
+  }
 
   // 2) Leads
   try {
@@ -57,7 +59,9 @@ async function fetchName(digits: string): Promise<string> {
       .in("phone", variants)
       .limit(1);
     if (data?.[0]?.name) return data[0].name as string;
-  } catch {}
+  } catch {
+    // noop
+  }
 
   // 3) Fallback formatted phone
   return formatPhone(digits);

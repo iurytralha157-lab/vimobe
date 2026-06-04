@@ -35,6 +35,7 @@ interface Organization {
   subscription_status?: string;
   segment?: 'imobiliario' | 'telecom' | 'servicos' | null;
   cnpj?: string | null;
+  creci?: string | null;
   inscricao_estadual?: string | null;
   razao_social?: string | null;
   nome_fantasia?: string | null;
@@ -94,6 +95,7 @@ export const AuthContext = createContext<AuthContextType | undefined>(undefined)
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const userRef = useRef<User | null>(null);
+  const isLoggingOutRef = useRef(false);
 
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -104,6 +106,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [organizationsLoaded, setOrganizationsLoaded] = useState(false);
   const [isInitializingOrg, setIsInitializingOrg] = useState(false);
   const [userOrganizations, setUserOrganizations] = useState<UserOrganization[]>([]);
+  const authStateRef = useRef({
+    authInitialized: false,
+    organizationsLoaded: false,
+  });
+
+  useEffect(() => {
+    authStateRef.current = {
+      authInitialized,
+      organizationsLoaded,
+    };
+  }, [authInitialized, organizationsLoaded]);
 
   useEffect(() => {
     if (organization) {
@@ -183,7 +196,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             // Optimized: Select only required fields
             const { data: orgData } = await supabase
               .from('organizations')
-              .select('id, name, logo_url, theme_mode, accent_color, is_active, subscription_status, segment, cnpj, inscricao_estadual, razao_social, nome_fantasia, cep, endereco, numero, complemento, bairro, cidade, uf, telefone, whatsapp, email, website, default_commission_percentage')
+              .select('id, name, logo_url, theme_mode, accent_color, is_active, subscription_status, segment, cnpj, creci, inscricao_estadual, razao_social, nome_fantasia, cep, endereco, numero, complemento, bairro, cidade, uf, telefone, whatsapp, email, website, default_commission_percentage')
               .eq('id', orgIdToFetch)
               .single();
 
@@ -295,16 +308,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsInitializingOrg(false);
     };
 
-    // Safety timeout: stop loading after 5 seconds no matter what
+    // Safety timeout: stop loading only if the auth flow is truly still stuck.
     const safetyTimeout = setTimeout(() => {
-      if (isMounted && (!authInitialized || !organizationsLoaded)) {
+      const state = authStateRef.current;
+      if (isMounted && (!state.authInitialized || !state.organizationsLoaded)) {
         console.warn('Auth safety timeout reached - forcing all loading states to complete');
         setLoading(false);
         setAuthInitialized(true);
         setOrganizationsLoaded(true);
         setIsInitializingOrg(false);
       }
-    }, 5000);
+    }, 15000);
 
     console.log('getSession started');
     supabase.auth.getSession().then(async ({ data: { session }, error }) => {
@@ -363,6 +377,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setLoading(false);
           setAuthInitialized(true);
           setOrganizationsLoaded(true);
+          
+          // Se for logout explícito, ignoramos este evento para evitar
+          // duplo acionamento de performFullCacheClear concorrentes.
+          if (isLoggingOutRef.current) {
+            console.log('[AuthContext] SIGNED_OUT event ignored (explicit signOut in progress)');
+            return;
+          }
+
           setTimeout(() => {
             performFullCacheClear({ clearAuth: true, redirectTo: '/auth' });
           }, 0);
@@ -371,6 +393,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (authEvent === 'SIGNED_IN' || authEvent === 'USER_UPDATED') {
           if (session) {
+            const isSameInitializedUser =
+              authStateRef.current.authInitialized &&
+              authStateRef.current.organizationsLoaded &&
+              userRef.current?.id === session.user.id;
+
+            if (isSameInitializedUser) {
+              setSession(session);
+              setUser(session.user);
+              userRef.current = session.user;
+
+              setTimeout(() => {
+                if (!isMounted) return;
+                fetchProfile(session.user.id).catch(console.error);
+              }, 0);
+              return;
+            }
+
+            setLoading(true);
+            setOrganizationsLoaded(false);
+            setIsInitializingOrg(true);
             setSession(session);
             setUser(session.user);
             userRef.current = session.user;
@@ -380,9 +422,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               if (!isMounted) return;
               Promise.all([
                 fetchProfile(session.user.id),
-                checkMultiOrg(session.user.id),
+                checkMultiOrg(session.user.id, {
+                  forceSelectorForMultiOrg: authEvent === 'SIGNED_IN',
+                }),
               ]).finally(() => {
                 if (!isMounted) return;
+                setIsInitializingOrg(false);
                 setLoading(false);
                 setAuthInitialized(true);
               });
@@ -426,9 +471,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Log successful login (async to avoid blocking)
     if (!error && data.user) {
-      // Check multi-org in background
-      checkMultiOrg(data.user.id).catch(console.error);
-      
       setTimeout(() => {
         logAuditAction('login', 'session', data.user.id, undefined, {
           email,
@@ -470,6 +512,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signOut = async () => {
+    isLoggingOutRef.current = true;
+    
     // Log logout before clearing states (capture user ID while we still have it)
     const currentUserId = user?.id;
     if (currentUserId) {
@@ -497,10 +541,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const switchOrganization = async (orgId: string) => {
-    if (!user) return;
+    const activeUser = userRef.current || user;
+    if (!activeUser) return;
 
     // Persistir como a última organização ativa para este usuário
-    localStorage.setItem(`vimob_active_organization_${user.id}`, orgId);
+    localStorage.setItem(`vimob_active_organization_${activeUser.id}`, orgId);
     
     // sessionStorage org_selected removido - não dependemos mais dele
     console.log('[AuthContext] switching organization to:', orgId);
@@ -511,13 +556,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await supabase
       .from('users')
       .update({ organization_id: orgId })
-      .eq('id', user.id);
+      .eq('id', activeUser.id);
 
     // Track last access on the membership row
     await supabase
       .from('organization_members' as any)
       .update({ updated_at: new Date().toISOString() })
-      .eq('user_id', user.id)
+      .eq('user_id', activeUser.id)
       .eq('organization_id', orgId);
 
     // Fetch the new org data
@@ -535,7 +580,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { data: memberData } = await supabase
       .from('organization_members' as any)
       .select('role')
-      .eq('user_id', user.id)
+      .eq('user_id', activeUser.id)
       .eq('organization_id', orgId)
       .single();
 
@@ -545,7 +590,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await supabase
         .from('users')
         .update({ role: newRole })
-        .eq('id', user.id);
+        .eq('id', activeUser.id);
 
       setProfile(prev => prev ? { ...prev, organization_id: orgId, role: newRole } : prev);
     } else {
@@ -554,7 +599,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Check if user has multiple orgs after profile is loaded
-  const checkMultiOrg = async (userId: string) => {
+  const checkMultiOrg = async (userId: string, options?: { forceSelectorForMultiOrg?: boolean }) => {
     return performanceTracker.trackTimed('checkMultiOrg', async () => {
       try {
         console.log('[AuthContext] checking organizations for userId:', userId);
@@ -619,6 +664,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
           }
         } else if (count > 1) {
+          if (options?.forceSelectorForMultiOrg) {
+            console.log('[AuthContext] multiple organizations found; forcing organization selector');
+            setOrganization(null);
+            setProfile(prev => prev ? { ...prev, organization_id: null } : prev);
+            return;
+          }
+
           // Se tiver múltiplas, tenta carregar a última usada se houver flag de sessão
           const savedOrgId = localStorage.getItem(`vimob_active_organization_${userId}`);
           

@@ -2,17 +2,22 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { performanceTracker } from "@/lib/performance";
 import {
+  addDays,
+  addHours,
   subDays,
   format,
   eachDayOfInterval,
   eachWeekOfInterval,
   eachMonthOfInterval,
   differenceInDays,
+  isSameDay,
+  startOfDay,
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { DashboardFilters, sourceLabels } from "./use-dashboard-filters";
 import { useAuth } from "@/contexts/AuthContext";
 import { checkLeadVisibility, applyVisibilityFilter } from "./use-lead-visibility";
+import { applyLeadIdFilter, fetchDashboardTeamLeadIds } from "./use-dashboard-team-leads";
 
 export interface DealsEvolutionPoint {
   date: string;
@@ -149,6 +154,7 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
 
         const hasMetaFilter = !!(filters?.campaignId || filters?.adSetId || filters?.adId);
         const hasTagFilter = !!filters?.tagId;
+        const teamLeadIds = await fetchDashboardTeamLeadIds(filters?.teamId, null);
 
         let currentSelect = "id, deal_status, first_response_seconds, valor_interesse";
         if (hasMetaFilter) currentSelect += ", lead_meta!inner(campaign_id, adset_id, ad_id)";
@@ -174,6 +180,7 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
         }
 
         query = applyVisibilityFilter(query, visibility, "assigned_user_id", filters?.userId);
+        query = applyLeadIdFilter(query, teamLeadIds);
 
         let wonSelect = "id, valor_interesse, assigned_user_id, source";
         if (hasMetaFilter) wonSelect += ", lead_meta!inner(campaign_id, adset_id, ad_id)";
@@ -200,6 +207,7 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
         }
 
         wonQuery = applyVisibilityFilter(wonQuery, visibility, "assigned_user_id", filters?.userId);
+        wonQuery = applyLeadIdFilter(wonQuery, teamLeadIds);
 
         let prevSelect = "id, deal_status";
         if (hasMetaFilter) prevSelect += ", lead_meta!inner(campaign_id, adset_id, ad_id)";
@@ -220,20 +228,7 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
         if (filters?.dealStatus) prevQuery = prevQuery.eq("deal_status", filters.dealStatus);
 
         prevQuery = applyVisibilityFilter(prevQuery, visibility, "assigned_user_id", filters?.userId);
-
-        if (filters?.teamId && (visibility.canViewAll || visibility.teamMemberIds)) {
-          const { data: teamMembers } = await supabase
-            .from("team_members")
-            .select("user_id")
-            .eq("team_id", filters.teamId);
-
-          if (teamMembers?.length) {
-            const teamMemberIds = teamMembers.map((m) => m.user_id);
-            query = query.in("assigned_user_id", teamMemberIds);
-            wonQuery = wonQuery.in("assigned_user_id", teamMemberIds);
-            prevQuery = prevQuery.in("assigned_user_id", teamMemberIds);
-          }
-        }
+        prevQuery = applyLeadIdFilter(prevQuery, teamLeadIds);
 
         const [leadsResult, wonResult, prevResult] = await Promise.all([query, wonQuery, prevQuery]);
 
@@ -360,15 +355,15 @@ export function useFunnelData(filters?: DashboardFilters, pipelineId?: string | 
         effectiveUserId = visibility.teamMemberIds ? null : visibility.userId;
       }
 
-      const { data, error } = await (supabase as any).rpc("get_funnel_data", {
+        const { data, error } = await (supabase as any).rpc("get_funnel_data", {
         p_date_from: filters?.dateRange?.from?.toISOString() || null,
         p_date_to: filters?.dateRange?.to?.toISOString() || null,
         p_team_id: filters?.teamId || null,
         p_user_id: effectiveUserId || null,
         p_source: filters?.source || null,
-        p_pipeline_id: pipelineId || null,
-        p_tag_id: filters?.tagId || null,
-        p_deal_status: filters?.dealStatus || null,
+          p_pipeline_id: pipelineId || null,
+          p_tag_id: filters?.tagId || null,
+          p_deal_status: filters?.dealStatus || null,
       });
 
       if (error) {
@@ -421,15 +416,15 @@ export function useLeadSourcesData(filters?: DashboardFilters, pipelineId?: stri
         effectiveUserId = visibility.teamMemberIds ? null : visibility.userId;
       }
 
-      const { data, error } = await (supabase as any).rpc("get_lead_sources_data", {
+        const { data, error } = await (supabase as any).rpc("get_lead_sources_data", {
         p_date_from: filters?.dateRange?.from?.toISOString() || null,
         p_date_to: filters?.dateRange?.to?.toISOString() || null,
         p_team_id: filters?.teamId || null,
         p_user_id: effectiveUserId || null,
         p_source: filters?.source || null,
-        p_pipeline_id: pipelineId || null,
-        p_tag_id: filters?.tagId || null,
-        p_deal_status: filters?.dealStatus || null,
+          p_pipeline_id: pipelineId || null,
+          p_tag_id: filters?.tagId || null,
+          p_deal_status: filters?.dealStatus || null,
       });
 
       if (error) {
@@ -490,6 +485,7 @@ export function useTopBrokers(filters?: DashboardFilters) {
       if (!visibility.canViewAll && !visibility.teamMemberIds) {
         return { brokers: [], isFallbackMode: false };
       }
+      const teamLeadIds = await fetchDashboardTeamLeadIds(filters?.teamId, null);
 
       let selectString = `
           assigned_user_id,
@@ -516,6 +512,7 @@ export function useTopBrokers(filters?: DashboardFilters) {
       if (visibility.teamMemberIds) {
         query = query.in("assigned_user_id", visibility.teamMemberIds);
       }
+      query = applyLeadIdFilter(query, teamLeadIds);
 
       if (filters?.dateRange) {
         query = query
@@ -590,6 +587,7 @@ export function useTopBrokers(filters?: DashboardFilters) {
       }
 
       let fallbackQuery = supabase.from("leads").select(fallbackSelectString).not("assigned_user_id", "is", null);
+      fallbackQuery = applyLeadIdFilter(fallbackQuery, teamLeadIds);
 
       if (filters?.campaignId) fallbackQuery = fallbackQuery.eq("lead_meta.campaign_id", filters.campaignId);
       if (filters?.adSetId) fallbackQuery = fallbackQuery.eq("lead_meta.adset_id", filters.adSetId);
@@ -739,11 +737,13 @@ export function useDealsEvolutionData(filters?: DashboardFilters) {
         const visibility = currentUserId
           ? await checkLeadVisibility(currentUserId)
           : { canViewAll: false, userId: undefined };
+        const teamLeadIds = await fetchDashboardTeamLeadIds(filters?.teamId, null);
 
         const now = new Date();
         const dateFrom = filters?.dateRange?.from || subDays(now, 30);
         const dateTo = filters?.dateRange?.to || now;
         const daysDiff = differenceInDays(dateTo, dateFrom);
+        const isSingleDayRange = isSameDay(dateFrom, dateTo);
 
         let selectString = "id, created_at, won_at, lost_at, deal_status, assigned_user_id, source";
         if (filters?.campaignId || filters?.adSetId || filters?.adId) {
@@ -769,6 +769,7 @@ export function useDealsEvolutionData(filters?: DashboardFilters) {
         if (filters?.tagId) query = query.eq("lead_tags.tag_id", filters.tagId);
 
         query = applyVisibilityFilter(query, visibility, "assigned_user_id", filters?.userId);
+        query = applyLeadIdFilter(query, teamLeadIds);
 
         if (filters?.source) {
           query = query.eq("source", filters.source as any);
@@ -781,18 +782,6 @@ export function useDealsEvolutionData(filters?: DashboardFilters) {
         if (filters?.searchQuery) {
           const q = `%${filters.searchQuery}%`;
           query = (query as any).or(`name.ilike.${q},email.ilike.${q},phone.ilike.${q}`);
-        }
-
-        if (filters?.teamId && (visibility.canViewAll || visibility.teamMemberIds)) {
-          const { data: teamMembers } = await supabase
-            .from("team_members")
-            .select("user_id")
-            .eq("team_id", filters.teamId);
-
-          if (teamMembers?.length) {
-            const memberIds = teamMembers.map((m) => m.user_id);
-            query = query.in("assigned_user_id", memberIds);
-          }
         }
 
         const { data: leads, error } = await query;
@@ -809,8 +798,15 @@ export function useDealsEvolutionData(filters?: DashboardFilters) {
         let intervals: Date[];
         let formatLabel: (date: Date) => string;
         let shouldLimitPoints = true;
+        let singleDayEnd: Date | null = null;
 
-        if (daysDiff <= 31) {
+        if (isSingleDayRange) {
+          const singleDayStart = startOfDay(dateFrom);
+          singleDayEnd = addDays(singleDayStart, 1);
+          intervals = Array.from({ length: 24 }, (_, hour) => addHours(singleDayStart, hour));
+          formatLabel = (date) => format(date, "HH:mm", { locale: ptBR });
+          shouldLimitPoints = false;
+        } else if (daysDiff <= 31) {
           intervals = eachDayOfInterval({ start: dateFrom, end: dateTo });
           formatLabel = (date) => format(date, "dd/MM", { locale: ptBR });
           shouldLimitPoints = false;
@@ -834,7 +830,12 @@ export function useDealsEvolutionData(filters?: DashboardFilters) {
         };
 
         const result: DealsEvolutionPoint[] = intervals.map((intervalStart, index) => {
-          const intervalEnd = index < intervals.length - 1 ? intervals[index + 1] : dateTo;
+          const intervalEnd =
+            isSingleDayRange && index === intervals.length - 1 && singleDayEnd
+              ? singleDayEnd
+              : index < intervals.length - 1
+                ? intervals[index + 1]
+                : dateTo;
 
           const ganhos = leads.filter(
             (lead: any) => lead.deal_status === "won" && inRange(lead.won_at, intervalStart, intervalEnd),

@@ -25,7 +25,7 @@ Deno.serve(async (req) => {
     );
 
     let query = supabase.from('organizations').select(
-      'id, name, logo_url, primary_color, subscription_status, plan_id, asaas_customer_id, asaas_subscription_id, checkout_token, subscription_value'
+      'id, name, logo_url, accent_color, subscription_status, plan_id, asaas_customer_id, asaas_subscription_id, checkout_token, subscription_value'
     );
     if (token) query = query.eq('checkout_token', token);
     else query = query.eq('id', orgId);
@@ -47,7 +47,13 @@ Deno.serve(async (req) => {
       plan = data;
     }
 
-    return new Response(JSON.stringify({ organization: org, plan }), {
+    return new Response(JSON.stringify({
+      organization: {
+        ...org,
+        primary_color: (org as any).accent_color || null,
+      },
+      plan
+    }), {
       status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (e) {

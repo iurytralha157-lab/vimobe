@@ -1,36 +1,34 @@
-import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useEffect, useMemo, useState } from 'react';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet';
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { 
-  Plus, 
-  MoreHorizontal, 
-  Shuffle,
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import {
+  Plus,
   Pencil,
   Trash2,
   Loader2,
-  Filter,
-  Zap,
-  Target,
-  UsersRound
+  Shuffle,
+  UsersRound,
 } from 'lucide-react';
 import { useRoundRobins, useUpdateRoundRobin, useDeleteRoundRobin, RoundRobin as RoundRobinType } from '@/hooks/use-round-robins';
 import { useTeams } from '@/hooks/use-teams';
-import { useOrganizationUsers } from '@/hooks/use-users';
 import { useTags } from '@/hooks/use-tags';
 import { useProperties } from '@/hooks/use-properties';
 import { useServicePlans } from '@/hooks/use-service-plans';
@@ -40,7 +38,8 @@ import { useWebhooks } from '@/hooks/use-webhooks';
 import { useWhatsAppSessions } from '@/hooks/use-whatsapp-sessions';
 import { useCreateQueueAdvanced, useUpdateQueueAdvanced } from '@/hooks/use-create-queue-advanced';
 import { DistributionQueueEditor } from '@/components/round-robin/DistributionQueueEditor';
-import { RulesManager } from '@/components/round-robin/RulesManager';
+import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 const matchTypeLabels: Record<string, string> = {
   campaign: 'Campanha',
@@ -49,7 +48,7 @@ const matchTypeLabels: Record<string, string> = {
   property: 'Imóvel',
   source: 'Fonte',
   form: 'Formulário',
-  meta_form: 'Form Meta',
+  meta_form: 'Formulário',
   webhook: 'Webhook',
   whatsapp_session: 'WhatsApp',
   interest_property: 'Imóvel',
@@ -57,10 +56,25 @@ const matchTypeLabels: Record<string, string> = {
   city: 'Cidade',
 };
 
+const avatarColors = [
+  'bg-primary text-primary-foreground',
+  'bg-orange-500 text-white',
+  'bg-emerald-500 text-white',
+  'bg-violet-500 text-white',
+  'bg-pink-500 text-white',
+];
+
+const getPropertyLabel = (property: any, fallback: string) => {
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(fallback);
+  const cleanFallback = isUuid ? 'Configurado' : fallback;
+
+  if (!property) return cleanFallback;
+  return property.code || property.vista_codigo || property.imoview_codigo || property.title || cleanFallback;
+};
+
 export function DistributionTab() {
   const { data: roundRobins = [], isLoading } = useRoundRobins();
   const { data: teams = [], isLoading: teamsLoading } = useTeams();
-  const { data: users = [] } = useOrganizationUsers();
   const { data: tags = [] } = useTags();
   const { data: properties = [] } = useProperties();
   const { data: plans = [] } = useServicePlans();
@@ -73,14 +87,70 @@ export function DistributionTab() {
   const deleteRoundRobin = useDeleteRoundRobin();
   const createQueue = useCreateQueueAdvanced();
   const updateQueue = useUpdateQueueAdvanced();
-  
+
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingQueue, setEditingQueue] = useState<RoundRobinType | null>(null);
-  
-  const [rulesQueue, setRulesQueue] = useState<RoundRobinType | null>(null);
+  const [ruleProperties, setRuleProperties] = useState<any[]>([]);
 
-  const toggleActive = async (id: string, currentValue: boolean) => {
-    await updateRoundRobin.mutateAsync({ id, is_active: !currentValue });
+  const propertyRuleIds = useMemo(() => {
+    const ids = roundRobins
+      .flatMap(queue => queue.rules)
+      .filter(rule => rule.match_type === 'interest_property' || rule.match_type === 'property')
+      .map(rule => rule.match_value)
+      .filter((value): value is string => !!value?.trim());
+
+    return [...new Set(ids)];
+  }, [roundRobins]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadRuleProperties = async () => {
+      if (!propertyRuleIds.length) {
+        setRuleProperties([]);
+        return;
+      }
+
+      const loadedIds = new Set(properties.map(property => property.id));
+      const missingIds = propertyRuleIds.filter(id => !loadedIds.has(id));
+
+      if (!missingIds.length) {
+        setRuleProperties([]);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('properties')
+        .select('id, code, title, vista_codigo, imoview_codigo')
+        .in('id', missingIds);
+
+      if (cancelled) return;
+
+      if (error) {
+        console.error('[DistributionTab] Failed to load rule properties:', error);
+        setRuleProperties([]);
+        return;
+      }
+
+      setRuleProperties(data || []);
+    };
+
+    loadRuleProperties();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [properties, propertyRuleIds]);
+
+  const hasQueueCriteria = (queue: RoundRobinType) =>
+    queue.rules.some(rule => !!rule.match_value?.trim());
+
+  const toggleActive = async (queue: RoundRobinType) => {
+    if (!queue.is_active && !hasQueueCriteria(queue)) {
+      toast.error('Adicione pelo menos um critério antes de ativar a fila');
+      return;
+    }
+    await updateRoundRobin.mutateAsync({ id: queue.id, is_active: !queue.is_active });
   };
 
   const handleDeleteRR = async (id: string) => {
@@ -102,6 +172,60 @@ export function DistributionTab() {
     setEditorOpen(true);
   };
 
+  const formatRule = (rule: RoundRobinType['rules'][number]) => {
+    if (rule.match_type === 'tag') {
+      const tag = tags.find(t => t.id === rule.match_value);
+      return `Tag: ${tag?.name || rule.match_value}`;
+    }
+
+    if (rule.match_type === 'interest_property' || rule.match_type === 'property') {
+      const property = properties.find(p => p.id === rule.match_value) || ruleProperties.find(p => p.id === rule.match_value);
+      return `Imóvel: ${getPropertyLabel(property, rule.match_value || 'Configurado')}`;
+    }
+
+    if (rule.match_type === 'interest_plan') {
+      const plan = plans.find(p => p.id === rule.match_value);
+      return `Plano: ${plan?.name || rule.match_value}`;
+    }
+
+    if (rule.match_type === 'meta_form' || rule.match_type === 'form') {
+      const metaForm = metaFormConfigs.find(f => f.form_id === rule.match_value || f.id === rule.match_value);
+      return `Formulário: ${metaForm?.form_name || rule.match_value}`;
+    }
+
+    if (rule.match_type === 'webhook') {
+      const webhook = webhooks.find(w => w.id === rule.match_value);
+      return `Webhook: ${webhook?.name || rule.match_value}`;
+    }
+
+    if (rule.match_type === 'whatsapp_session') {
+      const session = whatsappSessions.find(s => s.id === rule.match_value);
+      return `WhatsApp: ${session?.display_name || session?.phone_number || session?.instance_name || rule.match_value}`;
+    }
+
+    return `${matchTypeLabels[rule.match_type] || rule.match_type}: ${rule.match_value || 'Configurado'}`;
+  };
+
+  const formatRules = (queue: RoundRobinType) => {
+    if (!queue.rules.length) return 'Qualquer lead';
+    return queue.rules.map(formatRule).join(' · ');
+  };
+
+  const getMemberName = (member: RoundRobinType['members'][number]) => {
+    const team = member.team_id ? teams.find(t => t.id === member.team_id) : null;
+    return member.team_id
+      ? `${team?.name || 'Equipe'} · ${member.user?.name || 'Usuário'}`
+      : member.user?.name || member.user?.email || 'Usuário';
+  };
+
+  const getInitials = (name: string) =>
+    name
+      .split(' ')
+      .map(part => part[0])
+      .join('')
+      .slice(0, 2)
+      .toUpperCase();
+
   if (isLoading || teamsLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -110,296 +234,194 @@ export function DistributionTab() {
     );
   }
 
-  // Stats
   const activeQueues = roundRobins.filter(rr => rr.is_active).length;
   const totalLeadsDistributed = roundRobins.reduce((acc, rr) => acc + (rr.leads_distributed || 0), 0);
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-semibold">Distribuição de Leads</h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            {roundRobins.length} {roundRobins.length === 1 ? 'fila' : 'filas'} · {activeQueues} {activeQueues === 1 ? 'ativa' : 'ativas'} · {totalLeadsDistributed} leads distribuídos
-          </p>
-        </div>
-        <div className="flex gap-2">
+    <TooltipProvider>
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <h2 className="text-xl font-semibold">Distribuição de Leads</h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              {roundRobins.length} {roundRobins.length === 1 ? 'fila' : 'filas'} · {activeQueues} {activeQueues === 1 ? 'ativa' : 'ativas'} · {totalLeadsDistributed} leads distribuídos
+            </p>
+          </div>
           <Button data-tour="distribution-new-queue" onClick={() => openEditor()} className="gap-2">
             <Plus className="h-4 w-4" />
             Nova Fila
           </Button>
         </div>
-      </div>
 
-      {/* Queues Grid */}
-      {roundRobins.length === 0 ? (
-        <Card className="border-dashed">
-          <CardContent className="py-16 text-center">
+        {roundRobins.length === 0 ? (
+          <div className="rounded-xl border border-dashed py-16 text-center">
             <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
               <Shuffle className="h-8 w-8 text-primary" />
             </div>
             <h3 className="font-semibold text-lg mb-2">Configure sua distribuição</h3>
             <p className="text-muted-foreground mb-6 max-w-sm mx-auto">
-              Crie filas para distribuir leads automaticamente entre sua equipe
+              Crie filas para distribuir leads automaticamente entre sua equipe.
             </p>
             <Button onClick={() => openEditor()} size="lg" className="gap-2">
               <Plus className="h-4 w-4" />
               Nova Fila
             </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {roundRobins.map((rr) => (
-            <Card 
-              key={rr.id} 
-              className={`overflow-hidden transition-all duration-300 ${
-                rr.is_active 
-                  ? 'hover:shadow-lg border-primary/20' 
-                  : 'opacity-60 bg-muted/20'
-              }`}
-            >
-              <CardHeader className="pb-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${
-                      rr.is_active ? 'bg-primary/10' : 'bg-muted'
-                    }`}>
-                      <Shuffle className={`h-5 w-5 ${rr.is_active ? 'text-primary' : 'text-muted-foreground'}`} />
-                    </div>
-                    <div>
-                      <CardTitle className="text-base">{rr.name}</CardTitle>
-                      <div className="flex items-center gap-2 mt-1 flex-wrap">
-                        <Badge 
-                          variant={rr.strategy === 'weighted' ? 'default' : 'secondary'} 
-                          className="text-xs"
-                        >
-                          {rr.strategy === 'weighted' ? 'Ponderada' : 'Round Robin'}
-                        </Badge>
-                        {rr.is_active && (
-                          <div className="flex items-center gap-1 text-xs text-green-600">
-                            <Zap className="h-3 w-3" />
-                            <span>Ativa</span>
-                          </div>
-                        )}
-                        {rr.target_pipeline && (
-                          <Badge variant="outline" className="text-xs gap-1">
-                            <Target className="h-3 w-3" />
-                            {rr.target_pipeline.name}
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Switch 
-                      checked={rr.is_active || false} 
-                      onCheckedChange={() => toggleActive(rr.id, rr.is_active || false)}
-                    />
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => openEditor(rr)}>
-                          <Pencil className="h-4 w-4 mr-2" />
-                          Editar Fila
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setRulesQueue(rr)}>
-                          <Filter className="h-4 w-4 mr-2" />
-                          Ver Regras
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          className="text-destructive"
-                          onClick={() => handleDeleteRR(rr.id)}
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Excluir
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </div>
-              </CardHeader>
-              
-              <CardContent className="space-y-5 px-4 md:px-6 pb-5">
-                {/* Rules */}
-                <div>
-                  <p className="text-xs font-medium text-muted-foreground mb-2">Critérios</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {rr.rules.length > 0 ? (
-                      rr.rules.slice(0, 3).map((rule) => {
-                        // Se for tag, busca o nome e cor da tag
-                        if (rule.match_type === 'tag') {
-                          const tag = tags.find(t => t.id === rule.match_value);
-                          if (tag) {
-                            return (
-                              <Badge 
-                                key={rule.id} 
-                                variant="outline" 
-                                className="gap-1 text-xs"
-                                style={{ borderColor: tag.color, color: tag.color }}
-                              >
-                                Tag: {tag.name}
-                              </Badge>
-                            );
-                          }
-                        }
-                        
-                        // Se for imóvel, busca o código do imóvel
-                        if (rule.match_type === 'interest_property' || rule.match_type === 'property') {
-                          const property = properties.find(p => p.id === rule.match_value);
-                          return (
-                            <Badge key={rule.id} variant="outline" className="gap-1 text-xs">
-                              Imóvel: {property?.code || property?.title || rule.match_value?.substring(0, 10)}
-                            </Badge>
-                          );
-                        }
-                        
-                        // Se for plano, busca o nome do plano
-                        if (rule.match_type === 'interest_plan') {
-                          const plan = plans.find(p => p.id === rule.match_value);
-                          return (
-                            <Badge key={rule.id} variant="outline" className="gap-1 text-xs">
-                              Plano: {plan?.name || rule.match_value?.substring(0, 10)}
-                            </Badge>
-                          );
-                        }
-                        
-                        // Se for formulário Meta, busca o nome do formulário
-                        if (rule.match_type === 'meta_form') {
-                          const metaForm = metaFormConfigs.find(f => f.form_id === rule.match_value);
-                          return (
-                            <Badge key={rule.id} variant="outline" className="gap-1 text-xs">
-                              📝 {metaForm?.form_name || `Form ${rule.match_value?.substring(0, 8)}...`}
-                            </Badge>
-                          );
-                        }
-                        
-                        // Se for webhook, busca o nome do webhook
-                        if (rule.match_type === 'webhook') {
-                          const webhook = webhooks.find(w => w.id === rule.match_value);
-                          return (
-                            <Badge key={rule.id} variant="outline" className="gap-1 text-xs">
-                              🔗 {webhook?.name || `Webhook ${rule.match_value?.substring(0, 8)}...`}
-                            </Badge>
-                          );
-                        }
-                        
-                        // Se for sessão WhatsApp, busca o nome da sessão
-                        if (rule.match_type === 'whatsapp_session') {
-                          const session = whatsappSessions.find(s => s.id === rule.match_value);
-                          return (
-                            <Badge key={rule.id} variant="outline" className="gap-1 text-xs">
-                              💬 {session?.display_name || session?.phone_number || session?.instance_name || 'WhatsApp'}
-                            </Badge>
-                          );
-                        }
-                        
-                        return (
-                          <Badge key={rule.id} variant="outline" className="gap-1 text-xs">
-                            {matchTypeLabels[rule.match_type] || rule.match_type}: {rule.match_value?.substring(0, 20) || 'Configurado'}
-                          </Badge>
-                        );
-                      })
-                    ) : (
-                      <span className="text-xs text-muted-foreground">Qualquer lead (fila genérica)</span>
-                    )}
-                    {rr.rules.length > 3 && (
-                      <Badge variant="secondary" className="text-xs">+{rr.rules.length - 3}</Badge>
-                    )}
-                  </div>
-                </div>
+          </div>
+        ) : (
+          <div className="overflow-hidden rounded-xl border bg-card">
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="w-[72px]">Status</TableHead>
+                  <TableHead>Nome da fila</TableHead>
+                  <TableHead>Critério</TableHead>
+                  <TableHead>Pipeline</TableHead>
+                  <TableHead>Usuários ou equipes</TableHead>
+                  <TableHead className="text-right">Leads</TableHead>
+                  <TableHead>Criada por</TableHead>
+                  <TableHead className="w-[112px] text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {roundRobins.map((queue) => {
+                  const creator = queue.created_by_user?.name || queue.created_by_user?.email || 'Não informado';
+                  const createdAt = format(new Date(queue.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR });
+                  const members = queue.members.slice(0, 5);
+                  const teamNames = Array.from(new Set(
+                    queue.members
+                      .filter(member => member.team_id)
+                      .map(member => teams.find(team => team.id === member.team_id)?.name)
+                      .filter(Boolean)
+                  ));
 
-                {/* Members */}
-                <div className="pt-4 border-t">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      {rr.members.length > 0 ? (
-                        <>
-                          <div className="flex -space-x-2">
-                            {rr.members.slice(0, 5).map((member, index) => {
-                              const user = member.user;
-                              const team = member.team_id ? teams.find(t => t.id === member.team_id) : null;
-                              const initials = user?.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || 
-                                              team?.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || '?';
-                              
-                              // Cores para avatares sem foto
-                              const colors = [
-                                'bg-primary text-primary-foreground',
-                                'bg-orange-500 text-white',
-                                'bg-emerald-500 text-white',
-                                'bg-violet-500 text-white',
-                                'bg-pink-500 text-white',
-                              ];
-                              const colorClass = colors[index % colors.length];
-                              
-                              return (
-                                <Avatar key={member.id} className="h-7 w-7 border-2 border-background">
-                                  {user?.avatar_url && (
-                                    <AvatarImage src={user.avatar_url} alt={user.name || ''} />
-                                  )}
-                                  <AvatarFallback className={`${colorClass} text-xs font-medium`}>
-                                    {member.team_id ? (
-                                      <UsersRound className="h-3.5 w-3.5" />
-                                    ) : (
-                                      initials
-                                    )}
-                                  </AvatarFallback>
-                                </Avatar>
-                              );
-                            })}
-                            {rr.members.length > 5 && (
-                              <div className="h-7 w-7 rounded-full bg-muted border-2 border-background flex items-center justify-center">
-                                <span className="text-xs text-muted-foreground">+{rr.members.length - 5}</span>
-                              </div>
+                  return (
+                    <TableRow
+                      key={queue.id}
+                      className="cursor-pointer"
+                      onClick={() => openEditor(queue)}
+                    >
+                      <TableCell onClick={(event) => event.stopPropagation()}>
+                        <Switch
+                          checked={queue.is_active || false}
+                          onCheckedChange={() => toggleActive(queue)}
+                          aria-label={queue.is_active ? 'Desativar fila' : 'Ativar fila'}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <div className="font-medium">{queue.name}</div>
+                        <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+                          <span>{queue.strategy === 'weighted' ? 'Ponderada' : 'Sequencial'}</span>
+                          {queue.settings?.enable_redistribution && (
+                            <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">
+                              Redistribuição ativa
+                            </Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="max-w-[260px]">
+                        <p className="truncate text-sm">{formatRules(queue)}</p>
+                        {queue.rules.length > 1 && (
+                          <p className="text-xs text-muted-foreground">{queue.rules.length} critérios</p>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {queue.target_pipeline ? (
+                          <div>
+                            <p className="font-medium">{queue.target_pipeline.name}</p>
+                            {queue.target_stage && (
+                              <p className="text-xs text-muted-foreground">{queue.target_stage.name}</p>
                             )}
                           </div>
-                          <span className="text-xs text-muted-foreground">
-                            {rr.members.length} {rr.members.length === 1 ? 'participante' : 'participantes'}
-                          </span>
-                        </>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">Sem participantes</span>
-                      )}
-                    </div>
-                    <Badge variant="secondary" className="text-xs">
-                      {rr.leads_distributed || 0} leads
-                    </Badge>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+                        ) : (
+                          <span className="text-sm text-muted-foreground">Sem pipeline</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {queue.members.length > 0 ? (
+                          <div className="flex items-center gap-2">
+                            <div className="flex -space-x-2">
+                              {members.map((member, index) => {
+                                const memberName = getMemberName(member);
+                                const isTeamMember = !!member.team_id;
+                                return (
+                                  <Tooltip key={member.id}>
+                                    <TooltipTrigger asChild>
+                                      <Avatar className="h-8 w-8 border-2 border-background">
+                                        {member.user?.avatar_url && (
+                                          <AvatarImage src={member.user.avatar_url} alt={memberName} />
+                                        )}
+                                        <AvatarFallback className={`${avatarColors[index % avatarColors.length]} text-xs font-medium`}>
+                                          {isTeamMember ? <UsersRound className="h-4 w-4" /> : getInitials(memberName)}
+                                        </AvatarFallback>
+                                      </Avatar>
+                                    </TooltipTrigger>
+                                    <TooltipContent>{memberName}</TooltipContent>
+                                  </Tooltip>
+                                );
+                              })}
+                              {queue.members.length > members.length && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className="h-8 w-8 rounded-full bg-muted border-2 border-background flex items-center justify-center">
+                                      <span className="text-xs text-muted-foreground">+{queue.members.length - members.length}</span>
+                                    </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    {queue.members.slice(members.length).map(getMemberName).join(', ')}
+                                  </TooltipContent>
+                                </Tooltip>
+                              )}
+                            </div>
+                            {teamNames.length > 0 && (
+                              <span className="max-w-[160px] truncate text-xs text-muted-foreground">
+                                {teamNames.join(', ')}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">Sem participantes</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right font-medium">
+                        {queue.leads_distributed || 0}
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm">{creator}</div>
+                        <div className="text-xs text-muted-foreground">{createdAt}</div>
+                      </TableCell>
+                      <TableCell onClick={(event) => event.stopPropagation()}>
+                        <div className="flex justify-end gap-1">
+                          <Button variant="ghost" size="icon" onClick={() => openEditor(queue)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => handleDeleteRR(queue.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+        )}
 
-
-      {/* Distribution Queue Editor */}
-      <DistributionQueueEditor
-        open={editorOpen}
-        onOpenChange={(open) => {
-          setEditorOpen(open);
-          if (!open) setEditingQueue(null);
-        }}
-        queue={editingQueue}
-        onSave={handleSaveQueue}
-      />
-
-      {/* Rules Manager Dialog */}
-      {rulesQueue && (
-        <Sheet open={!!rulesQueue} onOpenChange={(open) => !open && setRulesQueue(null)}>
-          <SheetContent side="right" className="w-[90%] sm:w-[650px] sm:max-w-[650px] p-6 flex flex-col overflow-y-auto">
-            <SheetHeader>
-              <SheetTitle>Regras de "{rulesQueue.name}"</SheetTitle>
-            </SheetHeader>
-            <RulesManager roundRobinId={rulesQueue.id} roundRobinName={rulesQueue.name} />
-          </SheetContent>
-        </Sheet>
-      )}
-    </div>
+        <DistributionQueueEditor
+          open={editorOpen}
+          onOpenChange={(open) => {
+            setEditorOpen(open);
+            if (!open) setEditingQueue(null);
+          }}
+          queue={editingQueue}
+          onSave={handleSaveQueue}
+        />
+      </div>
+    </TooltipProvider>
   );
 }

@@ -57,7 +57,7 @@ export function usePasswordStrength(password: string): PasswordStrength {
   }
 
   // Verificar caractere especial
-  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+  if (!/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password)) {
     feedback.push('Adicione caractere especial (!@#$%...)');
   } else {
     score += 1;

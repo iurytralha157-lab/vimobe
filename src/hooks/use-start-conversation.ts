@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { WhatsAppConversation } from "@/hooks/use-whatsapp-conversations";
-import { formatPhoneForWhatsApp } from "@/lib/phone-utils";
+import { formatPhoneForWhatsApp, isValidWhatsAppPhone } from "@/lib/phone-utils";
 
 interface StartConversationParams {
   phone: string;
@@ -11,12 +11,40 @@ interface StartConversationParams {
   leadName?: string;
 }
 
+export class WhatsAppStartError extends Error {
+  constructor(message: string, public readonly userMessage = message) {
+    super(message);
+    this.name = "WhatsAppStartError";
+  }
+}
+
+export function getWhatsAppStartErrorMessage(error: unknown) {
+  if (error instanceof WhatsAppStartError) return error.userMessage;
+
+  const message = error instanceof Error ? error.message : String(error || "");
+  const normalized = message.toLowerCase();
+
+  if (normalized.includes("statement timeout") || normalized.includes("timeout")) {
+    return "Não foi possível abrir a conversa agora. Tente novamente em alguns instantes.";
+  }
+
+  if (normalized.includes("invalid") || normalized.includes("jid") || normalized.includes("phone")) {
+    return "Este lead não tem um WhatsApp válido cadastrado.";
+  }
+
+  return message || "Ocorreu um erro inesperado ao tentar abrir o chat.";
+}
+
 export function useStartConversation() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async ({ phone, sessionId, leadId, leadName }: StartConversationParams): Promise<WhatsAppConversation> => {
       console.log('[WhatsApp Start] useStartConversation iniciado', { phone, sessionId, leadId });
+      if (!isValidWhatsAppPhone(phone)) {
+        throw new WhatsAppStartError("Telefone inválido para WhatsApp", "Este lead não tem um WhatsApp válido cadastrado.");
+      }
+
       // Always derive organization_id from the WhatsApp session itself (source of truth for RLS)
       const { data: sessionRow, error: sessionError } = await supabase
         .from("whatsapp_sessions")
@@ -100,7 +128,7 @@ export function useStartConversation() {
     onError: (error: Error) => {
       toast({
         title: "Erro ao iniciar conversa",
-        description: error.message,
+        description: getWhatsAppStartErrorMessage(error),
         variant: "destructive",
       });
     },
@@ -112,6 +140,8 @@ export function useFindConversationByPhone() {
   return useMutation({
     mutationFn: async ({ phone, leadId, sessionId }: { phone: string; leadId?: string; sessionId?: string }): Promise<WhatsAppConversation | null> => {
       console.log('[WhatsApp Start] useFindConversationByPhone iniciado', { phone, leadId, sessionId });
+      const canSearchByPhone = isValidWhatsAppPhone(phone);
+
       // 1) Se temos leadId E sessionId, buscar conversa vinculada ao lead NA sessão específica
       if (leadId && sessionId) {
         console.log('[WhatsApp Start] Buscando por leadId + sessionId...');
@@ -164,6 +194,11 @@ export function useFindConversationByPhone() {
       }
 
       // 3) Fallback por telefone - restringir pela sessão se fornecida
+      if (!canSearchByPhone) {
+        if (leadId) return null;
+        throw new WhatsAppStartError("Telefone inválido para WhatsApp", "Este lead não tem um WhatsApp válido cadastrado.");
+      }
+
       const cleanPhone = formatPhoneForWhatsApp(phone);
       console.log('[WhatsApp Start] Buscando por variante de telefone:', cleanPhone);
       

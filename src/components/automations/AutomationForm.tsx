@@ -1,11 +1,9 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useCreateStageAutomation, useUpdateStageAutomation, AutomationType, AUTOMATION_TYPE_LABELS, AUTOMATION_TYPE_DESCRIPTIONS, DEAL_STATUS_LABELS, StageAutomation } from "@/hooks/use-stage-automations";
-import { useStages } from "@/hooks/use-stages";
 import { useOrganizationUsers } from "@/hooks/use-users";
 import { Loader2, Info, User, Trophy, XCircle, Circle } from "lucide-react";
 
@@ -17,16 +15,13 @@ interface AutomationFormProps {
   onCancel?: () => void;
 }
 
-export function AutomationForm({ stageId, pipelineId, automation, onSuccess, onCancel }: AutomationFormProps) {
-  const [automationType, setAutomationType] = useState<AutomationType>('move_after_inactivity');
+export function AutomationForm({ stageId, automation, onSuccess, onCancel }: AutomationFormProps) {
+  const [automationType, setAutomationType] = useState<AutomationType>('alert_on_inactivity');
   const [triggerDays, setTriggerDays] = useState<number>(7);
-  const [targetStageId, setTargetStageId] = useState<string>('');
-  const [whatsappTemplate, setWhatsappTemplate] = useState<string>('');
   const [alertMessage, setAlertMessage] = useState<string>('');
   const [targetUserId, setTargetUserId] = useState<string>('');
   const [dealStatus, setDealStatus] = useState<'open' | 'won' | 'lost'>('won');
 
-  const { data: stages } = useStages(pipelineId);
   const { data: users } = useOrganizationUsers();
   const createAutomation = useCreateStageAutomation();
   const updateAutomation = useUpdateStageAutomation();
@@ -34,15 +29,11 @@ export function AutomationForm({ stageId, pipelineId, automation, onSuccess, onC
   const isEditing = !!automation;
   const isLoading = createAutomation.isPending || updateAutomation.isPending;
 
-  // Filter out current stage from target options
-  const targetStageOptions = stages?.filter(s => s.id !== stageId) || [];
 
   useEffect(() => {
     if (automation) {
       setAutomationType(automation.automation_type as AutomationType);
       setTriggerDays(automation.trigger_days || 7);
-      setTargetStageId(automation.target_stage_id || '');
-      setWhatsappTemplate(automation.whatsapp_template || '');
       setAlertMessage(automation.alert_message || '');
       // Parse action_config for new fields
       const config = automation.action_config as Record<string, unknown> || {};
@@ -57,9 +48,9 @@ export function AutomationForm({ stageId, pipelineId, automation, onSuccess, onC
     const data = {
       stage_id: stageId,
       automation_type: automationType,
-      trigger_days: (automationType === 'move_after_inactivity' || automationType === 'alert_on_inactivity') ? triggerDays : null,
-      target_stage_id: automationType === 'move_after_inactivity' ? targetStageId : null,
-      whatsapp_template: automationType === 'send_whatsapp_on_enter' ? whatsappTemplate : null,
+      trigger_days: automationType === 'alert_on_inactivity' ? triggerDays : null,
+      target_stage_id: null,
+      whatsapp_template: null,
       alert_message: automationType === 'alert_on_inactivity' ? alertMessage : null,
       // Pass direct values - hook will build action_config
       deal_status: automationType === 'change_deal_status_on_enter' ? dealStatus : undefined,
@@ -105,8 +96,8 @@ export function AutomationForm({ stageId, pipelineId, automation, onSuccess, onC
         </p>
       </div>
 
-      {/* Trigger Days - for inactivity-based automations */}
-      {(automationType === 'move_after_inactivity' || automationType === 'alert_on_inactivity') && (
+      {/* Trigger Days - for inactivity alert */}
+      {automationType === 'alert_on_inactivity' && (
         <div className="space-y-2">
           <Label>Dias de Inatividade</Label>
           <Input
@@ -117,46 +108,10 @@ export function AutomationForm({ stageId, pipelineId, automation, onSuccess, onC
             onChange={(e) => setTriggerDays(parseInt(e.target.value) || 1)}
           />
           <p className="text-xs text-muted-foreground">
-            Número de dias sem atividade para disparar a automação
+            Número de dias sem atividade para disparar a Automação
           </p>
         </div>
       )}
-
-      {/* Target Stage - for move automation */}
-      {automationType === 'move_after_inactivity' && (
-        <div className="space-y-2">
-          <Label>Estágio de Destino</Label>
-          <Select value={targetStageId} onValueChange={setTargetStageId}>
-            <SelectTrigger>
-              <SelectValue placeholder="Selecione o estágio" />
-            </SelectTrigger>
-            <SelectContent>
-              {targetStageOptions.map(stage => (
-                <SelectItem key={stage.id} value={stage.id}>
-                  {stage.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      )}
-
-      {/* WhatsApp Template */}
-      {automationType === 'send_whatsapp_on_enter' && (
-        <div className="space-y-2">
-          <Label>Mensagem do WhatsApp</Label>
-          <Textarea
-            value={whatsappTemplate}
-            onChange={(e) => setWhatsappTemplate(e.target.value)}
-            placeholder="Olá {{lead_name}}, você foi movido para o estágio {{stage_name}}..."
-            rows={4}
-          />
-          <p className="text-xs text-muted-foreground">
-            Variáveis disponíveis: {"{{lead_name}}"}, {"{{stage_name}}"}, {"{{broker_name}}"}
-          </p>
-        </div>
-      )}
-
       {/* Alert Message */}
       {automationType === 'alert_on_inactivity' && (
         <div className="space-y-2">
@@ -178,7 +133,7 @@ export function AutomationForm({ stageId, pipelineId, automation, onSuccess, onC
           </Label>
           <Select value={targetUserId} onValueChange={setTargetUserId}>
             <SelectTrigger>
-              <SelectValue placeholder="Selecione o responsável" />
+              <SelectValue placeholder="Selecione o Responsável" />
             </SelectTrigger>
             <SelectContent>
               {users?.map(user => (

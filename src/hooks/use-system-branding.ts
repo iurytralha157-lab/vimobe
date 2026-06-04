@@ -49,7 +49,7 @@ export function useSystemBranding() {
       });
       
       // Also update standard icon link
-      let iconNode = document.querySelector("link[rel='icon'][type='image/png']");
+      const iconNode = document.querySelector("link[rel='icon'][type='image/png']");
       if (iconNode) {
         iconNode.setAttribute('href', pwaIcon);
       }
@@ -64,7 +64,7 @@ export function useSystemBranding() {
     };
 
     Object.entries(metaTags).forEach(([name, value]) => {
-      let node = document.querySelector(`meta[name='${name}'], meta[property='${name}']`);
+      const node = document.querySelector(`meta[name='${name}'], meta[property='${name}']`);
       if (node) {
         node.setAttribute('content', value);
       }

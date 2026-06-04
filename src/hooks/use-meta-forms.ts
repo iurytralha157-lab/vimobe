@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+﻿import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -27,7 +27,14 @@ export interface MetaFormConfig {
   stage_id: string | null;
   default_status: string | null;
   assigned_user_id: string | null;
+  round_robin_id?: string | null;
   property_id: string | null;
+  purpose?: string | null;
+  source?: string | null;
+  source_details?: string | null;
+  default_values?: Record<string, unknown>;
+  created_by?: string | null;
+  created_by_name?: string | null;
   auto_tags: string[];
   field_mapping: Record<string, string>;
   custom_fields_config: string[];
@@ -56,12 +63,22 @@ export function useMetaFormConfigs(integrationId: string | undefined) {
 
       if (error) throw error;
       
-      // Parse JSONB fields
+      const creatorIds = [...new Set((data || []).map((config: any) => config.created_by).filter(Boolean))];
+      const { data: creators } = creatorIds.length
+        ? await (supabase as any)
+            .from("users")
+            .select("id,name,email")
+            .in("id", creatorIds)
+        : { data: [] };
+      const creatorsById = new Map((creators || []).map((user: any) => [user.id, user.name || user.email]));
+
       return (data || []).map((config: any) => ({
         ...config,
+        created_by_name: config.created_by ? creatorsById.get(config.created_by) || null : null,
         auto_tags: Array.isArray(config.auto_tags) ? config.auto_tags : [],
         field_mapping: typeof config.field_mapping === 'object' ? config.field_mapping : {},
         custom_fields_config: Array.isArray(config.custom_fields_config) ? config.custom_fields_config : [],
+        default_values: typeof config.default_values === 'object' && config.default_values ? config.default_values : {},
       })) as MetaFormConfig[];
     },
     enabled: !!profile?.organization_id && !!integrationId,
@@ -85,12 +102,22 @@ export function useAllMetaFormConfigs() {
 
       if (error) throw error;
       
-      // Parse JSONB fields
+      const creatorIds = [...new Set((data || []).map((config: any) => config.created_by).filter(Boolean))];
+      const { data: creators } = creatorIds.length
+        ? await (supabase as any)
+            .from("users")
+            .select("id,name,email")
+            .in("id", creatorIds)
+        : { data: [] };
+      const creatorsById = new Map((creators || []).map((user: any) => [user.id, user.name || user.email]));
+
       return (data || []).map((config: any) => ({
         ...config,
+        created_by_name: config.created_by ? creatorsById.get(config.created_by) || null : null,
         auto_tags: Array.isArray(config.auto_tags) ? config.auto_tags : [],
         field_mapping: typeof config.field_mapping === 'object' ? config.field_mapping : {},
         custom_fields_config: Array.isArray(config.custom_fields_config) ? config.custom_fields_config : [],
+        default_values: typeof config.default_values === 'object' && config.default_values ? config.default_values : {},
       })) as MetaFormConfig[];
     },
     enabled: !!profile?.organization_id,
@@ -131,7 +158,7 @@ export function useFetchPageForms() {
 
 // Create or update form configuration
 // NOTE: pipeline_id, stage_id, default_status, assigned_user_id are LEGACY fields
-// Distribution is now handled by Round Robin in Gestão CRM
+// Distribution is now handled by Round Robin in GestÃ£o CRM
 export function useSaveFormConfig() {
   const queryClient = useQueryClient();
   const { profile } = useAuth();
@@ -142,6 +169,11 @@ export function useSaveFormConfig() {
       formId: string;
       formName?: string;
       propertyId?: string;
+      roundRobinId?: string | null;
+      purpose?: string | null;
+      source?: string | null;
+      sourceDetails?: string | null;
+      defaultValues?: Record<string, unknown>;
       autoTags?: string[];
       fieldMapping?: Record<string, string>;
       customFieldsConfig?: string[];
@@ -156,16 +188,20 @@ export function useSaveFormConfig() {
           integration_id: config.integrationId,
           form_id: config.formId,
           form_name: config.formName,
-          // Legacy fields - not used for new configs, Round Robin handles distribution
           pipeline_id: null,
           stage_id: null,
           default_status: null,
           assigned_user_id: null,
-          // Actual config fields
+          round_robin_id: config.roundRobinId || null,
           property_id: config.propertyId || null,
+          purpose: config.purpose || null,
+          source: config.source || null,
+          source_details: config.sourceDetails || null,
+          default_values: config.defaultValues || {},
           auto_tags: config.autoTags || [],
           field_mapping: config.fieldMapping || {},
           custom_fields_config: config.customFieldsConfig || [],
+          created_by: profile.id,
           is_active: config.isActive !== false,
           updated_at: new Date().toISOString(),
         }, {
@@ -175,18 +211,41 @@ export function useSaveFormConfig() {
         .single();
 
       if (error) throw error;
+
+      await (supabase as any)
+        .from("round_robin_rules")
+        .delete()
+        .eq("match_type", "meta_form")
+        .eq("match_value", config.formId);
+
+      if (config.roundRobinId) {
+        const { error: ruleError } = await (supabase as any)
+          .from("round_robin_rules")
+          .insert({
+            round_robin_id: config.roundRobinId,
+            match_type: "meta_form",
+            match_value: config.formId,
+            match: { meta_form_id: [config.formId] },
+            priority: 100,
+            is_active: true,
+          });
+
+        if (ruleError) throw ruleError;
+      }
+
       return data;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["meta-form-configs", variables.integrationId] });
-      toast.success("Configuração do formulário salva!");
+      queryClient.invalidateQueries({ queryKey: ["meta-form-configs"] });
+      queryClient.invalidateQueries({ queryKey: ["round-robin-rules"] });
+      toast.success("Configuracao do formulario salva!");
     },
     onError: (error: Error) => {
       toast.error(`Erro ao salvar: ${error.message}`);
     },
   });
 }
-
 // Toggle form active status
 export function useToggleFormConfig() {
   const queryClient = useQueryClient();
@@ -205,6 +264,7 @@ export function useToggleFormConfig() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["meta-form-configs", variables.integrationId] });
+      queryClient.invalidateQueries({ queryKey: ["meta-form-configs"] });
     },
     onError: (error: Error) => {
       toast.error(`Erro: ${error.message}`);
@@ -224,10 +284,18 @@ export function useDeleteFormConfig() {
         .eq("form_id", formId);
 
       if (error) throw error;
+
+      await (supabase as any)
+        .from("round_robin_rules")
+        .delete()
+        .eq("match_type", "meta_form")
+        .eq("match_value", formId);
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["meta-form-configs", variables.integrationId] });
-      toast.success("Configuração removida!");
+      queryClient.invalidateQueries({ queryKey: ["meta-form-configs"] });
+      queryClient.invalidateQueries({ queryKey: ["round-robin-rules"] });
+      toast.success("Configuracao removida!");
     },
     onError: (error: Error) => {
       toast.error(`Erro: ${error.message}`);

@@ -14,6 +14,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { getNotificationRoute } from '@/lib/notification-routing';
 
 const notificationIcons: Record<string, typeof Bell> = {
   lead: UserPlus,
@@ -101,13 +102,8 @@ export const AppHeader = React.memo(function AppHeader({
 
   const handleNotificationClick = (notification: any) => {
     markRead.mutate(notification.id);
-    if (notification.title?.includes('Atualize seu telefone')) {
-      navigate('/settings');
-      return;
-    }
-    if (notification.lead_id) {
-      navigate(`/crm/pipelines?lead_id=${notification.lead_id}`);
-    }
+    const route = getNotificationRoute(notification);
+    if (route) navigate(route);
   };
 
   const getInitials = (name: string) => {

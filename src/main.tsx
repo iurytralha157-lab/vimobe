@@ -35,8 +35,11 @@ async function cleanupServiceWorkers(reload = false) {
     if ('serviceWorker' in navigator) {
       const registrations = await navigator.serviceWorker.getRegistrations();
       if (registrations.length > 0) {
-        await Promise.all(registrations.map(r => r.unregister()));
-        console.log('All Service Workers unregistered');
+        await Promise.all(registrations.map(async (registration) => {
+          registration.active?.postMessage({ type: 'CLEAR_CACHES' });
+          await registration.update();
+        }));
+        console.log('Service Workers updated');
       }
     }
     if ('caches' in window) {
@@ -86,9 +89,31 @@ if (currentVersion !== CACHE_BUST_VERSION) {
 // Set up periodic check
 setInterval(checkSystemVersion, 1000 * 60 * 5);
 
-// Ensure SWs are cleaned up if PWA is disabled
 if ('serviceWorker' in navigator) {
-  cleanupServiceWorkers(false);
+  window.addEventListener('load', () => {
+    navigator.serviceWorker
+      .register('/sw.js')
+      .then((registration) => {
+        console.log('[PWA] Service Worker registered:', registration.scope);
+        registration.update();
+
+        if (registration.waiting) {
+          registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+        }
+
+        registration.addEventListener('updatefound', () => {
+          const installingWorker = registration.installing;
+          installingWorker?.addEventListener('statechange', () => {
+            if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              installingWorker.postMessage({ type: 'SKIP_WAITING' });
+            }
+          });
+        });
+      })
+      .catch((error) => {
+        console.warn('[PWA] Service Worker registration failed:', error);
+      });
+  });
 }
 
 createRoot(document.getElementById("root")!).render(
@@ -97,4 +122,4 @@ createRoot(document.getElementById("root")!).render(
   </React.StrictMode>
 );
 
-// PWA and Service Worker registration removed to ensure fresh updates.
+// Service Worker is push-only and does not cache app shell/assets.

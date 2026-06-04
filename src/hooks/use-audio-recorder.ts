@@ -5,6 +5,7 @@
    duration: number;
    audioBlob: Blob | null;
    base64: string | null;
+   mimeType: string | null;
  }
  
  export function useAudioRecorder() {
@@ -13,6 +14,7 @@
      duration: 0,
      audioBlob: null,
      base64: null,
+     mimeType: null,
    });
  
    const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -31,12 +33,11 @@
          }
        });
  
-       // Use webm/opus for better compatibility with WhatsApp
-       const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') 
-         ? 'audio/webm;codecs=opus' 
-         : MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')
-           ? 'audio/ogg;codecs=opus'
-           : 'audio/webm';
+      const mimeType = MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')
+        ? 'audio/ogg;codecs=opus'
+        : MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+          ? 'audio/webm;codecs=opus'
+          : 'audio/webm';
  
        const mediaRecorder = new MediaRecorder(stream, { 
          mimeType,
@@ -71,6 +72,7 @@
              isRecording: false,
              audioBlob: blob,
              base64,
+             mimeType: blob.type || mimeType,
            }));
          };
          reader.readAsDataURL(blob);
@@ -91,6 +93,7 @@
          duration: 0,
          audioBlob: null,
          base64: null,
+         mimeType,
        });
  
      } catch (error) {
@@ -131,6 +134,7 @@
        duration: 0,
        audioBlob: null,
        base64: null,
+       mimeType: null,
      });
    }, []);
  
@@ -140,6 +144,7 @@
        duration: 0,
        audioBlob: null,
        base64: null,
+       mimeType: null,
      });
    }, []);
  

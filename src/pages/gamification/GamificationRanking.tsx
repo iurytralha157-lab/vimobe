@@ -124,6 +124,13 @@ export default function GamificationRanking() {
     queryKey: ['gamification-leaderboard-full', organization?.id, rankingType, datePreset, customDateRange],
     queryFn: async () => {
       if (!organization?.id) return [];
+
+      const { data: nonParticipants } = await supabase
+        .from('gamification_participants' as any)
+        .select('user_id')
+        .eq('organization_id', organization.id)
+        .eq('participates', false);
+      const excludedUserIds = new Set((nonParticipants || []).map((p: any) => p.user_id));
       
       // Query events instead of stats for filtered/period points
       let query = supabase
@@ -154,7 +161,7 @@ export default function GamificationRanking() {
           });
           
           const { data: users } = await supabase.from('users' as any).select('id, name, avatar_url').eq('organization_id', organization.id);
-          return (users || []).map((u: any) => ({
+          return (users || []).filter((u: any) => !excludedUserIds.has(u.id)).map((u: any) => ({
             id: u.id,
             user_id: u.id,
             total_points: vgvByUser[u.id] || 0,
@@ -164,11 +171,12 @@ export default function GamificationRanking() {
 
         const typeMap: Record<string, string[]> = {
           calls: ['call_made'],
+          messages: ['message_sent'],
           proposals: ['proposal_sent'],
           sales: ['sale_closed', 'contract_signed'],
           meetings: ['meeting_held'],
           visits: ['visit_scheduled', 'visit_confirmed'],
-          general: ['call_made', 'message_sent', 'proposal_sent', 'sale_closed', 'contract_signed', 'meeting_held', 'visit_scheduled', 'visit_confirmed', 'mission_bonus', 'lead_created_manual', 'property_created']
+          general: ['call_made', 'message_sent', 'proposal_sent', 'sale_closed', 'contract_signed', 'meeting_held', 'visit_scheduled', 'visit_confirmed', 'mission_bonus', 'lead_created', 'lead_created_manual', 'property_created']
         };
         const types = typeMap[rankingType] || [];
         if (types.length > 0) {
@@ -194,7 +202,7 @@ export default function GamificationRanking() {
 
       if (userError) throw userError;
 
-      const mergedData = (userData || []).map((user: any) => ({
+      const mergedData = (userData || []).filter((user: any) => !excludedUserIds.has(user.id)).map((user: any) => ({
         id: user.id,
         user_id: user.id,
         total_points: pointsByUser[user.id] || 0,
@@ -285,6 +293,7 @@ export default function GamificationRanking() {
                 Arena Imobiliária {
                   rankingType === 'general' ? 'de Elite' : 
                   rankingType === 'calls' ? 'de Ligações' :
+                  rankingType === 'messages' ? 'de Mensagens' :
                   rankingType === 'proposals' ? 'de Propostas' :
                   rankingType === 'sales' ? 'de Vendas' :
                   rankingType === 'meetings' ? 'de Reuniões' :
@@ -425,6 +434,7 @@ export default function GamificationRanking() {
                       <span className="hidden sm:inline">
                         {rankingType === 'general' ? 'Geral' : 
                          rankingType === 'calls' ? 'Ligações' :
+                         rankingType === 'messages' ? 'Mensagens' :
                          rankingType === 'proposals' ? 'Propostas' :
                          rankingType === 'sales' ? 'Vendas' :
                          rankingType === 'meetings' ? 'Reuniões' :
@@ -439,6 +449,9 @@ export default function GamificationRanking() {
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setRankingType('calls')} className={cn(rankingType === 'calls' && "bg-muted")}>
                       <Phone className="mr-2 h-4 w-4" /> Ligações
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setRankingType('messages')} className={cn(rankingType === 'messages' && "bg-muted")}>
+                      <MessageSquare className="mr-2 h-4 w-4" /> Mensagens
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setRankingType('proposals')} className={cn(rankingType === 'proposals' && "bg-muted")}>
                       <FileText className="mr-2 h-4 w-4" /> Propostas

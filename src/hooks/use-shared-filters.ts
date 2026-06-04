@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useLeadVisibility, applyVisibilityFilter } from './use-lead-visibility';
 import { DatePreset } from './use-dashboard-filters';
 import { useTags } from './use-tags';
+import { applyLeadIdFilter, fetchDashboardTeamLeadIds } from './use-dashboard-team-leads';
 
 export interface SharedFilters {
   datePreset: DatePreset;
@@ -58,13 +59,8 @@ export function useSharedFilters() {
         .not('source', 'is', null);
       
       query = applyVisibilityFilter(query, visibility!, 'assigned_user_id', userId);
-      
-      if (teamId) {
-        const { data: teamMembers } = await supabase.from('team_members').select('user_id').eq('team_id', teamId);
-        if (teamMembers?.length) {
-          query = query.in('assigned_user_id', teamMembers.map(m => m.user_id));
-        }
-      }
+      const teamLeadIds = await fetchDashboardTeamLeadIds(teamId, null);
+      query = applyLeadIdFilter(query, teamLeadIds);
 
       const { data } = await query;
       const distinctSources = [...new Set(data?.map(l => l.source))].filter(Boolean);
@@ -83,19 +79,18 @@ export function useSharedFilters() {
     queryFn: async () => {
       let query = supabase
         .from('lead_meta')
-        .select('campaign_id, campaign_name, leads!inner(organization_id, created_at, assigned_user_id)')
+        .select('campaign_id, campaign_name, leads!inner(id, organization_id, created_at, assigned_user_id)')
         .eq('leads.organization_id', organization?.id)
         .gte('leads.created_at', dateRange.from.toISOString())
         .lte('leads.created_at', dateRange.to.toISOString())
         .not('campaign_id', 'is', null);
       
       query = applyVisibilityFilter(query, visibility!, 'leads.assigned_user_id', userId);
-      
-      if (teamId) {
-        const { data: teamMembers } = await supabase.from('team_members').select('user_id').eq('team_id', teamId);
-        if (teamMembers?.length) {
-          query = query.in('leads.assigned_user_id', teamMembers.map(m => m.user_id));
-        }
+      const teamLeadIds = await fetchDashboardTeamLeadIds(teamId, null);
+      if (teamLeadIds !== null) {
+        query = teamLeadIds.length === 0
+          ? query.eq('leads.id', '00000000-0000-0000-0000-000000000000')
+          : query.in('leads.id', teamLeadIds);
       }
 
       const { data } = await query;
@@ -117,7 +112,7 @@ export function useSharedFilters() {
     queryFn: async () => {
       let query = supabase
         .from('lead_meta')
-        .select('adset_id, adset_name, leads!inner(organization_id, created_at, assigned_user_id)')
+        .select('adset_id, adset_name, leads!inner(id, organization_id, created_at, assigned_user_id)')
         .eq('leads.organization_id', organization?.id)
         .eq('campaign_id', campaignId)
         .gte('leads.created_at', dateRange.from.toISOString())
@@ -125,12 +120,11 @@ export function useSharedFilters() {
         .not('adset_id', 'is', null);
 
       query = applyVisibilityFilter(query, visibility!, 'leads.assigned_user_id', userId);
-      
-      if (teamId) {
-        const { data: teamMembers } = await supabase.from('team_members').select('user_id').eq('team_id', teamId);
-        if (teamMembers?.length) {
-          query = query.in('leads.assigned_user_id', teamMembers.map(m => m.user_id));
-        }
+      const teamLeadIds = await fetchDashboardTeamLeadIds(teamId, null);
+      if (teamLeadIds !== null) {
+        query = teamLeadIds.length === 0
+          ? query.eq('leads.id', '00000000-0000-0000-0000-000000000000')
+          : query.in('leads.id', teamLeadIds);
       }
 
       const { data } = await query;
@@ -151,7 +145,7 @@ export function useSharedFilters() {
     queryFn: async () => {
       let query = supabase
         .from('lead_meta')
-        .select('ad_id, ad_name, leads!inner(organization_id, created_at, assigned_user_id)')
+        .select('ad_id, ad_name, leads!inner(id, organization_id, created_at, assigned_user_id)')
         .eq('leads.organization_id', organization?.id)
         .eq('adset_id', adSetId)
         .gte('leads.created_at', dateRange.from.toISOString())
@@ -159,12 +153,11 @@ export function useSharedFilters() {
         .not('ad_id', 'is', null);
 
       query = applyVisibilityFilter(query, visibility!, 'leads.assigned_user_id', userId);
-      
-      if (teamId) {
-        const { data: teamMembers } = await supabase.from('team_members').select('user_id').eq('team_id', teamId);
-        if (teamMembers?.length) {
-          query = query.in('leads.assigned_user_id', teamMembers.map(m => m.user_id));
-        }
+      const teamLeadIds = await fetchDashboardTeamLeadIds(teamId, null);
+      if (teamLeadIds !== null) {
+        query = teamLeadIds.length === 0
+          ? query.eq('leads.id', '00000000-0000-0000-0000-000000000000')
+          : query.in('leads.id', teamLeadIds);
       }
 
       const { data } = await query;
@@ -246,7 +239,7 @@ export function useSharedFilters() {
 
   const hasActiveFilters = 
     teamId !== null || 
-    userId !== null || 
+    (userId !== null && userId !== 'all') || 
     source !== null || 
     campaignId !== null || 
     adSetId !== null || 

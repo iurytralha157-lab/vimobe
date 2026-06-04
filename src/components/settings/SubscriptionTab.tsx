@@ -180,11 +180,11 @@ export function SubscriptionTab() {
             <CardHeader className="bg-primary/5 pb-6">
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
-                  <CardTitle className="text-xl flex items-center gap-2">
+                  <CardTitle className="text-xl font-semibold text-foreground flex items-center gap-2">
                     <CreditCard className="h-5 w-5 text-primary" />
                     {plan?.name || org?.plan_name || 'Plano de Assinatura'}
                   </CardTitle>
-                  <CardDescription>{plan?.description || 'Gestão da sua assinatura Vimob'}</CardDescription>
+                  <CardDescription className="mt-0.5 text-sm text-muted-foreground">{plan?.description || 'Gestão da sua assinatura Vimob'}</CardDescription>
                 </div>
                 <Badge variant={s.variant} className="uppercase">{s.label}</Badge>
               </div>
@@ -203,6 +203,72 @@ export function SubscriptionTab() {
             </CardContent>
           </Card>
 
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-xl font-semibold text-foreground">Dados de Faturamento</CardTitle>
+              <CardDescription>Usados para emissão de notas e boletos</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" className="flex-1 text-[10px] h-8" onClick={autoFillFromUser}><User className="h-3 w-3 mr-1" /> Perfil</Button>
+                <Button variant="outline" size="sm" className="flex-1 text-[10px] h-8" onClick={autoFillFromOrg}><Building2 className="h-3 w-3 mr-1" /> Empresa</Button>
+              </div>
+              <div className="space-y-3">
+                <div className="space-y-1.5"><Label className="text-xs">Nome / Razão Social</Label><Input value={billingInfo.name} onChange={e => setBillingInfo({...billingInfo, name: e.target.value})} className="h-9" /></div>
+                <div className="space-y-1.5"><Label className="text-xs">CPF ou CNPJ</Label><Input value={billingInfo.taxId} onChange={e => setBillingInfo({...billingInfo, taxId: e.target.value})} className="h-9" /></div>
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="space-y-1.5"><Label className="text-xs">CEP</Label><Input value={billingInfo.cep} onChange={e => setBillingInfo({...billingInfo, cep: e.target.value})} className="h-9" /></div>
+                  <div className="space-y-1.5 col-span-2"><Label className="text-xs">Cidade</Label><Input value={billingInfo.cidade} onChange={e => setBillingInfo({...billingInfo, cidade: e.target.value})} className="h-9" /></div>
+                </div>
+                <div className="space-y-1.5"><Label className="text-xs">Endereço</Label><Input value={billingInfo.endereco} onChange={e => setBillingInfo({...billingInfo, endereco: e.target.value})} className="h-9" /></div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1.5"><Label className="text-xs">Número</Label><Input value={billingInfo.numero} onChange={e => setBillingInfo({...billingInfo, numero: e.target.value})} className="h-9" /></div>
+                  <div className="space-y-1.5"><Label className="text-xs">UF</Label><Input value={billingInfo.uf} onChange={e => setBillingInfo({...billingInfo, uf: e.target.value.toUpperCase()})} maxLength={2} className="h-9" /></div>
+                </div>
+              </div>
+              <Button onClick={handleSaveBilling} disabled={saving} className="w-full mt-2" variant="secondary">
+                {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Salvar Faturamento
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader><CardTitle className="text-lg flex items-center gap-2"><History className="h-5 w-5" /> Histórico</CardTitle></CardHeader>
+            <CardContent>
+              <div className="relative overflow-x-auto">
+                <table className="w-full text-sm text-left">
+                  <thead>
+                    <tr className="border-b text-muted-foreground font-medium">
+                      <th className="py-2">Vencimento</th>
+                      <th className="py-2">Valor</th>
+                      <th className="py-2">Status</th>
+                      <th className="py-2 text-right">Ação</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {history.map(h => (
+                      <tr key={h.id} className="hover:bg-muted/50 transition-colors">
+                        <td className="py-3">{format(new Date(h.due_date), 'dd/MM/yyyy')}</td>
+                        <td className="py-3 font-semibold">{Number(h.value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+                        <td className="py-3">
+                          <Badge variant={h.status === 'RECEIVED' || h.status === 'CONFIRMED' ? 'default' : 'outline'} className="text-[10px]">
+                            {h.status === 'RECEIVED' || h.status === 'CONFIRMED' ? 'Pago' : h.status}
+                          </Badge>
+                        </td>
+                        <td className="py-3 text-right">
+                          {h.invoice_url && <Button variant="ghost" size="sm" asChild><a href={h.invoice_url} target="_blank"><ExternalLink className="h-4 w-4" /></a></Button>}
+                        </td>
+                      </tr>
+                    ))}
+                    {history.length === 0 && <tr><td colSpan={4} className="py-8 text-center text-muted-foreground">Nenhum pagamento encontrado</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="space-y-6">
           {checkoutResult ? (
             <Card className="border-primary">
               <CardHeader>
@@ -258,8 +324,8 @@ export function SubscriptionTab() {
           ) : (
             <Card>
               <CardHeader>
-                <CardTitle>Pagamento de Assinatura</CardTitle>
-                <CardDescription>Selecione o método de pagamento para sua mensalidade</CardDescription>
+                <CardTitle className="text-lg">Pagamento de Assinatura</CardTitle>
+                <CardDescription className="mt-0.5 text-sm text-muted-foreground">Selecione o método de pagamento para sua mensalidade</CardDescription>
               </CardHeader>
               <CardContent>
                 <Tabs defaultValue="PIX">
@@ -316,72 +382,6 @@ export function SubscriptionTab() {
               </CardContent>
             </Card>
           )}
-
-          <Card>
-            <CardHeader><CardTitle className="text-lg flex items-center gap-2"><History className="h-5 w-5" /> Histórico</CardTitle></CardHeader>
-            <CardContent>
-              <div className="relative overflow-x-auto">
-                <table className="w-full text-sm text-left">
-                  <thead>
-                    <tr className="border-b text-muted-foreground font-medium">
-                      <th className="py-2">Vencimento</th>
-                      <th className="py-2">Valor</th>
-                      <th className="py-2">Status</th>
-                      <th className="py-2 text-right">Ação</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y">
-                    {history.map(h => (
-                      <tr key={h.id} className="hover:bg-muted/50 transition-colors">
-                        <td className="py-3">{format(new Date(h.due_date), 'dd/MM/yyyy')}</td>
-                        <td className="py-3 font-semibold">{Number(h.value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
-                        <td className="py-3">
-                          <Badge variant={h.status === 'RECEIVED' || h.status === 'CONFIRMED' ? 'default' : 'outline'} className="text-[10px]">
-                            {h.status === 'RECEIVED' || h.status === 'CONFIRMED' ? 'Pago' : h.status}
-                          </Badge>
-                        </td>
-                        <td className="py-3 text-right">
-                          {h.invoice_url && <Button variant="ghost" size="sm" asChild><a href={h.invoice_url} target="_blank"><ExternalLink className="h-4 w-4" /></a></Button>}
-                        </td>
-                      </tr>
-                    ))}
-                    {history.length === 0 && <tr><td colSpan={4} className="py-8 text-center text-muted-foreground">Nenhum pagamento encontrado</td></tr>}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Dados de Faturamento</CardTitle>
-              <CardDescription>Usados para emissão de notas e boletos</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" className="flex-1 text-[10px] h-8" onClick={autoFillFromUser}><User className="h-3 w-3 mr-1" /> Perfil</Button>
-                <Button variant="outline" size="sm" className="flex-1 text-[10px] h-8" onClick={autoFillFromOrg}><Building2 className="h-3 w-3 mr-1" /> Empresa</Button>
-              </div>
-              <div className="space-y-3">
-                <div className="space-y-1.5"><Label className="text-xs">Nome / Razão Social</Label><Input value={billingInfo.name} onChange={e => setBillingInfo({...billingInfo, name: e.target.value})} className="h-9" /></div>
-                <div className="space-y-1.5"><Label className="text-xs">CPF ou CNPJ</Label><Input value={billingInfo.taxId} onChange={e => setBillingInfo({...billingInfo, taxId: e.target.value})} className="h-9" /></div>
-                <div className="grid grid-cols-3 gap-2">
-                  <div className="space-y-1.5"><Label className="text-xs">CEP</Label><Input value={billingInfo.cep} onChange={e => setBillingInfo({...billingInfo, cep: e.target.value})} className="h-9" /></div>
-                  <div className="space-y-1.5 col-span-2"><Label className="text-xs">Cidade</Label><Input value={billingInfo.cidade} onChange={e => setBillingInfo({...billingInfo, cidade: e.target.value})} className="h-9" /></div>
-                </div>
-                <div className="space-y-1.5"><Label className="text-xs">Endereço</Label><Input value={billingInfo.endereco} onChange={e => setBillingInfo({...billingInfo, endereco: e.target.value})} className="h-9" /></div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="space-y-1.5"><Label className="text-xs">Número</Label><Input value={billingInfo.numero} onChange={e => setBillingInfo({...billingInfo, numero: e.target.value})} className="h-9" /></div>
-                  <div className="space-y-1.5"><Label className="text-xs">UF</Label><Input value={billingInfo.uf} onChange={e => setBillingInfo({...billingInfo, uf: e.target.value.toUpperCase()})} maxLength={2} className="h-9" /></div>
-                </div>
-              </div>
-              <Button onClick={handleSaveBilling} disabled={saving} className="w-full mt-2" variant="secondary">
-                {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Salvar Faturamento
-              </Button>
-            </CardContent>
-          </Card>
 
           {isSuperAdmin && (
             <Card className="border-warning bg-warning/5">

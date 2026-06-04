@@ -1,195 +1,368 @@
-import { useMemo } from 'react';
-import {
-  Building2,
-  Users,
-  DollarSign,
-  TrendingUp,
-  Wallet,
-  AlertOctagon,
-  Clock,
-  XCircle,
-  Activity,
-  Zap,
-  AlertTriangle,
-  LogIn,
-  Users2,
-  Briefcase,
-  Phone,
-} from 'lucide-react';
+﻿import { useMemo, useState } from 'react';
+import { endOfDay, format, startOfDay, startOfMonth } from 'date-fns';
+import { Activity, Building2, CheckCircle2, DollarSign, RefreshCw, Target, TrendingUp, Users } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { AdminLayout } from '@/components/admin/AdminLayout';
-import { useLocalStorage } from '@/hooks/use-local-storage';
-import {
-  useDashboardOverview,
-  useDashboardTimeseries,
-  useDashboardPendingBoards,
-  useDashboardFeed,
-  type DashboardPeriod,
-} from '@/hooks/use-admin-dashboard';
-import { PlatformHeader } from '@/components/admin/dashboard/PlatformHeader';
-import { KpiCard } from '@/components/admin/dashboard/KpiCard';
-import { RevenueChart } from '@/components/admin/dashboard/RevenueChart';
 import { OrgsGrowthChart } from '@/components/admin/dashboard/OrgsGrowthChart';
-import { HealthDonutChart } from '@/components/admin/dashboard/HealthDonutChart';
-import { UsageChart } from '@/components/admin/dashboard/UsageChart';
-import { PendingBoard, PendingRow } from '@/components/admin/dashboard/PendingBoard';
-import { OperationalFeed } from '@/components/admin/dashboard/OperationalFeed';
-import { useQueryClient } from '@tanstack/react-query';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { DateFilterPopover } from '@/components/ui/date-filter-popover';
+import { DatePreset, getDateRangeFromPreset } from '@/hooks/use-dashboard-filters';
+import { supabase } from '@/integrations/supabase/client';
+import { cn } from '@/lib/utils';
 
 const fmtBRL = (n: number) =>
-  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(n || 0);
+  new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    maximumFractionDigits: 0,
+  }).format(n || 0);
+
 const fmtNum = (n: number) => new Intl.NumberFormat('pt-BR').format(n || 0);
 
+type AdminDashboardData = {
+  revenue: number;
+  mrr: number;
+  totalOrgs: number;
+  activeOrgs: number;
+  leads: number;
+  activeUsers: number;
+  automations: number;
+  accesses: number;
+  organizationFlow: Array<{ date: string; created: number; active: number; disabled: number }>;
+  bucket: 'dia' | 'mês';
+};
+
 export default function AdminDashboard() {
-  const [period, setPeriod] = useLocalStorage<DashboardPeriod>('admin-dash-period', 30);
+  const [datePreset, setDatePreset] = useState<DatePreset | null>('thisYear');
+  const [customDateRange, setCustomDateRange] = useState<{ from: Date; to: Date } | null>(null);
   const qc = useQueryClient();
 
-  const overview = useDashboardOverview(period);
-  const ts = useDashboardTimeseries(period);
-  const pending = useDashboardPendingBoards();
-  const feed = useDashboardFeed(40);
+  const dateRange = useMemo(() => {
+    if (datePreset === 'custom' && customDateRange) {
+      return { from: startOfDay(customDateRange.from), to: endOfDay(customDateRange.to) };
+    }
+    return getDateRangeFromPreset(datePreset || 'thisYear');
+  }, [customDateRange, datePreset]);
 
-  const isFetching = overview.isFetching || ts.isFetching || pending.isFetching || feed.isFetching;
+  const dashboard = useAdminDashboardData(dateRange);
+
+  const kpis = useMemo(() => {
+    const data = dashboard.data;
+    return [
+      {
+        title: 'Receita',
+        value: fmtBRL(data?.revenue ?? 0),
+        icon: DollarSign,
+        color: 'primary',
+        tooltip: 'Pagamentos confirmados no período filtrado',
+      },
+      {
+        title: 'MRR',
+        value: fmtBRL(data?.mrr ?? 0),
+        icon: TrendingUp,
+        color: 'chart-3',
+        tooltip: 'Receita mensal recorrente das organizações ativas',
+      },
+      {
+        title: 'Organizações',
+        value: fmtNum(data?.totalOrgs ?? 0),
+        icon: Building2,
+        color: 'chart-2',
+        tooltip: 'Total de organizações cadastradas',
+      },
+      {
+        title: 'Ativas',
+        value: fmtNum(data?.activeOrgs ?? 0),
+        icon: CheckCircle2,
+        color: 'chart-3',
+        tooltip: 'Organizações ativas',
+      },
+      {
+        title: 'Leads',
+        value: fmtNum(data?.leads ?? 0),
+        icon: Target,
+        color: 'chart-4',
+        tooltip: 'Leads recebidos no período filtrado',
+      },
+      {
+        title: 'Usuários no período',
+        value: fmtNum(data?.activeUsers ?? 0),
+        icon: Users,
+        color: 'chart-1',
+        tooltip: 'Usuários distintos com atividade registrada no período filtrado',
+      },
+      {
+        title: 'Automações',
+        value: fmtNum(data?.automations ?? 0),
+        icon: Activity,
+        color: 'chart-5',
+        tooltip: 'Automações executadas no período filtrado',
+      },
+      {
+        title: 'Acessos',
+        value: fmtNum(data?.accesses ?? 0),
+        icon: Users,
+        color: 'chart-2',
+        tooltip: 'Logins e início de sessão no período filtrado',
+      },
+    ];
+  }, [dashboard.data]);
 
   const refreshAll = () => {
-    qc.invalidateQueries({ queryKey: ['admin-dashboard-overview'] });
-    qc.invalidateQueries({ queryKey: ['admin-dashboard-timeseries'] });
-    qc.invalidateQueries({ queryKey: ['admin-dashboard-pending'] });
-    qc.invalidateQueries({ queryKey: ['admin-dashboard-feed'] });
+    qc.invalidateQueries({ queryKey: ['admin-dashboard-direct'] });
   };
-
-  const highlights = useMemo(() => {
-    const o = overview.data;
-    const p = pending.data;
-    const list: string[] = [];
-    if (p?.overdue?.length) list.push(`${p.overdue.length} ${p.overdue.length === 1 ? 'cliente inadimplente' : 'clientes inadimplentes'}`);
-    if (p?.trials?.length) list.push(`${p.trials.length} ${p.trials.length === 1 ? 'trial vencendo' : 'trials vencendo'}`);
-    if (o?.financial.revenue_growth_pct) {
-      const g = o.financial.revenue_growth_pct;
-      list.push(`Receita ${g >= 0 ? '+' : ''}${g.toFixed(1)}% no período`);
-    }
-    if (o?.operational.errors_recent) list.push(`${o.operational.errors_recent} erros recentes`);
-    return list;
-  }, [overview.data, pending.data]);
-
-  const fin = overview.data?.financial;
-  const plat = overview.data?.platform;
-  const op = overview.data?.operational;
 
   return (
     <AdminLayout title="Dashboard">
-      <div className="space-y-6 max-w-[1600px]">
-        <PlatformHeader
-          period={period}
-          onPeriodChange={setPeriod}
-          onRefresh={refreshAll}
-          isFetching={isFetching}
-          lastUpdated={overview.dataUpdatedAt ? new Date(overview.dataUpdatedAt) : undefined}
-          highlights={highlights}
+      <div className="w-full max-w-[1600px] space-y-3">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
+            <p className="text-sm text-muted-foreground">
+              Receita, entrada e uso da plataforma no período selecionado.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <DateFilterPopover
+              datePreset={datePreset}
+              onDatePresetChange={setDatePreset}
+              customDateRange={customDateRange}
+              onCustomDateRangeChange={setCustomDateRange}
+              defaultPreset="thisYear"
+              align="end"
+              triggerClassName="bg-card"
+            />
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={refreshAll}
+              disabled={dashboard.isFetching}
+              className="h-9 w-9 rounded-lg bg-card"
+              aria-label="Atualizar"
+            >
+              <RefreshCw className={cn('h-4 w-4', dashboard.isFetching && 'animate-spin')} />
+            </Button>
+          </div>
+        </div>
+
+        <DashboardKpiGrid items={kpis} loading={dashboard.isLoading} />
+
+        <OrgsGrowthChart
+          data={dashboard.data?.organizationFlow}
+          loading={dashboard.isLoading}
+          bucket={dashboard.data?.bucket}
         />
-
-        {/* KPIs Financeiro */}
-        <section>
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Financeiro</h2>
-          <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
-            <KpiCard label="MRR" value={fmtBRL(fin?.mrr ?? 0)} icon={DollarSign} accent="primary" hint="receita mensal recorrente" loading={overview.isLoading} />
-            <KpiCard label="Receita no período" value={fmtBRL(fin?.revenue_period ?? 0)} icon={TrendingUp} deltaPct={fin?.revenue_growth_pct} accent="success" loading={overview.isLoading} />
-            <KpiCard label="Receita prevista" value={fmtBRL(fin?.revenue_forecast ?? 0)} icon={Wallet} hint="a vencer no período" loading={overview.isLoading} />
-            <KpiCard label="Ticket médio" value={fmtBRL(fin?.avg_ticket ?? 0)} icon={Briefcase} hint="últimos 90 dias" loading={overview.isLoading} />
-            <KpiCard label="Inadimplência" value={fmtBRL(fin?.overdue_total ?? 0)} icon={AlertOctagon} accent="danger" hint="total em atraso" loading={overview.isLoading} />
-          </div>
-        </section>
-
-        {/* KPIs Plataforma */}
-        <section>
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Plataforma</h2>
-          <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
-            <KpiCard label="Organizações" value={fmtNum(plat?.total_orgs ?? 0)} icon={Building2} deltaPct={plat?.orgs_growth_pct} loading={overview.isLoading} />
-            <KpiCard label="Ativas" value={fmtNum(plat?.active_orgs ?? 0)} icon={Activity} accent="success" loading={overview.isLoading} />
-            <KpiCard label="Trials ativos" value={fmtNum(plat?.trial_orgs ?? 0)} icon={Clock} accent="warning" loading={overview.isLoading} />
-            <KpiCard label="Canceladas" value={fmtNum(plat?.cancelled_orgs ?? 0)} icon={XCircle} accent="danger" loading={overview.isLoading} />
-            <KpiCard label="Usuários ativos hoje" value={fmtNum(plat?.active_users_today ?? 0)} icon={Users} loading={overview.isLoading} />
-          </div>
-        </section>
-
-        {/* KPIs Operacional */}
-        <section>
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Operacional</h2>
-          <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
-            <KpiCard label="Leads hoje" value={fmtNum(op?.leads_today ?? 0)} icon={Users2} loading={overview.isLoading} />
-            <KpiCard label="Automações executadas" value={fmtNum(op?.automations_today ?? 0)} icon={Zap} loading={overview.isLoading} />
-            <KpiCard label="Atividades hoje" value={fmtNum(op?.activities_today ?? 0)} icon={Activity} loading={overview.isLoading} />
-            <KpiCard label="Erros recentes" value={fmtNum(op?.errors_recent ?? 0)} icon={AlertTriangle} accent={op?.errors_recent ? 'danger' : 'default'} hint="últimas 24h" loading={overview.isLoading} />
-            <KpiCard label="Acessos hoje" value={fmtNum(op?.accesses_today ?? 0)} icon={LogIn} loading={overview.isLoading} />
-          </div>
-        </section>
-
-        {/* Gráficos */}
-        <section className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))' }}>
-          <RevenueChart data={ts.data?.revenue} loading={ts.isLoading} />
-          <OrgsGrowthChart data={ts.data?.orgs} loading={ts.isLoading} />
-          <HealthDonutChart data={ts.data?.health} loading={ts.isLoading} />
-          <UsageChart data={ts.data?.usage} loading={ts.isLoading} />
-        </section>
-
-        {/* Central de pendências */}
-        <section>
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Central de pendências</h2>
-          <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))' }}>
-            <PendingBoard title="Clientes inadimplentes" icon={AlertOctagon} tone="danger" count={pending.data?.overdue?.length ?? 0} loading={pending.isLoading} empty="Nenhum cliente em atraso.">
-              {pending.data?.overdue?.map((o) => (
-                <PendingRow
-                  key={o.id}
-                  title={o.name}
-                  subtitle={`${o.days_overdue} dia${o.days_overdue === 1 ? '' : 's'} em atraso`}
-                  value={fmtBRL(Number(o.amount_due))}
-                  valueTone="danger"
-                />
-              ))}
-            </PendingBoard>
-
-            <PendingBoard title="Organizações sem uso" icon={Activity} tone="warning" count={pending.data?.idle?.length ?? 0} loading={pending.isLoading} empty="Todas as organizações ativas.">
-              {pending.data?.idle?.map((o) => (
-                <PendingRow
-                  key={o.id}
-                  title={o.name}
-                  subtitle={o.days_idle == null ? 'Nunca acessou' : `Sem acesso há ${o.days_idle} dias`}
-                  value="risco de churn"
-                  valueTone="warning"
-                />
-              ))}
-            </PendingBoard>
-
-            <PendingBoard title="Problemas técnicos" icon={AlertTriangle} tone="danger" count={pending.data?.issues?.length ?? 0} loading={pending.isLoading} empty="Tudo funcionando.">
-              {pending.data?.issues?.map((i) => (
-                <PendingRow
-                  key={i.id}
-                  title={i.title}
-                  subtitle={`${i.organization_name ?? 'Sistema'} · ${i.type}`}
-                  value={i.severity}
-                  valueTone="danger"
-                />
-              ))}
-            </PendingBoard>
-
-            <PendingBoard title="Trials vencendo" icon={Clock} tone="warning" count={pending.data?.trials?.length ?? 0} loading={pending.isLoading} empty="Sem trials próximos do vencimento.">
-              {pending.data?.trials?.map((t) => (
-                <PendingRow
-                  key={t.id}
-                  title={t.name}
-                  subtitle={t.whatsapp ?? t.telefone ?? t.email ?? '—'}
-                  value={`${t.days_left}d restantes`}
-                  valueTone={t.days_left <= 3 ? 'danger' : 'warning'}
-                />
-              ))}
-            </PendingBoard>
-          </div>
-        </section>
-
-        {/* Feed operacional */}
-        <section>
-          <OperationalFeed events={feed.data} loading={feed.isLoading} />
-        </section>
       </div>
     </AdminLayout>
   );
 }
+
+function useAdminDashboardData(dateRange: { from: Date; to: Date }) {
+  const from = dateRange.from.toISOString();
+  const to = dateRange.to.toISOString();
+
+  return useQuery({
+    queryKey: ['admin-dashboard-direct', from, to],
+    queryFn: async (): Promise<AdminDashboardData> => {
+      const fromDate = from.slice(0, 10);
+      const toDate = to.slice(0, 10);
+
+      const [
+        financialResult,
+        orgsResult,
+        adminOrgsResult,
+        leadsResult,
+        auditResult,
+        automationsResult,
+        plansResult,
+      ] = await Promise.all([
+        (supabase as any)
+          .from('financial_entries')
+          .select('amount, paid_amount, paid_date, status, type')
+          .eq('status', 'paid')
+          .eq('type', 'income')
+          .gte('paid_date', fromDate)
+          .lte('paid_date', toDate),
+        (supabase as any)
+          .from('organizations')
+          .select('id, is_active, subscription_status, subscription_type, plan_id, created_at, updated_at')
+          .gte('created_at', from)
+          .lte('created_at', to),
+        (supabase.rpc as any)('admin_list_organizations', {
+          p_search: '',
+          p_status: 'all',
+          p_segment: 'all',
+        }),
+        (supabase as any)
+          .from('leads')
+          .select('id', { count: 'exact', head: true })
+          .gte('created_at', from)
+          .lte('created_at', to),
+        (supabase as any)
+          .from('audit_logs')
+          .select('user_id, action, created_at')
+          .gte('created_at', from)
+          .lte('created_at', to),
+        (supabase as any)
+          .from('automation_runs')
+          .select('id', { count: 'exact', head: true })
+          .gte('started_at', from)
+          .lte('started_at', to),
+        (supabase as any)
+          .from('admin_subscription_plans')
+          .select('id, price'),
+      ]);
+
+      const firstError = [
+        financialResult.error,
+        orgsResult.error,
+        adminOrgsResult.error,
+        leadsResult.error,
+        auditResult.error,
+        automationsResult.error,
+        plansResult.error,
+      ].find(Boolean);
+      if (firstError) throw firstError;
+
+      const financialEntries = financialResult.data || [];
+      const filteredOrgs = orgsResult.data || [];
+      const adminOrgs = adminOrgsResult.data || [];
+      const auditLogs = auditResult.data || [];
+      const planPrices = new Map((plansResult.data || []).map((plan: any) => [plan.id, Number(plan.price) || 0]));
+
+      const revenue = financialEntries.reduce(
+        (sum: number, entry: any) => sum + Number(entry.paid_amount ?? entry.amount ?? 0),
+        0,
+      );
+
+      const directMrr = filteredOrgs.reduce((sum: number, org: any) => {
+        if (!org.is_active || org.subscription_type !== 'paid' || !org.plan_id) return sum;
+        return sum + (planPrices.get(org.plan_id) || 0);
+      }, 0);
+
+      const adminMrr = adminOrgs.reduce((sum: number, org: any) => sum + Number(org.mrr || 0), 0);
+      const activeOrgs = adminOrgs.length
+        ? adminOrgs.filter((org: any) => org.is_active && org.subscription_status === 'active').length
+        : filteredOrgs.filter((org: any) => org.is_active && org.subscription_status === 'active').length;
+      const totalLeads = adminOrgs.reduce((sum: number, org: any) => sum + Number(org.lead_count || 0), 0);
+      const totalAutomations = adminOrgs.reduce((sum: number, org: any) => sum + Number(org.automation_count || 0), 0);
+      const activeUsers = new Set(auditLogs.map((log: any) => log.user_id).filter(Boolean)).size;
+      const accesses = auditLogs.filter((log: any) => log.action === 'login' || log.action === 'session.start').length;
+      const bucket = getBucket(dateRange.from, dateRange.to);
+      const flowSource = filteredOrgs.length
+        ? filteredOrgs
+        : adminOrgs.filter((org: any) => {
+            if (!org.created_at) return false;
+            const createdAt = new Date(org.created_at);
+            return createdAt >= dateRange.from && createdAt <= dateRange.to;
+          });
+      const organizationFlow = buildOrganizationFlow(flowSource, bucket);
+
+      return {
+        revenue,
+        mrr: adminMrr || directMrr,
+        totalOrgs: adminOrgs.length || filteredOrgs.length,
+        activeOrgs,
+        leads: totalLeads || leadsResult.count || 0,
+        activeUsers,
+        automations: totalAutomations || automationsResult.count || 0,
+        accesses,
+        organizationFlow,
+        bucket,
+      };
+    },
+    staleTime: 60_000,
+  });
+}
+
+function getBucket(from: Date, to: Date): 'dia' | 'mês' {
+  const days = Math.ceil((to.getTime() - from.getTime()) / 86_400_000);
+  return days > 120 ? 'mês' : 'dia';
+}
+
+function buildOrganizationFlow(orgs: any[], bucket: 'dia' | 'mês') {
+  const map = new Map<string, { date: string; created: number; active: number; disabled: number }>();
+
+  const ensureRow = (key: string) => {
+    if (!map.has(key)) {
+      map.set(key, { date: key, created: 0, active: 0, disabled: 0 });
+    }
+    return map.get(key)!;
+  };
+
+  orgs.forEach((org) => {
+    if (!org.created_at) return;
+    const createdAt = new Date(org.created_at);
+    const key = bucket === 'mês'
+      ? format(startOfMonth(createdAt), 'yyyy-MM-01')
+      : format(createdAt, 'yyyy-MM-dd');
+    const row = ensureRow(key);
+
+    row.created += 1;
+    if (org.is_active && org.subscription_status === 'active') row.active += 1;
+    if (!org.is_active || org.subscription_status === 'cancelled') row.disabled += 1;
+  });
+
+  return Array.from(map.values()).sort((a, b) => a.date.localeCompare(b.date));
+}
+
+function DashboardKpiGrid({ items, loading }: { items: any[]; loading?: boolean }) {
+  if (loading) {
+    return (
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {Array.from({ length: 8 }).map((_, index) => (
+          <Card key={index}>
+            <CardContent className="p-4">
+              <Skeleton className="mb-3 h-3 w-20" />
+              <Skeleton className="h-7 w-24" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      {items.map((item) => {
+        const Icon = item.icon;
+        return (
+          <TooltipProvider key={item.title}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Card className="card-hover h-full cursor-default">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="mb-1 truncate text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                          {item.title}
+                        </p>
+                        <p className="truncate text-2xl font-bold leading-tight">{item.value}</p>
+                      </div>
+                      <div
+                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg"
+                        style={{ backgroundColor: `hsl(var(--${item.color}) / 0.1)` }}
+                      >
+                        <Icon className="h-5 w-5" style={{ color: `hsl(var(--${item.color}))` }} />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="text-xs">{item.tooltip}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        );
+      })}
+    </div>
+  );
+}
+
+
+

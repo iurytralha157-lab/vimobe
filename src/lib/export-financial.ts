@@ -83,12 +83,12 @@ export function prepareFinancialEntriesExport(entries: any[]): ExportData[] {
   return entries.map((entry) => ({
     Descrição: entry.description,
     Tipo: entry.type === 'receivable' ? 'A Receber' : 'A Pagar',
-    Categoria: entry.category?.name || '-',
-    Valor: formatCurrency(entry.value),
+    Categoria: typeof entry.category === 'string' ? entry.category : entry.category?.name || '-',
+    Valor: formatCurrency(entry.amount),
     Vencimento: formatDate(entry.due_date),
     Status: getStatusLabel(entry.status),
-    'Valor Pago': formatCurrency(entry.paid_value),
-    'Data Pagamento': formatDate(entry.paid_at),
+    'Valor Pago': formatCurrency(entry.paid_value ?? entry.paid_amount),
+    'Data Pagamento': formatDate(entry.paid_date),
     Parcela: entry.installment_number && entry.total_installments 
       ? `${entry.installment_number}/${entry.total_installments}` 
       : '-',

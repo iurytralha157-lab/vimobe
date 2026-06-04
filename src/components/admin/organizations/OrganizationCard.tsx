@@ -1,27 +1,28 @@
-import { 
-  Building2, 
-  Users, 
-  Target, 
-  Zap, 
-  Activity, 
-  Calendar,
+import {
+  Activity,
   AlertCircle,
-  Clock,
+  Ban,
+  Building2,
+  CalendarDays,
   ExternalLink,
   MoreVertical,
   ShieldCheck,
-  Ban,
-  Trash2
+  Target,
+  Trash2,
+  Users,
+  Zap,
+  type LucideIcon,
 } from 'lucide-react';
+import type { MouseEvent } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuSeparator, 
-  DropdownMenuTrigger 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -37,171 +38,183 @@ interface OrganizationCardProps {
   onDelete: (id: string, name: string) => void;
 }
 
-export function OrganizationCard({ 
-  org, 
-  onImpersonate, 
-  onViewDetails, 
-  onToggleStatus, 
-  onDelete 
+export function OrganizationCard({
+  org,
+  onImpersonate,
+  onViewDetails,
+  onToggleStatus,
+  onDelete,
 }: OrganizationCardProps) {
-  
-  const getStatusConfig = (status: string, isActive: boolean) => {
-    if (!isActive) return { label: 'Inativo', color: 'bg-red-100 text-red-700 border-red-200' };
-    
-    switch (status) {
-      case 'active': return { label: 'Ativo', color: 'bg-emerald-100 text-emerald-700 border-emerald-200' };
-      case 'trial': return { label: 'Trial', color: 'bg-blue-100 text-blue-700 border-blue-200' };
-      case 'suspended': return { label: 'Suspenso', color: 'bg-amber-100 text-amber-700 border-amber-200' };
-      default: return { label: status, color: 'bg-gray-100 text-gray-700 border-gray-200' };
-    }
-  };
-
   const status = getStatusConfig(org.subscription_status, org.is_active);
+  const healthTone = getHealthTone(org.health_score);
 
-  const getHealthColor = (score: number) => {
-    if (score >= 80) return 'bg-emerald-500';
-    if (score >= 50) return 'bg-amber-500';
-    return 'bg-red-500';
-  };
+  const stop = (event: MouseEvent) => event.stopPropagation();
 
   return (
-    <Card className="group hover:shadow-xl transition-all duration-300 border-border/50 overflow-hidden bg-card/50 backdrop-blur-sm">
-      <CardContent className="p-0">
-        {/* Top Header */}
-        <div className="p-6 pb-4">
-          <div className="flex justify-between items-start">
-            <div className="flex gap-4">
-              <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 flex items-center justify-center overflow-hidden shadow-inner group-hover:scale-105 transition-transform">
-                {org.logo_url ? (
-                  <img src={org.logo_url} alt={org.name} className="h-full w-full object-contain p-2" />
-                ) : (
-                  <Building2 className="h-7 w-7 text-primary" />
-                )}
-              </div>
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <h3 className="font-bold text-lg text-foreground truncate max-w-[180px]">
-                    {org.name}
-                  </h3>
-                  <Badge variant="outline" className={cn("text-[10px] px-1.5 h-5 font-bold uppercase tracking-wider", status.color)}>
-                    {status.label}
-                  </Badge>
-                </div>
-                <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1">
-                    <Activity className="h-3 w-3" />
-                    {org.segment || 'Geral'}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Clock className="h-3 w-3" />
-                    {org.last_access_at 
-                      ? `Ativo ${formatDistanceToNow(new Date(org.last_access_at), { addSuffix: true, locale: ptBR })}`
-                      : 'Sem acesso'
-                    }
-                  </span>
-                </div>
+    <Card
+      role="button"
+      tabIndex={0}
+      onClick={() => onViewDetails(org.id)}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onViewDetails(org.id);
+        }
+      }}
+      className="group cursor-pointer overflow-hidden border-border/60 bg-card transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+    >
+      <CardContent className="p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full border bg-muted">
+              {org.logo_url ? (
+                <img src={org.logo_url} alt={org.name} className="h-full w-full object-cover" />
+              ) : (
+                <Building2 className="h-6 w-6 text-primary" />
+              )}
+            </div>
+            <div className="min-w-0">
+              <h3 className="truncate font-semibold">{org.name}</h3>
+              <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+                <Activity className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate">{org.segment || 'Geral'}</span>
               </div>
             </div>
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-muted">
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuItem onClick={() => onViewDetails(org.id)} className="cursor-pointer">
-                  <ExternalLink className="mr-2 h-4 w-4" /> Ver Painel Completo
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onImpersonate(org.id, org.name)} className="cursor-pointer">
-                  <ShieldCheck className="mr-2 h-4 w-4 text-emerald-500" /> Personificar (Login)
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => onToggleStatus(org.id, org.is_active)} className="cursor-pointer">
-                  {org.is_active ? (
-                    <><Ban className="mr-2 h-4 w-4 text-amber-500" /> Desativar Acesso</>
-                  ) : (
-                    <><Zap className="mr-2 h-4 w-4 text-emerald-500" /> Reativar Acesso</>
-                  )}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onDelete(org.id, org.name)} className="text-red-500 cursor-pointer">
-                  <Trash2 className="mr-2 h-4 w-4" /> Excluir Organização
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
           </div>
 
-          {/* Key Metrics Row */}
-          <div className="grid grid-cols-3 gap-2 mt-6">
-            <div className="bg-muted/30 p-2 rounded-xl text-center">
-              <div className="flex justify-center mb-1">
-                <Users className="h-3 w-3 text-blue-500" />
-              </div>
-              <p className="text-sm font-bold">{org.user_count}</p>
-              <p className="text-[10px] text-muted-foreground uppercase">Usuários</p>
+          <div className="flex shrink-0 items-start gap-1.5">
+            <div className="flex flex-col items-end gap-1">
+              <Badge variant="outline" className={cn('h-5 px-1.5 text-[10px] font-medium leading-none', status.color)}>
+                {status.label}
+              </Badge>
+              {org.overdue_amount > 0 && (
+                <Badge variant="outline" className="h-5 border-destructive/40 px-1.5 text-[10px] leading-none text-destructive">
+                  Inadimplente
+                </Badge>
+              )}
             </div>
-            <div className="bg-muted/30 p-2 rounded-xl text-center">
-              <div className="flex justify-center mb-1">
-                <Target className="h-3 w-3 text-emerald-500" />
-              </div>
-              <p className="text-sm font-bold">{org.lead_count}</p>
-              <p className="text-[10px] text-muted-foreground uppercase">Leads</p>
-            </div>
-            <div className="bg-muted/30 p-2 rounded-xl text-center">
-              <div className="flex justify-center mb-1">
-                <Zap className="h-3 w-3 text-amber-500" />
-              </div>
-              <p className="text-sm font-bold">{org.automation_count}</p>
-              <p className="text-[10px] text-muted-foreground uppercase">Tasks</p>
-            </div>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild onClick={stop}>
+              <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 rounded-lg">
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56" onClick={stop}>
+              <DropdownMenuItem onClick={() => onViewDetails(org.id)} className="cursor-pointer">
+                <ExternalLink className="mr-2 h-4 w-4" />
+                Ver painel completo
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onImpersonate(org.id, org.name)} className="cursor-pointer">
+                <ShieldCheck className="mr-2 h-4 w-4 text-emerald-500" />
+                Entrar na conta
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => onToggleStatus(org.id, org.is_active)} className="cursor-pointer">
+                {org.is_active ? (
+                  <>
+                    <Ban className="mr-2 h-4 w-4 text-amber-500" />
+                    Desativar acesso
+                  </>
+                ) : (
+                  <>
+                    <Zap className="mr-2 h-4 w-4 text-emerald-500" />
+                    Reativar acesso
+                  </>
+                )}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => onDelete(org.id, org.name)} className="cursor-pointer text-destructive">
+                <Trash2 className="mr-2 h-4 w-4" />
+                Excluir organização
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           </div>
         </div>
 
-        {/* Footer info & Health */}
-        <div className="px-6 py-4 bg-muted/20 border-t border-border/50">
-          <div className="space-y-3">
-            <div className="flex justify-between items-center text-xs">
-              <span className="text-muted-foreground flex items-center gap-1">
-                <Activity className="h-3 w-3" /> Saúde da Operação
-              </span>
-              <span className={cn("font-bold", org.health_score >= 80 ? "text-emerald-500" : "text-amber-500")}>
-                {org.health_score}%
-              </span>
+        <div className="mt-4 grid grid-cols-3 gap-2">
+          <Metric icon={Users} label="Usuários" value={org.user_count} />
+          <Metric icon={Target} label="Leads" value={org.lead_count} />
+          <Metric icon={Zap} label="Automações" value={org.automation_count} />
+        </div>
+
+        <div className="mt-4 space-y-3">
+          <div>
+            <div className="mb-1.5 flex items-center justify-between text-xs">
+              <span className="text-muted-foreground">Saúde da operação</span>
+              <span className={cn('font-semibold', healthTone.text)}>{org.health_score}%</span>
             </div>
-            <Progress value={org.health_score} className="h-1.5" indicatorClassName={getHealthColor(org.health_score)} />
-            
-            <div className="flex justify-between items-center pt-1">
-              <div className="flex flex-col">
-                <span className="text-[10px] text-muted-foreground uppercase tracking-tight">Receita Mensal</span>
-                <span className="text-sm font-bold">
-                  {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(org.mrr)}
-                </span>
+            <Progress value={org.health_score} className="h-1.5" indicatorClassName={healthTone.bar} />
+          </div>
+
+          <div className="flex items-end justify-between gap-3 border-t pt-3">
+            <div>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Receita mensal</p>
+              <p className="text-sm font-bold">
+                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(org.mrr)}
+              </p>
+            </div>
+
+            {org.overdue_amount > 0 ? (
+              <div className="text-right">
+                <p className="flex items-center justify-end gap-1 text-[10px] font-semibold uppercase text-destructive">
+                  <AlertCircle className="h-3 w-3" />
+                  Em atraso
+                </p>
+                <p className="text-sm font-bold text-destructive">
+                  {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(org.overdue_amount)}
+                </p>
               </div>
-              
-              {org.overdue_amount > 0 ? (
-                <div className="flex flex-col items-end">
-                  <span className="text-[10px] text-red-500 uppercase font-bold tracking-tight flex items-center gap-1">
-                    <AlertCircle className="h-2 w-2" /> Inadimplente
-                  </span>
-                  <span className="text-sm font-bold text-red-600">
-                    -{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(org.overdue_amount)}
-                  </span>
-                </div>
-              ) : org.subscription_type === 'trial' ? (
-                <div className="flex flex-col items-end">
-                  <span className="text-[10px] text-blue-500 uppercase font-bold tracking-tight">Expira em</span>
-                  <span className="text-sm font-bold text-blue-600">{org.days_trial_left} dias</span>
-                </div>
-              ) : (
-                <div className="flex flex-col items-end">
-                  <span className="text-[10px] text-muted-foreground uppercase tracking-tight">Criado em</span>
-                  <span className="text-xs font-medium">{new Date(org.created_at).toLocaleDateString('pt-BR')}</span>
-                </div>
-              )}
-            </div>
+            ) : (
+              <div className="max-w-[45%] text-right">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Último acesso</p>
+                <p className="truncate text-xs font-medium">
+                  {org.last_access_at
+                    ? formatDistanceToNow(new Date(org.last_access_at), { addSuffix: true, locale: ptBR })
+                    : 'Sem acesso'}
+                </p>
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <CalendarDays className="h-3.5 w-3.5" />
+            Criada em {new Date(org.created_at).toLocaleDateString('pt-BR')}
           </div>
         </div>
       </CardContent>
     </Card>
   );
+}
+
+function Metric({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: number }) {
+  return (
+    <div className="rounded-lg border bg-muted/20 p-2 text-center">
+      <Icon className="mx-auto mb-1 h-3.5 w-3.5 text-muted-foreground" />
+      <p className="text-sm font-bold">{value}</p>
+      <p className="truncate text-[10px] uppercase text-muted-foreground">{label}</p>
+    </div>
+  );
+}
+
+function getStatusConfig(status: string, isActive: boolean) {
+  if (!isActive) return { label: 'Inativo', color: 'border-red-200 bg-red-100 text-red-700' };
+
+  switch (status) {
+    case 'active':
+      return { label: 'Ativo', color: 'border-emerald-200 bg-emerald-100 text-emerald-700' };
+    case 'trial':
+      return { label: 'Trial', color: 'border-blue-200 bg-blue-100 text-blue-700' };
+    case 'suspended':
+      return { label: 'Suspenso', color: 'border-amber-200 bg-amber-100 text-amber-700' };
+    default:
+      return { label: status || 'Sem status', color: 'border-border bg-muted text-muted-foreground' };
+  }
+}
+
+function getHealthTone(score: number) {
+  if (score >= 80) return { text: 'text-emerald-500', bar: 'bg-emerald-500' };
+  if (score >= 50) return { text: 'text-amber-500', bar: 'bg-amber-500' };
+  return { text: 'text-destructive', bar: 'bg-destructive' };
 }

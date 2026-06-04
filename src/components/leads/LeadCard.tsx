@@ -40,8 +40,8 @@ interface LeadCardProps {
   lead: any;
   onClick: () => void;
   index: number;
-  onAssignNow?: (leadId: string) => void;
-  isDragDisabled?: boolean;
+  onAssignNow: (leadId: string) => void;
+  isDragDisabled: boolean;
 }
 
 // Formata tempo sempre em horas (ex: "30min", "2h", "72h")
@@ -74,6 +74,7 @@ export const LeadCard = memo(function LeadCard({
   const totalTasks = pendingTasks + completedTasks;
   const hasPhone = !!lead.phone;
   const hasEmail = !!lead.email;
+  const leadAvatarUrl = lead.whatsapp_avatar_url || lead.whatsapp_picture || lead.contact_picture || null;
   
   // Get interest value from: interest property, interest plan, legacy valor_interesse, or property
   const interestPropertyPrice = lead.interest_property?.preco;
@@ -84,7 +85,7 @@ export const LeadCard = memo(function LeadCard({
                         lead.property?.code || lead.property?.title || null;
 
   // Verifica se o lead tem tags de prioridade alta
-  const hasHighPriority = lead.tags?.some((tag: any) => tag.name?.toLowerCase().includes('urgente') || tag.name?.toLowerCase().includes('vip') || tag.name?.toLowerCase().includes('prioridade') || tag.name?.toLowerCase().includes('hot'));
+  const hasHighPriority = lead.tags?.some((tag: any) => tag.name.toLowerCase().includes('urgente') || tag.name.toLowerCase().includes('vip') || tag.name.toLowerCase().includes('prioridade') || tag.name.toLowerCase().includes('hot'));
 
   // Esquema de cores dinâmico baseado na prioridade
   const iconColors = hasHighPriority ? {
@@ -113,9 +114,9 @@ export const LeadCard = memo(function LeadCard({
     if (lead.phone) {
       recordFirstResponse({
         leadId: lead.id,
-        organizationId: lead.organization_id || profile?.organization_id || '',
+        organizationId: lead.organization_id || profile.organization_id || '',
         channel: 'phone',
-        actorUserId: profile?.id || null,
+        actorUserId: profile.id || null,
         firstResponseAt: lead.first_response_at,
       });
       window.open(`tel:${lead.phone.replace(/\D/g, '')}`, '_blank');
@@ -132,14 +133,7 @@ export const LeadCard = memo(function LeadCard({
   const handleEmailClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (lead.email) {
-      recordFirstResponse({
-        leadId: lead.id,
-        organizationId: lead.organization_id || profile?.organization_id || '',
-        channel: 'email',
-        actorUserId: profile?.id || null,
-        firstResponseAt: lead.first_response_at,
-      });
-      const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&tf=1&to=${encodeURIComponent(lead.email)}`;
+      const gmailUrl = `https://mail.google.com/mail/view=cm&fs=1&tf=1&to=${encodeURIComponent(lead.email)}`;
       window.open(gmailUrl, '_blank');
       setOutcomeType('email');
       setOutcomeDialogOpen(true);
@@ -169,12 +163,12 @@ export const LeadCard = memo(function LeadCard({
           {/* Deal Status Badge + Tags */}
           <div className="flex items-center gap-1 mb-2 flex-wrap">
             {/* Deal Status Badge */}
-            {lead.deal_status && lead.deal_status !== 'open' && <span className={cn("text-[9px] px-1.5 py-0.5 font-medium flex items-center gap-0.5 rounded-full", dealStatusConfig[lead.deal_status as keyof typeof dealStatusConfig]?.color)}>
-                {dealStatusConfig[lead.deal_status as keyof typeof dealStatusConfig]?.icon && (() => {
+            {lead.deal_status && lead.deal_status !== 'open' && <span className={cn("text-[9px] px-1.5 py-0.5 font-medium flex items-center gap-0.5 rounded-full", dealStatusConfig[lead.deal_status as keyof typeof dealStatusConfig].color)}>
+                {dealStatusConfig[lead.deal_status as keyof typeof dealStatusConfig].icon && (() => {
             const Icon = dealStatusConfig[lead.deal_status as keyof typeof dealStatusConfig].icon;
             return Icon ? <Icon className="h-2.5 w-2.5" /> : null;
           })()}
-                {dealStatusConfig[lead.deal_status as keyof typeof dealStatusConfig]?.label}
+                {dealStatusConfig[lead.deal_status as keyof typeof dealStatusConfig].label}
               </span>}
             
             {/* Tags - primeira tag em destaque */}
@@ -198,7 +192,7 @@ export const LeadCard = memo(function LeadCard({
             <div className="flex items-center gap-2 flex-1 min-w-0">
               <div className="relative shrink-0">
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src={lead.whatsapp_picture} alt={lead.name} />
+                  <AvatarImage src={leadAvatarUrl || undefined} alt={lead.name} />
                   <AvatarFallback className="bg-muted text-muted-foreground text-xs font-medium">
                     {lead.name?.[0]?.toUpperCase() || <User className="h-4 w-4" />}
                   </AvatarFallback>
@@ -260,7 +254,8 @@ export const LeadCard = memo(function LeadCard({
             // Website / property interest
             if ((source === 'site' || source === 'website') && interestProp) {
               const label = interestProp.code 
-                ? `${interestProp.code} · ${(interestProp.title || '').substring(0, 20)}${(interestProp.title || '').length > 20 ? '…' : ''}`
+                ?
+                 `${interestProp.code} · ${(interestProp.title || '').substring(0, 20)}${(interestProp.title || '').length > 20 ? '…' : ''}`
                 : (interestProp.title || '').substring(0, 30);
               return (
                 <div className="flex items-center gap-1.5 -mt-1 mb-1 min-w-0">
@@ -299,7 +294,7 @@ export const LeadCard = memo(function LeadCard({
                     <Avatar className="h-6 w-6 ring-2 ring-background shrink-0">
                       <AvatarImage src={lead.assignee.avatar_url} />
                       <AvatarFallback className="text-[10px] bg-primary text-primary-foreground">
-                        {lead.assignee.name?.[0] || '?'}
+                        {lead.assignee.name?.[0] || ''}
                       </AvatarFallback>
                     </Avatar>
                   </TooltipTrigger>
@@ -365,7 +360,8 @@ export const LeadCard = memo(function LeadCard({
                     <div className={cn(
                       "text-[10px] font-semibold px-1.5 py-0.5 rounded",
                       interestPlanPrice 
-                        ? "text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-950" 
+                        ?
+                         "text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-950" 
                         : "text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-950"
                     )}>
                       {formatCurrency(valorInteresse)}

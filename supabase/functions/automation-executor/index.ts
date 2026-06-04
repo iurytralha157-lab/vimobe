@@ -24,6 +24,101 @@ interface EvolutionConnectionState {
   status: number;
 }
 
+type WhatsAppProvider = "evolution" | "evolution_go";
+
+async function leadRepliedAfter(
+  supabase: any,
+  organizationId: string,
+  leadId: string | null | undefined,
+  since: string | null | undefined,
+) {
+  if (!leadId || !since) return false;
+
+  const { data: conversations, error: convError } = await supabase
+    .from("whatsapp_conversations")
+    .select("id")
+    .eq("organization_id", organizationId)
+    .eq("lead_id", leadId)
+    .is("deleted_at", null);
+
+  if (convError) {
+    console.error(`Error checking conversations for lead ${leadId}:`, convError);
+    return false;
+  }
+
+  const conversationIds = (conversations || []).map((conversation: { id: string }) => conversation.id);
+  if (!conversationIds.length) return false;
+
+  const { data: reply, error: replyError } = await supabase
+    .from("whatsapp_messages")
+    .select("id")
+    .in("conversation_id", conversationIds)
+    .eq("from_me", false)
+    .gt("sent_at", since)
+    .limit(1)
+    .maybeSingle();
+
+  if (replyError) {
+    console.error(`Error checking replies for lead ${leadId}:`, replyError);
+    return false;
+  }
+
+  return !!reply;
+}
+
+function getSentMessageId(data: any) {
+  return data?.key?.id || data?.data?.key?.id || data?.messageId || data?.data?.messageId;
+}
+
+async function sendEvolutionGoAction(
+  supabaseUrl: string,
+  serviceRoleKey: string,
+  sessionId: string,
+  action: string,
+  body: Record<string, unknown>,
+) {
+  const response = await fetch(`${supabaseUrl}/functions/v1/evolution-go-proxy`, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${serviceRoleKey}`,
+      "apikey": serviceRoleKey,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      action,
+      session_id: sessionId,
+      body,
+    }),
+  });
+
+  const data = await response.json();
+  if (!response.ok || !data?.ok) {
+    throw new Error(data?.error || data?.data?.message || data?.message || "Failed to send message via Evolution Go");
+  }
+
+  return data?.data || data;
+}
+
+async function sendWhatsAppTextProviderAware(
+  supabaseUrl: string,
+  serviceRoleKey: string,
+  evolutionApiUrl: string | undefined,
+  evolutionApiKey: string | undefined,
+  session: { id: string; instance_name: string; provider?: WhatsAppProvider | null },
+  number: string,
+  text: string,
+) {
+  if (session.provider === "evolution_go") {
+    return sendEvolutionGoAction(supabaseUrl, serviceRoleKey, session.id, "send.text", { number, text });
+  }
+
+  if (!evolutionApiUrl || !evolutionApiKey) {
+    throw new Error("Evolution API not configured");
+  }
+
+  return sendWhatsAppTextWithRetry(evolutionApiUrl, evolutionApiKey, session.instance_name, number, text);
+}
+
 // ────────────────────────────────────────────────────────────────────────────
 // PHONE / EVOLUTION HELPERS (unchanged from v1)
 // ────────────────────────────────────────────────────────────────────────────
@@ -374,6 +469,8 @@ Deno.serve(async (req) => {
                 supabase,
                 currentNode,
                 execution,
+                SUPABASE_URL,
+                SUPABASE_SERVICE_ROLE_KEY,
                 EVOLUTION_API_URL,
                 EVOLUTION_API_KEY,
               );
@@ -439,12 +536,13 @@ Deno.serve(async (req) => {
               break;
             }
 
-            default:
+            default: {
               console.log(`Unknown node_type: ${currentNode.node_type} — skipping to next`);
               const conn = automation.connections?.find(
                 (c: { source_node_id: string }) => c.source_node_id === currentNodeId,
               );
               nextNodeId = conn?.target_node_id || null;
+            }
           }
         } catch (nodeErr) {
           const errMsg = nodeErr instanceof Error ? nodeErr.message : "Unknown node error";
@@ -473,15 +571,16 @@ Deno.serve(async (req) => {
           currentNodeId = nextNodeId;
         } else {
           // End of flow
-          await supabase
+          const { error: completeError } = await supabase
             .from("automation_executions")
             .update({
               status: "completed",
               completed_at: new Date().toISOString(),
-              step_lock_token: null,
-              step_started_at: null,
+              lock_token: null,
+              locked_at: null,
             })
             .eq("id", execution_id);
+          if (completeError) throw completeError;
           lockReleased = true; // we just nulled the lock
           console.log(`✅ Execution ${execution_id} completed`);
           await sendAutomationNotification(supabase, execution, automation, "completed");
@@ -526,16 +625,20 @@ Deno.serve(async (req) => {
 
 // deno-lint-ignore no-explicit-any
 async function markFailed(supabase: any, executionId: string, error: string) {
-  await supabase
+  const { error: updateError } = await supabase
     .from("automation_executions")
     .update({
       status: "failed",
       completed_at: new Date().toISOString(),
       error_message: error,
-      step_lock_token: null,
-      step_started_at: null,
+      lock_token: null,
+      locked_at: null,
     })
     .eq("id", executionId);
+
+  if (updateError) {
+    console.error("Failed to mark automation execution as failed:", updateError);
+  }
 }
 
 function translateError(error: string): string {
@@ -631,7 +734,9 @@ async function logAutomationActivity(
 async function processActionNode(
   supabase: any,
   node: { id: string; action_type: string; node_config?: Record<string, unknown>; config?: Record<string, unknown> },
-  execution: { id: string; lead_id?: string; conversation_id?: string; organization_id: string },
+  execution: { id: string; lead_id?: string; conversation_id?: string; organization_id: string; started_at?: string },
+  supabaseUrl: string,
+  serviceRoleKey: string,
   evolutionApiUrl?: string,
   evolutionApiKey?: string,
 ) {
@@ -642,6 +747,26 @@ async function processActionNode(
 
   switch (actionType) {
     case "send_whatsapp": {
+      const hasReply = await leadRepliedAfter(
+        supabase,
+        execution.organization_id,
+        execution.lead_id,
+        execution.started_at,
+      );
+
+      if (hasReply) {
+        console.log(`Skipping send_whatsapp for execution ${execution.id}: lead replied after automation started`);
+        await supabase
+          .from("automation_executions")
+          .update({
+            status: "cancelled",
+            completed_at: new Date().toISOString(),
+            next_execution_at: null,
+            error_message: "Cancelado: lead respondeu antes do envio",
+          })
+          .eq("id", execution.id);
+        return;
+      }
       // Idempotency claim FIRST — before any side-effect
       const claimed = await claimDispatch(supabase, execution.id, node.id, execution.organization_id);
       if (!claimed) {
@@ -658,7 +783,6 @@ async function processActionNode(
         const { data: lead } = await supabase
           .from("leads").select("phone, name").eq("id", execution.lead_id).single();
         if (!lead?.phone) { console.log("Lead has no phone"); return; }
-        if (!evolutionApiUrl || !evolutionApiKey) { console.log("Evolution API not configured"); return; }
 
         const messageContent = await replaceVariables(
           supabase,
@@ -667,11 +791,16 @@ async function processActionNode(
           { contact_name: lead.name, contact_phone: lead.phone },
         );
 
-        const sendResult = await sendWhatsAppTextWithRetry(
-          evolutionApiUrl, evolutionApiKey, session.instance_name,
-          normalizePhoneNumber(lead.phone), messageContent,
+        const sendResult = await sendWhatsAppTextProviderAware(
+          supabaseUrl,
+          serviceRoleKey,
+          evolutionApiUrl,
+          evolutionApiKey,
+          session,
+          normalizePhoneNumber(lead.phone),
+          messageContent,
         );
-        const sentMessageId = (sendResult as any)?.key?.id || (sendResult as any)?.messageId || crypto.randomUUID();
+        const sentMessageId = getSentMessageId(sendResult) || crypto.randomUUID();
         console.log("✉️ WhatsApp sent (configured session), id:", sentMessageId);
 
         await persistOutgoingMessage(supabase, {
@@ -695,18 +824,22 @@ async function processActionNode(
         .select("*, session:whatsapp_sessions(*)")
         .eq("id", execution.conversation_id).single();
       if (!conv?.session) { console.log("Conversation/session not found"); return; }
-      if (!evolutionApiUrl || !evolutionApiKey) return;
 
       const messageContent = await replaceVariables(
         supabase,
         (config.message as string) || (config.template_content as string) || "",
         execution, conv,
       );
-      const sendResult = await sendWhatsAppTextWithRetry(
-        evolutionApiUrl, evolutionApiKey, conv.session.instance_name,
-        normalizePhoneNumber(conv.contact_phone), messageContent,
+      const sendResult = await sendWhatsAppTextProviderAware(
+        supabaseUrl,
+        serviceRoleKey,
+        evolutionApiUrl,
+        evolutionApiKey,
+        conv.session,
+        normalizePhoneNumber(conv.contact_phone),
+        messageContent,
       );
-      const sentMsgId = (sendResult as any)?.key?.id || (sendResult as any)?.messageId || crypto.randomUUID();
+      const sentMsgId = getSentMessageId(sendResult) || crypto.randomUUID();
       await supabase.from("whatsapp_messages").upsert({
         conversation_id: execution.conversation_id,
         session_id: conv.session_id,
@@ -862,7 +995,16 @@ async function processActionNode(
         return;
       }
       const mediaType = actionType.replace("send_", "") as "audio" | "image" | "video";
-      await sendMediaMessage(supabase, execution, config, mediaType, evolutionApiUrl, evolutionApiKey);
+      await sendMediaMessage(
+        supabase,
+        execution,
+        config,
+        mediaType,
+        supabaseUrl,
+        serviceRoleKey,
+        evolutionApiUrl,
+        evolutionApiKey,
+      );
       return;
     }
 
@@ -990,10 +1132,11 @@ async function sendMediaMessage(
   execution: { lead_id?: string; conversation_id?: string; organization_id: string },
   config: Record<string, unknown>,
   mediaType: "audio" | "image" | "video",
+  supabaseUrl: string,
+  serviceRoleKey: string,
   evolutionApiUrl?: string,
   evolutionApiKey?: string,
 ) {
-  if (!evolutionApiUrl || !evolutionApiKey) return;
   const sessionId = config.session_id as string;
   if (!sessionId || !execution.lead_id) return;
   const { data: session } = await supabase.from("whatsapp_sessions").select("*").eq("id", sessionId).single();
@@ -1024,6 +1167,31 @@ async function sendMediaMessage(
     endpoint = `message/sendMedia/${session.instance_name}`;
     body = { number, media: videoUrl, mediatype: "video", caption: "" };
     messageContent = "🎥 Vídeo";
+  }
+
+  if (session.provider === "evolution_go") {
+    const goBody = mediaType === "audio"
+      ? { number, media: config.audio_url as string, mimetype: "audio/ogg" }
+      : body;
+    const result = await sendEvolutionGoAction(
+      supabaseUrl,
+      serviceRoleKey,
+      sessionId,
+      mediaType === "audio" ? "send.audio" : "send.media",
+      goBody,
+    );
+    const sentMsgId = getSentMessageId(result) || crypto.randomUUID();
+    await persistOutgoingMessage(supabase, {
+      sessionId, phone: number, contactName: lead.name, leadId: execution.lead_id,
+      messageContent, sentMessageId: sentMsgId, mediaType,
+    });
+    await logAutomationActivity(supabase, execution.lead_id, "automation_message", messageContent,
+      { channel: "whatsapp", automation_action: `send_${mediaType}`, session_id: sessionId });
+    return;
+  }
+
+  if (!evolutionApiUrl || !evolutionApiKey) {
+    throw new Error("Evolution API not configured");
   }
 
   let response;
@@ -1065,7 +1233,7 @@ async function sendMediaMessage(
   if (!result) {
     throw lastError || new Error(`Failed to send ${mediaType} after ${maxAttempts} attempts`);
   }
-  const sentMsgId = result?.key?.id || result?.messageId || crypto.randomUUID();
+  const sentMsgId = getSentMessageId(result) || crypto.randomUUID();
   await persistOutgoingMessage(supabase, {
     sessionId, phone: number, contactName: lead.name, leadId: execution.lead_id,
     messageContent, sentMessageId: sentMsgId, mediaType,

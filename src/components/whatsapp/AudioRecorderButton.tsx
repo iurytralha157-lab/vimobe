@@ -17,6 +17,8 @@
      isRecording,
      duration,
      base64,
+     audioBlob,
+     mimeType,
      startRecording,
      stopRecording,
      cancelRecording,
@@ -41,8 +43,7 @@
      
      setIsSending(true);
      try {
-       // Use ogg/opus which is better supported by WhatsApp
-       await onSend(base64, "audio/ogg; codecs=opus");
+       await onSend(base64, mimeType || audioBlob?.type || "audio/webm");
        clearRecording();
      } catch (error) {
        console.error("Error sending audio:", error);

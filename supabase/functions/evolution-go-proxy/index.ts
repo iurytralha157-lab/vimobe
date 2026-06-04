@@ -1,6 +1,7 @@
 // Evolution Go (whatsmeow) proxy
 // Routes actions from frontend to the Evolution Go REST API
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { enforceRateLimit } from "../_shared/rate-limit.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -68,6 +69,142 @@ function normalizeQRCodeResponse(data: any) {
   }
   
   return { found: false };
+}
+
+function getNested(obj: any, path: string) {
+  return path.split(".").reduce((acc, key) => acc?.[key], obj);
+}
+
+function extractSentMessageId(data: any): string | null {
+  if (!data) return null;
+  const paths = [
+    "messageId",
+    "messageID",
+    "MessageID",
+    "id",
+    "ID",
+    "Id",
+    "key.id",
+    "key.ID",
+    "Key.ID",
+    "Info.ID",
+    "Info.Id",
+    "info.ID",
+    "info.id",
+    "data.messageId",
+    "data.messageID",
+    "data.MessageID",
+    "data.id",
+    "data.ID",
+    "data.key.id",
+    "data.Key.ID",
+    "data.Info.ID",
+    "data.Info.Id",
+    "data.info.ID",
+    "data.info.id",
+    "Data.messageId",
+    "Data.MessageID",
+    "Data.id",
+    "Data.ID",
+    "Data.key.id",
+    "Data.Key.ID",
+    "Data.Info.ID",
+    "Data.Info.Id",
+    "message.key.id",
+    "message.Key.ID",
+    "data.message.key.id",
+    "data.message.Key.ID",
+    "response.key.id",
+    "response.Key.ID",
+  ];
+  for (const path of paths) {
+    const value = getNested(data, path);
+    if (value) return String(value);
+  }
+  return null;
+}
+
+function withNormalizedSentId(action: string, data: any) {
+  if (!["send.text", "send.media", "send.audio", "send.sticker"].includes(action)) return data;
+  const messageId = extractSentMessageId(data);
+  if (!messageId) return data;
+  if (data && typeof data === "object" && !Array.isArray(data)) {
+    return { ...data, messageId, sentMessageId: messageId };
+  }
+  return { data, messageId, sentMessageId: messageId };
+}
+
+function isSendAction(action: string) {
+  return ["send.text", "send.media", "send.audio", "send.sticker", "send.location", "send.contact", "send.link", "send.poll"].includes(action);
+}
+
+function firstPresent(...values: any[]) {
+  return values.find((value) => value !== undefined && value !== null && value !== "");
+}
+
+function withoutEmpty(obj: Record<string, any>) {
+  return Object.fromEntries(
+    Object.entries(obj).filter(([, value]) => value !== undefined && value !== null && value !== ""),
+  );
+}
+
+function normalizeMentionedJid(value: any) {
+  if (!value) return undefined;
+  if (Array.isArray(value)) return value.filter(Boolean);
+  if (typeof value === "string") return value.split(",").map((item) => item.trim()).filter(Boolean);
+  return undefined;
+}
+
+function sendCommonBody(b: any) {
+  return withoutEmpty({
+    number: firstPresent(b.number, b.phone, b.jid, b.remoteJid),
+    delay: b.delay,
+    quoted: b.quoted,
+    mentionAll: b.mentionAll,
+    mentionedJid: normalizeMentionedJid(firstPresent(b.mentionedJid, b.mentionedJids, b.mentions)),
+  });
+}
+
+function sendTextBody(b: any) {
+  return withoutEmpty({
+    ...sendCommonBody(b),
+    text: firstPresent(b.text, b.message, b.body, b.caption),
+  });
+}
+
+function sendMediaBody(b: any, forcedType?: string) {
+  const type = firstPresent(forcedType, b.type, b.mediatype, b.mediaType, b.kind);
+  const url = firstPresent(b.url, b.mediaUrl, b.media, b.base64, b.path, b.file);
+  const filename = firstPresent(b.filename, b.fileName, b.name);
+  return withoutEmpty({
+    ...sendCommonBody(b),
+    type,
+    url,
+    caption: b.caption,
+    filename,
+    mimetype: b.mimetype,
+    ptt: firstPresent(b.ptt, type === "audio" ? true : undefined),
+    media: url,
+    base64: b.base64,
+    path: url,
+    file: url,
+    audio: type === "audio" ? url : undefined,
+    image: type === "image" ? url : undefined,
+    video: type === "video" ? url : undefined,
+    document: type === "document" ? url : undefined,
+    mediatype: type,
+    mediaType: type,
+    fileName: filename,
+  });
+}
+
+function sendStickerBody(b: any) {
+  const sticker = firstPresent(b.sticker, b.url, b.media, b.mediaUrl, b.base64, b.path);
+  return withoutEmpty({
+    ...sendCommonBody(b),
+    sticker,
+    url: sticker,
+  });
 }
 
 function normalizeStatus(data: any) {
@@ -165,6 +302,76 @@ async function evolutionFetch(
   }
 }
 
+const NOTIFICATION_SAFE_SETTINGS = {
+  rejectCall: false,
+  msgCall: "",
+  groupsIgnore: false,
+  alwaysOnline: false,
+  readMessages: false,
+  readStatus: false,
+  syncFullHistory: false,
+  wavoipToken: "",
+};
+
+function shouldRefreshNotificationSafeSettings(session: any): boolean {
+  const settings = (session?.advanced_settings || {}) as Record<string, any>;
+  const appliedAt = settings.notification_safe_settings_applied_at;
+  if (!appliedAt) return true;
+
+  const appliedTime = new Date(appliedAt).getTime();
+  if (!Number.isFinite(appliedTime)) return true;
+
+  return Date.now() - appliedTime > 12 * 60 * 60 * 1000;
+}
+
+async function applyNotificationSafeSettings(
+  instanceKey: string,
+  token?: string,
+) {
+  if (!instanceKey) return { skipped: true, reason: "missing_instance" };
+
+  const attempts = [];
+
+  let result = await evolutionFetch(
+    "POST",
+    `/settings/set/${encodeURIComponent(instanceKey)}`,
+    { body: NOTIFICATION_SAFE_SETTINGS },
+  );
+  attempts.push({ endpoint: `/settings/set/${instanceKey}`, status: result.status, ok: result.ok });
+
+  if (!result.ok) {
+    result = await evolutionFetch(
+      "POST",
+      "/settings/set",
+      { body: NOTIFICATION_SAFE_SETTINGS, query: { instanceId: instanceKey }, instanceId: instanceKey },
+    );
+    attempts.push({ endpoint: "/settings/set?instanceId=...", status: result.status, ok: result.ok });
+  }
+
+  if (!result.ok && token) {
+    result = await evolutionFetch(
+      "POST",
+      `/settings/set/${encodeURIComponent(instanceKey)}`,
+      { body: NOTIFICATION_SAFE_SETTINGS, token },
+    );
+    attempts.push({ endpoint: `/settings/set/${instanceKey} with token`, status: result.status, ok: result.ok });
+  }
+
+  console.log("[EvolutionProxy] notification_safe_settings", {
+    instanceKey,
+    status: result.status,
+    ok: result.ok,
+    attempts,
+  });
+
+  return {
+    ok: result.ok,
+    status: result.status,
+    data: result.data,
+    attempts,
+  };
+}
+
 // Helper for dual-endpoint fetching (primary vs fallback)
 async function smartFetch(
   method: string,
@@ -217,6 +424,24 @@ Deno.serve(async (req) => {
     const action: string = payload?.action;
     if (!action) throw new Error("Missing 'action'");
 
+    const userId = String(claims.claims.sub || "unknown");
+    const role = String(claims.claims.role || "");
+    if (isSendAction(action) && role !== "service_role") {
+      const rateLimit = await enforceRateLimit(
+        supabase,
+        req,
+        "evolution-go-proxy:whatsapp-send",
+        [
+          { name: "per_second", limit: 2, windowSeconds: 1 },
+          { name: "per_minute", limit: 20, windowSeconds: 60 },
+        ],
+        corsHeaders,
+        { identifier: userId },
+      );
+
+      if (rateLimit.response) return rateLimit.response;
+    }
+
     // Resolve session
     let session = null;
     if (payload.session_id) {
@@ -241,6 +466,7 @@ Deno.serve(async (req) => {
       const normalizedStatus = isValid ? normalizeStatus(result.data) : null;
       
       let dbUpdated = false;
+      let notificationSafeSettings: any = null;
       if (isValid && normalizedStatus && session?.id) {
         // Only update if normalized status is connected or disconnected
         if (["connected", "disconnected"].includes(normalizedStatus)) {
@@ -260,6 +486,37 @@ Deno.serve(async (req) => {
           
           if (!updateError) dbUpdated = true;
         }
+
+        if (normalizedStatus === "connected" && shouldRefreshNotificationSafeSettings(session)) {
+          try {
+            notificationSafeSettings = await applyNotificationSafeSettings(instanceKey, token);
+            const advancedSettings = {
+              ...((session.advanced_settings || {}) as Record<string, any>),
+              ...(notificationSafeSettings?.ok
+                ? {
+                    notification_safe_settings_applied_at: new Date().toISOString(),
+                    notification_safe_settings_last_error: null,
+                    notification_safe_settings_last_attempts: notificationSafeSettings?.attempts || null,
+                  }
+                : {
+                    notification_safe_settings_last_error: JSON.stringify({
+                      status: notificationSafeSettings?.status,
+                      data: notificationSafeSettings?.data,
+                    }).slice(0, 1000),
+                    notification_safe_settings_last_attempts: notificationSafeSettings?.attempts || null,
+                    notification_safe_settings_last_failed_at: new Date().toISOString(),
+                  }),
+            };
+
+            await supabase
+              .from("whatsapp_sessions")
+              .update({ advanced_settings: advancedSettings, updated_at: new Date().toISOString() })
+              .eq("id", session.id);
+          } catch (settingsError: any) {
+            notificationSafeSettings = { ok: false, error: settingsError?.message || String(settingsError) };
+            console.warn("[EvolutionProxy] Could not apply notification-safe settings:", notificationSafeSettings);
+          }
+        }
       }
 
       console.log(`[EvolutionProxy] Action: status`, {
@@ -268,6 +525,7 @@ Deno.serve(async (req) => {
         httpStatus: result.status,
         normalizedStatus,
         dbUpdated,
+        notificationSafeSettings,
         rawText: result.rawText.substring(0, 500)
       });
 
@@ -281,7 +539,8 @@ Deno.serve(async (req) => {
           diagnostics: {
             endpointUsed: result.endpointUsed,
             instanceKey,
-            dbUpdated
+            dbUpdated,
+            notificationSafeSettings
           }
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -351,6 +610,15 @@ Deno.serve(async (req) => {
         body = {
           name: b.name ?? b.instanceName,
           token: b.token || "default_token",
+          advancedSettings: {
+            ...(b.advancedSettings || {}),
+            rejectCalls: false,
+            groupsIgnore: false,
+            alwaysOnline: false,
+            readMessages: false,
+            readStatus: false,
+            syncFullHistory: false,
+          },
           ...(b.proxy ? { proxy: b.proxy } : {})
         };
         break;
@@ -388,10 +656,10 @@ Deno.serve(async (req) => {
         query = { instanceId: instanceKey };
         break;
 
-      case "send.text":     method = "POST"; path = "/send/text";     body = b; break;
-      case "send.media":    method = "POST"; path = "/send/media";    body = b; break;
-      case "send.audio":    method = "POST"; path = "/send/media";    body = { ...b, mediatype: "audio", ptt: true }; break;
-      case "send.sticker":  method = "POST"; path = "/send/sticker";  body = b; break;
+      case "send.text":     method = "POST"; path = "/send/text";     body = sendTextBody(b); break;
+      case "send.media":    method = "POST"; path = "/send/media";    body = sendMediaBody(b); break;
+      case "send.audio":    method = "POST"; path = "/send/media";    body = sendMediaBody(b, "audio"); break;
+      case "send.sticker":  method = "POST"; path = "/send/sticker";  body = sendStickerBody(b); break;
       case "send.location": method = "POST"; path = "/send/location"; body = b; break;
       case "send.contact":  method = "POST"; path = "/send/contact";  body = b; break;
       case "send.link":     method = "POST"; path = "/send/link";     body = b; break;
@@ -401,7 +669,13 @@ Deno.serve(async (req) => {
       case "message.delete":   method = "POST"; path = "/message/delete";        body = b; break;
       case "message.edit":     method = "POST"; path = "/message/edit";          body = b; break;
       case "message.react":    method = "POST"; path = "/message/react";         body = b; break;
-      case "message.markread": method = "POST"; path = "/message/markread";      body = b; break;
+      case "message.markread":
+        if (b?.allowWhatsAppReadReceipt !== true) {
+          console.log("[EvolutionProxy] message.markread skipped to preserve phone notifications", { instanceKey });
+          return new Response(JSON.stringify({ ok: true, skipped: true, reason: "read_receipts_disabled" }),
+            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+        method = "POST"; path = "/message/markread"; body = b; break;
       case "message.presence": method = "POST"; path = "/message/presence";      body = b; break;
       case "message.status":   method = "POST"; path = "/message/status";        body = b; break;
       case "message.downloadMedia": method = "POST"; path = "/message/downloadimage"; body = b; break;
@@ -443,17 +717,46 @@ Deno.serve(async (req) => {
       case "user.unblock":   method = "POST"; path = "/user/unblock";  body = b; break;
       case "user.blocklist": method = "GET";  path = "/user/blocklist"; break;
 
-      default:
+      default: {
         // If not status or qr, and not one of the few above, use evolutionFetch with original logic
         // But the user only cares about Status and QR refactor.
         // Let's just return a generic response for other actions if not explicitly handled here.
         const res = await evolutionFetch(method || "GET", path, { body, query, token, instanceId: instanceKey });
         return new Response(JSON.stringify({ ok: res.ok, status: res.status, data: res.data }), 
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
     }
 
     const finalRes = await evolutionFetch(method, path, { body, query, token, instanceId: instanceKey });
-    return new Response(JSON.stringify({ ok: finalRes.ok, status: finalRes.status, data: finalRes.data }), 
+    let notificationSafeSettings: any = null;
+    if (finalRes.ok && (action === "instance.create" || action === "instance.connect")) {
+      const targetInstance = action === "instance.create"
+        ? (b.name ?? b.instanceName ?? instanceKey)
+        : instanceKey;
+
+      if (action === "instance.create") {
+        notificationSafeSettings = { ok: true, source: "instance.create.advancedSettings" };
+      } else {
+        try {
+          notificationSafeSettings = await applyNotificationSafeSettings(targetInstance, token);
+        } catch (settingsError: any) {
+          notificationSafeSettings = { ok: false, error: settingsError?.message || String(settingsError) };
+          console.warn("[EvolutionProxy] Could not apply notification-safe settings after action:", {
+            action,
+            targetInstance,
+            notificationSafeSettings,
+          });
+        }
+      }
+    }
+
+    const responseData = withNormalizedSentId(action, finalRes.data);
+    const responsePayload: Record<string, any> = { ok: finalRes.ok, status: finalRes.status, data: responseData };
+    if (action === "instance.create" || action === "instance.connect") {
+      responsePayload.notificationSafeSettings = notificationSafeSettings;
+    }
+
+    return new Response(JSON.stringify(responsePayload), 
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
   } catch (err: any) {

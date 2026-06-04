@@ -24,6 +24,8 @@ export interface OrganizationWithStats {
   asaas_customer_id?: string | null;
   asaas_subscription_id?: string | null;
   segment?: string | null;
+  creci?: string | null;
+  max_whatsapp_sessions_override?: number | null;
 }
 
 export function useSuperAdmin() {
@@ -69,6 +71,8 @@ export function useSuperAdmin() {
       whatsapp?: string;
       phone?: string;
       cnpj?: string;
+      creci?: string;
+      planId?: string | null;
       address?: string;
       city?: string;
       neighborhood?: string;
@@ -123,6 +127,8 @@ export function useSuperAdmin() {
       subscription_value?: number | null;
       billing_day?: number | null;
       next_billing_date?: string | null;
+      creci?: string | null;
+      max_whatsapp_sessions_override?: number | null;
     }) => {
       const { id, ...updates } = data;
       

@@ -56,6 +56,26 @@ Deno.serve(async (req) => {
       });
     }
 
+    const { data: plan, error: planError } = await supabaseAdmin
+      .from("admin_subscription_plans")
+      .select("id,name,price,billing_cycle,trial_enabled,trial_days,max_users,modules")
+      .eq("id", planId)
+      .maybeSingle();
+
+    if (planError) throw planError;
+    if (!plan) {
+      return new Response(JSON.stringify({ error: "Plan not found" }), {
+        status: 404,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const trialDays = Number(plan.trial_days || 0);
+    const hasTrial = Boolean(plan.trial_enabled) && trialDays > 0;
+    const trialEndsAt = hasTrial
+      ? new Date(Date.now() + trialDays * 24 * 60 * 60 * 1000).toISOString()
+      : null;
+
     // 2. Generate random password
     const generatedPassword = Math.random().toString(36).slice(-10) + "A1!";
 
@@ -110,15 +130,18 @@ Deno.serve(async (req) => {
         segment: onboardingRequest.segment || "imobiliario",
         whatsapp: onboardingRequest.company_whatsapp || null,
         cnpj: onboardingRequest.cnpj || null,
+        creci: onboardingRequest.creci || null,
         endereco: onboardingRequest.company_address || null,
         cidade: onboardingRequest.company_city || null,
         bairro: onboardingRequest.company_neighborhood || null,
         numero: onboardingRequest.company_number || null,
         complemento: onboardingRequest.company_complement || null,
         plan_id: planId,
-        subscription_status: "trial",
-        subscription_type: "trial",
-        trial_ends_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+        max_users: Number(plan.max_users || 10),
+        subscription_value: Number(confirmedValue || plan.price || 0),
+        subscription_status: hasTrial ? "trial" : "pending_payment",
+        subscription_type: hasTrial ? "trial" : plan.billing_cycle || billingCycle || "monthly",
+        trial_ends_at: trialEndsAt,
       })
       .select()
       .single();
@@ -139,6 +162,20 @@ Deno.serve(async (req) => {
 
     // 3d. Set user role
     await supabaseAdmin.from("user_roles").upsert({ user_id: userId, role: "admin" });
+
+    if (Array.isArray(plan.modules) && plan.modules.length > 0) {
+      const moduleRows = plan.modules.map((moduleName: string) => ({
+        organization_id: org.id,
+        module_name: moduleName,
+        is_enabled: true,
+      }));
+
+      const { error: moduleError } = await supabaseAdmin
+        .from("organization_modules")
+        .upsert(moduleRows, { onConflict: "organization_id,module_name" });
+
+      if (moduleError) console.error("Failed to sync plan modules:", moduleError);
+    }
 
     // 4. Update Onboarding Request — usando colunas que existem na tabela
     const { error: updateError } = await supabaseAdmin
@@ -163,7 +200,7 @@ Deno.serve(async (req) => {
         body: {
           organization_id: org.id,
           onboarding_id: requestId,
-          plan_name: "Vimob Pro",
+          plan_name: plan.name || "Vimob",
           value: Number(confirmedValue),
           billing_cycle: billingCycle,
           customer_name: onboardingRequest.responsible_name,

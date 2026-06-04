@@ -352,7 +352,9 @@ export function PropertyFormDialog({
                             uf: data.uf || formData.uf,
                           });
                         }
-                      } catch {}
+                      } catch {
+                        // noop
+                      }
                     }
                   }}
                 />

@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { getNotificationRoute } from '@/lib/notification-routing';
 
 // Global AudioContext for reliable sound playback
 let globalAudioContext: AudioContext | null = null;
@@ -216,6 +217,13 @@ export function useNotifications() {
             // Skip WhatsApp message notifications (silent)
             const isWhatsAppNotification = newNotification.type === 'whatsapp' || newNotification.type === 'message';
             const isLeadNotification = newNotification.type === 'lead' || newNotification.type === 'new_lead';
+            const notificationRoute = getNotificationRoute(newNotification);
+            const toastAction = notificationRoute
+              ? {
+                  label: 'Abrir',
+                  onClick: () => window.location.assign(notificationRoute),
+                }
+              : undefined;
             
             if (isWhatsAppNotification) {
               console.log('💬 WhatsApp notification (silent):', newNotification.title);
@@ -227,6 +235,7 @@ export function useNotifications() {
               toast.success('Novo Lead Recebido', {
                 description: newNotification.content || newNotification.title,
                 duration: 10000,
+                action: toastAction,
               });
             } else {
               // Other important notifications (financial, system, etc.)
@@ -236,6 +245,7 @@ export function useNotifications() {
               toast(newNotification.title, {
                 description: newNotification.content || undefined,
                 duration: 5000,
+                action: toastAction,
               });
             }
 
@@ -260,7 +270,7 @@ export function useNotifications() {
           
           if (status === 'SUBSCRIBED') {
             reconnectAttempts = 0;
-            console.log('✅ Realtime notifications connected successfully!');
+            console.log('Realtime notifications connected successfully');
           } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
             if (isUnmounting) return;
             
@@ -268,16 +278,18 @@ export function useNotifications() {
               reconnectAttempts++;
               // Exponential backoff: 1s, 2s, 4s, 8s, 16s
               const delay = baseDelay * Math.pow(2, reconnectAttempts - 1);
-              console.warn(`⚠️ Realtime channel error, reconnecting in ${delay}ms (attempt ${reconnectAttempts}/${maxReconnectAttempts})`);
+              console.warn(`Realtime channel error, reconnecting in ${delay}ms (attempt ${reconnectAttempts}/${maxReconnectAttempts})`);
               
               reconnectTimeout = setTimeout(() => {
                 if (!isUnmounting) setupChannel();
               }, delay);
             } else {
-              console.error('❌ Max reconnection attempts reached. Falling back to polling only.');
+              console.error('Max reconnection attempts reached. Falling back to polling only.');
             }
           } else if (status === 'CLOSED') {
-            console.warn('⚠️ Realtime channel closed');
+            if (!isUnmounting) {
+              console.debug('Notifications realtime channel closed');
+            }
           }
         });
 

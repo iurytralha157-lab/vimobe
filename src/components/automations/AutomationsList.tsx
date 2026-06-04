@@ -1,33 +1,27 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent } from "@/components/ui/card";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useStageAutomations, useDeleteStageAutomation, useToggleStageAutomation, AUTOMATION_TYPE_LABELS, DEAL_STATUS_LABELS, StageAutomation } from "@/hooks/use-stage-automations";
-import { useStages } from "@/hooks/use-stages";
 import { useOrganizationUsers } from "@/hooks/use-users";
-import { Pencil, Trash2, Zap, Clock, MessageSquare, Bell, ArrowRight, User, Trophy, XCircle, Circle } from "lucide-react";
+import { Pencil, Trash2, Zap, Clock, Bell, User, Trophy, XCircle, Circle } from "lucide-react";
 
 interface AutomationsListProps {
   stageId: string;
-  pipelineId: string;
+  pipelineId?: string;
   onEdit?: (automation: StageAutomation) => void;
 }
 
-export function AutomationsList({ stageId, pipelineId, onEdit }: AutomationsListProps) {
+export function AutomationsList({ stageId, onEdit }: AutomationsListProps) {
   const { data: automations, isLoading } = useStageAutomations(stageId);
-  const { data: stages } = useStages(pipelineId);
   const { data: users } = useOrganizationUsers();
   const deleteAutomation = useDeleteStageAutomation();
   const toggleAutomation = useToggleStageAutomation();
 
   const getAutomationIcon = (type: string) => {
     switch (type) {
-      case 'move_after_inactivity':
-        return <ArrowRight className="h-4 w-4" />;
-      case 'send_whatsapp_on_enter':
-        return <MessageSquare className="h-4 w-4" />;
       case 'alert_on_inactivity':
         return <Bell className="h-4 w-4" />;
       case 'change_assignee_on_enter':
@@ -38,13 +32,6 @@ export function AutomationsList({ stageId, pipelineId, onEdit }: AutomationsList
         return <Zap className="h-4 w-4" />;
     }
   };
-
-  const getTargetStageName = (stageId: string | null) => {
-    if (!stageId || !stages) return null;
-    const stage = stages.find(s => s.id === stageId);
-    return stage?.name || 'Estágio desconhecido';
-  };
-
   const getUserName = (userId: string | null) => {
     if (!userId || !users) return null;
     const user = users.find(u => u.id === userId);
@@ -63,19 +50,6 @@ export function AutomationsList({ stageId, pipelineId, onEdit }: AutomationsList
     const config = automation.action_config as Record<string, unknown> || {};
     
     switch (automation.automation_type) {
-      case 'move_after_inactivity':
-        return (
-          <span className="flex items-center gap-1 text-sm text-muted-foreground">
-            <Clock className="h-3 w-3" />
-            {automation.trigger_days} dias → {getTargetStageName(automation.target_stage_id)}
-          </span>
-        );
-      case 'send_whatsapp_on_enter':
-        return (
-          <span className="text-sm text-muted-foreground line-clamp-1">
-            {automation.whatsapp_template?.slice(0, 50)}...
-          </span>
-        );
       case 'alert_on_inactivity':
         return (
           <span className="flex items-center gap-1 text-sm text-muted-foreground">
@@ -90,7 +64,7 @@ export function AutomationsList({ stageId, pipelineId, onEdit }: AutomationsList
             → {getUserName(config.target_user_id as string) || 'Não definido'}
           </span>
         );
-      case 'change_deal_status_on_enter':
+      case 'change_deal_status_on_enter': {
         const status = config.deal_status as string || 'open';
         return (
           <span className="flex items-center gap-1 text-sm text-muted-foreground">
@@ -98,6 +72,7 @@ export function AutomationsList({ stageId, pipelineId, onEdit }: AutomationsList
             → {DEAL_STATUS_LABELS[status] || status}
           </span>
         );
+      }
       default:
         return null;
     }

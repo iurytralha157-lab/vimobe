@@ -37,7 +37,7 @@ export default function PublicSiteLayout() {
     const originalFavicon = document.querySelector<HTMLLinkElement>('link[rel="icon"]')?.href;
 
     // Update title - handle potential double "Imóveis" or similar redundancy
-    let displayTitle = siteConfig?.seo_title || siteConfig?.site_title || 'Portal Imobiliário';
+    const displayTitle = siteConfig?.seo_title || siteConfig?.site_title || 'Portal Imobiliário';
     
     // Clean up title to avoid "Nexo Imóveis Imóveis" if it happens via concatenation or bad data
     // We check if the organization name is already in the title and clean it up if needed

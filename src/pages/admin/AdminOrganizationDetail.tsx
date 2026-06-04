@@ -109,6 +109,8 @@ export default function AdminOrganizationDetail() {
     subscription_value: 0,
     billing_day: 1,
     next_billing_date: null as string | null,
+    creci: '',
+    max_whatsapp_sessions_override: null as number | null,
   });
 
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
@@ -214,6 +216,8 @@ export default function AdminOrganizationDetail() {
         subscription_value: Number(orgDetails.subscription_value) || 0,
         billing_day: orgDetails.billing_day || 1,
         next_billing_date: orgDetails.next_billing_date || null,
+        creci: orgDetails.creci || '',
+        max_whatsapp_sessions_override: orgDetails.max_whatsapp_sessions_override ?? null,
       });
     }
   }, [orgDetails]);
@@ -228,12 +232,34 @@ export default function AdminOrganizationDetail() {
 
   }
 
-  const handleSave = () => {
-    updateOrganization.mutate({
+  const syncModulesFromPlan = async (planId: string | null) => {
+    if (!planId) return;
+    const selectedPlan = plans?.find((p) => p.id === planId);
+    if (!selectedPlan) return;
+
+    const enabledModules = new Set(selectedPlan.modules || []);
+    await Promise.all(
+      ALL_MODULES.map((module) =>
+        supabase
+          .from('organization_modules')
+          .upsert({
+            organization_id: org.id,
+            module_name: module.name,
+            is_enabled: enabledModules.has(module.name),
+          }, { onConflict: 'organization_id,module_name' })
+      )
+    );
+  };
+
+  const handleSave = async () => {
+    await updateOrganization.mutateAsync({
       id: org.id,
       ...formData,
       next_billing_date: formData.next_billing_date || null,
     });
+    await syncModulesFromPlan(formData.plan_id);
+    await refetchModules();
+    await refetchOrg();
   };
 
   const handlePlanChange = (planId: string) => {
@@ -262,6 +288,7 @@ export default function AdminOrganizationDetail() {
         ...prev,
         plan_id: planId,
         subscription_value: selectedPlan.price,
+        max_users: selectedPlan.max_users || prev.max_users,
         billing_day: prev.billing_day || day,
         next_billing_date: nextDate.toISOString().split('T')[0]
       }));
@@ -491,10 +518,32 @@ export default function AdminOrganizationDetail() {
 
                   </div>
                   <div className="space-y-2">
+                    <Label htmlFor="maxWhatsAppOverride">Limite de WhatsApps</Label>
+                    <Input
+                      id="maxWhatsAppOverride"
+                      type="number"
+                      min={0}
+                      placeholder="Plano"
+                      value={formData.max_whatsapp_sessions_override ?? ''}
+                      onChange={(e) => setFormData({
+                        ...formData,
+                        max_whatsapp_sessions_override: e.target.value === '' ? null : Math.max(0, parseInt(e.target.value) || 0)
+                      })} />
+                    <p className="text-xs text-muted-foreground">Vazio segue o plano. 0 deixa sem limite.</p>
+                  </div>
+                  <div className="space-y-2">
                     <Label>Criado em</Label>
                     <Input
                       value={new Date(org.created_at).toLocaleDateString('pt-BR')}
                       disabled />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>CRECI</Label>
+                    <Input
+                      value={formData.creci}
+                      placeholder="12345-F"
+                      onChange={(e) => setFormData({ ...formData, creci: e.target.value })} />
                   </div>
                   
                   <div className="space-y-2">

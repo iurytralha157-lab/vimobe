@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+﻿import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Users,
@@ -34,6 +34,7 @@ import { useSharedFilters } from "@/hooks/use-shared-filters";
 import { useEnhancedDashboardStats, useDealsEvolutionData, useLeadSourcesData } from "@/hooks/use-dashboard-stats";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLeadVisibility, applyVisibilityFilter } from "@/hooks/use-lead-visibility";
+import { applyLeadIdFilter, fetchDashboardTeamLeadIds } from "@/hooks/use-dashboard-team-leads";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { SharedFilters } from "@/components/shared/SharedFilters";
 import { datePresetOptions } from "@/hooks/use-dashboard-filters";
@@ -88,19 +89,59 @@ export default function Dashboard() {
   const dateFromStr = filters.dateRange.from.toISOString();
   const dateToStr = filters.dateRange.to.toISOString();
 
+  const getDashboardPropertyUserIds = async () => {
+    if (filters.userId) return [filters.userId];
+
+    if (filters.teamId) {
+      const { data: members } = await supabase
+        .from("team_members")
+        .select("user_id")
+        .eq("team_id", filters.teamId);
+      return (members || []).map((member) => member.user_id).filter(Boolean);
+    }
+
+    if (!visibility || visibility.canViewAll) return null;
+    if (visibility.teamMemberIds?.length) return visibility.teamMemberIds;
+    return visibility.userId ? [visibility.userId] : [];
+  };
+
   // Query: Contagem de Imóveis
   const { data: propertyCount = 0 } = useQuery({
-    queryKey: ["dashboard-property-count", organization?.id],
+    queryKey: ["dashboard-property-count", organization?.id, filters.userId, filters.teamId, visibility],
     queryFn: async () => {
-      if (!organization?.id) return 0;
-      const { count, error } = await supabase
+      if (!organization?.id || !visibility) return 0;
+      const propertyUserIds = await getDashboardPropertyUserIds();
+      let query = supabase
         .from("properties")
         .select("*", { count: "exact", head: true })
         .eq("organization_id", organization.id);
+
+      if (propertyUserIds) {
+        if (propertyUserIds.length === 0) return 0;
+
+        const { data: activities, error: activitiesError } = await supabase
+          .from("activities")
+          .select("metadata")
+          .eq("type", "property_created")
+          .in("user_id", propertyUserIds);
+
+        if (activitiesError) throw activitiesError;
+
+        const propertyIds = Array.from(new Set(
+          (activities || [])
+            .map((activity: any) => activity.metadata?.property_id)
+            .filter(Boolean),
+        ));
+
+        if (propertyIds.length === 0) return 0;
+        query = query.in("id", propertyIds);
+      }
+
+      const { count, error } = await query;
       if (error) throw error;
       return count || 0;
     },
-    enabled: !!organization?.id,
+    enabled: !!organization?.id && !!visibility,
     staleTime: 1000 * 60 * 5,
   });
 
@@ -112,9 +153,42 @@ export default function Dashboard() {
 
   // Query: Visitas no Site
   const { data: siteVisits = 0 } = useQuery({
-    queryKey: ["dashboard-site-visits", organization?.id, dateFromStr, dateToStr],
+    queryKey: ["dashboard-site-visits", organization?.id, dateFromStr, dateToStr, filters.userId, filters.teamId, visibility],
     queryFn: async () => {
-      if (!organization?.id) return 0;
+      if (!organization?.id || !visibility) return 0;
+      const propertyUserIds = await getDashboardPropertyUserIds();
+
+      if (propertyUserIds) {
+        if (propertyUserIds.length === 0) return 0;
+
+        const { data: activities, error: activitiesError } = await supabase
+          .from("activities")
+          .select("metadata")
+          .eq("type", "property_created")
+          .in("user_id", propertyUserIds);
+
+        if (activitiesError) throw activitiesError;
+
+        const propertyIds = Array.from(new Set(
+          (activities || [])
+            .map((activity: any) => activity.metadata?.property_id)
+            .filter(Boolean),
+        ));
+
+        if (propertyIds.length === 0) return 0;
+
+        const { data: events, error } = await supabase
+          .from("lead_events")
+          .select("session_id")
+          .eq("organization_id", organization.id)
+          .in("property_id", propertyIds)
+          .gte("created_at", dateFromStr)
+          .lte("created_at", dateToStr);
+
+        if (error) throw error;
+        return new Set((events || []).map((event) => event.session_id).filter(Boolean)).size;
+      }
+
       const { data, error } = await (supabase as any).rpc("count_unique_sessions", {
         p_organization_id: organization.id,
         p_date_from: dateFromStr,
@@ -156,16 +230,8 @@ export default function Dashboard() {
         if (filters.dealStatus) leadQuery = leadQuery.eq("deal_status", filters.dealStatus);
 
         if (filters.teamId) {
-          const { data: teamMembers } = await supabase
-            .from("team_members")
-            .select("user_id")
-            .eq("team_id", filters.teamId);
-          if (teamMembers?.length) {
-            leadQuery = leadQuery.in(
-              "assigned_user_id",
-              teamMembers.map((m) => m.user_id),
-            );
-          }
+          const teamLeadIds = await fetchDashboardTeamLeadIds(filters.teamId, null);
+          leadQuery = applyLeadIdFilter(leadQuery, teamLeadIds);
         }
 
         if (filters.tagId) {
@@ -373,8 +439,8 @@ function formatKPIValue(value: string | number, format: string): string {
       return new Intl.NumberFormat("pt-BR", {
         style: "currency",
         currency: "BRL",
-        notation: value >= 100000 ? "compact" : "standard",
-        maximumFractionDigits: value >= 100000 ? 1 : 0,
+        notation: "standard",
+        maximumFractionDigits: 0,
       }).format(value);
     case "percent":
       return `${value.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 1 })}%`;
@@ -471,10 +537,10 @@ function KPICardsGrid({
       color: "chart-3",
     },
     {
-      title: "Tempo Resp.",
+      title: "1º Contato",
       value: data.avgResponseTime,
       icon: Clock,
-      tooltip: "Tempo médio de resposta",
+      tooltip: "Tempo medio ate a primeira ligacao ou mensagem",
       format: "time",
       color: "chart-4",
     },
@@ -485,6 +551,7 @@ function KPICardsGrid({
       tooltip: `Valor em vendas - ${periodLabel}`,
       format: "currency",
       color: "chart-5",
+      hideIconOnDesktop: true,
     },
     {
       title: "Imóveis",
@@ -516,6 +583,8 @@ function KPICardsGrid({
     const Icon = kpi.icon;
     const hasTrend = kpi.trend !== undefined && kpi.trend !== 0;
     const isPositive = (kpi.trend ?? 0) >= 0;
+    const isCurrency = kpi.format === "currency";
+    const showIcon = !kpi.hideIconOnDesktop || isSide;
 
     return (
       <TooltipProvider key={kpi.title}>
@@ -528,7 +597,14 @@ function KPICardsGrid({
                     <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider font-medium truncate mb-1">
                       {kpi.title}
                     </p>
-                    <p className="text-lg sm:text-2xl font-bold truncate">{formatKPIValue(kpi.value, kpi.format)}</p>
+                    <p
+                      className={cn(
+                        "font-bold leading-tight",
+                        isCurrency ? "text-sm sm:text-lg xl:text-xl break-words" : "text-lg sm:text-2xl truncate",
+                      )}
+                    >
+                      {formatKPIValue(kpi.value, kpi.format)}
+                    </p>
                     {hasTrend && (
                       <div className="flex items-center gap-0.5 mt-1">
                         {isPositive ? (
@@ -548,12 +624,14 @@ function KPICardsGrid({
                       </div>
                     )}
                   </div>
-                  <div
-                    className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg flex items-center justify-center flex-shrink-0"
-                    style={{ backgroundColor: `hsl(var(--${kpi.color}) / 0.1)` }}
-                  >
-                    <Icon className="h-4 w-4 sm:h-5 sm:w-5" style={{ color: `hsl(var(--${kpi.color}))` }} />
-                  </div>
+                  {showIcon && (
+                    <div
+                      className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                      style={{ backgroundColor: `hsl(var(--${kpi.color}) / 0.1)` }}
+                    >
+                      <Icon className="h-4 w-4 sm:h-5 sm:w-5" style={{ color: `hsl(var(--${kpi.color}))` }} />
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>

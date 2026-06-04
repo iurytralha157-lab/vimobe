@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { 
   Users, 
   Search,
@@ -15,7 +15,7 @@ import {
   Save,
   Building
 } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { useSuperAdmin } from '@/hooks/use-super-admin';
 import { Badge } from '@/components/ui/badge';
@@ -219,145 +219,155 @@ export default function AdminUsers() {
           </Select>
         </div>
 
-        {/* Users List */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Todos os Usuários
-            </CardTitle>
-            <CardDescription>
-              {filteredUsers.length} usuários encontrados
-              {orphanCount > 0 && (
-                <span className="text-destructive ml-2">
-                  ({orphanCount} sem organização)
-                </span>
-              )}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="px-4 md:px-6 pb-4">
-            {loadingUsers ? (
-              <div className="text-center py-8 text-muted-foreground">
+        {/* Users Grid */}
+        <div className="space-y-3">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 className="flex items-center gap-2 text-lg font-semibold">
+                <Users className="h-5 w-5" />
+                Todos os Usuários
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                {filteredUsers.length} usuários encontrados
+                {orphanCount > 0 && (
+                  <span className="ml-2 text-destructive">
+                    ({orphanCount} sem organização)
+                  </span>
+                )}
+              </p>
+            </div>
+          </div>
+
+          {loadingUsers ? (
+            <Card>
+              <CardContent className="py-8 text-center text-muted-foreground">
                 Carregando...
-              </div>
-            ) : filteredUsers.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
+              </CardContent>
+            </Card>
+          ) : filteredUsers.length === 0 ? (
+            <Card>
+              <CardContent className="py-8 text-center text-muted-foreground">
                 Nenhum usuário encontrado
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {filteredUsers.map((user) => (
-                  <div 
-                    key={user.id} 
-                    className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg transition-colors gap-3 ${
-                      !user.organization_id && user.role !== 'super_admin' 
-                        ? 'border-destructive/50 bg-destructive/5' 
-                        : 'hover:bg-muted/50'
-                    } ${!user.is_active ? 'opacity-60' : ''}`}
-                  >
-                    <div className="flex items-center gap-4">
-                      <Avatar className="h-10 w-10">
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              {filteredUsers.map((user) => (
+                <Card
+                  key={user.id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => handleViewDetails(user.id)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      handleViewDetails(user.id);
+                    }
+                  }}
+                  className={`group cursor-pointer border-border/60 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md ${
+                    !user.organization_id && user.role !== 'super_admin'
+                      ? 'border-destructive/50 bg-destructive/5'
+                      : 'bg-card'
+                  } ${!user.is_active ? 'opacity-60' : ''}`}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <Avatar className="h-14 w-14 border">
                         <AvatarImage src={user.avatar_url || undefined} />
-                        <AvatarFallback className="bg-primary text-primary-foreground">
+                        <AvatarFallback className="bg-primary text-base font-semibold text-primary-foreground">
                           {getInitials(user.name)}
                         </AvatarFallback>
                       </Avatar>
-                      <div>
-                        <p className="font-medium">{user.name}</p>
-                        <p className="text-sm text-muted-foreground">{user.email}</p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-2 flex-wrap">
-                      {/* Organization */}
-                      {user.organization_name ? (
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Building2 className="h-4 w-4" />
-                          <span>{user.organization_name}</span>
-                        </div>
-                      ) : user.role !== 'super_admin' && (
-                        <Badge variant="outline" className="text-destructive border-destructive">
-                          Sem Organização
-                        </Badge>
-                      )}
-                      
-                      {/* Role Badge */}
-                      {getRoleBadge(user.role)}
-                      
-                      {/* Status Badge */}
-                      {!user.is_active && (
-                        <Badge variant="outline" className="text-muted-foreground">
-                          Inativo
-                        </Badge>
-                      )}
-                      
-                      {/* Created Date */}
-                      <span className="text-sm text-muted-foreground hidden md:inline">
-                        {formatDistanceToNow(new Date(user.created_at), { 
-                          addSuffix: true,
-                          locale: ptBR 
-                        })}
-                      </span>
-                      
-                      {/* Actions */}
+
                       {user.role !== 'super_admin' && (
                         <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
+                          <DropdownMenuTrigger asChild onClick={(event) => event.stopPropagation()}>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem 
-                              onClick={() => handleViewDetails(user.id)}
-                            >
-                              <Info className="h-4 w-4 mr-2" />
+                          <DropdownMenuContent align="end" onClick={(event) => event.stopPropagation()}>
+                            <DropdownMenuItem onClick={() => handleViewDetails(user.id)}>
+                              <Info className="mr-2 h-4 w-4" />
                               Ver Detalhes
                             </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              onClick={() => setEditDialog({ open: true, user })}
-                            >
-                              <Save className="h-4 w-4 mr-2" />
+                            <DropdownMenuItem onClick={() => setEditDialog({ open: true, user })}>
+                              <Save className="mr-2 h-4 w-4" />
                               Editar
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem 
-                              onClick={() => handleToggleStatus(user.id, user.is_active)}
-                            >
+                            <DropdownMenuItem onClick={() => handleToggleStatus(user.id, user.is_active)}>
                               {user.is_active ? (
                                 <>
-                                  <UserX className="h-4 w-4 mr-2" />
+                                  <UserX className="mr-2 h-4 w-4" />
                                   Desativar
                                 </>
                               ) : (
                                 <>
-                                  <UserCheck className="h-4 w-4 mr-2" />
+                                  <UserCheck className="mr-2 h-4 w-4" />
                                   Ativar
                                 </>
                               )}
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem 
+                            <DropdownMenuItem
                               className="text-destructive"
-                              onClick={() => setDeleteDialog({ 
-                                open: true, 
-                                userId: user.id, 
-                                userName: user.name 
+                              onClick={() => setDeleteDialog({
+                                open: true,
+                                userId: user.id,
+                                userName: user.name
                               })}
                             >
-                              <Trash2 className="h-4 w-4 mr-2" />
+                              <Trash2 className="mr-2 h-4 w-4" />
                               Excluir
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       )}
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+
+                    <div className="mt-4 min-w-0">
+                      <p className="truncate font-semibold">{user.name}</p>
+                      <p className="truncate text-sm text-muted-foreground">{user.email}</p>
+                    </div>
+
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {getRoleBadge(user.role)}
+                      {!user.organization_id && user.role !== 'super_admin' && (
+                        <Badge variant="outline" className="border-destructive text-destructive">
+                          Sem Organização
+                        </Badge>
+                      )}
+                      {!user.is_active && (
+                        <Badge variant="outline" className="text-muted-foreground">
+                          Inativo
+                        </Badge>
+                      )}
+                    </div>
+
+                    <div className="mt-4 space-y-2 text-xs text-muted-foreground">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <Building2 className="h-3.5 w-3.5 shrink-0" />
+                        <span className="truncate">
+                          {user.organization_name || (user.role === 'super_admin' ? 'Plataforma' : 'Sem organização')}
+                        </span>
+                      </div>
+                      <div className="flex min-w-0 items-center gap-2">
+                        <Building className="h-3.5 w-3.5 shrink-0" />
+                        <span className="truncate">
+                          Criado {formatDistanceToNow(new Date(user.created_at), {
+                            addSuffix: true,
+                            locale: ptBR
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Delete Confirmation Dialog */}
@@ -569,3 +579,4 @@ export default function AdminUsers() {
     </AdminLayout>
   );
 }
+

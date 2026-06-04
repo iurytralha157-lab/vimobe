@@ -1,9 +1,14 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+﻿import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 
 import { formatPhoneForWhatsApp, normalizePhone } from "@/lib/phone-utils";
+import { getWhatsAppClient } from "@/lib/whatsapp-provider";
+import { callEvolutionGo } from "@/hooks/use-evolution-go";
+
+const WHATSAPP_SEND_COOLDOWN_MS = 1000;
+const lastWhatsAppSendByUser = new Map<string, number>();
 
 export interface WhatsAppConversation {
   id: string;
@@ -29,10 +34,12 @@ export interface WhatsAppConversation {
     phone_number: string | null;
     status: string;
     organization_id: string;
+    provider?: "evolution" | "evolution_go" | null;
   };
   lead?: {
     id: string;
     name: string;
+    whatsapp_avatar_url?: string | null;
     pipeline_id?: string | null;
     stage_id?: string | null;
     pipeline?: {
@@ -69,6 +76,12 @@ export interface WhatsAppMessage {
   media_error?: string | null;
   media_size?: number | null;
   media_storage_path?: string | null;
+  remote_jid?: string | null;
+  reaction_to_message_id?: string | null;
+  reaction_emoji?: string | null;
+  reaction_sender_jid?: string | null;
+  reaction_sender_name?: string | null;
+  metadata?: Record<string, any>;
   status: string;
   sent_at: string;
   delivered_at: string | null;
@@ -82,12 +95,177 @@ export interface ConversationFilters {
   showArchived?: boolean;
 }
 
+const avatarSyncStartedBySession = new Map<string, number>();
+
+function formatOutgoingLastMessage(messageType: string | undefined, text: string | null, senderName: string | null, isGroup: boolean) {
+  const type = messageType || "text";
+  if (type === "text") return text || "";
+  const mediaLabels: Record<string, { article: string; noun: string }> = {
+    image: { article: "uma", noun: "imagem" },
+    video: { article: "um", noun: "vídeo" },
+    audio: { article: "um", noun: "áudio" },
+    document: { article: "um", noun: "documento" },
+    sticker: { article: "uma", noun: "figurinha" },
+  };
+  const label = mediaLabels[type] || { article: "uma", noun: "mídia" };
+  const actor = isGroup && senderName ? senderName : "Você";
+  return `${actor} enviou ${label.article} ${label.noun}`;
+}
+
+async function hydrateMessageMediaUrls(messages: WhatsAppMessage[]): Promise<WhatsAppMessage[]> {
+  const messagesWithPrivateMedia = messages.filter((message) => (
+    message.media_storage_path
+  ));
+
+  if (messagesWithPrivateMedia.length === 0) return messages;
+
+  const uniquePaths = [...new Set(messagesWithPrivateMedia.map((message) => message.media_storage_path!).filter(Boolean))];
+  const { data, error } = await supabase.storage
+    .from("whatsapp-media")
+    .createSignedUrls(uniquePaths, 60 * 60);
+
+  if (error || !data) {
+    console.error("Error creating signed WhatsApp media URLs:", error);
+    return messages;
+  }
+
+  const signedByPath = new Map<string, string>();
+  data.forEach((item, index) => {
+    if (item.signedUrl) signedByPath.set(uniquePaths[index], item.signedUrl);
+  });
+
+  return messages.map((message) => {
+    if (!message.media_storage_path) return message;
+    const signedUrl = signedByPath.get(message.media_storage_path);
+    return signedUrl ? { ...message, media_url: signedUrl } : message;
+  });
+}
+
+function getWhatsappMediaStoragePath(url?: string | null): string | null {
+  if (!url) return null;
+  const marker = "/storage/v1/object/public/whatsapp-media/";
+  const index = url.indexOf(marker);
+  if (index < 0) return null;
+  return decodeURIComponent(url.slice(index + marker.length).split("?")[0]);
+}
+
+function getPhoneVariants(phone?: string | null): string[] {
+  const cleaned = (phone || "").replace(/\D/g, "");
+  const normalized = normalizePhone(phone || "");
+  const baseVariants = [
+    cleaned,
+    normalized,
+    normalized ? `55${normalized}` : "",
+  ].filter(Boolean);
+
+  const brMobileVariants: string[] = [];
+  for (const variant of baseVariants) {
+    const local = normalizePhone(variant);
+    if (local.length === 11 && local[2] === "9") {
+      const withoutNinthDigit = `${local.slice(0, 2)}${local.slice(3)}`;
+      brMobileVariants.push(withoutNinthDigit, `55${withoutNinthDigit}`);
+    }
+    if (local.length === 10) {
+      const withNinthDigit = `${local.slice(0, 2)}9${local.slice(2)}`;
+      brMobileVariants.push(withNinthDigit, `55${withNinthDigit}`);
+    }
+  }
+
+  return [...new Set(baseVariants.concat(brMobileVariants))];
+}
+
+function syncMissingConversationAvatars(conversations: WhatsAppConversation[], onSynced?: () => void) {
+  const sessionIds = [
+    ...new Set(
+      conversations
+        .filter((conversation) => (
+          conversation.session?.provider === "evolution_go" &&
+          !conversation.contact_picture &&
+          conversation.session_id
+        ))
+        .map((conversation) => conversation.session_id),
+    ),
+  ];
+
+  for (const sessionId of sessionIds) {
+    const lastStartedAt = avatarSyncStartedBySession.get(sessionId) || 0;
+    if (Date.now() - lastStartedAt < 60_000) continue;
+    avatarSyncStartedBySession.set(sessionId, Date.now());
+    supabase.functions
+      .invoke("sync-whatsapp-contacts", { body: { session_id: sessionId, limit: 100 } })
+      .then(({ data, error }) => {
+        if (error) {
+          console.error("Error syncing WhatsApp avatars:", error);
+          avatarSyncStartedBySession.delete(sessionId);
+          return;
+        }
+        console.log("WhatsApp avatar sync finished:", data);
+        if (data?.success) {
+          onSynced?.();
+        }
+      });
+  }
+}
+
+function getNested(obj: any, path: string) {
+  return path.split(".").reduce((acc, key) => acc?.[key], obj);
+}
+
+function extractProviderMessageId(data: any): string | null {
+  const paths = [
+    "sentMessageId",
+    "messageId",
+    "messageID",
+    "MessageID",
+    "id",
+    "ID",
+    "Id",
+    "key.id",
+    "key.ID",
+    "Key.ID",
+    "Info.ID",
+    "Info.Id",
+    "info.ID",
+    "info.id",
+    "data.sentMessageId",
+    "data.messageId",
+    "data.messageID",
+    "data.MessageID",
+    "data.id",
+    "data.ID",
+    "data.key.id",
+    "data.Key.ID",
+    "data.Info.ID",
+    "data.Info.Id",
+    "data.info.ID",
+    "data.info.id",
+    "Data.messageId",
+    "Data.MessageID",
+    "Data.id",
+    "Data.ID",
+    "Data.Info.ID",
+    "Data.Info.Id",
+    "message.key.id",
+    "message.Key.ID",
+    "data.message.key.id",
+    "data.message.Key.ID",
+    "response.key.id",
+    "response.Key.ID",
+  ];
+  for (const path of paths) {
+    const value = getNested(data, path);
+    if (value) return String(value);
+  }
+  return null;
+}
+
 export function useWhatsAppConversations(
   sessionId?: string, 
   filters?: ConversationFilters,
   accessibleSessionIds?: string[]
 ) {
   const { profile } = useAuth();
+  const queryClient = useQueryClient();
 
   return useQuery({
     queryKey: ["whatsapp-conversations", sessionId, filters, accessibleSessionIds],
@@ -101,7 +279,7 @@ export function useWhatsAppConversations(
       });
 
       if (!profile?.organization_id) {
-        console.warn('[WhatsApp Conversations Load] Organização não identificada');
+        console.warn('[WhatsApp Conversations Load] Organizacao nao identificada');
         return [];
       }
 
@@ -109,10 +287,11 @@ export function useWhatsAppConversations(
         .from("whatsapp_conversations")
         .select(`
           *,
-          session:whatsapp_sessions!whatsapp_conversations_session_id_fkey(id, instance_name, phone_number, status, organization_id),
+          session:whatsapp_sessions!whatsapp_conversations_session_id_fkey(id, instance_name, phone_number, status, organization_id, provider),
           lead:leads!whatsapp_conversations_lead_id_fkey(
             id, 
             name,
+            whatsapp_avatar_url,
             pipeline_id,
             stage_id,
             pipeline:pipelines(id, name),
@@ -122,25 +301,25 @@ export function useWhatsAppConversations(
         `)
         .eq("organization_id", profile.organization_id)
         .is("deleted_at", null)
-        // Relaxado conforme solicitado para não ocultar conversas que podem ter last_message_at nulo
+        // Relaxado conforme solicitado para nao ocultar conversas que podem ter last_message_at nulo
         // .not("last_message_at", "is", null) 
         .order("last_message_at", { ascending: false, nullsFirst: false })
         .order("created_at", { ascending: false });
 
       if (sessionId) {
         query = query.eq("session_id", sessionId);
-        console.log(`[WhatsApp Conversations Load] Filtrando por sessão única: ${sessionId}`);
+        console.log(`[WhatsApp Conversations Load] Filtrando por sessao unica: ${sessionId}`);
       } else if (accessibleSessionIds !== undefined) {
-        // Se ainda não temos a lista de sessões (undefined), não retornamos nada para não dar flash de vazio
+        // Se ainda nao temos a lista de sessoes (undefined), nao retornamos nada para nao dar flash de vazio
         if (accessibleSessionIds === null) return [];
         
         if (accessibleSessionIds.length === 0) {
-          console.log('[WhatsApp Conversations Load] Lista de sessões acessíveis está vazia. Retornando [].');
+          console.log('[WhatsApp Conversations Load] Lista de sessoes acessiveis esta vazia. Retornando [].');
           return [];
         }
 
         query = query.in("session_id", accessibleSessionIds);
-        console.log(`[WhatsApp Conversations Load] Filtrando por múltiplas sessões: ${accessibleSessionIds.join(', ')}`);
+        console.log(`[WhatsApp Conversations Load] Filtrando por multiplas sessoes: ${accessibleSessionIds.join(', ')}`);
       }
 
       // Filter archived
@@ -164,21 +343,21 @@ export function useWhatsAppConversations(
         : conversations;
       
       // ===== BUSCAR LEADS POR TELEFONE PARA CONVERSAS SEM LEAD_ID =====
-      // Isso garante que tags apareçam mesmo se a conversa não foi vinculada automaticamente
+      // Isso garante que tags aparecam mesmo se a conversa nao foi vinculada automaticamente
       const unlinkedConversations = conversationsResult.filter(c => !c.lead_id && c.contact_phone && !c.is_group);
       
       if (unlinkedConversations.length > 0) {
         // Obter lista de telefones originais e normalizados para busca
-        const rawPhones = unlinkedConversations.map(c => c.contact_phone).filter(Boolean) as string[];
-        const normalizedPhones = unlinkedConversations.map(c => normalizePhone(c.contact_phone || ''));
-        const allPossiblePhones = [...new Set([...rawPhones, ...normalizedPhones])];
+        const allPossiblePhones = [
+          ...new Set(unlinkedConversations.flatMap(c => getPhoneVariants(c.contact_phone)))
+        ];
         
         // Buscar apenas leads que correspondem aos telefones (otimizado)
         const { data: leads, error: leadsError } = await supabase
           .from('leads')
-          .select('id, phone, name, pipeline_id, stage_id, pipeline:pipelines(id, name), stage:stages(id, name, color), tags:lead_tags(tag:tags(id, name, color))')
+          .select('id, phone, name, whatsapp_avatar_url, pipeline_id, stage_id, pipeline:pipelines(id, name), stage:stages(id, name, color), tags:lead_tags(tag:tags(id, name, color))')
           .eq('organization_id', profile?.organization_id)
-          .in('phone', allPossiblePhones);
+          .or(allPossiblePhones.map((phone) => `phone.ilike.%${phone}%`).join(","));
         
         if (leadsError) {
           console.error("Error fetching leads for linking:", leadsError);
@@ -191,12 +370,12 @@ export function useWhatsAppConversations(
               if (normalizedLeadPhone) {
                 phoneToLead.set(normalizedLeadPhone, lead);
               }
-              // Também indexar pelo telefone bruto se disponível no banco
+              // Tambem indexar pelo telefone bruto se disponivel no banco
               phoneToLead.set(lead.phone, lead);
             }
           }
           
-          // Associar leads às conversas
+          // Associar leads as conversas
           conversationsResult = conversationsResult.map(conv => {
             if (conv.lead_id || !conv.contact_phone || conv.is_group) return conv;
             
@@ -206,9 +385,11 @@ export function useWhatsAppConversations(
             if (matchingLead) {
               return { 
                 ...conv, 
+                lead_id: matchingLead.id,
                 lead: { 
                   id: matchingLead.id, 
                   name: matchingLead.name,
+                  whatsapp_avatar_url: matchingLead.whatsapp_avatar_url,
                   pipeline_id: matchingLead.pipeline_id,
                   stage_id: matchingLead.stage_id,
                   pipeline: matchingLead.pipeline as any,
@@ -222,6 +403,10 @@ export function useWhatsAppConversations(
         }
       }
       
+      syncMissingConversationAvatars(conversationsResult, () => {
+        queryClient.invalidateQueries({ queryKey: ["whatsapp-conversations"] });
+      });
+
       return conversationsResult;
     },
     enabled: !!profile?.organization_id,
@@ -244,8 +429,8 @@ export function useWhatsAppConversation(conversationId: string | null) {
         .from("whatsapp_conversations")
         .select(`
           *,
-          session:whatsapp_sessions!whatsapp_conversations_session_id_fkey(id, instance_name, phone_number, status, organization_id),
-          lead:leads!whatsapp_conversations_lead_id_fkey(id, name)
+          session:whatsapp_sessions!whatsapp_conversations_session_id_fkey(id, instance_name, phone_number, status, organization_id, provider),
+          lead:leads!whatsapp_conversations_lead_id_fkey(id, name, whatsapp_avatar_url)
         `)
         .eq("id", conversationId)
         .single();
@@ -270,6 +455,21 @@ export function useWhatsAppMessages(
     queryFn: async () => {
       if (!conversationId && !leadId) return [];
 
+      if (leadId) {
+        const { data, error } = await supabase.functions.invoke("whatsapp-history-access", {
+          body: { conversationId, leadId, allMessages: true },
+        });
+
+        if (!error && data && !data.error) {
+          return hydrateMessageMediaUrls((data.messages || []) as WhatsAppMessage[]);
+        }
+
+        if (!conversationId) {
+          if (error) throw error;
+          throw new Error(data?.error || "Erro ao carregar historico do lead");
+        }
+      }
+
       if (conversationId) {
         const { data, error } = await supabase
           .from("whatsapp_messages")
@@ -280,7 +480,7 @@ export function useWhatsAppMessages(
 
         if (!error && data) {
           // Reverter para ordem ascendente para o chat
-          return (data as WhatsAppMessage[]).reverse();
+          return hydrateMessageMediaUrls((data as WhatsAppMessage[]).reverse());
         }
 
         if (error && !leadId) {
@@ -288,7 +488,7 @@ export function useWhatsAppMessages(
         }
 
         if (!leadId) {
-          return (data || []) as WhatsAppMessage[];
+          return hydrateMessageMediaUrls((data || []) as WhatsAppMessage[]);
         }
       }
 
@@ -297,10 +497,10 @@ export function useWhatsAppMessages(
       });
 
       if (error) throw error;
-      return (data?.messages || []) as WhatsAppMessage[];
+      return hydrateMessageMediaUrls((data?.messages || []) as WhatsAppMessage[]);
     },
     enabled: !!conversationId || !!leadId,
-    // Realtime updates are pushed by WhatsAppRealtimeBus — no polling needed
+    // Realtime updates are pushed by WhatsAppRealtimeBus; no polling needed
     refetchIntervalInBackground: false,
     staleTime: 60_000,
     gcTime: 1000 * 60 * 5,
@@ -329,6 +529,8 @@ export function useSendWhatsAppMessage() {
       base64,
       mimetype,
       filename,
+      sendSessionId,
+      previewMediaUrl,
       _optimisticId,
     }: {
       conversation: WhatsAppConversation;
@@ -338,6 +540,8 @@ export function useSendWhatsAppMessage() {
       base64?: string;
       mimetype?: string;
       filename?: string;
+      sendSessionId?: string;
+      previewMediaUrl?: string;
       _optimisticId?: string;
     }) => {
       console.log("[useSendWhatsAppMessage] Starting mutation", { 
@@ -345,14 +549,64 @@ export function useSendWhatsAppMessage() {
         text: text?.substring(0, 20),
         hasMedia: !!(mediaUrl || base64)
       });
-      // Use session info from the conversation object
-      const session = (conversation as any).session;
-      
+
+      const rateLimitUserId = profile?.id || "anonymous";
+      const now = Date.now();
+      const lastSendAt = lastWhatsAppSendByUser.get(rateLimitUserId) || 0;
+
+      if (now - lastSendAt < WHATSAPP_SEND_COOLDOWN_MS) {
+        throw new Error("RATE_LIMIT_LOCAL");
+      }
+
+      lastWhatsAppSendByUser.set(rateLimitUserId, now);
+
+      const conversationSession = (conversation as any).session;
+      let session = conversationSession;
+
+      if (sendSessionId && sendSessionId !== conversationSession?.id) {
+        const { data: preferredSession, error: preferredError } = await supabase
+          .from("whatsapp_sessions")
+          .select("id, instance_name, phone_number, status, organization_id, provider")
+          .eq("id", sendSessionId)
+          .maybeSingle();
+
+        if (preferredError) throw preferredError;
+        if (preferredSession?.status === "connected") {
+          session = preferredSession;
+        }
+      }
+
+      if (!session || session.status !== "connected") {
+        const organizationId = conversationSession?.organization_id || profile?.organization_id;
+        let connectedQuery = supabase
+          .from("whatsapp_sessions")
+          .select("id, instance_name, phone_number, status, organization_id, provider")
+          .eq("status", "connected")
+          .order("last_connected_at", { ascending: false, nullsFirst: false })
+          .limit(2);
+
+        if (organizationId) {
+          connectedQuery = connectedQuery.eq("organization_id", organizationId);
+        }
+
+        const { data: connectedSessions, error: connectedError } = await connectedQuery;
+        if (connectedError) throw connectedError;
+
+        if (connectedSessions?.length === 1) {
+          session = connectedSessions[0];
+        } else if ((connectedSessions?.length || 0) > 1) {
+          throw new Error("Selecione qual WhatsApp deseja usar para enviar esta mensagem.");
+        }
+      }
+
       if (!session) {
         throw new Error("Sessão não encontrada na conversa.");
       }
 
-      // Extract phone number from remote_jid and format
+      if (session.status !== "connected") {
+        throw new Error("WhatsApp desconectado. Reconecte ou selecione uma conexão ativa.");
+      }
+// Extract phone number from remote_jid and format
       const rawPhone = conversation.remote_jid
         .replace("@c.us", "")
         .replace("@s.whatsapp.net", "")
@@ -366,9 +620,9 @@ export function useSendWhatsAppMessage() {
       
       // If we have base64 media, upload to storage first for reliability
       let storedMediaUrl = mediaUrl;
-      let storedMediaPath: string | null = null;
+      let storedMediaPath: string | null = getWhatsappMediaStoragePath(mediaUrl);
       
-      if (base64 && mimetype) {
+      if (base64 && mimetype && !storedMediaUrl) {
         try {
           // Decode base64 and upload to Supabase Storage
           const binaryString = atob(base64);
@@ -385,6 +639,7 @@ export function useSendWhatsAppMessage() {
             "image/webp": "webp",
             "video/mp4": "mp4",
             "audio/ogg": "ogg",
+            "audio/webm": "webm",
             "audio/mpeg": "mp3",
             "application/pdf": "pdf",
           };
@@ -418,53 +673,10 @@ export function useSendWhatsAppMessage() {
         }
       }
 
-      console.log("[useSendWhatsAppMessage] Calling evolution-proxy", {
-        action: (storedMediaUrl || base64) ? "sendFile" : "sendMessage",
-        instance: session.instance_name,
-        phone
-      });
-
       // Extract mentions from text (numbers only for now)
       const mentionMatches = text?.match(/@(\d{7,})/g);
       const mentions = mentionMatches ? mentionMatches.map(m => m.replace("@", "")) : [];
 
-      // Send via Evolution API - prefer stored URL over base64
-      const { data, error } = await supabase.functions.invoke("evolution-proxy", {
-        body: {
-          action: (storedMediaUrl || base64) ? "sendFile" : "sendMessage",
-          instanceName: session.instance_name,
-          number: phone,
-          text,
-          isGroup,
-          mentions,
-          ...((storedMediaUrl || base64) && { 
-            mediaUrl: storedMediaUrl, 
-            mediaType: mediaType || "image",
-            // Não enviar caption se for só o nome do arquivo (qualquer extensão de mídia)
-            caption: text && text !== filename && !/\.(png|jpg|jpeg|gif|webp|mp4|mp3|pdf|doc|docx|ogg|wav|m4a|avi|mov|mkv|xlsx|xls|pptx|ppt|zip|rar)$/i.test(text) ? text : undefined,
-            // Only send base64 if we don't have stored URL
-            base64: storedMediaUrl ? undefined : base64,
-            mimetype,
-            filename,
-          }),
-        },
-      });
-
-      if (error) {
-        console.error("[useSendWhatsAppMessage] evolution-proxy Error:", error);
-        throw error;
-      }
-      
-      console.log("[useSendWhatsAppMessage] evolution-proxy Success:", { 
-        success: data?.success,
-        evolutionData: data?.data?.key?.id ? "has_id" : "no_id"
-      });
-
-      if (!data.success) throw new Error(data.error || "Failed to send message");
-
-      // Insert message in database with client_message_id for deduplication
-      const messageId = data.data?.key?.id || clientMessageId;
-      
       // Determine proper content - don't use filename as content for media messages
       const isMediaMessage = !!(storedMediaUrl || base64);
       const isFilenameOnly = text && (
@@ -473,11 +685,64 @@ export function useSendWhatsAppMessage() {
         text.match(/^\S+\.(png|jpg|jpeg|gif|webp|mp4|mp3|ogg|pdf|doc|docx)$/i)
       );
       const actualContent = isMediaMessage && isFilenameOnly ? null : text;
+      const caption = isMediaMessage && actualContent ? actualContent : undefined;
+      const provider = session.provider || "evolution_go";
+      let mediaSource = provider === "evolution_go" ? (storedMediaUrl || base64) : (storedMediaUrl || base64);
+      if (provider === "evolution_go" && storedMediaPath) {
+        const { data: signedMedia } = await supabase.storage
+          .from("whatsapp-media")
+          .createSignedUrl(storedMediaPath, 60 * 15);
+        if (signedMedia?.signedUrl) {
+          mediaSource = signedMedia.signedUrl;
+        }
+      }
+      const destination = provider === "evolution_go" && isGroup ? conversation.remote_jid : phone;
+      const whatsappClient = getWhatsAppClient({
+        id: session.id,
+        instance_name: session.instance_name,
+        provider,
+      });
+
+      console.log("[useSendWhatsAppMessage] Calling WhatsApp provider", {
+        provider,
+        action: mediaSource ? "sendMedia" : "sendText",
+        instance: session.instance_name,
+        destination,
+      });
+
+      const safeMediaType = ["image", "video", "document", "audio"].includes(mediaType || "")
+        ? (mediaType as "image" | "video" | "document" | "audio")
+        : "image";
+
+      const sendResult = mediaSource
+        ? await whatsappClient.sendMedia(
+            destination,
+            mediaSource,
+            safeMediaType,
+            mimetype || "application/octet-stream",
+            filename,
+            caption,
+            { isGroup, mentions },
+          )
+        : await whatsappClient.sendText(destination, text, { isGroup, mentions });
+
+      if (!sendResult.ok) {
+        console.error("[useSendWhatsAppMessage] WhatsApp provider Error:", sendResult.error);
+        throw new Error(sendResult.error || "Failed to send message");
+      }
+      
+      console.log("[useSendWhatsAppMessage] WhatsApp provider Success:", { 
+        provider,
+        evolutionData: sendResult.data?.key?.id || sendResult.data?.messageId ? "has_id" : "no_id"
+      });
+
+      // Insert message in database with client_message_id for deduplication
+      const messageId = extractProviderMessageId(sendResult.data) || clientMessageId;
       
       console.log("[useSendWhatsAppMessage] Inserting message into DB");
       const { error: insertError } = await supabase.from("whatsapp_messages").insert({
         conversation_id: conversation.id,
-        session_id: conversation.session_id,
+        session_id: session.id,
         message_id: messageId,
         client_message_id: clientMessageId,
         from_me: true,
@@ -487,6 +752,7 @@ export function useSendWhatsAppMessage() {
         media_mime_type: mimetype || null,
         media_status: storedMediaUrl ? 'ready' : null,
         media_storage_path: storedMediaPath,
+        remote_jid: conversation.remote_jid,
         status: "sent",
         sent_at: new Date().toISOString(),
         sender_name: profile?.name || null,
@@ -540,15 +806,16 @@ export function useSendWhatsAppMessage() {
         await supabase
           .from("whatsapp_conversations")
           .update({
-            last_message: text,
+            last_message: formatOutgoingLastMessage(mediaType, actualContent, profile?.name || null, isGroup),
             last_message_at: new Date().toISOString(),
             unread_count: 0,
+            session_id: session.id,
           })
           .eq("id", conversation.id);
         
         console.log("[useSendWhatsAppMessage] Mutation complete!");
 
-      return { ...data.data, clientMessageId };
+      return { ...sendResult.data, clientMessageId };
     },
     // Optimistic update: add message to cache immediately
     onMutate: async (variables) => {
@@ -588,15 +855,16 @@ export function useSendWhatsAppMessage() {
         from_me: true,
         content: optimisticContent,
         message_type: variables.mediaType || "text",
-        media_url: variables.mediaUrl || null,
+        media_url: variables.previewMediaUrl || variables.mediaUrl || null,
         media_mime_type: variables.mimetype || null,
+        remote_jid: variables.conversation.remote_jid,
         status: "pending",
         sent_at: new Date().toISOString(),
         delivered_at: null,
         read_at: null,
         sender_jid: null,
         sender_name: profile?.name || null,
-        media_status: null,
+        media_status: (variables.previewMediaUrl || variables.mediaUrl) ? "ready" : null,
         media_storage_path: null,
         media_error: null,
       };
@@ -647,7 +915,13 @@ export function useSendWhatsAppMessage() {
           },
           (old) => old?.map(msg =>
             msg.id === context.optimisticId
-              ? { ...msg, id: result?.clientMessageId || msg.id, status: "sent" }
+              ? {
+                  ...msg,
+                  id: result?.clientMessageId || msg.id,
+                  status: "sent",
+                  media_url: variables.mediaUrl || msg.media_url,
+                  media_status: variables.mediaUrl || msg.media_url ? "ready" : msg.media_status,
+                }
               : msg
           )
         );
@@ -655,6 +929,12 @@ export function useSendWhatsAppMessage() {
 
       // Invalidate conversations to update last_message
       queryClient.invalidateQueries({ queryKey: ["whatsapp-conversations"] });
+      queryClient.invalidateQueries({
+        predicate: (q) =>
+          Array.isArray(q.queryKey) &&
+          q.queryKey[0] === "whatsapp-messages" &&
+          q.queryKey[1] === conversationId,
+      });
     },
     onError: (error: Error, variables, context) => {
       // Rollback optimistic update on error
@@ -671,6 +951,9 @@ export function useSendWhatsAppMessage() {
       }
       
       const errorMessage = error.message || "";
+      const isRateLimited = errorMessage.includes("RATE_LIMIT_LOCAL") ||
+                            errorMessage.includes("rate_limit_exceeded") ||
+                            errorMessage.includes("Muitas requisi");
       
       // Check for different error types
       const isDisconnected = errorMessage.includes("WHATSAPP_DISCONNECTED") || 
@@ -688,10 +971,13 @@ export function useSendWhatsAppMessage() {
       
       if (isDisconnected) {
         title = "WhatsApp Desconectado";
-        description = "Vá em Configurações → WhatsApp e escaneie o QR Code novamente.";
+        description = "Vá em Configurações > WhatsApp e escaneie o QR Code novamente.";
       } else if (isNumberNotExists) {
         title = "Contato sem WhatsApp";
         description = "Este número não está no WhatsApp. Tente ligar ou enviar SMS.";
+      } else if (isRateLimited) {
+        title = "Aguarde um instante";
+        description = "Você está enviando mensagens muito rápido. Tente novamente em alguns segundos.";
       }
       
       toast({
@@ -713,9 +999,9 @@ export function useMarkConversationAsRead() {
       remote_jid: string;
       is_group?: boolean;
     }) => {
-      // APENAS atualiza localmente - NÃO envia sendSeen para Evolution API
+      // APENAS atualiza localmente - NAO envia sendSeen para Evolution API
       // Isso evita marcar como lida no WhatsApp automaticamente
-      // O usuário deve usar "Marcar como lida no WhatsApp" manualmente
+      // O usuario deve usar "Marcar como lida no WhatsApp" manualmente
       const { error } = await supabase
         .from("whatsapp_conversations")
         .update({ unread_count: 0 })
@@ -729,7 +1015,7 @@ export function useMarkConversationAsRead() {
   });
 }
 
-// Hook separado para marcar como lida no WhatsApp (ação manual)
+// Hook separado para marcar como lida no WhatsApp (acao manual)
 export function useMarkAsSeenOnWhatsApp() {
   return useMutation({
     mutationFn: async (conversation: { 
@@ -740,25 +1026,30 @@ export function useMarkAsSeenOnWhatsApp() {
     }) => {
       const { data: session } = await supabase
         .from("whatsapp_sessions")
-        .select("instance_name")
+        .select("id, provider")
         .eq("id", conversation.session_id)
         .maybeSingle();
 
-      if (session) {
-        const phone = conversation.remote_jid
-          .replace("@c.us", "")
-          .replace("@s.whatsapp.net", "")
-          .replace("@g.us", "");
-
-        await supabase.functions.invoke("evolution-proxy", {
-          body: {
-            action: "sendSeen",
-            instanceName: session.instance_name,
-            phone,
-            isGroup: conversation.is_group || false,
-          },
-        });
+      if (!session || session.provider !== "evolution_go") {
+        throw new Error("Marcacao como lida esta disponivel apenas para Evolution Go.");
       }
+
+      const { data: messages } = await supabase
+        .from("whatsapp_messages")
+        .select("message_id")
+        .eq("conversation_id", conversation.id)
+        .eq("from_me", false)
+        .order("sent_at", { ascending: false })
+        .limit(20);
+
+      const messageIds = (messages || []).map((m: any) => m.message_id).filter(Boolean);
+      await callEvolutionGo("message.markread", {
+        session_id: conversation.session_id,
+        body: {
+          jid: conversation.remote_jid,
+          messageIds,
+        },
+      });
     },
     onError: (error: Error) => {
       toast({
@@ -781,11 +1072,11 @@ export function useArchiveConversation() {
 
   return useMutation({
     mutationFn: async ({ conversationId, archive }: { conversationId: string; archive: boolean }) => {
-      // archived_at column doesn't exist - using updated_at as placeholder
       const { error } = await (supabase as any)
         .from("whatsapp_conversations")
         .update({ 
-          updated_at: new Date().toISOString() 
+          archived_at: archive ? new Date().toISOString() : null,
+          updated_at: new Date().toISOString(),
         })
         .eq("id", conversationId);
 
@@ -808,10 +1099,12 @@ export function useDeleteConversation() {
 
   return useMutation({
     mutationFn: async (conversationId: string) => {
-      // deleted_at column doesn't exist - using updated_at as placeholder
       const { error } = await (supabase as any)
         .from("whatsapp_conversations")
-        .update({ updated_at: new Date().toISOString() })
+        .update({
+          deleted_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
         .eq("id", conversationId);
 
       if (error) throw error;
@@ -849,10 +1142,11 @@ export function useLinkConversationToLead() {
   });
 }
 
-// Hook kept for backwards compatibility — realtime is now handled by
+// Hook kept for backwards compatibility; realtime is now handled by
 // WhatsAppRealtimeBus (mounted in AppLayout). This is a no-op so callers
 // don't break.
 export function useWhatsAppRealtimeConversations() {
   // intentionally empty
 }
+
 

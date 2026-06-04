@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -27,7 +27,12 @@ const ACTION_LABELS: Record<string, string> = {
   message_sent: 'Mensagens',
   sale_closed: 'Vendas',
   lead_created_manual: 'Novos Leads',
-  visit_scheduled: 'Visitas',
+  visit_scheduled: 'Visitas Agendadas',
+  visit_confirmed: 'Visitas Confirmadas',
+  meeting_scheduled: 'Reuniões Agendadas',
+  meeting_held: 'Reuniões Realizadas',
+  proposal_sent: 'Propostas',
+  contract_signed: 'Contratos',
 };
 
 const PERIOD_LABELS: Record<string, string> = {
@@ -43,6 +48,8 @@ const EMPTY_MISSION = {
   target_count: 10,
   bonus_points: 100,
   period: 'daily',
+  target_scope: 'organization',
+  target_user_id: null as string | null,
 };
 
 export function MissionManager() {
@@ -50,6 +57,22 @@ export function MissionManager() {
   const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(false);
   const [newMission, setNewMission] = useState(EMPTY_MISSION);
+
+  const { data: users } = useQuery({
+    queryKey: ['gamification-mission-users', organization?.id],
+    queryFn: async () => {
+      if (!organization?.id) return [];
+      const { data, error } = await supabase
+        .from('users' as any)
+        .select('id, name')
+        .eq('organization_id', organization.id)
+        .eq('is_active', true)
+        .order('name');
+      if (error) throw error;
+      return data as Array<{ id: string; name: string }>;
+    },
+    enabled: !!organization?.id,
+  });
 
   const { data: missions, isLoading } = useQuery({
     queryKey: ['gamification-missions-admin', organization?.id],
@@ -71,7 +94,12 @@ export function MissionManager() {
     mutationFn: async (mission: typeof newMission) => {
       const { error } = await supabase
         .from('gamification_missions' as any)
-        .insert([{ ...mission, organization_id: organization?.id, is_active: true }]);
+        .insert([{
+          ...mission,
+          organization_id: organization?.id,
+          target_user_id: mission.target_scope === 'user' ? mission.target_user_id : null,
+          is_active: true,
+        }]);
 
       if (error) throw error;
     },
@@ -214,7 +242,11 @@ export function MissionManager() {
 
                   <div className="flex items-center gap-1.5 mt-2 pt-2 border-t text-xs text-muted-foreground">
                     <Users className="h-3.5 w-3.5" />
-                    <span>Público: Toda a equipe</span>
+                    <span>
+                      Público: {mission.target_scope === 'user'
+                        ? (users?.find((user) => user.id === mission.target_user_id)?.name || 'Pessoa específica')
+                        : 'Toda a equipe'}
+                    </span>
                   </div>
                 </div>
               ))}
@@ -252,6 +284,45 @@ export function MissionManager() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Público</Label>
+                <Select
+                  value={newMission.target_scope}
+                  onValueChange={(val) => setNewMission({
+                    ...newMission,
+                    target_scope: val,
+                    target_user_id: val === 'organization' ? null : newMission.target_user_id,
+                  })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="organization">Toda a equipe</SelectItem>
+                    <SelectItem value="user">Pessoa específica</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {newMission.target_scope === 'user' && (
+                <div className="space-y-2">
+                  <Label>Participante</Label>
+                  <Select
+                    value={newMission.target_user_id || ''}
+                    onValueChange={(val) => setNewMission({ ...newMission, target_user_id: val })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione uma pessoa" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(users || []).map((user) => (
+                        <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
               <div className="space-y-2">
                 <Label>Ação Gatilho</Label>
                 <Select
@@ -316,7 +387,7 @@ export function MissionManager() {
             </Button>
             <Button
               onClick={() => createMissionMutation.mutate(newMission)}
-              disabled={createMissionMutation.isPending || !newMission.title}
+              disabled={createMissionMutation.isPending || !newMission.title || (newMission.target_scope === 'user' && !newMission.target_user_id)}
             >
               {createMissionMutation.isPending ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -330,3 +401,5 @@ export function MissionManager() {
     </>
   );
 }
+
+

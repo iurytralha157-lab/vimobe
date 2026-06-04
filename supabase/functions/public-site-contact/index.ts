@@ -1,4 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
+import { enforceRateLimit } from '../_shared/rate-limit.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -34,6 +35,23 @@ Deno.serve(async (req) => {
   }
 
   try {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    const rateLimit = await enforceRateLimit(
+      supabase,
+      req,
+      'public-site-contact',
+      [
+        { name: 'burst', limit: 5, windowSeconds: 60 },
+        { name: 'hourly', limit: 20, windowSeconds: 3600 },
+      ],
+      corsHeaders,
+    );
+
+    if (rateLimit.response) return rateLimit.response;
+
     const { 
       organization_id, 
       name, 
@@ -75,11 +93,6 @@ Deno.serve(async (req) => {
     }
 
     console.log(`New contact form submission for org: ${organization_id}`);
-
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Verify the site is active for this organization
     const { data: siteData, error: siteError } = await supabase

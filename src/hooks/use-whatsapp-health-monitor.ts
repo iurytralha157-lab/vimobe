@@ -39,15 +39,16 @@ export function useWhatsAppHealthMonitor() {
     sessionId: string, 
     instanceName: string, 
     displayName: string,
-    provider: string = "evolution"
+    provider: string = "evolution_go"
   ): Promise<boolean> => {
 
     try {
-      const isGo = provider === "evolution_go";
-      const { data, error } = await supabase.functions.invoke(isGo ? "evolution-go-proxy" : "evolution-proxy", {
-        body: isGo
-          ? { action: "instance.status", session_id: sessionId }
-          : { action: "getConnectionStatus", instanceName },
+      if (provider !== "evolution_go") {
+        return false;
+      }
+
+      const { data, error } = await supabase.functions.invoke("evolution-go-proxy", {
+        body: { action: "instance.status", session_id: sessionId },
       });
 
 
@@ -64,18 +65,7 @@ export function useWhatsAppHealthMonitor() {
         return false;
       }
 
-      if (isGo) {
-        return data?.normalizedStatus === "connected" || (data?.data?.data?.connected === true) || (data?.data?.connected === true);
-      }
-      
-      const reportedState = (data?.data?.state || "").toLowerCase();
-      const isConnected = data?.success && (
-        data.data?.connected === true || 
-        reportedState === "open"
-      );
-
-
-      return isConnected;
+      return data?.normalizedStatus === "connected" || (data?.data?.data?.connected === true) || (data?.data?.connected === true);
     } catch (err) {
       console.error(`Health check exception for ${displayName}:`, err);
       return false;

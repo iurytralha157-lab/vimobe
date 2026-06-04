@@ -6,9 +6,16 @@ import { supabase } from '@/integrations/supabase/client';
 
 export type SetupStepId =
   | 'whatsapp'
+  | 'profile'
+  | 'contacts'
+  | 'conversations'
   | 'first_lead'
+  | 'pipeline'
+  | 'dashboard'
   | 'add_broker'
   | 'create_queue'
+  | 'meta_integration'
+  | 'configure_meta_forms'
   | 'add_property'
   | 'create_site'
   | 'create_automation';
@@ -20,13 +27,11 @@ export interface SetupStep {
   icon: string;
   route: string;
   ctaLabel: string;
+  section: string;
   tourTarget?: string;
 }
 
-// Only users created on/after this date will see the guide.
-// Older accounts are considered "already onboarded" and won't be bothered.
 const GUIDE_CUTOFF_DATE = new Date('2024-01-01T00:00:00Z');
-
 const SESSION_SHOWN_KEY = 'setup_guide_shown_this_session';
 const ACTIVE_STEP_LS_PREFIX = 'setup_guide_active_step_';
 
@@ -43,13 +48,11 @@ export function useSetupGuide() {
   const isNewUser = !!user?.created_at && new Date(user.created_at) >= GUIDE_CUTOFF_DATE;
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Fallback to metadata if DB table is missing
   const metaProgress = user?.user_metadata?.setup_progress || {};
   const metaSkipped = !!user?.user_metadata?.setup_skipped;
+  const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin';
 
-
-  // Build available steps based on permissions
-  const allSteps: SetupStep[] = [
+  const brokerSteps: SetupStep[] = [
     {
       id: 'whatsapp',
       title: 'Conectar WhatsApp',
@@ -57,17 +60,68 @@ export function useSetupGuide() {
       icon: 'MessageCircle',
       route: '/settings?tab=whatsapp',
       ctaLabel: 'Iniciar',
+      section: 'Comunicação',
       tourTarget: 'whatsapp-new-session',
     },
     {
+      id: 'profile',
+      title: 'Completar meu perfil',
+      description: 'Adicione foto, WhatsApp e mantenha seus dados atualizados.',
+      icon: 'UserCircle',
+      route: '/settings?tab=account',
+      ctaLabel: 'Abrir',
+      section: 'Conta',
+    },
+    {
+      id: 'contacts',
+      title: 'Conhecer contatos',
+      description: 'Veja seus contatos, importe leads e organize sua base.',
+      icon: 'Contact',
+      route: '/contacts',
+      ctaLabel: 'Abrir',
+      section: 'CRM',
+    },
+    {
+      id: 'conversations',
+      title: 'Abrir conversas',
+      description: 'Atenda seus leads pelo chat depois de conectar o WhatsApp.',
+      icon: 'MessagesSquare',
+      route: '/crm/conversas',
+      ctaLabel: 'Abrir',
+      section: 'Comunicação',
+    },
+    {
       id: 'first_lead',
-      title: 'Crie seu primeiro lead',
-      description: 'Veja como é o fluxo de atendimento na prática.',
+      title: 'Criar primeiro lead',
+      description: 'Crie um lead manual para testar o fluxo de atendimento.',
       icon: 'UserPlus',
       route: '/crm/pipelines',
       ctaLabel: 'Iniciar',
+      section: 'CRM',
       tourTarget: 'pipeline-new-lead',
     },
+    {
+      id: 'pipeline',
+      title: 'Conhecer a pipeline',
+      description: 'Acompanhe etapas, cards e histórico dos seus leads.',
+      icon: 'Columns3',
+      route: '/crm/pipelines',
+      ctaLabel: 'Abrir',
+      section: 'CRM',
+    },
+    {
+      id: 'dashboard',
+      title: 'Ver minha dashboard',
+      description: 'Acompanhe seus indicadores, tarefas e resultados.',
+      icon: 'LayoutDashboard',
+      route: '/dashboard',
+      ctaLabel: 'Abrir',
+      section: 'Relatórios',
+    },
+  ];
+
+  const adminSteps: SetupStep[] = [
+    ...brokerSteps,
     {
       id: 'add_broker',
       title: 'Adicionar corretor',
@@ -75,16 +129,36 @@ export function useSetupGuide() {
       icon: 'Users',
       route: '/settings?tab=team',
       ctaLabel: 'Iniciar',
+      section: 'Equipe',
       tourTarget: 'team-add-user',
     },
     {
       id: 'create_queue',
-      title: 'Criar Fila de Atendimento',
+      title: 'Criar fila de atendimento',
       description: 'Defina como os leads serão distribuídos entre a equipe.',
       icon: 'Workflow',
       route: '/crm/management?tab=distribution',
       ctaLabel: 'Iniciar',
+      section: 'Distribuição',
       tourTarget: 'distribution-new-queue',
+    },
+    {
+      id: 'meta_integration',
+      title: 'Integrar Meta',
+      description: 'Conecte Facebook e Instagram para receber leads de campanha.',
+      icon: 'Facebook',
+      route: '/settings?tab=integrations',
+      ctaLabel: 'Conectar',
+      section: 'Integrações',
+    },
+    {
+      id: 'configure_meta_forms',
+      title: 'Configurar formulários Meta',
+      description: 'Vincule formulários, campanhas e filas de atendimento.',
+      icon: 'FileCog',
+      route: '/settings?tab=integrations',
+      ctaLabel: 'Configurar',
+      section: 'Integrações',
     },
     {
       id: 'add_property',
@@ -93,6 +167,7 @@ export function useSetupGuide() {
       icon: 'Building2',
       route: '/properties/new',
       ctaLabel: 'Iniciar',
+      section: 'Imóveis',
     },
     {
       id: 'create_site',
@@ -101,6 +176,7 @@ export function useSetupGuide() {
       icon: 'Globe',
       route: '/settings/site',
       ctaLabel: 'Iniciar',
+      section: 'Site',
     },
     {
       id: 'create_automation',
@@ -109,41 +185,49 @@ export function useSetupGuide() {
       icon: 'Zap',
       route: '/automations',
       ctaLabel: 'Iniciar',
+      section: 'Automações',
       tourTarget: 'automations-new',
     },
   ];
 
-  const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin';
-
-  const steps: SetupStep[] = allSteps.filter((step) => {
+  const steps: SetupStep[] = (isAdmin ? adminSteps : brokerSteps).filter((step) => {
     switch (step.id) {
       case 'whatsapp':
+      case 'conversations':
+        return hasModule('whatsapp');
+      case 'profile':
+      case 'dashboard':
         return true;
+      case 'contacts':
       case 'first_lead':
-        return true;
+      case 'pipeline':
+        return hasModule('crm');
       case 'add_broker':
         return isAdmin;
       case 'create_queue':
-        return isAdmin;
+        return isAdmin && hasModule('round_robin');
+      case 'meta_integration':
+      case 'configure_meta_forms':
+        return isAdmin && hasModule('campaigns');
       case 'add_property':
-        return hasModule('properties');
+        return isAdmin && hasModule('properties');
       case 'create_site':
         return isAdmin && hasModule('site');
       case 'create_automation':
-        return isAdmin || hasPermission('automations_view');
+        return isAdmin && hasModule('automations') && hasPermission('automations_view');
       default:
         return true;
     }
   });
 
-  // Load progress from DB (with metadata fallback)
   useEffect(() => {
-    // Solo carregar se tivermos usuário E organização ativa
     if (!userId || !profile?.organization_id) {
       if (!userId) setLoaded(false);
       return;
     }
+
     let cancelled = false;
+
     (async () => {
       try {
         const { data, error } = await supabase
@@ -151,31 +235,24 @@ export function useSetupGuide() {
           .select('completed_steps, skipped')
           .eq('user_id', userId)
           .maybeSingle();
-        
+
         if (cancelled) return;
-        
+
         if (error) {
-          // Check if it's a 404/missing table error and suppress from console if possible
-          // In PostgREST, a missing table usually returns 404
-          if (error.code === 'PGRST204' || error.code === '42P01') {
-            // Silently fallback to metadata
-            setProgress(metaProgress);
-            setSkipped(metaSkipped);
-          } else {
+          if (error.code !== 'PGRST204' && error.code !== '42P01') {
             console.warn('[SetupGuide] falling back to user metadata', error);
-            setProgress(metaProgress);
-            setSkipped(metaSkipped);
           }
+          setProgress(metaProgress);
+          setSkipped(metaSkipped);
         } else if (data) {
           const row: any = data;
           setProgress((row.completed_steps as Record<string, boolean>) || {});
           setSkipped(!!row.skipped);
         } else {
-          // No row in DB yet, use metadata
           setProgress(metaProgress);
           setSkipped(metaSkipped);
         }
-      } catch (err) {
+      } catch {
         if (!cancelled) {
           setProgress(metaProgress);
           setSkipped(metaSkipped);
@@ -184,31 +261,32 @@ export function useSetupGuide() {
         if (!cancelled) setLoaded(true);
       }
     })();
-    return () => { cancelled = true; };
+
+    return () => {
+      cancelled = true;
+    };
   }, [userId, profile?.organization_id, metaProgress, metaSkipped]);
 
-  // Persist helper (debounced)
   const persist = useCallback(
     (next: { completed_steps?: Record<string, boolean>; skipped?: boolean }) => {
       if (!userId) return;
       if (saveTimer.current) clearTimeout(saveTimer.current);
+
       saveTimer.current = setTimeout(async () => {
-        // 1. Try DB table
         const payload: any = { user_id: userId, ...next };
         const { error: dbError } = await supabase
           .from('setup_guide_progress' as any)
           .upsert(payload, { onConflict: 'user_id' });
-        
+
         if (dbError) {
           console.warn('[SetupGuide] DB save failed, relying on metadata', dbError);
         }
 
-        // 2. Always sync to user metadata as a robust fallback
         const { error: metaError } = await supabase.auth.updateUser({
           data: {
             setup_progress: next.completed_steps ?? progress,
-            setup_skipped: next.skipped ?? skipped
-          }
+            setup_skipped: next.skipped ?? skipped,
+          },
         });
 
         if (metaError) {
@@ -216,13 +294,12 @@ export function useSetupGuide() {
         }
       }, 500);
     },
-    [userId, progress, skipped]
+    [userId, progress, skipped],
   );
 
-  // Show pop-up only once per session, after login — only for NEW users
   useEffect(() => {
     if (!userId || !profile || !loaded) return;
-    if (!isNewUser) return; // legacy users never see the guide
+    if (!isNewUser) return;
     if (skipped) return;
 
     const shownThisSession = sessionStorage.getItem(SESSION_SHOWN_KEY) === 'true';
@@ -235,10 +312,8 @@ export function useSetupGuide() {
       }, 1200);
       return () => clearTimeout(timer);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, profile?.id, loaded, isNewUser, skipped]);
+  }, [userId, profile, loaded, isNewUser, skipped, steps, progress]);
 
-  // Allow opening the guide from anywhere via a custom event
   useEffect(() => {
     const handler = () => setOpen(true);
     window.addEventListener('setup-guide:open', handler);
@@ -260,7 +335,7 @@ export function useSetupGuide() {
         // ignore
       }
     },
-    [userId, persist]
+    [userId, persist],
   );
 
   const markIncomplete = useCallback(
@@ -273,7 +348,7 @@ export function useSetupGuide() {
         return next;
       });
     },
-    [userId, persist]
+    [userId, persist],
   );
 
   const skipAll = useCallback(() => {
@@ -299,22 +374,25 @@ export function useSetupGuide() {
     sessionStorage.removeItem(SESSION_SHOWN_KEY);
   }, [userId, persist]);
 
-  const setActiveStepId = useCallback((id: string | null) => {
-    if (!userId) return;
-    try {
-      if (id) {
-        localStorage.setItem(ACTIVE_STEP_LS_PREFIX + userId, id);
-      } else {
-        localStorage.removeItem(ACTIVE_STEP_LS_PREFIX + userId);
+  const setActiveStepId = useCallback(
+    (id: string | null) => {
+      if (!userId) return;
+      try {
+        if (id) {
+          localStorage.setItem(ACTIVE_STEP_LS_PREFIX + userId, id);
+        } else {
+          localStorage.removeItem(ACTIVE_STEP_LS_PREFIX + userId);
+        }
+      } catch {
+        // ignore
       }
-    } catch {}
 
-    // Save to metadata
-    supabase.auth.updateUser({
-      data: { setup_active_step: id }
-    }).catch(() => {});
-  }, [userId]);
-
+      supabase.auth.updateUser({
+        data: { setup_active_step: id },
+      }).catch(() => {});
+    },
+    [userId],
+  );
 
   const activeStepId = (() => {
     if (!userId) return null;

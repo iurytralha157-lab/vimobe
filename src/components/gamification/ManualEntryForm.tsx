@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+﻿import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -37,9 +37,14 @@ import {
 
 const ACTION_OPTIONS = [
   { value: 'call_made', label: 'Ligação Externa' },
+  { value: 'message_sent', label: 'Mensagem Enviada' },
+  { value: 'visit_scheduled', label: 'Visita Agendada' },
   { value: 'visit_confirmed', label: 'Visita Realizada' },
+  { value: 'meeting_scheduled', label: 'Reunião Agendada' },
   { value: 'meeting_held', label: 'Reunião Externa' },
-  { value: 'prospecting_report', label: 'Ação Comercial Extra' },
+  { value: 'proposal_sent', label: 'Proposta Enviada' },
+  { value: 'contract_signed', label: 'Contrato Assinado' },
+  { value: 'property_created', label: 'Captação de Imóvel' },
 ];
 
 export function ManualEntryForm() {
@@ -315,3 +320,4 @@ export function ManualEntryForm() {
     </div>
   );
 }
+

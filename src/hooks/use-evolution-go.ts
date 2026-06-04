@@ -51,12 +51,12 @@ export const evolutionGo = {
   ) =>
     callEvolutionGo("send.media", {
       session_id,
-      body: { number, media: base64, mediatype, mimetype, fileName, caption },
+      body: { number, type: mediatype, url: base64, media: base64, mediatype, mimetype, fileName, filename: fileName, caption },
     }),
   sendAudio: (session_id: string, number: string, base64: string, mimetype = "audio/ogg") =>
     callEvolutionGo("send.audio", {
       session_id,
-      body: { number, media: base64, mimetype },
+      body: { number, type: "audio", url: base64, media: base64, mimetype },
     }),
 
   // Chat
@@ -77,11 +77,11 @@ export const evolutionGo = {
   // Groups
   myGroups: (session_id: string) => callEvolutionGo("group.myAll", { session_id }),
   groupInfo: (session_id: string, jid: string) =>
-    callEvolutionGo("group.info", { session_id, body: { jid } }),
+    callEvolutionGo("group.info", { session_id, body: { groupJid: jid } }),
 
   // User
   avatar: (session_id: string, jid: string) =>
-    callEvolutionGo("user.avatar", { session_id, body: { jid } }),
+    callEvolutionGo("user.avatar", { session_id, body: { number: jid.replace(/@.*/, "").replace(/\D/g, ""), preview: true } }),
   check: (session_id: string, numbers: string[]) =>
     callEvolutionGo("user.check", { session_id, body: { numbers } }),
   contacts: (session_id: string) => callEvolutionGo("user.contacts", { session_id }),

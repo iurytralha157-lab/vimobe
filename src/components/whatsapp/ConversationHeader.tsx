@@ -30,7 +30,6 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { StartAutomationDialog } from "./StartAutomationDialog";
-import { LabelsPopover } from "./LabelsPopover";
 import { useChatLabels } from "@/hooks/use-whatsapp-labels";
 import { Link } from "react-router-dom";
 import { formatPhoneForDisplay } from "@/lib/phone-utils";
@@ -272,13 +271,6 @@ export function ConversationHeader({
       </div>
 
       <div className="flex items-center gap-1 shrink-0">
-        {sessionId && conversationId && remoteJid && !isGroup && (
-          <LabelsPopover
-            sessionId={sessionId}
-            conversationId={conversationId}
-            remoteJid={remoteJid}
-          />
-        )}
         {leadId ? (
           <Button variant="ghost" size="sm" className="h-8 text-xs" asChild>
             <Link to={`/crm/pipelines?lead=${leadId}`}>

@@ -108,7 +108,7 @@ Deno.serve(async (req) => {
         const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         const regex = new RegExp(`\\{\\s*${escapedKey}\\s*\\}`, 'gi');
         
-        let stringValue = value !== null && value !== undefined ? String(value) : '';
+        const stringValue = value !== null && value !== undefined ? String(value) : '';
         
         // If organization_name is empty, also try to clean up prefixes like "Organização: " or "🏢 "
         if (key === 'organization_name' && !stringValue) {
@@ -127,7 +127,9 @@ Deno.serve(async (req) => {
     formattedMessage = formattedMessage.replace(/\n\n+/g, '\n\n').trim();
 
     // 4. Dispatch for each channel
-    const channels = template.channels || [template.channel];
+    const channels = Array.isArray(template.channels) && template.channels.length > 0
+      ? template.channels
+      : [template.channel].filter(Boolean);
     const dispatchResults = await Promise.all(channels.map(async (channel: string) => {
       let result: any = { success: false };
       const startTime = performance.now();
@@ -177,7 +179,14 @@ Deno.serve(async (req) => {
           const data = await resp.json();
           result = { success: resp.ok, data, error: data.error };
         } else if (channel === 'push' && user_id) {
-          const resp = await fetch(`${SUPABASE_URL}/functions/v1/send-push`, {
+          const notificationData = {
+            event_key,
+            lead_id: lead_id || null,
+            organization_id,
+            url: lead_id ? `/crm/conversas?lead=${lead_id}` : "/notifications",
+          };
+
+          const resp = await fetch(`${SUPABASE_URL}/functions/v1/send-push-notification`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -187,7 +196,8 @@ Deno.serve(async (req) => {
               user_id: user_id,
               title: formattedTitle || template.name,
               body: formattedMessage,
-              data: { lead_id: lead_id }
+              data: notificationData,
+              priority: "high",
             }),
           });
           const data = await resp.json();

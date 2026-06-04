@@ -9,9 +9,8 @@ import { FloatingChat } from '@/components/chat/FloatingChat';
 import { FloatingChatButton } from '@/components/chat/FloatingChatButton';
 import { WhatsAppRealtimeBus } from '@/contexts/WhatsAppRealtimeBus';
 import { SidebarProvider } from '@/contexts/SidebarContext';
-// PWA components disabled
-// import { InstallPrompt } from '@/components/pwa/InstallPrompt';
-// import { WebPushPrompt } from '@/components/pwa/WebPushPrompt';
+import { InstallPrompt } from '@/components/pwa/InstallPrompt';
+import { WebPushPrompt } from '@/components/pwa/WebPushPrompt';
 import { useWhatsAppHealthMonitor } from '@/hooks/use-whatsapp-health-monitor';
 import { usePushNotifications } from '@/hooks/use-push-notifications';
 import { usePhoneReminder } from '@/hooks/use-phone-reminder';
@@ -48,8 +47,6 @@ function AppLayoutContent({ children, title, disableMainScroll = false }: AppLay
   const isMobile = useIsMobile();
   const { data: settings } = useSystemSettings();
 
-  // Dynamic PWA Manifest Update disabled as requested
-  
   // Start WhatsApp session health monitoring
   useWhatsAppHealthMonitor();
   
@@ -98,9 +95,8 @@ function AppLayoutContent({ children, title, disableMainScroll = false }: AppLay
       <FloatingChatButton />
       <FloatingChat />
       
-      {/* PWA Prompts disabled as requested */}
-      {/* <InstallPrompt />
-      <WebPushPrompt /> */}
+      <InstallPrompt />
+      <WebPushPrompt />
     </div>
   );
 }

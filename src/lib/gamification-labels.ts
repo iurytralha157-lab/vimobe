@@ -4,6 +4,7 @@ export const ACTION_LABELS: Record<string, string> = {
   contact_made: 'Contato Realizado',
   visit_scheduled: 'Visita Agendada',
   sale_closed: 'Venda Concluída',
+  lead_created: 'Novo Lead Recebido',
   prospecting_report: 'Relatório de Prospecção',
   mission_bonus: 'Bônus de Missão',
   meeting_held: 'Reunião Realizada',

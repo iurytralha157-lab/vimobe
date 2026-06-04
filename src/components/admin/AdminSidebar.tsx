@@ -13,7 +13,8 @@ import {
   HelpCircle,
   Database,
   ClipboardList,
-  Bell
+  Bell,
+  Bot
 } from 'lucide-react';
 
 import { NavLink, useLocation } from 'react-router-dom';
@@ -32,6 +33,7 @@ const navItems = [
   { icon: ClipboardList, label: 'Onboarding', path: '/admin/onboarding' },
   { icon: Lightbulb, label: 'Solicitações', path: '/admin/requests' },
   { icon: Megaphone, label: 'Comunicados', path: '/admin/announcements' },
+  { icon: Bot, label: 'Jenny IA', path: '/admin/ai' },
   { icon: HelpCircle, label: 'Central de Ajuda', path: '/admin/help-editor' },
   { icon: Settings, label: 'Configurações', path: '/admin/settings' },
 ];

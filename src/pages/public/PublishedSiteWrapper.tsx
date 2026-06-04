@@ -16,33 +16,25 @@ const PublicFavorites = lazy(() => import('./PublicFavorites'));
 
 const PageLoader = () => null;
 
+const BILLING_BLOCKED_STATUSES = ['suspended', 'pending_payment', 'overdue', 'past_due', 'blocked', 'cancelled'];
+
+function isBillingBlockedStatus(status: unknown) {
+  return BILLING_BLOCKED_STATUSES.includes(String(status || '').toLowerCase());
+}
 
 function PublishedSiteProvider({ children, slug }: { children: ReactNode; slug: string }) {
   const [siteConfig, setSiteConfig] = useState<PublicSiteConfig | null>(null);
   const [organizationId, setOrganizationId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isBlocked, setIsBlocked] = useState(false);
 
   useEffect(() => {
     const loadSiteConfig = async () => {
       try {
-        // Check session cache first
-        const cached = sessionStorage.getItem(`site_slug_${slug}`);
-        if (cached) {
-          try {
-            const parsed = JSON.parse(cached);
-            setOrganizationId(parsed.organization_id);
-            setSiteConfig(parsed.site_config);
-            setIsLoading(false);
-            return;
-          } catch (e) {
-            sessionStorage.removeItem(`site_slug_${slug}`);
-          }
-        }
-
         const { data, error: fetchError } = await supabase
           .from('organization_sites')
-          .select('*, organizations(name)')
+          .select('*, organizations(name, subscription_status, is_active)')
           .eq('subdomain', slug)
           .eq('is_active', true)
           .maybeSingle();
@@ -50,6 +42,13 @@ function PublishedSiteProvider({ children, slug }: { children: ReactNode; slug: 
         if (fetchError || !data) {
           console.error('Error loading site config:', fetchError);
           setError('Site não encontrado');
+          return;
+        }
+
+        const organization = data.organizations as any;
+        if (organization?.is_active === false || isBillingBlockedStatus(organization?.subscription_status)) {
+          setIsBlocked(true);
+          sessionStorage.removeItem(`site_slug_${slug}`);
           return;
         }
 
@@ -134,6 +133,17 @@ function PublishedSiteProvider({ children, slug }: { children: ReactNode; slug: 
     isLoading,
     error,
   };
+
+  if (isBlocked) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#0D0D0D] px-6 text-white">
+        <div className="max-w-md text-center">
+          <h1 className="text-3xl font-bold mb-3">Acesso bloqueado</h1>
+          <p className="text-base text-white/70">Entre em contato com o administrador.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <PublicContext.Provider value={contextValue}>

@@ -1,9 +1,12 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
+import { enforceRateLimit } from '../_shared/rate-limit.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+const BILLING_BLOCKED_STATUSES = new Set(['suspended', 'pending_payment', 'overdue', 'past_due', 'blocked', 'cancelled']);
 
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
@@ -36,6 +39,23 @@ Deno.serve(async (req) => {
     const mobilia = url.searchParams.get('mobilia');
     const pet = url.searchParams.get('pet');
 
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    const rateLimit = await enforceRateLimit(
+      supabase,
+      req,
+      `public-site-data:${organizationId || 'missing-org'}`,
+      [
+        { name: 'burst', limit: 180, windowSeconds: 60 },
+        { name: 'hourly', limit: 3000, windowSeconds: 3600 },
+      ],
+      corsHeaders,
+    );
+
+    if (rateLimit.response) return rateLimit.response;
+
     if (!organizationId) {
       return new Response(
         JSON.stringify({ error: 'organization_id is required' }),
@@ -45,13 +65,31 @@ Deno.serve(async (req) => {
 
     console.log(`Public site data request: ${endpoint} for org: ${organizationId}`);
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const { data: organizationAccess, error: organizationAccessError } = await supabase
+      .from('organizations')
+      .select('is_active, subscription_status')
+      .eq('id', organizationId)
+      .maybeSingle();
 
-    // Optional: verification query removed for speed as RLS/filter by status handles it.
-    // We only filter by organizationId in queries below.
+    if (organizationAccessError || !organizationAccess) {
+      return new Response(
+        JSON.stringify({ error: 'organization_not_found' }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (
+      organizationAccess.is_active === false ||
+      BILLING_BLOCKED_STATUSES.has(String(organizationAccess.subscription_status || '').toLowerCase())
+    ) {
+      return new Response(
+        JSON.stringify({
+          error: 'site_blocked',
+          message: 'Acesso bloqueado, entre em contato com o administrador.',
+        }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     let response;
 

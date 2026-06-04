@@ -38,6 +38,32 @@
 @tailwind components;
 @tailwind utilities;
 
+@keyframes loader-float {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-6px) scale(1.04);
+  }
+}
+
+@keyframes loader-dot {
+  0%,
+  20% {
+    opacity: 0.2;
+    transform: translateY(0);
+  }
+  45% {
+    opacity: 1;
+    transform: translateY(-2px);
+  }
+  100% {
+    opacity: 0.2;
+    transform: translateY(0);
+  }
+}
+
 @layer base {
   :root {
     /* Vetter CRM - Clean Professional Theme */
@@ -713,4 +739,3 @@ div[style*="Edit with Lovable"],
   position: absolute !important;
   z-index: -9999 !important;
 }
-

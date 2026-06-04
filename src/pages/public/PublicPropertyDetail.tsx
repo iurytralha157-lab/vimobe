@@ -17,6 +17,45 @@ import {
 } from "@/components/public/property-detail";
 import { Skeleton } from "@/components/ui/skeleton";
 
+type PublicAddressVisibility = 'completo' | 'parcial' | 'minimo';
+
+const getPublicAddressVisibility = (property: any): PublicAddressVisibility => {
+  const value = property?.public_address_visibility;
+  return value === 'completo' || value === 'minimo' ? value : 'parcial';
+};
+
+const buildPublicAddress = (property: any) => {
+  const visibility = getPublicAddressVisibility(property);
+  const endereco = property.endereco || property.address || null;
+  const numero = property.numero || null;
+  const bairro = property.bairro || null;
+  const cidade = property.cidade || property.estado_cidade || null;
+  const uf = property.estado || property.uf || null;
+  const cep = property.cep || null;
+
+  if (visibility === 'completo') {
+    return {
+      visibility,
+      display: [endereco, numero, bairro, cidade, uf].filter(Boolean).join(', '),
+      map: { endereco, numero, bairro, cidade, uf, cep },
+    };
+  }
+
+  if (visibility === 'minimo') {
+    return {
+      visibility,
+      display: [cidade, uf].filter(Boolean).join(', '),
+      map: { endereco: null, numero: null, bairro: null, cidade, uf, cep: null },
+    };
+  }
+
+  return {
+    visibility,
+    display: [bairro, cidade, uf].filter(Boolean).join(', '),
+    map: { endereco: null, numero: null, bairro, cidade, uf, cep: null },
+  };
+};
+
 export default function PublicPropertyDetail() {
   // Support both old route (/imoveis/:codigo) and new route (/imovel/:code)
   const { codigo, code } = useParams<{ codigo?: string; code?: string }>();
@@ -81,6 +120,65 @@ export default function PublicPropertyDetail() {
         [property.imagem_principal, ...(property.fotos || [])].filter(Boolean)
       )) as string[]
     : [];
+  const publicAddress = property ? buildPublicAddress(property) : null;
+
+  useEffect(() => {
+    if (!property) return;
+
+    const title = property.titulo || (property as any).title || siteConfig?.site_title || 'Imóvel';
+    const description =
+      property.descricao ||
+      (property as any).descricao ||
+      siteConfig?.seo_description ||
+      siteConfig?.site_description ||
+      '';
+    const image = allImages[0] || siteConfig?.logo_url || siteConfig?.favicon_url || '';
+
+    const metaUpdates: Record<string, string> = {
+      'meta[property="og:title"]': title,
+      'meta[name="twitter:title"]': title,
+      'meta[property="og:description"]': description,
+      'meta[name="twitter:description"]': description,
+      'meta[property="og:image"]': image,
+      'meta[name="twitter:image"]': image,
+      'meta[property="og:url"]': window.location.href,
+    };
+
+    const previousTitle = document.title;
+    const previousMeta: Record<string, string | null> = {};
+    document.title = title;
+
+    Object.entries(metaUpdates).forEach(([selector, value]) => {
+      if (!value) return;
+      let element = document.querySelector<HTMLMetaElement>(selector);
+      if (!element) {
+        element = document.createElement('meta');
+        const attrMatch = selector.match(/\[(\w+)="([^"]+)"\]/);
+        if (attrMatch) element.setAttribute(attrMatch[1], attrMatch[2]);
+        document.head.appendChild(element);
+      }
+      previousMeta[selector] = element.getAttribute('content');
+      element.setAttribute('content', value);
+    });
+
+    return () => {
+      document.title = previousTitle;
+      Object.entries(previousMeta).forEach(([selector, value]) => {
+        const element = document.querySelector<HTMLMetaElement>(selector);
+        if (!element) return;
+        if (value === null) element.removeAttribute('content');
+        else element.setAttribute('content', value);
+      });
+    };
+  }, [
+    property,
+    allImages,
+    siteConfig?.favicon_url,
+    siteConfig?.logo_url,
+    siteConfig?.seo_description,
+    siteConfig?.site_description,
+    siteConfig?.site_title,
+  ]);
 
   if (!property && !isLoading) {
     return (
@@ -157,15 +255,12 @@ export default function PublicPropertyDetail() {
                 </h1>
 
                 {/* Address */}
-                <p className="flex items-center gap-2 text-lg" style={{ color: textColor, opacity: 0.6 }}>
-                  <MapPin className="w-5 h-5 flex-shrink-0" style={{ color: primaryColor }} />
-                  {[
-                    property.endereco || (property as any).endereco,
-                    property.bairro || (property as any).bairro,
-                    property.cidade || (property as any).cidade,
-                    property.estado || (property as any).uf,
-                  ].filter(Boolean).join(', ')}
-                </p>
+                {publicAddress?.display && (
+                  <p className="flex items-center gap-2 text-lg" style={{ color: textColor, opacity: 0.6 }}>
+                    <MapPin className="w-5 h-5 flex-shrink-0" style={{ color: primaryColor }} />
+                    {publicAddress.display}
+                  </p>
+                )}
               </div>
 
               {/* Features */}
@@ -213,13 +308,13 @@ export default function PublicPropertyDetail() {
               <PropertyLocation
                 latitude={(property as any).latitude}
                 longitude={(property as any).longitude}
-                endereco={property.endereco || (property as any).endereco}
-                
-                complemento={(property as any).complemento}
-                bairro={property.bairro || (property as any).bairro}
-                cidade={property.cidade || (property as any).cidade}
-                uf={property.estado || (property as any).uf}
-                cep={property.cep || (property as any).cep}
+                endereco={publicAddress?.map.endereco}
+                numero={publicAddress?.map.numero}
+                complemento={publicAddress?.visibility === 'completo' ? (property as any).complemento : null}
+                bairro={publicAddress?.map.bairro}
+                cidade={publicAddress?.map.cidade}
+                uf={publicAddress?.map.uf}
+                cep={publicAddress?.map.cep}
                 title={property.titulo || (property as any).title}
                 primaryColor={primaryColor}
                 cardColor={cardColor}

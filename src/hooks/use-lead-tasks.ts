@@ -1,9 +1,19 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+﻿import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Tables } from '@/integrations/supabase/types';
 
 export type LeadTask = Tables<'lead_tasks'>;
+
+function invalidateLeadTaskCaches(queryClient: ReturnType<typeof useQueryClient>, leadId?: string | null) {
+  queryClient.invalidateQueries({ queryKey: ['lead-tasks'] });
+  queryClient.invalidateQueries({ queryKey: ['activities'] });
+  queryClient.invalidateQueries({ queryKey: ['recent-activities'] });
+  if (leadId) {
+    queryClient.invalidateQueries({ queryKey: ['lead-history-v2', leadId] });
+    queryClient.invalidateQueries({ queryKey: ['lead-timeline', leadId] });
+  }
+}
 
 export function useLeadTasks(leadId?: string) {
   return useQuery({
@@ -49,8 +59,8 @@ export function useToggleLeadTask() {
       if (is_done && leadId) {
         await supabase.from('activities').insert({
           lead_id: leadId,
-          type: data.type, // 'call', 'message', 'email', 'note'
-          content: data.title,
+          type: 'task_completed',
+          content: `Cadencia concluida: ${data.title}`,
           user_id: user.user?.id,
           metadata: {
             task_id: data.id,
@@ -63,11 +73,7 @@ export function useToggleLeadTask() {
       return data;
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['lead-tasks'] });
-      queryClient.invalidateQueries({ queryKey: ['activities'] });
-      if (data?.lead_id) {
-        queryClient.invalidateQueries({ queryKey: ['lead-history-v2', data.lead_id] });
-      }
+      invalidateLeadTaskCaches(queryClient, data?.lead_id);
     },
     onError: (error) => {
       toast.error('Erro ao atualizar tarefa: ' + error.message);
@@ -140,21 +146,26 @@ export function useCompleteCadenceTask() {
         .eq('title', title)
         .eq('day_offset', dayOffset)
         .eq('type', type)
+        .order('is_done', { ascending: false })
+        .order('created_at', { ascending: true })
+        .limit(1)
         .maybeSingle();
       
       let taskData;
       
       if (existingTask) {
-        // Toggle existing task
-        const newIsDone = !existingTask.is_done;
+        if (existingTask.is_done) {
+          return existingTask;
+        }
+
         const { data, error } = await supabase
           .from('lead_tasks')
           .update({
-            is_done: newIsDone,
-            done_at: newIsDone ? new Date().toISOString() : null,
-            done_by: newIsDone ? user.user?.id : null,
-            outcome: newIsDone ? outcome : null,
-            outcome_notes: newIsDone ? outcomeNotes : null,
+            is_done: true,
+            done_at: new Date().toISOString(),
+            done_by: user.user?.id,
+            outcome: outcome || existingTask.outcome,
+            outcome_notes: outcomeNotes || existingTask.outcome_notes,
           })
           .eq('id', existingTask.id)
           .select()
@@ -163,22 +174,19 @@ export function useCompleteCadenceTask() {
         if (error) throw error;
         taskData = data;
         
-        // Create activity only when marking as done
-        if (newIsDone) {
-          await supabase.from('activities').insert({
-            lead_id: leadId,
-            type: type,
-            content: title,
-            user_id: user.user?.id,
-            metadata: {
-              task_id: data.id,
-              task_type: type,
-              day_offset: dayOffset,
-              outcome: outcome,
-              outcome_notes: outcomeNotes,
-            },
-          });
-        }
+        await supabase.from('activities').insert({
+          lead_id: leadId,
+          type: 'task_completed',
+          content: `Cadencia concluida: ${title}`,
+          user_id: user.user?.id,
+          metadata: {
+            task_id: data.id,
+            task_type: type,
+            day_offset: dayOffset,
+            outcome: outcome,
+            outcome_notes: outcomeNotes,
+          },
+        });
       } else {
         // Create new lead_task and mark as done
         const { data, error } = await supabase
@@ -204,8 +212,8 @@ export function useCompleteCadenceTask() {
         // Create activity
         await supabase.from('activities').insert({
           lead_id: leadId,
-          type: type,
-          content: title,
+          type: 'task_completed',
+          content: `Cadencia concluida: ${title}`,
           user_id: user.user?.id,
           metadata: {
             task_id: data.id,
@@ -220,14 +228,11 @@ export function useCompleteCadenceTask() {
       return taskData;
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['lead-tasks'] });
-      queryClient.invalidateQueries({ queryKey: ['activities'] });
-      if (data?.lead_id) {
-        queryClient.invalidateQueries({ queryKey: ['lead-history-v2', data.lead_id] });
-      }
+      invalidateLeadTaskCaches(queryClient, data?.lead_id);
     },
     onError: (error) => {
       toast.error('Erro ao completar tarefa: ' + error.message);
     },
   });
 }
+

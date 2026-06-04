@@ -37,10 +37,19 @@ Deno.serve(async (req) => {
 
     console.log(`Calculating first response for lead ${lead_id}, channel: ${channel}, is_automation: ${is_automation}`);
 
+    const allowedChannels = new Set(["whatsapp", "phone"]);
+    if (!allowedChannels.has(channel)) {
+      console.log(`Channel ${channel} does not count as first contact, skipping`);
+      return new Response(
+        JSON.stringify({ success: true, message: "Channel ignored for first contact" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // 1. Check if lead already has first_response_at (idempotency)
     const { data: lead, error: leadError } = await supabase
       .from("leads")
-      .select("first_response_at, pipeline_id, created_at")
+      .select("first_response_at, pipeline_id, created_at, assigned_user_id")
       .eq("id", lead_id)
       .single();
 
@@ -149,6 +158,10 @@ Deno.serve(async (req) => {
       updateData.first_touch_seconds = diffSeconds;
       updateData.first_touch_actor_user_id = actor_user_id;
       updateData.first_touch_channel = channel;
+      if (lead.assigned_user_id === actor_user_id) {
+        updateData.owner_last_activity_at = now.toISOString();
+        updateData.owner_last_activity_user_id = actor_user_id;
+      }
       console.log(`Recording first_touch (human action) for lead ${lead_id}`);
     }
 
@@ -173,8 +186,8 @@ Deno.serve(async (req) => {
         lead_id: lead_id,
         event_type: "first_response",
         user_id: actor_user_id,
-        title: channel === 'stage_move' ? 'Tempo de resposta (moveu lead)' : `Tempo de resposta via ${channel}`,
-        description: `Tempo de resposta: ${diffSeconds} segundos`,
+        title: `Primeiro contato via ${channel}`,
+        description: `Primeiro contato: ${diffSeconds} segundos`,
         metadata: {
           channel: channel,
           is_automation: is_automation,
@@ -199,7 +212,7 @@ Deno.serve(async (req) => {
           event_type: "whatsapp_message_sent",
           user_id: actor_user_id,
           title: "Mensagem WhatsApp enviada",
-          description: "Primeira mensagem que registrou tempo de resposta",
+          description: "Primeira mensagem que registrou o primeiro contato",
           metadata: { 
             channel: "whatsapp",
             is_automation: is_automation,

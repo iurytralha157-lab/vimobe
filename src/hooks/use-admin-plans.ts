@@ -8,8 +8,10 @@ export interface SubscriptionPlan {
   description: string | null;
   price: number;
   billing_cycle: string;
+  trial_enabled: boolean | null;
   trial_days: number;
   max_users: number;
+  max_whatsapp_sessions: number | null;
   max_leads: number | null;
   modules: string[];
   is_active: boolean;

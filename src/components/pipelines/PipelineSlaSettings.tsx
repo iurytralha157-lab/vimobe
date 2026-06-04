@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -68,7 +68,7 @@ export function PipelineSlaSettings({
             Configurações de SLA
           </DialogTitle>
           <DialogDescription>
-            Configure os alertas de tempo de resposta para o pipeline "{pipelineName}"
+            Configure os alertas de primeiro contato para o pipeline "{pipelineName}"
           </DialogDescription>
         </DialogHeader>
 

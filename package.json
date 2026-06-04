@@ -7,7 +7,11 @@
     "dev": "vite",
     "build": "vite build",
     "build:dev": "vite build --mode development",
-    "lint": "eslint .",
+    "lint": "npm run lint:app && npm run lint:functions",
+    "lint:app": "eslint src",
+    "lint:functions": "eslint supabase/functions",
+    "typecheck": "tsc --noEmit",
+    "qa:build": "npm run lint && npm run typecheck && npm run build",
     "preview": "vite preview"
   },
   "dependencies": {

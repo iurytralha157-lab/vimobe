@@ -80,6 +80,7 @@ interface QueueMember {
 interface QueueSettings {
   enable_redistribution?: boolean;
   redistribution_timeout_minutes?: number;
+  redistribution_warning_minutes?: number;
   redistribution_max_attempts?: number;
   preserve_position?: boolean;
   require_checkin?: boolean;
@@ -140,6 +141,7 @@ export function useCreateQueueAdvanced() {
           name: input.name,
           strategy: input.strategy,
           organization_id: profile.organization_id,
+          created_by: userData.user.id,
           is_active: input.is_active,
           target_pipeline_id: input.target_pipeline_id || null,
           target_stage_id: input.target_stage_id || null,
@@ -160,7 +162,9 @@ export function useCreateQueueAdvanced() {
             .update({
               pool_enabled: true,
               pool_timeout_minutes: input.settings.redistribution_timeout_minutes ?? 10,
+              pool_warning_minutes: input.settings.redistribution_warning_minutes ?? 2,
               pool_max_redistributions: input.settings.redistribution_max_attempts ?? 3,
+              pool_enabled_at: new Date().toISOString(),
             })
             .eq('id', input.target_pipeline_id);
         } else {
@@ -332,7 +336,9 @@ export function useUpdateQueueAdvanced() {
             .update({
               pool_enabled: true,
               pool_timeout_minutes: input.settings.redistribution_timeout_minutes ?? 10,
+              pool_warning_minutes: input.settings.redistribution_warning_minutes ?? 2,
               pool_max_redistributions: input.settings.redistribution_max_attempts ?? 3,
+              pool_enabled_at: new Date().toISOString(),
             })
             .eq('id', input.target_pipeline_id);
         } else {

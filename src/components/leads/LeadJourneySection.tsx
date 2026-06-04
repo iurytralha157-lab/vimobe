@@ -75,7 +75,7 @@ function getDeviceIcon(deviceType: string | null) {
 function formatPagePath(path: string): string {
   if (path === '/' || path === '') return 'Página inicial';
   // Remove leading slash and clean up
-  const clean = path.replace(/^\//, '').replace(/\//g, ' › ');
+  const clean = path.replace(/^\//, '').replace(/\//g, ' > ');
   return clean.charAt(0).toUpperCase() + clean.slice(1);
 }
 
@@ -225,7 +225,7 @@ export function LeadJourneySection({ leadId }: LeadJourneySectionProps) {
       {/* Footer with time range */}
       <div className="mt-2 pt-2 border-t text-[10px] text-muted-foreground text-center">
         {format(new Date(firstEvent.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-        {' → '}
+        {' -> '}
         {format(new Date(lastEvent.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
       </div>
     </div>

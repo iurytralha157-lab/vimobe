@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+﻿import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
@@ -12,53 +12,7 @@ import { AnimatedTabNav, AnimatedTabItem } from '@/components/ui/animated-tab-na
 import { DistributionTab } from '@/components/crm-management/DistributionTab';
 import { TeamsTab } from '@/components/crm-management/TeamsTab';
 import { TagsTab } from '@/components/crm-management/TagsTab';
-import { TabIntroCard } from '@/components/crm-management/TabIntroCard';
 import { OperationalTab } from '@/components/crm-management/OperationalTab';
-
-// Intro card content for each tab
-const tabIntros: Record<string, { title: string; description: string; tips?: string[] }> = {
-  teams: {
-    title: 'Organize sua equipe',
-    description: 'Crie times de corretores e defina líderes para acompanhar o desempenho de cada grupo.',
-    tips: [
-      'Líderes têm acesso a todos os leads das pipelines vinculadas',
-      'Membros só veem seus próprios leads',
-    ],
-  },
-  pipelines: {
-    title: 'Vincule pipelines às equipes',
-    description: 'Conecte cada pipeline a uma ou mais equipes para controlar quem pode visualizar os negócios.',
-    tips: [
-      'Uma pipeline pode estar vinculada a múltiplas equipes',
-      'Equipes sem vínculos não verão leads no Kanban',
-    ],
-  },
-  distribution: {
-    title: 'Distribuição automática de leads',
-    description: 'Configure regras de round-robin para distribuir leads automaticamente entre os corretores disponíveis.',
-    tips: [
-      'Leads são distribuídos com base em disponibilidade e regras',
-      'Você pode criar filas por origem, cidade ou outros critérios',
-      'Ative a redistribuição nas configurações avançadas de cada fila para reatribuir leads sem contato',
-    ],
-  },
-  tags: {
-    title: 'Organize leads com tags',
-    description: 'Crie etiquetas coloridas para categorizar e filtrar leads de forma rápida.',
-    tips: [
-      'Tags aparecem no Kanban e na lista de contatos',
-      'Use para marcar prioridade, interesse ou qualquer critério',
-    ],
-  },
-  operational: {
-    title: 'Inteligência Operacional',
-    description: 'Vincule estágios do pipeline a contextos de negócio e defina metas de SLA.',
-    tips: [
-      'Escolha qual setor é responsável por cada etapa',
-      'Defina prazos de atendimento (SLA) em horas',
-    ],
-  },
-};
 
 const VALID_TABS = ['teams', 'pipelines', 'distribution', 'tags', 'operational'];
 
@@ -89,7 +43,6 @@ export default function CRMManagement() {
 
   const currentTab = managementTabs.find(tab => tab.value === activeTab);
   const CurrentIcon = currentTab?.icon;
-  const currentIntro = tabIntros[activeTab];
 
   return (
     <AppLayout title="Gestão">
@@ -118,17 +71,6 @@ export default function CRMManagement() {
             </Select>
           ) : (
             <AnimatedTabNav tabs={managementTabs} activeTab={activeTab} onTabChange={setActiveTab} />
-          )}
-
-          {/* Intro card for current tab */}
-          {currentIntro && CurrentIcon && (
-            <TabIntroCard
-              id={activeTab}
-              icon={CurrentIcon}
-              title={currentIntro.title}
-              description={currentIntro.description}
-              tips={currentIntro.tips}
-            />
           )}
 
           <TabsContent value="teams" className="mt-4">

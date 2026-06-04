@@ -48,9 +48,42 @@ export function useSyncLabels() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (sessionId: string) => {
+      const { data: session, error: sessionError } = await supabase
+        .from("whatsapp_sessions")
+        .select("id, organization_id")
+        .eq("id", sessionId)
+        .single();
+      if (sessionError) throw sessionError;
+
       const r = await callEvolutionGo("label.list", { session_id: sessionId });
       if (!r.ok) throw new Error(r.error || "Falha ao sincronizar etiquetas");
-      return r.data;
+
+      const rawLabels =
+        Array.isArray(r.data) ? r.data :
+        Array.isArray(r.data?.data) ? r.data.data :
+        Array.isArray(r.data?.labels) ? r.data.labels :
+        Array.isArray(r.data?.data?.labels) ? r.data.data.labels :
+        [];
+
+      const labels = rawLabels
+        .map((label: any) => ({
+          session_id: sessionId,
+          organization_id: session.organization_id,
+          remote_label_id: String(label.id ?? label.ID ?? label.labelId ?? label.LabelID ?? ""),
+          name: String(label.name ?? label.Name ?? label.label ?? label.Label ?? "Etiqueta"),
+          color: label.color ?? label.Color ?? label.colorIndex ?? label.ColorIndex ?? null,
+          predefined: Boolean(label.predefined ?? label.Predefined ?? false),
+        }))
+        .filter((label: any) => label.remote_label_id);
+
+      if (labels.length > 0) {
+        const { error } = await supabase
+          .from("whatsapp_labels")
+          .upsert(labels, { onConflict: "session_id,remote_label_id" });
+        if (error) throw error;
+      }
+
+      return { raw: r.data, synced: labels.length };
     },
     onSuccess: (_d, sessionId) => qc.invalidateQueries({ queryKey: ["whatsapp-labels", sessionId] }),
   });
@@ -67,9 +100,18 @@ export function useAssignLabel() {
       add: boolean;
     }) => {
       const action = args.add ? "label.addChat" : "label.removeChat";
+      const { data: labelRow } = await supabase
+        .from("whatsapp_labels")
+        .select("id, remote_label_id")
+        .eq("session_id", args.sessionId)
+        .or(`id.eq.${args.labelId},remote_label_id.eq.${args.labelId}`)
+        .maybeSingle();
+
+      const dbLabelId = labelRow?.id || args.labelId;
+      const remoteLabelId = labelRow?.remote_label_id || args.labelId;
       const r = await callEvolutionGo(action, {
         session_id: args.sessionId,
-        body: { labelId: args.labelId, jid: args.remoteJid },
+        body: { labelId: remoteLabelId, jid: args.remoteJid },
       });
       if (!r.ok) throw new Error(r.error || "Falha ao alterar etiqueta");
 
@@ -77,13 +119,13 @@ export function useAssignLabel() {
       if (args.add) {
         await supabase.from("whatsapp_chat_labels").upsert({
           conversation_id: args.conversationId,
-          label_id: args.labelId,
+          label_id: dbLabelId,
         }, { onConflict: "conversation_id,label_id" });
       } else {
         await supabase.from("whatsapp_chat_labels")
           .delete()
           .eq("conversation_id", args.conversationId)
-          .eq("label_id", args.labelId);
+          .eq("label_id", dbLabelId);
       }
       return r.data;
     },

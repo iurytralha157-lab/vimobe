@@ -127,6 +127,40 @@ export function useCreateCadenceTask() {
   });
 }
 
+export function useUpdateCadenceTask() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (task: {
+      id: string;
+      day_offset: number;
+      type: 'call' | 'message' | 'email' | 'note';
+      title: string;
+      description?: string | null;
+      observation?: string | null;
+      recommended_message?: string | null;
+    }) => {
+      const { id, ...updates } = task;
+      const { data, error } = await supabase
+        .from('cadence_tasks_template')
+        .update(updates as any)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['cadence-templates'] });
+      toast.success('Tarefa atualizada!');
+    },
+    onError: (error) => {
+      toast.error('Erro ao atualizar tarefa: ' + error.message);
+    },
+  });
+}
+
 export function useDeleteCadenceTask() {
   const queryClient = useQueryClient();
   

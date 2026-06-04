@@ -61,32 +61,41 @@ export function ContactCard({ contact, sourceLabels, onViewDetails, onDelete }: 
     >
       {/* Header: Name + Actions */}
       <div className="flex items-start justify-between gap-2">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 min-w-0">
-            <p className="font-medium truncate">{contact.name}</p>
-            <ReentryBadge count={contact.reentry_count} lastEntryAt={contact.last_entry_at} />
-          </div>
-          <div className="flex flex-wrap items-center gap-2 mt-1 text-sm text-muted-foreground">
-            {contact.phone && (
-              <a 
-                href={`tel:${contact.phone}`} 
-                className="flex items-center gap-1 hover:text-foreground"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <Phone className="h-3 w-3" />
-                <span className="truncate max-w-[120px]">{contact.phone}</span>
-              </a>
-            )}
-            {contact.email && (
-              <a 
-                href={`mailto:${contact.email}`} 
-                className="flex items-center gap-1 hover:text-foreground"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <Mail className="h-3 w-3" />
-                <span className="truncate max-w-[140px]">{contact.email}</span>
-              </a>
-            )}
+        <div className="flex items-start gap-3 flex-1 min-w-0">
+          <Avatar className="h-10 w-10 shrink-0">
+            <AvatarImage src={contact.whatsapp_avatar_url || undefined} alt={contact.name} />
+            <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+              {getInitials(contact.name)}
+            </AvatarFallback>
+          </Avatar>
+
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 min-w-0">
+              <p className="font-medium truncate">{contact.name}</p>
+              <ReentryBadge count={contact.reentry_count} lastEntryAt={contact.last_entry_at} />
+            </div>
+            <div className="flex flex-wrap items-center gap-2 mt-1 text-sm text-muted-foreground">
+              {contact.phone && (
+                <a 
+                  href={`tel:${contact.phone}`} 
+                  className="flex items-center gap-1 hover:text-foreground"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Phone className="h-3 w-3" />
+                  <span className="truncate max-w-[120px]">{contact.phone}</span>
+                </a>
+              )}
+              {contact.email && (
+                <a 
+                  href={`mailto:${contact.email}`} 
+                  className="flex items-center gap-1 hover:text-foreground"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Mail className="h-3 w-3" />
+                  <span className="truncate max-w-[140px]">{contact.email}</span>
+                </a>
+              )}
+            </div>
           </div>
         </div>
         <DropdownMenu>

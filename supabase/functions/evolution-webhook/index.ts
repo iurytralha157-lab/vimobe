@@ -58,6 +58,53 @@ function extractUtmFromText(text: string) {
   return utm;
 }
 
+async function recordLeadMetaFromWhatsApp(
+  supabase: any,
+  leadId: string,
+  hubCtx: { rule: any | null; adContext: any; utm: Record<string, string> } | null,
+  isFromAds: boolean,
+  adSource: string | null
+) {
+  const rule = hubCtx?.rule || null;
+  const adCtx = hubCtx?.adContext || {};
+  const utm = hubCtx?.utm || {};
+  const campaignId = adCtx.meta_campaign_id || utm.utm_campaign || rule?.campaign_label || null;
+  const campaignName = rule?.campaign_label || utm.utm_campaign || adCtx.headline || campaignId;
+
+  if (!campaignId && !campaignName && !adCtx.meta_ad_id && !adCtx.meta_click_id && Object.keys(utm).length === 0) {
+    return;
+  }
+
+  const { error } = await supabase.from("lead_meta").insert({
+    lead_id: leadId,
+    campaign_id: campaignId,
+    campaign_name: campaignName,
+    ad_id: adCtx.meta_ad_id || null,
+    ad_name: adCtx.headline || null,
+    adset_id: adCtx.meta_adset_id || null,
+    adset_name: null,
+    platform: isFromAds ? "whatsapp_meta" : "whatsapp",
+    source_type: "whatsapp",
+    utm_source: utm.utm_source || null,
+    utm_medium: utm.utm_medium || null,
+    utm_campaign: utm.utm_campaign || rule?.campaign_label || null,
+    utm_content: utm.utm_content || null,
+    utm_term: utm.utm_term || null,
+    raw_payload: {
+      source: "evolution_webhook",
+      from_ads: isFromAds,
+      ad_source: adSource,
+      ad_context: adCtx,
+      utm,
+      inbound_rule_id: rule?.id || null,
+    },
+  });
+
+  if (error) {
+    console.error("Error recording WhatsApp lead meta:", error);
+  }
+}
+
 async function applyInboundRules(
   supabase: any,
   session: any,
@@ -579,6 +626,7 @@ async function handleMessagesUpsert(
       const messageDate = new Date(Number(timestamp) * 1000).toISOString();
 
       // Find or create conversation - search by contact_phone to avoid duplicates
+      // eslint-disable-next-line prefer-const
       let { data: conversation, error: convError } = await supabase
         .from("whatsapp_conversations")
         .select("*")
@@ -1445,7 +1493,7 @@ async function handleMessagesUpdate(supabase: any, session: any, data: any) {
       // Evolution v2 status format
       const status = update.update?.status || update.status;
 
-      let updateData: any = {};
+      const updateData: any = {};
       
       // Status codes: 0 = error, 1 = pending, 2 = server, 3 = delivery, 4 = read, 5 = played
       if (status === 2 || status === "SERVER_ACK") {
@@ -1695,11 +1743,17 @@ async function createLeadFromConversation(
         p_org_id: session.organization_id,
         p_entry_type: 'whatsapp_reentry',
         p_source: 'whatsapp',
+        p_campaign_name: hubCtx?.rule?.campaign_label || hubCtx?.utm?.utm_campaign || hubCtx?.adContext?.headline || null,
+        p_utm_source: hubCtx?.utm?.utm_source || null,
+        p_utm_medium: hubCtx?.utm?.utm_medium || null,
+        p_utm_campaign: hubCtx?.utm?.utm_campaign || hubCtx?.rule?.campaign_label || null,
         p_metadata: {
           from_ads: isFromAds,
           ad_source: adSource || null,
           phone: contactPhone,
-          first_message: firstMessage
+          first_message: firstMessage,
+          ad_context: hubCtx?.adContext || null,
+          inbound_rule_id: hubCtx?.rule?.id || null,
         }
       });
 
@@ -1720,6 +1774,8 @@ async function createLeadFromConversation(
         .from("whatsapp_conversations")
         .update({ lead_id: existingLead.id })
         .eq("id", conversation.id);
+
+      await recordLeadMetaFromWhatsApp(supabase, existingLead.id, hubCtx, isFromAds, adSource);
       
       console.log(`Linked conversation to existing lead: ${existingLead.id}`);
       return;
@@ -1797,6 +1853,7 @@ async function createLeadFromConversation(
       pipelineId = anyPipeline.id;
     }
 
+    // eslint-disable-next-line prefer-const
     let { data: stage, error: stageError } = await supabase
       .from("stages")
       .select("id")
@@ -1883,6 +1940,8 @@ async function createLeadFromConversation(
     if (linkError) {
       console.error("Error linking conversation to lead:", linkError);
     }
+
+    await recordLeadMetaFromWhatsApp(supabase, newLead.id, hubCtx, isFromAds, adSource);
 
     // Apply Facebook Ads tag if from ads
     if (isFromAds) {

@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet';
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { PropertyPickerDialog } from '@/components/properties/PropertyPickerDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -86,6 +86,7 @@ import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
 interface QueueSettings {
   enable_redistribution?: boolean;
   redistribution_timeout_minutes?: number;
+  redistribution_warning_minutes?: number;
   redistribution_max_attempts?: number;
   preserve_position?: boolean;
   require_checkin?: boolean;
@@ -134,16 +135,16 @@ const SOURCE_OPTIONS = [
 ];
 
 const CONDITION_TYPES = [
-  { value: 'source', label: 'Fonte (genérica)', icon: '🌐' },
-  { value: 'webhook', label: 'Webhook Específico', icon: '🔗' },
-  { value: 'whatsapp_session', label: 'Conexão WhatsApp', icon: '💬' },
-  { value: 'meta_form', label: 'Formulário Meta', icon: '📝' },
-  { value: 'website_category', label: 'Categoria do Site', icon: '🏷️' },
-  { value: 'campaign_contains', label: 'Nome da Campanha (contém)', icon: '📣' },
-  { value: 'tag', label: 'Tag', icon: '🏷️' },
-  { value: 'city', label: 'Cidade', icon: '📍' },
-  { value: 'interest_property', label: 'Interesse em Imóvel', icon: '🏠' },
-  { value: 'interest_plan', label: 'Interesse em Plano', icon: '📋' },
+  { value: 'source', label: 'Fonte genérica' },
+  { value: 'webhook', label: 'Webhook específico' },
+  { value: 'whatsapp_session', label: 'Conexão WhatsApp' },
+  { value: 'meta_form', label: 'Formulário Meta' },
+  { value: 'website_category', label: 'Categoria do site' },
+  { value: 'campaign_contains', label: 'Nome da campanha contém' },
+  { value: 'tag', label: 'Tag' },
+  { value: 'city', label: 'Cidade' },
+  { value: 'interest_property', label: 'Interesse em imóvel' },
+  { value: 'interest_plan', label: 'Interesse em plano' },
 ];
 
 const WEBSITE_CATEGORY_OPTIONS = [
@@ -268,7 +269,7 @@ export function DistributionQueueEditor({
   const { data: metaFormConfigs = [] } = useMetaFormConfigs(activeMetaIntegration?.id);
   
   const [saving, setSaving] = useState(false);
-  const [openSections, setOpenSections] = useState<string[]>(['basic', 'rules', 'members']);
+  const [openSections, setOpenSections] = useState<string[]>([]);
   
   const [formData, setFormData] = useState<QueueFormData>({
     name: '',
@@ -278,6 +279,9 @@ export function DistributionQueueEditor({
     is_active: true,
     settings: {
       enable_redistribution: false,
+      redistribution_timeout_minutes: 20,
+      redistribution_warning_minutes: 2,
+      redistribution_max_attempts: 10,
       preserve_position: true,
       require_checkin: false,
     },
@@ -298,6 +302,10 @@ export function DistributionQueueEditor({
 
   // Initialize form when queue changes
   useEffect(() => {
+    if (open) {
+      setOpenSections([]);
+    }
+
     if (queue) {
       const existingConditions: RuleCondition[] = (queue.rules || []).map((rule: any) => {
         const matchType = rule.match_type as RuleCondition['type'];
@@ -345,7 +353,15 @@ export function DistributionQueueEditor({
         target_pipeline_id: queue.target_pipeline_id || '',
         target_stage_id: queue.target_stage_id || '',
         is_active: queue.is_active ?? true,
-        settings: queue.settings || {},
+        settings: {
+          enable_redistribution: false,
+          redistribution_timeout_minutes: 20,
+          redistribution_warning_minutes: 2,
+          redistribution_max_attempts: 10,
+          preserve_position: true,
+          require_checkin: false,
+          ...(queue.settings || {}),
+        },
         conditions: existingConditions,
         members: existingMembers,
       });
@@ -356,7 +372,14 @@ export function DistributionQueueEditor({
         target_pipeline_id: '',
         target_stage_id: '',
         is_active: true,
-        settings: {},
+        settings: {
+          enable_redistribution: false,
+          redistribution_timeout_minutes: 20,
+          redistribution_warning_minutes: 2,
+          redistribution_max_attempts: 10,
+          preserve_position: true,
+          require_checkin: false,
+        },
         conditions: [],
         members: [],
       });
@@ -448,6 +471,13 @@ export function DistributionQueueEditor({
       toast.error('Estágio inicial é obrigatório');
       return;
     }
+    const hasValidCriteria = formData.conditions.some(condition =>
+      condition.values.some(value => value.trim())
+    );
+    if (!hasValidCriteria) {
+      toast.error('Adicione pelo menos um critério de entrada para salvar a fila');
+      return;
+    }
     
     setSaving(true);
     try {
@@ -457,7 +487,6 @@ export function DistributionQueueEditor({
       setSaving(false);
     }
   };
-
   const totalWeight = formData.members.reduce((sum, m) => sum + m.weight, 0);
 
   const renderConditionValueSelector = (condition: RuleCondition) => {
@@ -644,230 +673,333 @@ export function DistributionQueueEditor({
     }
   };
 
+  const hasValidCriteria = formData.conditions.some(condition =>
+    condition.values.some(value => value.trim())
+  );
+  const canSave = !!formData.name.trim() && !!formData.target_pipeline_id && !!formData.target_stage_id && hasValidCriteria && !saving;
+
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-[90%] sm:w-[650px] sm:max-w-[650px] p-6 flex flex-col overflow-y-auto">
-        <SheetHeader>
-          <SheetTitle>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[90vh] w-[94vw] max-w-6xl overflow-hidden p-0">
+        <DialogHeader className="border-b px-6 py-5">
+          <DialogTitle>
             {queue ? 'Editar Fila de Distribuição' : 'Nova Fila de Distribuição'}
-          </SheetTitle>
-        </SheetHeader>
+          </DialogTitle>
+        </DialogHeader>
 
-        <div className="space-y-4 py-4">
-          <Collapsible open={openSections.includes('basic')} onOpenChange={() => toggleSection('basic')}>
-            <CollapsibleTrigger className="flex items-center justify-between w-full p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
-              <div className="flex items-center gap-2">
-                <Settings2 className="h-4 w-4 text-primary" />
-                <span className="font-medium">Informações Básicas</span>
-              </div>
-              <ChevronDown className={cn("h-4 w-4 transition-transform", openSections.includes('basic') && "rotate-180")} />
-            </CollapsibleTrigger>
-            <CollapsibleContent className="pt-4 px-1 space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Nome da Fila *</Label>
-                  <Input
-                    placeholder="Ex: Leads Facebook"
-                    value={formData.name}
-                    onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Estratégia</Label>
-                  <Select 
-                    value={formData.strategy} 
-                    onValueChange={v => setFormData(prev => ({ ...prev, strategy: v as any }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="simple">Round Robin (sequencial)</SelectItem>
-                      <SelectItem value="weighted">Ponderada (por peso)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
+        <div className="max-h-[calc(90vh-150px)] overflow-y-auto px-6 py-5">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <div className="space-y-4">
+              <Collapsible open={openSections.includes('basic')} onOpenChange={() => toggleSection('basic')}>
+                <CollapsibleTrigger className="flex w-full items-center justify-between rounded-lg border bg-card p-4 text-left transition-colors hover:bg-muted/40">
+                  <div className="flex items-center gap-2">
+                    <Settings2 className="h-4 w-4 text-primary" />
+                    <span className="font-medium">Informações básicas</span>
+                  </div>
+                  <ChevronDown className={cn('h-4 w-4 transition-transform', openSections.includes('basic') && 'rotate-180')} />
+                </CollapsibleTrigger>
+                <CollapsibleContent className="space-y-4 px-1 pt-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label>Nome da fila *</Label>
+                      <Input
+                        placeholder="Ex: Leads Facebook"
+                        value={formData.name}
+                        onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Estratégia</Label>
+                      <Select
+                        value={formData.strategy}
+                        onValueChange={v => setFormData(prev => ({ ...prev, strategy: v as any }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="simple">Sequencial</SelectItem>
+                          <SelectItem value="weighted">Ponderada</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Pipeline de Destino *</Label>
-                  <Select 
-                    value={formData.target_pipeline_id || ''} 
-                    onValueChange={v => setFormData(prev => ({ 
-                      ...prev, 
-                      target_pipeline_id: v,
-                      target_stage_id: ''
-                    }))}
-                  >
-                    <SelectTrigger className={!formData.target_pipeline_id ? 'border-destructive' : ''}>
-                      <SelectValue placeholder="Selecione um pipeline..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {pipelines.map(p => (
-                        <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Estágio Inicial *</Label>
-                  <Select 
-                    value={formData.target_stage_id || ''} 
-                    onValueChange={v => setFormData(prev => ({ ...prev, target_stage_id: v }))}
-                    disabled={!formData.target_pipeline_id}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione um estágio..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {stages.map(s => (
-                        <SelectItem key={s.id} value={s.id}>
-                          <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color }} />
-                            {s.name}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label>Pipeline de destino *</Label>
+                      <Select
+                        value={formData.target_pipeline_id || ''}
+                        onValueChange={v => setFormData(prev => ({
+                          ...prev,
+                          target_pipeline_id: v,
+                          target_stage_id: '',
+                        }))}
+                      >
+                        <SelectTrigger className={!formData.target_pipeline_id ? 'border-destructive' : ''}>
+                          <SelectValue placeholder="Selecione um pipeline..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {pipelines.map(p => (
+                            <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Estágio inicial *</Label>
+                      <Select
+                        value={formData.target_stage_id || ''}
+                        onValueChange={v => setFormData(prev => ({ ...prev, target_stage_id: v }))}
+                        disabled={!formData.target_pipeline_id}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione um estágio..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {stages.map(s => (
+                            <SelectItem key={s.id} value={s.id}>
+                              <div className="flex items-center gap-2">
+                                <div className="h-2 w-2 rounded-full" style={{ backgroundColor: s.color }} />
+                                {s.name}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
 
-          <Collapsible open={openSections.includes('rules')} onOpenChange={() => toggleSection('rules')}>
-            <CollapsibleTrigger className="flex items-center justify-between w-full p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
-              <div className="flex items-center gap-2">
-                <Filter className="h-4 w-4 text-primary" />
-                <span className="font-medium">Regras de Entrada</span>
-                {formData.conditions.length > 0 && <Badge variant="secondary" className="text-xs">{formData.conditions.length}</Badge>}
-              </div>
-              <ChevronDown className={cn("h-4 w-4 transition-transform", openSections.includes('rules') && "rotate-180")} />
-            </CollapsibleTrigger>
-            <CollapsibleContent className="pt-4 px-1 space-y-4">
-              {formData.conditions.map((condition, idx) => (
-                <div key={condition.id} className="p-3 rounded-lg border space-y-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <Select
-                      value={condition.type}
-                      onValueChange={v => updateCondition(condition.id, { type: v as any, values: [] })}
-                    >
-                      <SelectTrigger className="w-48">
-                        <SelectValue />
+              <Collapsible open={openSections.includes('rules')} onOpenChange={() => toggleSection('rules')}>
+                <CollapsibleTrigger className="flex w-full items-center justify-between rounded-lg border bg-card p-4 text-left transition-colors hover:bg-muted/40">
+                  <div className="flex items-center gap-2">
+                    <Filter className="h-4 w-4 text-primary" />
+                    <span className="font-medium">Regras de entrada</span>
+                    {formData.conditions.length > 0 && <Badge variant="secondary" className="text-xs">{formData.conditions.length}</Badge>}
+                  </div>
+                  <ChevronDown className={cn('h-4 w-4 transition-transform', openSections.includes('rules') && 'rotate-180')} />
+                </CollapsibleTrigger>
+                <CollapsibleContent className="space-y-4 px-1 pt-4">
+                  {formData.conditions.map((condition) => (
+                    <div key={condition.id} className="space-y-3 rounded-lg border p-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <Select
+                          value={condition.type}
+                          onValueChange={v => updateCondition(condition.id, { type: v as any, values: [] })}
+                        >
+                          <SelectTrigger className="w-56">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {CONDITION_TYPES.map(ct => (
+                              <SelectItem key={ct.value} value={ct.value}>{ct.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => removeCondition(condition.id)}>
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      {renderConditionValueSelector(condition)}
+                    </div>
+                  ))}
+                  {!hasValidCriteria && (
+                    <p className="text-xs text-destructive">Adicione pelo menos um critério preenchido para salvar a fila.</p>
+                  )}
+                  <Button variant="outline" onClick={addCondition} className="w-full gap-2">
+                    <Plus className="h-4 w-4" /> Nova condição
+                  </Button>
+                </CollapsibleContent>
+              </Collapsible>
+            </div>
+
+            <div className="space-y-4">
+              <Collapsible open={openSections.includes('members')} onOpenChange={() => toggleSection('members')}>
+                <CollapsibleTrigger className="flex w-full items-center justify-between rounded-lg border bg-card p-4 text-left transition-colors hover:bg-muted/40">
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4 text-primary" />
+                    <span className="font-medium">Ordem de distribuição</span>
+                    {formData.members.length > 0 && <Badge variant="secondary" className="text-xs">{formData.members.length}</Badge>}
+                  </div>
+                  <ChevronDown className={cn('h-4 w-4 transition-transform', openSections.includes('members') && 'rotate-180')} />
+                </CollapsibleTrigger>
+                <CollapsibleContent className="space-y-4 px-1 pt-4">
+                  {formData.members.length > 0 && (
+                    <div className="overflow-hidden rounded-lg border">
+                      <DndContext
+                        sensors={sensors}
+                        collisionDetection={closestCenter}
+                        onDragEnd={handleDragEnd}
+                        modifiers={[restrictToVerticalAxis]}
+                      >
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="w-10" />
+                              <TableHead>Participante</TableHead>
+                              <TableHead className="w-32 text-center">
+                                {formData.strategy === 'weighted' ? 'Peso' : 'Ordem'}
+                              </TableHead>
+                              <TableHead className="w-12" />
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            <SortableContext
+                              items={formData.members.map(m => m.entityId)}
+                              strategy={verticalListSortingStrategy}
+                            >
+                              {formData.members.map((member, idx) => (
+                                <SortableMemberRow
+                                  key={member.entityId}
+                                  member={member}
+                                  idx={idx}
+                                  strategy={formData.strategy}
+                                  totalWeight={totalWeight}
+                                  onUpdateWeight={updateMemberWeight}
+                                  onRemove={removeMember}
+                                />
+                              ))}
+                            </SortableContext>
+                          </TableBody>
+                        </Table>
+                      </DndContext>
+                    </div>
+                  )}
+
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <Select onValueChange={v => {
+                      const user = users.find(u => u.id === v);
+                      if (user) addMember('user', v, user.name);
+                    }}>
+                      <SelectTrigger className="flex-1">
+                        <SelectValue placeholder="Adicionar corretor..." />
                       </SelectTrigger>
                       <SelectContent>
-                        {CONDITION_TYPES.map(ct => (
-                          <SelectItem key={ct.value} value={ct.value}>
-                            <span className="mr-2">{ct.icon}</span> {ct.label}
-                          </SelectItem>
+                        {users.filter(u => !formData.members.some(m => m.type === 'user' && m.entityId === u.id)).map(user => (
+                          <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => removeCondition(condition.id)}>
-                      <X className="h-4 w-4" />
-                    </Button>
+                    <Select onValueChange={v => {
+                      const team = teams.find(t => t.id === v);
+                      if (team) addMember('team', v, team.name);
+                    }}>
+                      <SelectTrigger className="flex-1">
+                        <SelectValue placeholder="Adicionar equipe..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {teams.filter(t => !formData.members.some(m => m.type === 'team' && m.entityId === t.id)).map(team => (
+                          <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
-                  {renderConditionValueSelector(condition)}
-                </div>
-              ))}
-              <Button variant="outline" onClick={addCondition} className="w-full gap-2">
-                <Plus className="h-4 w-4" /> Nova Condição
-              </Button>
-            </CollapsibleContent>
-          </Collapsible>
+                </CollapsibleContent>
+              </Collapsible>
 
-          <Collapsible open={openSections.includes('members')} onOpenChange={() => toggleSection('members')}>
-            <CollapsibleTrigger className="flex items-center justify-between w-full p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
-              <div className="flex items-center gap-2">
-                <Users className="h-4 w-4 text-primary" />
-                <span className="font-medium">Ordem de Distribuição</span>
-                {formData.members.length > 0 && <Badge variant="secondary" className="text-xs">{formData.members.length}</Badge>}
-              </div>
-              <ChevronDown className={cn("h-4 w-4 transition-transform", openSections.includes('members') && "rotate-180")} />
-            </CollapsibleTrigger>
-            <CollapsibleContent className="pt-4 px-1 space-y-4">
-              {formData.members.length > 0 && (
-                <div className="border rounded-lg overflow-hidden">
-                  <DndContext 
-                    sensors={sensors}
-                    collisionDetection={closestCenter}
-                    onDragEnd={handleDragEnd}
-                    modifiers={[restrictToVerticalAxis]}
-                  >
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="w-10"></TableHead>
-                          <TableHead>Participante</TableHead>
-                          <TableHead className="text-center w-32">
-                            {formData.strategy === 'weighted' ? 'Peso' : 'Ordem'}
-                          </TableHead>
-                          <TableHead className="w-12"></TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        <SortableContext 
-                          items={formData.members.map(m => m.entityId)}
-                          strategy={verticalListSortingStrategy}
-                        >
-                          {formData.members.map((member, idx) => (
-                            <SortableMemberRow 
-                              key={member.entityId}
-                              member={member}
-                              idx={idx}
-                              strategy={formData.strategy}
-                              totalWeight={totalWeight}
-                              onUpdateWeight={updateMemberWeight}
-                              onRemove={removeMember}
-                            />
-                          ))}
-                        </SortableContext>
-                      </TableBody>
-                    </Table>
-                  </DndContext>
-                </div>
-              )}
+              <Collapsible open={openSections.includes('redistribution')} onOpenChange={() => toggleSection('redistribution')}>
+                <CollapsibleTrigger className="flex w-full items-center justify-between rounded-lg border bg-card p-4 text-left transition-colors hover:bg-muted/40">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4 text-primary" />
+                    <span className="font-medium">Redistribuição</span>
+                    {formData.settings.enable_redistribution && <Badge variant="secondary" className="text-xs">Ativa</Badge>}
+                  </div>
+                  <ChevronDown className={cn('h-4 w-4 transition-transform', openSections.includes('redistribution') && 'rotate-180')} />
+                </CollapsibleTrigger>
+                <CollapsibleContent className="space-y-4 px-1 pt-4">
+                  <div className="space-y-4 rounded-lg border p-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="space-y-1">
+                        <Label>Ativar redistribuição de lead parado</Label>
+                        <p className="text-xs text-muted-foreground">
+                          Se o responsável não fizer contato nem movimentar o próprio lead no prazo, o sistema envia para o próximo participante da fila.
+                        </p>
+                      </div>
+                      <Switch
+                        checked={!!formData.settings.enable_redistribution}
+                        onCheckedChange={(checked) => setFormData(prev => ({
+                          ...prev,
+                          settings: {
+                            ...prev.settings,
+                            enable_redistribution: checked,
+                            redistribution_timeout_minutes: prev.settings.redistribution_timeout_minutes ?? 20,
+                            redistribution_warning_minutes: prev.settings.redistribution_warning_minutes ?? 2,
+                            redistribution_max_attempts: prev.settings.redistribution_max_attempts ?? 10,
+                          },
+                        }))}
+                      />
+                    </div>
 
-              <div className="flex gap-2">
-                <Select onValueChange={v => {
-                  const user = users.find(u => u.id === v);
-                  if (user) addMember('user', v, user.name);
-                }}>
-                  <SelectTrigger className="flex-1">
-                    <SelectValue placeholder="Adicionar corretor..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {users.filter(u => !formData.members.some(m => m.type === 'user' && m.entityId === u.id)).map(user => (
-                      <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select onValueChange={v => {
-                  const team = teams.find(t => t.id === v);
-                  if (team) addMember('team', v, team.name);
-                }}>
-                  <SelectTrigger className="w-48">
-                    <SelectValue placeholder="Adicionar equipe..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {teams.filter(t => !formData.members.some(m => m.type === 'team' && m.entityId === t.id)).map(team => (
-                      <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
+                    {formData.settings.enable_redistribution && (
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                        <div className="space-y-2">
+                          <Label>Tempo</Label>
+                          <Input
+                            type="number"
+                            min={1}
+                            value={formData.settings.redistribution_timeout_minutes ?? 20}
+                            onChange={e => setFormData(prev => ({
+                              ...prev,
+                              settings: {
+                                ...prev.settings,
+                                redistribution_timeout_minutes: Math.max(1, Number(e.target.value) || 20),
+                              },
+                            }))}
+                          />
+                          <p className="text-[11px] text-muted-foreground">Minutos.</p>
+                        </div>
 
-          <div className="flex gap-2 pt-4 border-t">
-            <Button variant="outline" className="w-[40%] rounded-xl" onClick={() => onOpenChange(false)}>Cancelar</Button>
-            <Button className="w-[60%] rounded-xl" onClick={handleSave} disabled={!formData.name.trim() || saving}>
-              {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />} Salvar
-            </Button>
+                        <div className="space-y-2">
+                          <Label>Aviso</Label>
+                          <Input
+                            type="number"
+                            min={0}
+                            value={formData.settings.redistribution_warning_minutes ?? 2}
+                            onChange={e => setFormData(prev => ({
+                              ...prev,
+                              settings: {
+                                ...prev.settings,
+                                redistribution_warning_minutes: Math.max(0, Number(e.target.value) || 0),
+                              },
+                            }))}
+                          />
+                          <p className="text-[11px] text-muted-foreground">Minutos antes.</p>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label>Tentativas</Label>
+                          <Input
+                            type="number"
+                            min={0}
+                            value={formData.settings.redistribution_max_attempts ?? 10}
+                            onChange={e => setFormData(prev => ({
+                              ...prev,
+                              settings: {
+                                ...prev.settings,
+                                redistribution_max_attempts: Math.max(0, Number(e.target.value) || 0),
+                              },
+                            }))}
+                          />
+                          <p className="text-[11px] text-muted-foreground">0 sem limite.</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            </div>
           </div>
         </div>
-      </SheetContent>
-    </Sheet>
+
+        <div className="flex justify-end gap-2 border-t px-6 py-4">
+          <Button variant="outline" className="rounded-xl" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button className="rounded-xl" onClick={handleSave} disabled={!canSave}>
+            {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />} Salvar
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }

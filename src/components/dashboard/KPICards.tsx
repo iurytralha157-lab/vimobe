@@ -1,4 +1,4 @@
-import { 
+﻿import { 
   Users, 
   Target, 
   CheckCircle2, 
@@ -69,8 +69,8 @@ function formatValue(value: string | number, format: string): string {
       return new Intl.NumberFormat('pt-BR', {
         style: 'currency',
         currency: 'BRL',
-        notation: value >= 100000 ? 'compact' : 'standard',
-        maximumFractionDigits: value >= 100000 ? 1 : 0,
+        notation: 'standard',
+        maximumFractionDigits: 0,
       }).format(value);
     case 'percent':
       return `${value.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 1 })}%`;
@@ -111,7 +111,7 @@ function KPICardItem({
                     {title}
                   </p>
                   <div className={cn(
-                    "rounded-lg flex items-center justify-center flex-shrink-0 hidden lg:flex",
+                    "rounded-lg flex items-center justify-center flex-shrink-0",
                     isHighlighted ? "h-10 w-10 sm:h-12 sm:w-12" : "h-8 w-8 sm:h-9 sm:w-9"
                   )} style={{ backgroundColor: `hsl(var(--${accentColor}) / 0.1)` }}>
                     <Icon 
@@ -125,7 +125,7 @@ function KPICardItem({
 
                 <div className="flex flex-col">
                   <p className={cn(
-                    "font-bold leading-tight",
+                    "font-bold leading-tight break-words",
                     isHighlighted ? "text-2xl sm:text-3xl" : "text-xl sm:text-2xl"
                   )}>
                     {formatValue(value, format)}
@@ -223,10 +223,10 @@ export function KPICards({ data, isLoading, periodLabel = 'Últimos 30 dias', sc
       accentColor: 'chart-3',
     },
     {
-      title: 'Tempo Resp.',
+      title: '1º Contato',
       value: data.avgResponseTime,
       icon: Clock,
-      tooltip: 'Tempo médio de resposta',
+      tooltip: 'Tempo medio ate a primeira ligacao ou mensagem',
       format: 'time',
       accentColor: 'chart-4',
     },

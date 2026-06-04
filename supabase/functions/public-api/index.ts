@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "npm:@supabase/supabase-js@2"
+import { enforceRateLimit } from "../_shared/rate-limit.ts"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -109,6 +110,26 @@ serve(async (req) => {
     }
 
     const organizationId = keyData.organization_id
+    const url = new URL(req.url)
+    const path = url.pathname.replace('/public-api', '').replace(/\/$/, '') || '/'
+
+    const rateLimit = await enforceRateLimit(
+      supabase,
+      req,
+      `public-api:${organizationId}`,
+      path === '/leads'
+        ? [
+            { name: 'leads_burst', limit: 30, windowSeconds: 60 },
+            { name: 'leads_hourly', limit: 300, windowSeconds: 3600 },
+          ]
+        : [
+            { name: 'read_burst', limit: 120, windowSeconds: 60 },
+            { name: 'read_hourly', limit: 2000, windowSeconds: 3600 },
+          ],
+      corsHeaders,
+    )
+
+    if (rateLimit.response) return rateLimit.response
 
     const { data: moduleData } = await supabase
       .from('organization_modules')
@@ -126,9 +147,6 @@ serve(async (req) => {
       .update({ last_used_at: new Date().toISOString() })
       .eq('id', keyData.id)
       .then(() => {})
-
-    const url = new URL(req.url)
-    const path = url.pathname.replace('/public-api', '').replace(/\/$/, '') || '/'
 
     if (req.method === 'GET' && path === '/properties') {
       const city = url.searchParams.get('city')

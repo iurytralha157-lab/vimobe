@@ -10,7 +10,7 @@ export type Property = Tables<'properties'>;
 const PROPERTY_LIST_FIELDS = `
   id, code, title, tipo_de_imovel, tipo_de_negocio, 
   status, destaque, bairro, cidade, uf,
-  quartos, banheiros, vagas, area_util, preco, 
+  quartos, banheiros, vagas, area_util, area_total, preco, valor_locacao, 
   imagem_principal, created_at, organization_id,
   commission_percentage, cadastrado_por
 `;

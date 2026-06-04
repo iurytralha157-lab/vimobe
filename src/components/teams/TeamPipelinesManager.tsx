@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -22,7 +22,6 @@ import {
   Check,
   X,
   Loader2,
-  AlertTriangle
 } from 'lucide-react';
 import { useTeams } from '@/hooks/use-teams';
 import { usePipelines } from '@/hooks/use-stages';
@@ -85,19 +84,6 @@ export function TeamPipelinesManager() {
 
   return (
     <div className="space-y-6">
-      {/* Info Card */}
-      <Card className="border-amber-200 bg-amber-50/50 dark:border-amber-900 dark:bg-amber-950/20">
-        <CardContent className="flex items-start gap-3 py-4 px-4 md:px-6">
-          <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-500 mt-0.5 flex-shrink-0" />
-          <div className="text-sm">
-            <p className="font-medium text-amber-800 dark:text-amber-400">Hierarquia de Acesso</p>
-            <p className="text-amber-700 dark:text-amber-500 mt-1">
-              Ao vincular pipelines a equipes, apenas <strong>admins</strong>, <strong>líderes da equipe</strong> e <strong>usuários com leads atribuídos</strong> terão acesso aos leads dessas pipelines.
-              Pipelines sem vínculo ficam acessíveis a todos.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Teams Panel */}

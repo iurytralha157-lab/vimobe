@@ -379,7 +379,7 @@ export default function FinancialReports() {
           </Table>
         );
 
-      case 'payments':
+      case 'payments': {
         const paymentsData = paidInPeriod;
         return isMobile ? (
           <Card>
@@ -429,6 +429,7 @@ export default function FinancialReports() {
             </TableBody>
           </Table>
         );
+      }
 
       case 'overdue':
         return (

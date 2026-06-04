@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+﻿import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -49,6 +49,17 @@ export interface ScheduleEvent {
   } | null;
 }
 
+function invalidateScheduleCaches(queryClient: ReturnType<typeof useQueryClient>, leadId?: string | null) {
+  queryClient.invalidateQueries({ queryKey: ['schedule-events'] });
+  if (leadId) {
+    queryClient.invalidateQueries({ queryKey: ['activities', leadId] });
+    queryClient.invalidateQueries({ queryKey: ['activities'] });
+    queryClient.invalidateQueries({ queryKey: ['recent-activities'] });
+    queryClient.invalidateQueries({ queryKey: ['lead-history-v2', leadId] });
+    queryClient.invalidateQueries({ queryKey: ['lead-timeline', leadId] });
+  }
+}
+
 async function logScheduleEventToTimeline(params: {
   lead_id: string;
   organization_id: string;
@@ -91,6 +102,9 @@ async function logScheduleEventToTimeline(params: {
     } else if (params.action_type === 'completed') {
       title = 'Atividade Concluída';
       description = `${actor?.name || 'Usuário'} concluiu a atividade "${params.event_title}" com o lead ${lead?.name || 'Lead'}.`;
+    } else if (params.action_type === 'cancelled') {
+      title = 'Atividade Cancelada';
+      description = `${actor?.name || 'Usuario'} cancelou a atividade "${params.event_title}" com o lead ${lead?.name || 'Lead'}.`;
     }
 
     await supabase.from('lead_timeline_events').insert({
@@ -126,7 +140,7 @@ export function useScheduleEvents(options: UseScheduleEventsOptions = {}) {
     queryFn: async () => {
       let assignedEventIds: string[] = [];
 
-      // Se houver filtro de usuário, buscamos eventos onde ele é co-responsável
+      // Se houver filtro de usuário, buscamos eventos onde ele Ã© co-responsÃ¡vel
       if (options.userId) {
         const { data: assignments } = await supabase
           .from('schedule_event_assignees')
@@ -153,7 +167,7 @@ export function useScheduleEvents(options: UseScheduleEventsOptions = {}) {
 
       if (options.userId) {
         if (assignedEventIds.length > 0) {
-          // Filtra onde ele é o dono OU onde ele está na lista de co-responsáveis
+          // Filtra onde ele Ã© o dono OU onde ele está na lista de co-responsÃ¡veis
           query = query.or(`user_id.eq.${options.userId},id.in.(${assignedEventIds.join(',')})`);
         } else {
           query = query.eq('user_id', options.userId);
@@ -223,7 +237,7 @@ export function useCreateScheduleEvent() {
       
       // Log to timeline if lead is present - non-blocking fire-and-forget
       if (data.lead_id && profile) {
-        logScheduleEventToTimeline({
+        await logScheduleEventToTimeline({
           lead_id: data.lead_id,
           organization_id: data.organization_id,
           actor_id: profile.id,
@@ -278,8 +292,8 @@ export function useCreateScheduleEvent() {
 
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['schedule-events'] });
+    onSuccess: (data) => {
+      invalidateScheduleCaches(queryClient, data?.lead_id);
       toast.success('Atividade criada com sucesso!');
     },
     onError: (error: Error) => {
@@ -317,7 +331,7 @@ export function useUpdateScheduleEvent() {
         const statusChangedToCompleted = updates.status === 'completed' && currentEvent?.status !== 'completed';
         
         if (timeChanged || statusChangedToCompleted) {
-          logScheduleEventToTimeline({
+          await logScheduleEventToTimeline({
             lead_id: data.lead_id,
             organization_id: data.organization_id,
             actor_id: profile.id,
@@ -329,7 +343,7 @@ export function useUpdateScheduleEvent() {
           });
         }
 
-        // Registrar atividade no histórico se foi concluído
+        // Registrar atividade no histórico se foi concluÃ­do
         if (statusChangedToCompleted && (data.event_type === 'visit' || data.event_type === 'meeting')) {
           const { error: activityError } = await supabase.from('activities').insert({
             lead_id: data.lead_id,
@@ -348,8 +362,8 @@ export function useUpdateScheduleEvent() {
 
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['schedule-events'] });
+    onSuccess: (data) => {
+      invalidateScheduleCaches(queryClient, data?.lead_id);
       toast.success('Atividade atualizada!');
     },
     onError: (error: Error) => {
@@ -367,6 +381,27 @@ export function useCompleteScheduleEvent() {
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
       const isCompleted = status === 'completed';
       const updates: any = { status };
+
+      const { data: currentEvent } = await supabase
+        .from('schedule_events')
+        .select('id, status')
+        .eq('id', id)
+        .single();
+
+      if (currentEvent?.status === status) {
+        const { data, error } = await supabase
+          .from('schedule_events')
+          .select(`
+            *,
+            user:users!schedule_events_user_id_fkey(id, name, avatar_url),
+            lead:leads(id, name, phone)
+          `)
+          .eq('id', id)
+          .single();
+
+        if (error) throw error;
+        return data;
+      }
       
       if (isCompleted) {
         updates.completed_by = profile?.id;
@@ -403,7 +438,7 @@ export function useCompleteScheduleEvent() {
         });
       }
 
-      // Registrar atividade no histórico se foi concluído
+      // Registrar atividade no histórico se foi concluÃ­do
       if (status === 'completed' && (data.event_type === 'visit' || data.event_type === 'meeting')) {
         const { error: activityError } = await supabase.from('activities').insert({
           lead_id: data.lead_id,
@@ -422,8 +457,8 @@ export function useCompleteScheduleEvent() {
       return data;
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['schedule-events'] });
-      toast.success(data.status === 'completed' ? 'Atividade concluída!' : 'Atividade reaberta');
+      invalidateScheduleCaches(queryClient, data?.lead_id);
+      toast.success(data.status === 'completed' ? 'Atividade concluida!' : 'Atividade reaberta');
     },
     onError: (error: Error) => {
       console.error('Error completing schedule event:', error);
@@ -434,18 +469,40 @@ export function useCompleteScheduleEvent() {
 
 export function useDeleteScheduleEvent() {
   const queryClient = useQueryClient();
+  const { profile } = useAuth();
 
   return useMutation({
     mutationFn: async ({ id }: { id: string }) => {
+      const { data: currentEvent } = await supabase
+        .from('schedule_events')
+        .select('*')
+        .eq('id', id)
+        .single();
+
       const { error } = await supabase
         .from('schedule_events')
         .delete()
         .eq('id', id);
 
       if (error) throw error;
+
+      if (currentEvent?.lead_id && profile) {
+        await logScheduleEventToTimeline({
+          lead_id: currentEvent.lead_id,
+          organization_id: currentEvent.organization_id,
+          actor_id: profile.id,
+          assigned_user_id: currentEvent.user_id,
+          event_title: currentEvent.title,
+          event_type: currentEvent.event_type || 'task',
+          start_time: currentEvent.start_time,
+          action_type: 'cancelled'
+        });
+      }
+
+      return currentEvent;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['schedule-events'] });
+    onSuccess: (data) => {
+      invalidateScheduleCaches(queryClient, data?.lead_id);
       toast.success('Atividade removida!');
     },
     onError: (error: Error) => {
@@ -454,3 +511,4 @@ export function useDeleteScheduleEvent() {
     },
   });
 }
+

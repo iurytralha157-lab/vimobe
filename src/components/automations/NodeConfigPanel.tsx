@@ -451,7 +451,9 @@ export function NodeConfigPanel({
                           onNodeDataChange(selectedNode.id, { tag_id: created.id, tag_name: created.name });
                           setNewTagName('');
                           setIsCreatingTag(false);
-                        } catch {}
+                        } catch {
+                          // noop
+                        }
                       }}
                     >
                       Criar

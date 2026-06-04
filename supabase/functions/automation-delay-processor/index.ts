@@ -5,6 +5,46 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+async function leadRepliedAfter(
+  supabase: any,
+  organizationId: string,
+  leadId: string | null | undefined,
+  since: string | null | undefined,
+) {
+  if (!leadId || !since) return false;
+
+  const { data: conversations, error: convError } = await supabase
+    .from("whatsapp_conversations")
+    .select("id")
+    .eq("organization_id", organizationId)
+    .eq("lead_id", leadId)
+    .is("deleted_at", null);
+
+  if (convError) {
+    console.error(`Error checking conversations for lead ${leadId}:`, convError);
+    return false;
+  }
+
+  const conversationIds = (conversations || []).map((conversation: { id: string }) => conversation.id);
+  if (!conversationIds.length) return false;
+
+  const { data: reply, error: replyError } = await supabase
+    .from("whatsapp_messages")
+    .select("id")
+    .in("conversation_id", conversationIds)
+    .eq("from_me", false)
+    .gt("sent_at", since)
+    .limit(1)
+    .maybeSingle();
+
+  if (replyError) {
+    console.error(`Error checking replies for lead ${leadId}:`, replyError);
+    return false;
+  }
+
+  return !!reply;
+}
+
 /**
  * Automation Delay Processor
  * 
@@ -62,7 +102,7 @@ Deno.serve(async (req) => {
     const now = new Date().toISOString();
     const { data: waitingExecutions, error: fetchError } = await supabase
       .from("automation_executions")
-      .select("id, automation_id, current_node_id, organization_id")
+      .select("id, automation_id, current_node_id, organization_id, lead_id, started_at")
       .eq("status", "waiting")
       .lte("next_execution_at", now)
       .limit(50); // Process max 50 at a time to avoid timeout
@@ -92,6 +132,35 @@ Deno.serve(async (req) => {
     for (const execution of waitingExecutions) {
       try {
         console.log(`🔄 Processing execution ${execution.id}`);
+
+        const hasReply = await leadRepliedAfter(
+          supabase,
+          execution.organization_id,
+          execution.lead_id,
+          execution.started_at,
+        );
+
+        if (hasReply) {
+          console.log(`Cancelling execution ${execution.id}: lead replied while automation was waiting`);
+          const { error: cancelError } = await supabase
+            .from("automation_executions")
+            .update({
+              status: "cancelled",
+              completed_at: new Date().toISOString(),
+              next_execution_at: null,
+              error_message: "Cancelado: lead respondeu durante a espera",
+            })
+            .eq("id", execution.id)
+            .eq("status", "waiting");
+
+          if (cancelError) {
+            console.error(`Error cancelling replied execution ${execution.id}:`, cancelError);
+            errorCount++;
+          } else {
+            processedCount++;
+          }
+          continue;
+        }
 
         // Update status to running
         const { error: updateError } = await supabase

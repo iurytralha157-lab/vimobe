@@ -80,6 +80,7 @@ export interface PublicProperty {
   area_total: number | null;
   area_construida: number | null;
   endereco: string | null;
+  public_address_visibility?: string | null;
   bairro: string | null;
   cidade: string | null;
   estado: string | null;

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
@@ -8,6 +9,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Property, useProperty, useUpdateProperty } from '@/hooks/use-properties';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
+import { cleanPropertyDescription } from '@/lib/property-description';
 import useEmblaCarousel from 'embla-carousel-react';
 import {
   MapPin,
@@ -28,6 +31,9 @@ import {
   Layers,
   Maximize2,
   Video,
+  User,
+  Phone,
+  Mail,
 } from 'lucide-react';
 
 interface PropertyPreviewDialogProps {
@@ -58,6 +64,23 @@ export function PropertyPreviewDialog({
   
   // Use full property if available, otherwise fallback to list property
   const property = fullProperty || propertyFromList;
+  const showLegacyDetails = false;
+  const { data: captorUser } = useQuery({
+    queryKey: ['property-captor', property?.corretor_id],
+    queryFn: async () => {
+      if (!property?.corretor_id) return null;
+
+      const { data, error } = await supabase
+        .from('users')
+        .select('id, name, email, phone, whatsapp')
+        .eq('id', property.corretor_id)
+        .maybeSingle();
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: open && !!property?.corretor_id,
+  });
 
   // Sync embla with currentIndex
   useEffect(() => {
@@ -101,6 +124,19 @@ export function PropertyPreviewDialog({
   }
 
   const isActive = property?.status !== 'inativo';
+  const dealType = (property?.tipo_de_negocio || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const propertyType = (property?.tipo_de_imovel || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const isLand = propertyType === 'terreno' || propertyType === 'lote';
+  const displayPrice = dealType === 'aluguel' || dealType === 'locacao' || dealType === 'temporada'
+    ? property?.valor_locacao || property?.preco || null
+    : property?.preco || null;
+  const displayArea = isLand ? property?.area_total : (property?.area_util || property?.area_total);
+  const cleanDescription = cleanPropertyDescription(property?.descricao);
+  const ownerPhone = property?.owner_cellphone || property?.owner_phone_commercial || property?.owner_phone_residential || null;
+  const captorName = captorUser?.name || property?.cadastrado_por || null;
+  const captorContact = captorUser?.whatsapp || captorUser?.phone || captorUser?.email || null;
+  const hasOwnerInfo = !!(property?.owner_name || ownerPhone || property?.owner_email);
+  const hasCaptorInfo = !!(captorName || captorContact);
 
   const handleToggleStatus = () => {
     if (!property) return;
@@ -109,6 +145,69 @@ export function PropertyPreviewDialog({
       status: isActive ? 'inativo' : 'ativo',
     });
   };
+
+  const propertyDetailsSection = property ? (
+    <div className="space-y-3">
+      <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+        Detalhes do Imóvel
+      </h3>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+        {property.tipo_de_imovel && (
+          <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/30">
+            <Home className="h-4 w-4 text-muted-foreground" />
+            <span className="text-muted-foreground">Tipo:</span>
+            <span className="font-medium ml-auto">{property.tipo_de_imovel}</span>
+          </div>
+        )}
+        {property.suites !== null && property.suites !== undefined && property.suites > 0 && (
+          <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/30">
+            <Bed className="h-4 w-4 text-muted-foreground" />
+            <span className="text-muted-foreground">Suítes:</span>
+            <span className="font-medium ml-auto">{property.suites}</span>
+          </div>
+        )}
+        {property.andar && (
+          <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/30">
+            <Layers className="h-4 w-4 text-muted-foreground" />
+            <span className="text-muted-foreground">Andar:</span>
+            <span className="font-medium ml-auto">{property.andar}º</span>
+          </div>
+        )}
+        {property.area_total && (
+          <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/30">
+            <Maximize2 className="h-4 w-4 text-muted-foreground" />
+            <span className="text-muted-foreground">Área Total:</span>
+            <span className="font-medium ml-auto">{property.area_total}m²</span>
+          </div>
+        )}
+        {property.ano_construcao && (
+          <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/30">
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <span className="text-muted-foreground">Ano:</span>
+            <span className="font-medium ml-auto">{property.ano_construcao}</span>
+          </div>
+        )}
+        {property.mobilia && (
+          <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/30">
+            <Sofa className="h-4 w-4 text-muted-foreground" />
+            <span className="text-muted-foreground">Mobília:</span>
+            <span className="font-medium ml-auto">{property.mobilia}</span>
+          </div>
+        )}
+        {property.regra_pet !== null && property.regra_pet !== undefined && (
+          <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/30">
+            <PawPrint className="h-4 w-4 text-muted-foreground" />
+            <span className="text-muted-foreground">Pet:</span>
+            <span className={`font-medium ml-auto flex items-center gap-1 ${property.regra_pet ? 'text-green-600' : ''}`}>
+              {property.regra_pet ? <Check className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
+              {property.regra_pet ? 'Sim' : 'Não'}
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
+  ) : null;
 
   const content = isLoading ? (
     <div className="flex flex-col lg:flex-row gap-6">
@@ -230,6 +329,10 @@ export function PropertyPreviewDialog({
             )}
           </div>
         )}
+
+        <div className={cn("mt-5", isMobile && "px-4")}>
+          {propertyDetailsSection}
+        </div>
       </div>
 
       {/* Right Side - Property Details */}
@@ -285,9 +388,9 @@ export function PropertyPreviewDialog({
             )}
 
             {/* Price */}
-            <div className="bg-primary/5 border border-primary/20 rounded-xl p-4">
-              <p className="text-xl lg:text-2xl font-bold text-primary">
-                {formatPrice(property.preco, property.tipo_de_negocio)}
+            <div className="bg-primary/5 border border-primary/20 rounded-xl p-3">
+              <p className="text-lg lg:text-xl font-bold text-primary">
+                {formatPrice(displayPrice, property.tipo_de_negocio)}
               </p>
               {property.tipo_de_negocio === 'Aluguel' && (
                 <p className="text-sm text-muted-foreground">por mês</p>
@@ -317,21 +420,21 @@ export function PropertyPreviewDialog({
                   <span className="text-[10px] text-muted-foreground">Vagas</span>
                 </div>
               )}
-              {property.area_util && (
+              {displayArea && (
                 <div className="flex flex-col items-center p-3 rounded-xl bg-muted/50 border text-center">
                   <Ruler className="h-5 w-5 text-primary mb-1" />
-                  <span className="font-bold">{property.area_util}</span>
-                  <span className="text-[10px] text-muted-foreground">m²</span>
+                  <span className="font-bold">{displayArea}</span>
+                  <span className="text-[10px] text-muted-foreground">{isLand ? 'm² total' : 'm²'}</span>
                 </div>
               )}
             </div>
 
-            {/* Property Details */}
+            {showLegacyDetails && (
             <div className="space-y-3">
               <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
                 Detalhes do Imóvel
               </h3>
-              
+
               <div className="grid grid-cols-2 gap-2 text-sm">
                 {property.tipo_de_imovel && (
                   <div className="flex items-center gap-2 p-1.5 rounded-lg bg-muted/30">
@@ -387,6 +490,7 @@ export function PropertyPreviewDialog({
                 )}
               </div>
             </div>
+            )}
 
             {/* Monthly Costs */}
             {(property.condominio || property.iptu || property.seguro_incendio || property.taxa_de_servico) && (
@@ -432,14 +536,61 @@ export function PropertyPreviewDialog({
               </div>
             )}
 
+            {(hasOwnerInfo || hasCaptorInfo) && (
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                  Responsáveis
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                  {hasOwnerInfo && (
+                    <div className="rounded-lg border bg-muted/20 p-3 space-y-2">
+                      <div className="flex items-center gap-2 font-medium">
+                        <User className="h-4 w-4 text-primary" />
+                        Proprietário
+                      </div>
+                      {property.owner_name && <p className="text-foreground">{property.owner_name}</p>}
+                      {ownerPhone && (
+                        <p className="flex items-center gap-2 text-muted-foreground">
+                          <Phone className="h-3.5 w-3.5" />
+                          {ownerPhone}
+                        </p>
+                      )}
+                      {property.owner_email && (
+                        <p className="flex items-center gap-2 text-muted-foreground break-all">
+                          <Mail className="h-3.5 w-3.5" />
+                          {property.owner_email}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {hasCaptorInfo && (
+                    <div className="rounded-lg border bg-muted/20 p-3 space-y-2">
+                      <div className="flex items-center gap-2 font-medium">
+                        <User className="h-4 w-4 text-primary" />
+                        Captador
+                      </div>
+                      {captorName && <p className="text-foreground">{captorName}</p>}
+                      {captorContact && (
+                        <p className="flex items-center gap-2 text-muted-foreground break-all">
+                          {captorContact.includes('@') ? <Mail className="h-3.5 w-3.5" /> : <Phone className="h-3.5 w-3.5" />}
+                          {captorContact}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Description */}
-            {property.descricao && (
+            {cleanDescription && (
               <div className="space-y-3">
                 <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
                   Descrição
                 </h3>
                 <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">
-                  {property.descricao}
+                  {cleanDescription}
                 </p>
               </div>
             )}

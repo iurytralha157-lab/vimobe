@@ -139,7 +139,7 @@ export function SharedFilters({
 
   const hasExtraFilters =
     teamId !== null ||
-    userId !== null ||
+    (userId !== null && userId !== "all") ||
     source !== null ||
     campaignId !== null ||
     adSetId !== null ||
@@ -174,7 +174,7 @@ export function SharedFilters({
 
   const UserFilter = () => (
     <Select value={userId || "all"} onValueChange={(value) => onUserChange(value === "all" ? null : value)}>
-      <SelectTrigger className={cn("h-9 w-full text-xs", userId && "border-primary text-primary")}>
+      <SelectTrigger className={cn("h-9 w-full text-xs", userId && userId !== "all" && "border-primary text-primary")}>
         <User className="h-3.5 w-3.5 mr-1.5 flex-shrink-0" />
         <SelectValue placeholder="Corretor" />
       </SelectTrigger>

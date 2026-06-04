@@ -21,6 +21,13 @@ import {
   CreditCard,
   Smartphone,
   RotateCcw,
+  UserCircle,
+  Contact,
+  MessagesSquare,
+  Columns3,
+  LayoutDashboard,
+  Facebook,
+  FileCog,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -34,6 +41,13 @@ const ICON_MAP: Record<string, any> = {
   Zap,
   CreditCard,
   Smartphone,
+  UserCircle,
+  Contact,
+  MessagesSquare,
+  Columns3,
+  LayoutDashboard,
+  Facebook,
+  FileCog,
 };
 
 export function SetupGuideDialog() {
@@ -61,12 +75,12 @@ export function SetupGuideDialog() {
       console.warn(`[SetupGuide] Step "${step.id}" não possui rota definida.`);
       return;
     }
-    // Persist the active step so a page reload resumes from here
+
     setActiveStepId(step.id);
     setOpen(false);
     navigate(step.route);
+
     if (step.tourTarget) {
-      // Wait for navigation/render before launching tour
       setTimeout(() => {
         startSetupTour({
           target: step.tourTarget!,
@@ -88,13 +102,11 @@ export function SetupGuideDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent
-        className="p-0 overflow-hidden max-w-[860px] w-[95vw] max-h-[92vh] gap-0 border-border/50 [&>button]:hidden"
-        onInteractOutside={(e) => e.preventDefault()}
+        className="p-0 overflow-hidden max-w-[900px] w-[95vw] h-[92vh] md:h-[680px] md:max-h-[92vh] gap-0 border-border/50 [&>button]:hidden"
+        onInteractOutside={(event) => event.preventDefault()}
       >
-        <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] md:min-h-[520px] max-h-[92vh] md:max-h-none">
-          {/* Left panel */}
+        <div className="grid h-full min-h-0 grid-cols-1 md:grid-cols-[260px_1fr]">
           <div className="relative bg-gradient-to-b from-primary to-primary/80 text-primary-foreground p-4 md:p-6 flex md:flex-col md:justify-between items-center md:items-stretch gap-3 md:gap-0">
-            {/* Compact circular progress on mobile, full on desktop */}
             <div className="flex items-center md:flex-col md:items-center md:justify-center md:my-6 shrink-0">
               <div className="relative w-14 h-14 md:w-28 md:h-28">
                 <svg className="w-14 h-14 md:w-28 md:h-28 -rotate-90" viewBox="0 0 100 100">
@@ -129,21 +141,16 @@ export function SetupGuideDialog() {
             </div>
 
             <div className="flex-1 md:hidden min-w-0">
-              <h2 className="text-base font-bold leading-tight">
-                Olá, {firstName}!
-              </h2>
+              <h2 className="text-base font-bold leading-tight">Olá, {firstName}!</h2>
               <p className="text-xs mt-0.5 text-primary-foreground/90 leading-snug">
                 {completedCount} de {totalCount} concluídos
               </p>
             </div>
 
             <div className="hidden md:block">
-              <h2 className="text-xl font-bold leading-tight">
-                Olá, {firstName}!
-              </h2>
+              <h2 className="text-xl font-bold leading-tight">Olá, {firstName}!</h2>
               <p className="text-sm mt-3 text-primary-foreground/90 leading-relaxed">
-                Complete os passos ao lado para começar a receber e gerenciar
-                seus leads.
+                Comece pelo essencial e avance conforme os módulos liberados para sua organização.
               </p>
             </div>
 
@@ -162,7 +169,6 @@ export function SetupGuideDialog() {
               </button>
             </div>
 
-            {/* Mobile close button */}
             <Button
               variant="ghost"
               size="icon"
@@ -173,13 +179,12 @@ export function SetupGuideDialog() {
             </Button>
           </div>
 
-          {/* Right panel */}
-          <div className="flex flex-col min-h-0 flex-1">
-            <div className="hidden md:flex items-start justify-between p-6 pb-4">
+          <div className="flex min-h-0 flex-1 flex-col">
+            <div className="hidden md:flex items-start justify-between p-5 pb-3">
               <div>
                 <h3 className="text-lg font-semibold">Guia de configuração</h3>
                 <p className="text-sm text-muted-foreground">
-                  Siga os passos para ativar sua conta
+                  Passos iniciais por perfil e permissão.
                 </p>
               </div>
               <Button
@@ -192,47 +197,47 @@ export function SetupGuideDialog() {
               </Button>
             </div>
 
-            <div className="flex-1 overflow-auto px-4 md:px-6 py-3 md:py-0 space-y-2 md:space-y-2.5">
+            <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3 md:px-5 md:py-0 space-y-2">
               {steps.map((step) => {
                 const Icon = ICON_MAP[step.icon] || Circle;
                 const done = !!progress[step.id];
+
                 return (
                   <div
                     key={step.id}
                     className={cn(
-                      'flex items-center gap-2.5 md:gap-3 p-2.5 md:p-3 rounded-lg transition-colors',
-                      done
-                        ? 'bg-emerald-50 dark:bg-emerald-950/20'
-                        : 'bg-card hover:bg-muted/50'
+                      'flex items-center gap-2.5 md:gap-3 p-2.5 rounded-lg transition-colors',
+                      done ? 'bg-emerald-50 dark:bg-emerald-950/20' : 'bg-card hover:bg-muted/50',
                     )}
                   >
                     <div
                       className={cn(
-                        'h-8 w-8 md:h-9 md:w-9 rounded-md flex items-center justify-center shrink-0',
-                        done
-                          ? 'bg-emerald-500 text-white'
-                          : 'bg-primary/10 text-primary'
+                        'h-8 w-8 rounded-md flex items-center justify-center shrink-0',
+                        done ? 'bg-emerald-500 text-white' : 'bg-primary/10 text-primary',
                       )}
                     >
-                      {done ? (
-                        <Check className="h-4 w-4" />
-                      ) : (
-                        <Icon className="h-4 w-4" />
-                      )}
+                      {done ? <Check className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
                     </div>
+
                     <div className="flex-1 min-w-0">
-                      <p
-                        className={cn(
-                          'text-sm font-medium leading-tight',
-                          done && 'line-through text-muted-foreground'
-                        )}
-                      >
-                        {step.title}
-                      </p>
+                      <div className="flex min-w-0 items-center gap-2">
+                        <p
+                          className={cn(
+                            'truncate text-sm font-medium leading-tight',
+                            done && 'line-through text-muted-foreground',
+                          )}
+                        >
+                          {step.title}
+                        </p>
+                        <span className="hidden sm:inline-flex shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                          {step.section}
+                        </span>
+                      </div>
                       <p className="hidden md:block text-xs text-muted-foreground mt-0.5 truncate">
                         {step.description}
                       </p>
                     </div>
+
                     {!done ? (
                       <Button
                         size="sm"
@@ -244,6 +249,7 @@ export function SetupGuideDialog() {
                     ) : (
                       <CheckCircle2 className="h-5 w-5 text-emerald-500 shrink-0" />
                     )}
+
                     {!done && (
                       <button
                         onClick={() => handleToggle(step)}
@@ -256,7 +262,7 @@ export function SetupGuideDialog() {
               })}
             </div>
 
-            <div className="border-t mt-2 md:mt-4 px-4 md:px-6 py-3 md:py-4 flex items-center gap-3 md:gap-4">
+            <div className="border-t mt-2 px-4 md:px-5 py-3 flex items-center gap-3 md:gap-4 shrink-0">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between text-xs mb-1.5">
                   <span className="text-muted-foreground">Progresso</span>
@@ -275,38 +281,27 @@ export function SetupGuideDialog() {
               </Button>
             </div>
 
-            {/* Mobile-only quick actions */}
-            <div className="md:hidden border-t px-4 py-2 flex items-center justify-between text-xs">
-              <button
-                onClick={() => setOpen(false)}
-                className="underline text-muted-foreground"
-              >
+            <div className="md:hidden border-t px-4 py-2 flex items-center justify-between text-xs shrink-0">
+              <button onClick={() => setOpen(false)} className="underline text-muted-foreground">
                 Ver mais tarde
               </button>
-              <button
-                onClick={() => setConfirmingSkip(true)}
-                className="underline text-muted-foreground"
-              >
+              <button onClick={() => setConfirmingSkip(true)} className="underline text-muted-foreground">
                 Pular tudo
               </button>
             </div>
           </div>
         </div>
 
-        {/* Skip confirmation overlay */}
         {confirmingSkip && (
           <div className="absolute inset-0 bg-background/95 backdrop-blur-sm flex items-center justify-center p-6 z-50">
             <div className="max-w-sm text-center space-y-4">
               <h3 className="text-lg font-semibold">Pular configuração?</h3>
               <p className="text-sm text-muted-foreground">
-                Todos os passos serão marcados como concluídos e este guia não
-                aparecerá mais. Você poderá reabri-lo manualmente quando quiser.
+                Todos os passos serão marcados como concluídos e este guia não aparecerá mais. Você poderá
+                reabri-lo manualmente quando quiser.
               </p>
               <div className="flex gap-2 justify-center">
-                <Button
-                  variant="outline"
-                  onClick={() => setConfirmingSkip(false)}
-                >
+                <Button variant="outline" onClick={() => setConfirmingSkip(false)}>
                   Cancelar
                 </Button>
                 <Button

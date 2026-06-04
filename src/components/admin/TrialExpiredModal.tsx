@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { useSystemSettings } from '@/hooks/use-system-settings';
 import {
   Dialog,
   DialogContent,
@@ -10,78 +9,91 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Clock, MessageCircle } from 'lucide-react';
+import { Clock, CreditCard } from 'lucide-react';
+
+const ACTIVE_SUBSCRIPTION_STATUSES = ['active', 'paid', 'confirmed'];
+const ACTIVE_SUBSCRIPTION_TYPES = ['paid', 'free'];
+const BILLING_BLOCKED_STATUSES = ['suspended', 'pending_payment', 'overdue', 'past_due', 'blocked', 'cancelled'];
+
+type AccessBlockReason = 'trial' | 'billing';
 
 export function TrialExpiredModal() {
   const { organization, isSuperAdmin, impersonating } = useAuth();
-  const { data: systemSettings } = useSystemSettings();
   const [isExpired, setIsExpired] = useState(false);
+  const [blockReason, setBlockReason] = useState<AccessBlockReason>('trial');
+  const [checkoutUrl, setCheckoutUrl] = useState('/settings?tab=subscription');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const checkTrialStatus = async () => {
-      if (!organization?.id || isSuperAdmin) {
+      if (!organization?.id || isSuperAdmin || impersonating) {
         setLoading(false);
         return;
       }
 
-      // Fetch fresh organization data with subscription info
       const { data: orgData } = await supabase
         .from('organizations')
-        .select('subscription_type, trial_ends_at')
+        .select('subscription_status, subscription_type, trial_ends_at, checkout_token')
         .eq('id', organization.id)
         .single();
 
       if (orgData) {
-        const isTrial = orgData.subscription_type === 'trial';
+        const subscriptionStatus = String(orgData.subscription_status || '').toLowerCase();
+        const subscriptionType = String(orgData.subscription_type || '').toLowerCase();
+        const hasActiveSubscription =
+          ACTIVE_SUBSCRIPTION_STATUSES.includes(subscriptionStatus) ||
+          ACTIVE_SUBSCRIPTION_TYPES.includes(subscriptionType);
+        const isTrial = subscriptionType === 'trial';
         const trialEnded = orgData.trial_ends_at && new Date(orgData.trial_ends_at) < new Date();
-        
-        setIsExpired(isTrial && !!trialEnded);
+        const isBillingBlocked = BILLING_BLOCKED_STATUSES.includes(subscriptionStatus);
+
+        setBlockReason(isBillingBlocked ? 'billing' : 'trial');
+        setIsExpired(isBillingBlocked || (!hasActiveSubscription && isTrial && !!trialEnded));
+        setCheckoutUrl(orgData.checkout_token ? `/checkout/${orgData.checkout_token}` : '/settings?tab=subscription');
       }
+
       setLoading(false);
     };
 
     checkTrialStatus();
-  }, [organization?.id, isSuperAdmin]);
+  }, [organization?.id, isSuperAdmin, impersonating]);
 
-  // Don't show for super admins or while loading
   if (loading || isSuperAdmin || !isExpired) {
     return null;
   }
 
-  const whatsappNumber = systemSettings?.contact_whatsapp || systemSettings?.default_whatsapp || '5511999999999';
-  const whatsappMessage = encodeURIComponent(
-    `Olá! Meu período de avaliação no sistema expirou e gostaria de continuar utilizando. Organização: ${organization?.name}`
-  );
-  const whatsappUrl = `https://wa.me/${whatsappNumber.replace(/\D/g, '')}?text=${whatsappMessage}`;
+  const isBillingBlock = blockReason === 'billing';
 
   return (
     <Dialog open={true} onOpenChange={() => {}}>
-      <DialogContent 
-        className="sm:max-w-md [&>button]:hidden" 
-        onPointerDownOutside={(e) => e.preventDefault()}
-        onEscapeKeyDown={(e) => e.preventDefault()}
+      <DialogContent
+        className="sm:max-w-md [&>button]:hidden"
+        onPointerDownOutside={(event) => event.preventDefault()}
+        onEscapeKeyDown={(event) => event.preventDefault()}
       >
         <DialogHeader className="text-center">
-          <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-orange-100 dark:bg-orange-900/30">
             <Clock className="h-8 w-8 text-orange-600 dark:text-orange-400" />
           </div>
-          <DialogTitle className="text-xl">Seu período de avaliação expirou</DialogTitle>
-          <DialogDescription className="text-base pt-2">
-            O período de avaliação gratuita do sistema chegou ao fim. 
-            Para continuar utilizando todas as funcionalidades, entre em contato conosco.
+          <DialogTitle className="text-xl">
+            {isBillingBlock ? 'Pagamento pendente' : 'Seu período de avaliação expirou'}
+          </DialogTitle>
+          <DialogDescription className="pt-2 text-base">
+            {isBillingBlock
+              ? 'Identificamos uma pendência no faturamento da sua conta. Para continuar utilizando o Vimob, regularize sua assinatura.'
+              : 'O período de avaliação gratuita chegou ao fim. Para continuar utilizando todas as funcionalidades, escolha uma forma de pagamento.'}
           </DialogDescription>
         </DialogHeader>
-        
-        <div className="flex flex-col gap-3 mt-4">
-          <a href={whatsappUrl} target="_blank" rel="noopener noreferrer">
-            <Button className="w-full gap-2 bg-[#25D366] hover:bg-[#20BD5A] text-white">
-              <MessageCircle className="h-5 w-5" />
-              Falar via WhatsApp
+
+        <div className="mt-4 flex flex-col gap-3">
+          <a href={checkoutUrl}>
+            <Button className="w-full gap-2">
+              <CreditCard className="h-5 w-5" />
+              Pagar assinatura
             </Button>
           </a>
-          <p className="text-sm text-muted-foreground text-center">
-            Nossa equipe está pronta para ajudar você a escolher o melhor plano.
+          <p className="text-center text-sm text-muted-foreground">
+            O acesso será liberado automaticamente após a confirmação do pagamento.
           </p>
         </div>
       </DialogContent>

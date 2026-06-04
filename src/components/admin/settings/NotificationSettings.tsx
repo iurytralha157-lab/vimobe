@@ -44,15 +44,26 @@ const EVENT_KEY_OPTIONS = [
   { value: 'new_lead_received', label: 'Novo Lead (Automático)', category: 'Leads' },
   { value: 'manual_lead_registered', label: 'Novo Lead (Manual)', category: 'Leads' },
   { value: 'lead_reentry', label: 'Reentrada de Lead', category: 'Leads' },
+  { value: 'lead_moved_system', label: 'Lead Movido', category: 'Leads' },
   { value: 'welcome_lead', label: 'Boas-vindas ao Lead', category: 'Leads' },
   { value: 'new_appointment', label: 'Novo Agendamento', category: 'Agenda' },
   { value: 'appointment_reminder', label: 'Lembrete de Agendamento', category: 'Agenda' },
   { value: 'ranking_update', label: 'Atualização de Ranking', category: 'Equipe' },
   { value: 'ranking_event', label: 'Evento de Gamificação', category: 'Equipe' },
+  { value: 'gamification_update', label: 'Atualização de Gamificação', category: 'Equipe' },
   { value: 'credentials_access', label: 'Credenciais de Acesso', category: 'Sistema' },
   { value: 'welcome_user', label: 'Boas-vindas ao Sistema', category: 'Sistema' },
   { value: 'whatsapp_disconnected', label: 'WhatsApp Desconectado', category: 'WhatsApp' },
+  { value: 'whatsapp_disconnected_admin', label: 'WhatsApp Desconectado (Admin)', category: 'WhatsApp' },
+  { value: 'sla_warning', label: 'SLA Próximo do Limite', category: 'SLA' },
+  { value: 'sla_overdue', label: 'SLA Vencido', category: 'SLA' },
+  { value: 'sla_overdue_manager', label: 'SLA Vencido (Gestor)', category: 'SLA' },
+  { value: 'automation_started', label: 'Automação Iniciada', category: 'Automação' },
+  { value: 'automation_failed', label: 'Falha em Automação', category: 'Automação' },
+  { value: 'automation_repeated_failures', label: 'Falhas Recorrentes em Automação', category: 'Automação' },
   { value: 'system_announcement', label: 'Comunicado do Sistema', category: 'Sistema' },
+  { value: 'update_phone_reminder', label: 'Atualização de Telefone', category: 'Sistema' },
+  { value: 'test_push', label: 'Teste de Push', category: 'Sistema' },
 ];
 
 export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
@@ -73,8 +84,15 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
   const [loadingTestUsers, setLoadingTestUsers] = useState(false);
 
   useEffect(() => {
-    fetchData();
+    let cleanup: (() => void) | undefined;
+    fetchData().then((unsubscribe) => {
+      if (typeof unsubscribe === 'function') cleanup = unsubscribe;
+    });
     loadTestConfig();
+
+    return () => {
+      cleanup?.();
+    };
   }, []);
 
   const loadTestConfig = async () => {
@@ -154,6 +172,13 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
       if (logsError) throw logsError;
       setLogs(logsData || []);
 
+      const { data: settingsData } = await supabase
+        .from('notification_settings' as any)
+        .select('*')
+        .maybeSingle();
+      
+      if (settingsData) setSettings(settingsData);
+
       // Configurar canal em tempo real para o histórico
       const channel = supabase
         .channel('notification_logs_realtime')
@@ -178,13 +203,6 @@ export function NotificationSettings({ filterSlug }: { filterSlug?: string }) {
       return () => {
         supabase.removeChannel(channel);
       };
-
-      const { data: settingsData } = await supabase
-        .from('notification_settings' as any)
-        .select('*')
-        .maybeSingle();
-      
-      if (settingsData) setSettings(settingsData);
     } catch (error: any) {
       console.error('Erro ao buscar dados:', error);
       toast.error('Não foi possível carregar os templates. Verifique se as tabelas foram criadas.');

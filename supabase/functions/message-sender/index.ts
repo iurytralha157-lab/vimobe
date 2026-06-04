@@ -5,6 +5,112 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+type WhatsAppProvider = "evolution" | "evolution_go";
+
+function getSentMessageId(data: any) {
+  const paths = [
+    "sentMessageId",
+    "messageId",
+    "messageID",
+    "MessageID",
+    "id",
+    "ID",
+    "Id",
+    "key.id",
+    "key.ID",
+    "Key.ID",
+    "data.sentMessageId",
+    "data.messageId",
+    "data.messageID",
+    "data.MessageID",
+    "data.id",
+    "data.ID",
+    "data.key.id",
+    "data.Key.ID",
+    "Data.messageId",
+    "Data.MessageID",
+    "Data.id",
+    "Data.ID",
+    "message.key.id",
+    "message.Key.ID",
+    "data.message.key.id",
+    "data.message.Key.ID",
+    "response.key.id",
+    "response.Key.ID",
+  ];
+  for (const path of paths) {
+    const value = path.split(".").reduce((acc, key) => acc?.[key], data);
+    if (value) return String(value);
+  }
+  return null;
+}
+
+async function sendViaEvolutionGo(
+  supabaseUrl: string,
+  serviceRoleKey: string,
+  sessionId: string,
+  isMedia: boolean,
+  body: Record<string, unknown>,
+  mediaType?: string,
+) {
+  const action = isMedia
+    ? mediaType === "audio" ? "send.audio" : "send.media"
+    : "send.text";
+
+  const response = await fetch(`${supabaseUrl}/functions/v1/evolution-go-proxy`, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${serviceRoleKey}`,
+      "apikey": serviceRoleKey,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      action,
+      session_id: sessionId,
+      body,
+    }),
+  });
+
+  const data = await response.json();
+  if (!response.ok || !data?.ok) {
+    throw new Error(data?.error || data?.data?.message || data?.message || "Failed to send message via Evolution Go");
+  }
+
+  return data?.data || data;
+}
+
+async function sendViaEvolutionLegacy(
+  evolutionApiUrl: string | undefined,
+  evolutionApiKey: string | undefined,
+  instanceName: string,
+  isMedia: boolean,
+  body: Record<string, unknown>,
+) {
+  if (!evolutionApiUrl || !evolutionApiKey) {
+    throw new Error("Evolution API not configured");
+  }
+
+  const endpoint = isMedia
+    ? `${evolutionApiUrl}/message/sendMedia/${instanceName}`
+    : `${evolutionApiUrl}/message/sendText/${instanceName}`;
+
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      "apikey": evolutionApiKey,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  const data = await response.json();
+  if (!response.ok || data.error) {
+    throw new Error(data.error?.message || data.message || "Failed to send message");
+  }
+
+  return data;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -15,14 +121,6 @@ Deno.serve(async (req) => {
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const EVOLUTION_API_URL = Deno.env.get("EVOLUTION_API_URL");
     const EVOLUTION_API_KEY = Deno.env.get("EVOLUTION_API_KEY");
-
-    if (!EVOLUTION_API_URL || !EVOLUTION_API_KEY) {
-      console.log("Evolution API credentials not configured");
-      return new Response(
-        JSON.stringify({ success: false, error: "Evolution API not configured" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
@@ -35,7 +133,7 @@ Deno.serve(async (req) => {
       .from("outbox_messages")
       .select(`
         *,
-        session:whatsapp_sessions!outbox_messages_session_id_fkey(id, instance_name, status),
+        session:whatsapp_sessions!outbox_messages_session_id_fkey(id, instance_name, status, provider),
         conversation:whatsapp_conversations!outbox_messages_conversation_id_fkey(id, remote_jid, is_group)
       `)
       .eq("status", "pending")
@@ -79,11 +177,8 @@ Deno.serve(async (req) => {
           throw new Error("Invalid conversation remote_jid");
         }
 
-        // Determine endpoint based on message type
+        const provider = (message.session?.provider || "evolution") as WhatsAppProvider;
         const isMedia = message.message_type !== "text" && (message.media_url || message.media_base64);
-        const endpoint = isMedia 
-          ? `${EVOLUTION_API_URL}/message/sendMedia/${message.session.instance_name}`
-          : `${EVOLUTION_API_URL}/message/sendText/${message.session.instance_name}`;
 
         // Build request body
         let body: any;
@@ -99,10 +194,10 @@ Deno.serve(async (req) => {
             caption: shouldSendCaption ? message.content : undefined,
             media: message.media_url || message.media_base64,
             fileName: message.media_filename,
+            mimetype: message.media_mime_type || undefined,
           };
           if (message.media_base64) {
             body.media = message.media_base64;
-            body.mimetype = message.media_mime_type;
           }
         } else {
           body = {
@@ -111,25 +206,26 @@ Deno.serve(async (req) => {
           };
         }
 
-        // Send via Evolution API
-        const response = await fetch(endpoint, {
-          method: "POST",
-          headers: {
-            "apikey": EVOLUTION_API_KEY,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(body),
-        });
-
-        const data = await response.json();
-        console.log(`Send result for ${message.id}:`, data);
-
-        if (!response.ok || data.error) {
-          throw new Error(data.error?.message || data.message || "Failed to send message");
-        }
+        const data = provider === "evolution_go"
+          ? await sendViaEvolutionGo(
+              SUPABASE_URL,
+              SUPABASE_SERVICE_ROLE_KEY,
+              message.session_id,
+              !!isMedia,
+              body,
+              message.message_type,
+            )
+          : await sendViaEvolutionLegacy(
+              EVOLUTION_API_URL,
+              EVOLUTION_API_KEY,
+              message.session.instance_name,
+              !!isMedia,
+              body,
+            );
+        console.log(`Send result for ${message.id} via ${provider}:`, data);
 
         // Mark as sent
-        const sentMessageId = data.key?.id || data.messageId;
+        const sentMessageId = getSentMessageId(data) || crypto.randomUUID();
         await supabase
           .from("outbox_messages")
           .update({ 

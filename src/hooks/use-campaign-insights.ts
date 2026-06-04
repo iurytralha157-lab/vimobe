@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import type { DashboardFilters } from "@/hooks/use-dashboard-filters";
+import { applyLeadIdFilter, fetchDashboardTeamLeadIds } from "@/hooks/use-dashboard-team-leads";
 
 export interface CampaignAggregated {
   campaign_id: string;
@@ -106,14 +107,6 @@ interface LeadRow {
   valor_interesse: number | null;
 }
 
-async function fetchTeamMemberIds(teamId: string): Promise<string[]> {
-  const { data } = await supabase
-    .from("team_members")
-    .select("user_id")
-    .eq("team_id", teamId);
-  return (data || []).map(m => m.user_id);
-}
-
 // Build hierarchy from lead_meta (primary), enrich with meta_campaign_insights (optional)
 export function useCampaignInsights(filters: DashboardFilters) {
   const { profile } = useAuth();
@@ -126,13 +119,10 @@ export function useCampaignInsights(filters: DashboardFilters) {
       if (!profile?.organization_id) return null;
       const orgId = profile.organization_id;
 
-      // 0. If team filter, resolve member IDs
-      let teamMemberIds: string[] | null = null;
-      if (filters.teamId) {
-        teamMemberIds = await fetchTeamMemberIds(filters.teamId);
-        if (teamMemberIds.length === 0) {
-          return emptyResult();
-        }
+      // 0. If team filter, resolve leads by real distribution team.
+      const teamLeadIds = await fetchDashboardTeamLeadIds(filters.teamId, null);
+      if (teamLeadIds !== null && teamLeadIds.length === 0) {
+        return emptyResult();
       }
 
       // 1. Get all lead_meta with campaign_id
@@ -160,7 +150,7 @@ export function useCampaignInsights(filters: DashboardFilters) {
             .gte("created_at", dateFrom)
             .lte("created_at", dateTo);
 
-          if (teamMemberIds) query = query.in("assigned_user_id", teamMemberIds);
+          query = applyLeadIdFilter(query, teamLeadIds);
           if (filters.userId) query = query.eq("assigned_user_id", filters.userId);
           if (filters.source && filters.source !== "all") query = query.eq("source", filters.source);
 

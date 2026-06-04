@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { notificationService } from '@/services/NotificationService';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Announcement {
   id: string;
@@ -32,18 +33,34 @@ interface PublishAnnouncementParams {
 
 // Hook para buscar o comunicado ativo (para todos os usuários)
 export function useActiveAnnouncement() {
+  const { profile, organization } = useAuth();
+
   return useQuery({
-    queryKey: ['active-announcement'],
+    queryKey: ['active-announcement', profile?.id, profile?.role, organization?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('announcements')
         .select('*')
         .eq('is_active', true)
-        .maybeSingle();
+        .eq('show_banner', true)
+        .order('created_at', { ascending: false })
+        .limit(10);
       
       if (error) throw error;
-      return data as Announcement | null;
+      const currentUserId = profile?.id;
+      const currentOrgId = organization?.id || profile?.organization_id;
+      const currentRole = profile?.role;
+      const announcements = (data || []) as Announcement[];
+
+      return announcements.find((announcement) => {
+        if (announcement.target_type === 'all') return true;
+        if (announcement.target_type === 'admins') return currentRole === 'admin' || currentRole === 'super_admin';
+        if (announcement.target_type === 'organizations') return !!currentOrgId && (announcement.target_organization_ids || []).includes(currentOrgId);
+        if (announcement.target_type === 'specific') return !!currentUserId && (announcement.target_user_ids || []).includes(currentUserId);
+        return false;
+      }) || null;
     },
+    enabled: !!profile?.id,
     staleTime: 1000 * 60 * 5, // 5 minutos
     gcTime: 1000 * 60 * 10,
   });
@@ -171,7 +188,7 @@ export function useAnnouncements() {
               eventKey: 'system_announcement',
               templateSlug: 'system_announcement',
               dedupeKey: `announcement:${announcement.id}:${user.id}`,
-              organizationId: user.organization_id || '',
+              organizationId: user.organization_id || targetOrganizationIds[0] || '',
               userId: user.id,
               variables: {
                 message: message

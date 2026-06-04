@@ -21,16 +21,11 @@ export function MaintenanceSettings({ settings, onUpdate }: MaintenanceSettingsP
     message: '',
     allowed_ips: [] as string[]
   });
-  const [forceUpdate, setForceUpdate] = useState({
-    version: '',
-    message: ''
-  });
   const [newIp, setNewIp] = useState('');
 
   useEffect(() => {
     if (settings) {
       if (settings.maintenance_config) setMaintenance(settings.maintenance_config);
-      if (settings.force_update) setForceUpdate(settings.force_update);
     }
   }, [settings]);
 
@@ -39,18 +34,6 @@ export function MaintenanceSettings({ settings, onUpdate }: MaintenanceSettingsP
     try {
       await onUpdate({ maintenance });
       toast.success('Configurações de manutenção salvas!');
-    } catch (error: any) {
-      toast.error('Erro ao salvar: ' + error.message);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleSaveForceUpdate = async () => {
-    setSaving(true);
-    try {
-      await onUpdate({ force_update: forceUpdate });
-      toast.success('Configurações de atualização forçada salvas!');
     } catch (error: any) {
       toast.error('Erro ao salvar: ' + error.message);
     } finally {
@@ -135,42 +118,6 @@ export function MaintenanceSettings({ settings, onUpdate }: MaintenanceSettingsP
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <RefreshCw className="h-5 w-5 text-blue-500" />
-            <div>
-              <CardTitle>Forçar Atualização</CardTitle>
-              <CardDescription>Obrigado os usuários a recarregarem o sistema para a versão mais recente.</CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label>Versão Mínima</Label>
-            <Input 
-              value={forceUpdate.version} 
-              onChange={(e) => setForceUpdate({ ...forceUpdate, version: e.target.value })}
-              placeholder="Ex: 1.2.0"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Mensagem de Atualização</Label>
-            <Textarea 
-              value={forceUpdate.message} 
-              onChange={(e) => setForceUpdate({ ...forceUpdate, message: e.target.value })}
-              placeholder="Uma nova versão está disponível. Por favor, recarregue a página."
-              className="min-h-[100px]"
-            />
-          </div>
-          <div className="flex justify-end">
-            <Button onClick={handleSaveForceUpdate} disabled={saving}>
-              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-              Salvar Forçar Atualização
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">

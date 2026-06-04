@@ -29,6 +29,7 @@ import {
   Smartphone,
   PenLine,
   Eye,
+  DollarSign,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -107,6 +108,8 @@ function getEventIcon(event: UnifiedHistoryEvent): React.ComponentType<{ classNa
     automation_message:      Bot,
     task_completed:          CheckCircle,
     contact_updated:         UserCircle,
+    commission_created:      DollarSign,
+    commission_updated:      DollarSign,
     assignee_changed:        UserCheck,
     status_change:           ArrowRight,
     whatsapp:                MessageSquare,
@@ -155,6 +158,8 @@ function getEventColors(event: UnifiedHistoryEvent): { text: string; bg: string 
     automation_tag_added:      { text: 'text-violet-600 dark:text-violet-400', bg: 'bg-violet-500/15' },
     task_completed:            { text: 'text-green-600 dark:text-green-400', bg: 'bg-green-500/15' },
     contact_updated:           { text: 'text-blue-600 dark:text-blue-400',   bg: 'bg-blue-500/15' },
+    commission_created:        { text: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/15' },
+    commission_updated:        { text: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/15' },
     status_change:             { text: 'text-muted-foreground',              bg: 'bg-muted' },
     whatsapp:                  { text: 'text-green-600 dark:text-green-400', bg: 'bg-green-500/15' },
     assignment:                { text: 'text-blue-600 dark:text-blue-400',   bg: 'bg-blue-500/15' },
@@ -193,7 +198,7 @@ export function LeadHistory({ leadId, onEventClick }: LeadHistoryProps) {
         <div className="mb-4 p-3 rounded-lg border border-yellow-200 dark:border-yellow-800 bg-yellow-50 dark:bg-yellow-900/20 flex items-center gap-2 flex-wrap">
           <Zap className="h-4 w-4 text-yellow-600 dark:text-yellow-400 shrink-0" />
           <span className="text-sm font-medium text-yellow-700 dark:text-yellow-300">
-            Tempo de resposta:{' '}
+            Primeiro contato:{' '}
             {firstResponseEvent.firstResponseSeconds != null
               ? formatResponseTime(firstResponseEvent.firstResponseSeconds)
               : firstResponseEvent.content || '—'}

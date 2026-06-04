@@ -7,7 +7,8 @@
    className?: string;
  }
  
- function formatDateLabel(date: Date): string {
+function formatDateLabel(date: Date): string {
+   if (Number.isNaN(date.getTime())) return "Sem data";
    if (isToday(date)) return "Hoje";
    if (isYesterday(date)) return "Ontem";
    
@@ -36,14 +37,19 @@
  /**
   * Hook helper to check if date separator should be shown between messages
   */
- export function shouldShowDateSeparator(
+export function shouldShowDateSeparator(
    currentDate: string,
    previousDate: string | null
  ): boolean {
+   const currentParsed = new Date(currentDate);
+   if (Number.isNaN(currentParsed.getTime())) return false;
    if (!previousDate) return true;
+
+   const previousParsed = new Date(previousDate);
+   if (Number.isNaN(previousParsed.getTime())) return true;
    
-   const current = format(new Date(currentDate), "yyyy-MM-dd");
-   const previous = format(new Date(previousDate), "yyyy-MM-dd");
+   const current = format(currentParsed, "yyyy-MM-dd");
+   const previous = format(previousParsed, "yyyy-MM-dd");
    
    return current !== previous;
  }

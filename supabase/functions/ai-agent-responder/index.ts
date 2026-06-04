@@ -70,7 +70,7 @@ Deno.serve(async (req) => {
       .eq("conversation_id", conversation_id)
       .maybeSingle();
 
-    let agentConv = existingConv;
+    const agentConv = existingConv;
 
     // If handed off, stop responding
     if (agentConv?.status === "handed_off" || agentConv?.status === "completed") {

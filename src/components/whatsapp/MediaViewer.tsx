@@ -34,9 +34,31 @@ export function MediaViewer({ src, type, isOpen, onClose, filename }: MediaViewe
     onClose();
   };
 
+  const handleDownload = async () => {
+    try {
+      const response = await fetch(src);
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = filename || "media";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(objectUrl);
+    } catch {
+      const link = document.createElement("a");
+      link.href = src;
+      link.download = filename || "media";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    }
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-[95vw] max-h-[95vh] p-0 bg-black/95 border-none overflow-hidden">
+    <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
+      <DialogContent className="max-w-[95vw] max-h-[95vh] p-0 bg-black/95 border-none overflow-hidden [&>button]:hidden">
         <div className="relative w-full h-full flex flex-col">
           {/* Header controls */}
           <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between p-4 bg-gradient-to-b from-black/70 to-transparent">
@@ -90,12 +112,10 @@ export function MediaViewer({ src, type, isOpen, onClose, filename }: MediaViewe
                 <Button 
                   variant="secondary"
                   className="bg-white/20 hover:bg-white/30 text-white border-none"
-                  asChild
+                  onClick={handleDownload}
                 >
-                  <a href={src} download={filename || "media"} target="_blank" rel="noopener noreferrer">
-                    <Download className="w-4 h-4 mr-2" />
-                    Tentar baixar
-                  </a>
+                  <Download className="w-4 h-4 mr-2" />
+                  Tentar baixar
                 </Button>
               </div>
             ) : type === "image" ? (
@@ -132,12 +152,10 @@ export function MediaViewer({ src, type, isOpen, onClose, filename }: MediaViewe
                 variant="secondary"
                 size="sm"
                 className="bg-white/20 hover:bg-white/30 text-white border-none"
-                asChild
+                onClick={handleDownload}
               >
-                <a href={src} download={filename || "media"} target="_blank" rel="noopener noreferrer">
-                  <Download className="w-4 h-4 mr-2" />
-                  Baixar
-                </a>
+                <Download className="w-4 h-4 mr-2" />
+                Baixar
               </Button>
             </div>
           )}

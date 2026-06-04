@@ -22,6 +22,7 @@ import { FeatureSelector } from '@/components/properties/FeatureSelector';
 import { useUsers } from '@/hooks/use-users';
 import { useAuth } from '@/contexts/AuthContext';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { cleanPropertyDescription } from '@/lib/property-description';
 import { toast } from 'sonner';
 
 interface PropertyFormData {
@@ -38,6 +39,7 @@ interface PropertyFormData {
   cidade: string;
   uf: string;
   cep: string;
+  public_address_visibility: string;
   quartos: string;
   suites: string;
   banheiros: string;
@@ -125,7 +127,7 @@ interface PropertyFormData {
 const initialFormData: PropertyFormData = {
   title: '', tipo_de_imovel: 'Apartamento', tipo_de_negocio: 'Venda', status: 'ativo',
   destaque: false, endereco: '', numero: '', complemento: '', bairro: '', cidade: '',
-   uf: '', cep: '', quartos: '', suites: '', banheiros: '', vagas: '', area_util: '',
+   uf: '', cep: '', public_address_visibility: 'parcial', quartos: '', suites: '', banheiros: '', vagas: '', area_util: '',
   area_total: '', mobilia: '', regra_pet: false, andar: '', ano_construcao: '', preco: '',
   valor_locacao: '', condominio: '', iptu: '', seguro_incendio: '', taxa_de_servico: '', commission_percentage: '',
   descricao: '', imagem_principal: '', fotos: [], video_imovel: '', detalhes_extras: [],
@@ -159,6 +161,13 @@ const formatCurrencyDisplay = (value: string): string => {
 const parseCurrencyInput = (value: string): string => value.replace(/\D/g, '');
 
 const DRAFT_KEY = 'property-form-draft';
+
+const RequiredMark = () => <span className="ml-0.5 text-primary">*</span>;
+
+const normalize = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+const isLandType = (value: string) => ['terreno', 'lote'].includes(normalize(value));
+const isRentalType = (value: string) => ['aluguel', 'locacao', 'temporada', 'venda e aluguel'].includes(normalize(value));
+const isSaleType = (value: string) => ['venda', 'venda e aluguel'].includes(normalize(value));
 
 async function saveDraft(data: PropertyFormData, supabaseClient?: any) {
   localStorage.setItem(DRAFT_KEY, JSON.stringify(data));
@@ -202,7 +211,9 @@ export default function PropertyForm() {
             ...(raw ? JSON.parse(raw) : {}) 
           };
         }
-      } catch {}
+      } catch {
+        // noop
+      }
     }
     return initialFormData;
   });
@@ -267,7 +278,7 @@ export default function PropertyForm() {
         tipo_de_negocio: p.tipo_de_negocio || 'Venda', status: p.status || 'ativo',
         destaque: p.destaque || false, endereco: p.endereco || '', numero: p.numero || '',
         complemento: p.complemento || '', bairro: p.bairro || '', cidade: p.cidade || '',
-        uf: p.uf || '', cep: p.cep || '', quartos: p.quartos?.toString() || '',
+        uf: p.uf || '', cep: p.cep || '', public_address_visibility: (p as any).public_address_visibility || 'parcial', quartos: p.quartos?.toString() || '',
         suites: p.suites?.toString() || '', banheiros: p.banheiros?.toString() || '',
         vagas: p.vagas?.toString() || '', area_util: p.area_util?.toString() || '',
         area_total: p.area_total?.toString() || '', mobilia: p.mobilia || '',
@@ -278,7 +289,7 @@ export default function PropertyForm() {
         seguro_incendio: p.seguro_incendio?.toString() || '',
         taxa_de_servico: p.taxa_de_servico?.toString() || '',
         commission_percentage: p.commission_percentage?.toString() || '',
-        descricao: p.descricao || '', imagem_principal: p.imagem_principal || '',
+        descricao: cleanPropertyDescription(p.descricao), imagem_principal: p.imagem_principal || '',
         fotos: (p.fotos as string[]) || [], video_imovel: p.video_imovel || '',
         detalhes_extras: (p.detalhes_extras as string[]) || [],
         proximidades: (p.proximidades as string[]) || [],
@@ -313,7 +324,29 @@ export default function PropertyForm() {
     }
   }, [property, isEditing]);
 
-  const isFormValid = formData.title.trim() !== '' && formData.preco.trim() !== '' && formData.quartos.trim() !== '' && formData.imagem_principal.trim() !== '' && formData.fotos.length > 0;
+  const isLand = isLandType(formData.tipo_de_imovel);
+  const isRental = isRentalType(formData.tipo_de_negocio);
+  const isSale = isSaleType(formData.tipo_de_negocio) || !isRental;
+  const hasOwnerContact = [
+    formData.owner_cellphone,
+    formData.owner_phone_residential,
+    formData.owner_phone_commercial,
+    formData.owner_email,
+  ].some(value => value.trim() !== '');
+  const isFormValid = [
+    formData.owner_name.trim() !== '',
+    hasOwnerContact,
+    formData.title.trim() !== '',
+    formData.tipo_de_imovel.trim() !== '',
+    formData.tipo_de_negocio.trim() !== '',
+    formData.public_address_visibility.trim() !== '',
+    formData.cadastrado_por.trim() !== '',
+    isSale ? formData.preco.trim() !== '' : true,
+    isRental ? formData.valor_locacao.trim() !== '' : true,
+    isLand ? formData.area_total.trim() !== '' : formData.quartos.trim() !== '',
+    formData.imagem_principal.trim() !== '',
+    formData.fotos.length > 0,
+  ].every(Boolean);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -327,6 +360,7 @@ export default function PropertyForm() {
       numero: formData.numero || null, complemento: formData.complemento || null,
       bairro: formData.bairro || null, cidade: formData.cidade || null,
       uf: formData.uf || null, cep: formData.cep || null,
+      public_address_visibility: formData.public_address_visibility,
       quartos: parseInt2(formData.quartos), suites: parseInt2(formData.suites),
       banheiros: parseInt2(formData.banheiros), vagas: parseInt2(formData.vagas),
       area_util: parseNum(formData.area_util), area_total: parseNum(formData.area_total),
@@ -482,7 +516,7 @@ export default function PropertyForm() {
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Nome do Proprietário</Label>
+                    <Label>Nome do Proprietário <RequiredMark /></Label>
                     <Input value={formData.owner_name} onChange={e => set('owner_name', e.target.value)} placeholder="Nome completo" />
                   </div>
                   <div className="space-y-2">
@@ -504,6 +538,9 @@ export default function PropertyForm() {
                     <Input value={formData.owner_cellphone} onChange={e => set('owner_cellphone', e.target.value)} placeholder="(00) 00000-0000" />
                   </div>
                 </div>
+                <p className="text-xs text-muted-foreground">
+                  Informe pelo menos um contato do proprietário <RequiredMark />: celular, telefone ou e-mail.
+                </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Mídia de Origem</Label>
@@ -534,7 +571,7 @@ export default function PropertyForm() {
               <CardHeader><CardTitle className="text-lg">Estrutura</CardTitle></CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label>Título do Imóvel *</Label>
+                  <Label>Título do Imóvel <RequiredMark /></Label>
                   <Input value={formData.title} onChange={e => set('title', e.target.value)} placeholder="Ex: Apartamento 3 quartos..." />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -552,7 +589,7 @@ export default function PropertyForm() {
                   </div>
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <Label>Tipo de Imóvel</Label>
+                      <Label>Tipo de Imóvel <RequiredMark /></Label>
                       <Button type="button" variant="ghost" size="sm" className="h-6 text-xs" onClick={() => setShowAddType(!showAddType)}>
                         <Plus className="h-3 w-3 mr-1" /> Novo
                       </Button>
@@ -571,12 +608,13 @@ export default function PropertyForm() {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label>Modalidade</Label>
+                    <Label>Modalidade <RequiredMark /></Label>
                     <Select value={formData.tipo_de_negocio} onValueChange={v => set('tipo_de_negocio', v)}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="Venda">Venda</SelectItem>
                         <SelectItem value="Aluguel">Locação</SelectItem>
+                        <SelectItem value="Venda e Aluguel">Venda e Locação</SelectItem>
                         <SelectItem value="Temporada">Temporada</SelectItem>
                       </SelectContent>
                     </Select>
@@ -624,6 +662,22 @@ export default function PropertyForm() {
                   </div>
                 </div>
                 <div className="space-y-2">
+                  <Label>Como o endereço aparece no site público? <RequiredMark /></Label>
+                  <Select value={formData.public_address_visibility} onValueChange={v => set('public_address_visibility', v)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a visibilidade do endereço" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="completo">Completo - rua, número, bairro, cidade, UF e CEP</SelectItem>
+                      <SelectItem value="parcial">Parcial - bairro, cidade e UF</SelectItem>
+                      <SelectItem value="minimo">Mínimo - cidade e UF</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Essa configuração controla apenas o site público. No CRM, a equipe continua vendo o endereço cadastrado conforme suas permissões.
+                  </p>
+                </div>
+                <div className="space-y-2">
                   <Label>CEP</Label>
                   <Input
                     value={formData.cep}
@@ -647,7 +701,9 @@ export default function PropertyForm() {
                               uf: data.uf || prev.uf,
                             }));
                           }
-                        } catch {}
+                        } catch {
+                          // noop
+                        }
                       }
                     }}
                     placeholder="00000-000"
@@ -687,10 +743,10 @@ export default function PropertyForm() {
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>Cadastrado por</Label>
+                      <Label>Responsável pela captação <RequiredMark /></Label>
                       <Select value={formData.cadastrado_por} onValueChange={v => set('cadastrado_por', v)}>
                         <SelectTrigger>
-                          <SelectValue placeholder="Selecione o responsável" />
+                          <SelectValue placeholder="Selecione o captador responsável" />
                         </SelectTrigger>
                         <SelectContent>
                           {/* Current user first */}
@@ -739,36 +795,42 @@ export default function PropertyForm() {
               <Card>
                 <CardHeader><CardTitle className="text-lg">Detalhes do Imóvel</CardTitle></CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="space-y-2">
-                      <Label>Quartos *</Label>
-                      <Select value={formData.quartos || undefined} onValueChange={v => set('quartos', v)}>
-                        <SelectTrigger><SelectValue placeholder="Qtd" /></SelectTrigger>
-                        <SelectContent>
-                          {[0,1,2,3,4,5,6,7,8,9,10].map(n => <SelectItem key={n} value={String(n)}>{n === 10 ? '10+' : String(n)}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
+                  {!isLand ? (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="space-y-2">
+                        <Label>Quartos <RequiredMark /></Label>
+                        <Select value={formData.quartos || undefined} onValueChange={v => set('quartos', v)}>
+                          <SelectTrigger><SelectValue placeholder="Qtd" /></SelectTrigger>
+                          <SelectContent>
+                            {[0,1,2,3,4,5,6,7,8,9,10].map(n => <SelectItem key={n} value={String(n)}>{n === 10 ? '10+' : String(n)}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Suítes</Label>
+                        <Input type="number" value={formData.suites} onChange={e => set('suites', e.target.value)} placeholder="0" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Banheiros</Label>
+                        <Input type="number" value={formData.banheiros} onChange={e => set('banheiros', e.target.value)} placeholder="0" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Vagas</Label>
+                        <Input type="number" value={formData.vagas} onChange={e => set('vagas', e.target.value)} placeholder="0" />
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label>Suítes</Label>
-                      <Input type="number" value={formData.suites} onChange={e => set('suites', e.target.value)} placeholder="0" />
+                  ) : (
+                    <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm text-muted-foreground">
+                      Terreno e lote usam metragem total como dado principal. Quartos, suítes, banheiros e vagas deixam de ser obrigatórios.
                     </div>
-                    <div className="space-y-2">
-                      <Label>Banheiros</Label>
-                      <Input type="number" value={formData.banheiros} onChange={e => set('banheiros', e.target.value)} placeholder="0" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Vagas</Label>
-                      <Input type="number" value={formData.vagas} onChange={e => set('vagas', e.target.value)} placeholder="0" />
-                    </div>
-                  </div>
+                  )}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Área Útil (m²)</Label>
                       <Input type="number" value={formData.area_util} onChange={e => set('area_util', e.target.value)} placeholder="120" />
                     </div>
                     <div className="space-y-2">
-                      <Label>Área Total (m²)</Label>
+                      <Label>Área Total (m²){isLand && <RequiredMark />}</Label>
                       <Input type="number" value={formData.area_total} onChange={e => set('area_total', e.target.value)} placeholder="150" />
                     </div>
                   </div>
@@ -943,15 +1005,19 @@ export default function PropertyForm() {
               <CardHeader><CardTitle className="text-lg">Valores</CardTitle></CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Preço (R$) *</Label>
-                    <Input value={formatCurrencyDisplay(formData.preco)} onChange={e => set('preco', parseCurrencyInput(e.target.value))} placeholder="500.000" className="text-lg font-semibold" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Valor de Locação (R$)</Label>
-                    <Input value={formatCurrencyDisplay(formData.valor_locacao)} onChange={e => set('valor_locacao', parseCurrencyInput(e.target.value))} placeholder="2.500" />
-                    <p className="text-xs text-muted-foreground">Preencha se o imóvel também aceita locação</p>
-                  </div>
+                  {isSale && (
+                    <div className="space-y-2">
+                      <Label>Preço de venda (R$) <RequiredMark /></Label>
+                      <Input value={formatCurrencyDisplay(formData.preco)} onChange={e => set('preco', parseCurrencyInput(e.target.value))} placeholder="500.000" className="text-lg font-semibold" />
+                    </div>
+                  )}
+                  {isRental && (
+                    <div className="space-y-2">
+                      <Label>Valor de locação (R$) <RequiredMark /></Label>
+                      <Input value={formatCurrencyDisplay(formData.valor_locacao)} onChange={e => set('valor_locacao', parseCurrencyInput(e.target.value))} placeholder="2.500" className="text-lg font-semibold" />
+                      <p className="text-xs text-muted-foreground">Obrigatório para imóveis de locação ou temporada.</p>
+                    </div>
+                  )}
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
@@ -967,10 +1033,6 @@ export default function PropertyForm() {
                   <div className="space-y-2">
                     <Label>Taxa de Serviço (R$)</Label>
                     <Input value={formatCurrencyDisplay(formData.taxa_de_servico)} onChange={e => set('taxa_de_servico', parseCurrencyInput(e.target.value))} placeholder="100" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Comissão da Imobiliária (%)</Label>
-                    <Input type="number" step="0.1" min="0" max="100" value={formData.commission_percentage} onChange={e => set('commission_percentage', e.target.value)} placeholder="5" />
                   </div>
                 </div>
               </CardContent>

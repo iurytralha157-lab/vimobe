@@ -1,10 +1,7 @@
-import { useState, useMemo, useEffect } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+﻿import { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import {
   Select,
   SelectContent,
@@ -12,40 +9,39 @@ import {
   SelectTrigger,
   SelectValue } from
 '@/components/ui/select';
-import { Users, Check, AlertCircle, Loader2, Settings2, ExternalLink, Webhook, User, Bot, Facebook, Key, Bell, CreditCard } from 'lucide-react';
-import { WhatsAppIcon } from '@/components/icons/WhatsAppIcon';
+import { UserCog, User, Plug, CreditCard } from 'lucide-react';
 import { AnimatedIcon } from '@/components/icons/AnimatedIcon';
 import AVATAR_JSON from '@/components/icons/avatar-icon.json';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { useMetaIntegrations } from '@/hooks/use-meta-integration';
 import { AccountTab } from '@/components/settings/AccountTab';
 import { TeamTab } from '@/components/settings/TeamTab';
-import { WebhooksTab } from '@/components/settings/WebhooksTab';
-import { WhatsAppTab } from '@/components/settings/WhatsAppTab';
-import { AIAgentTab } from '@/components/settings/AIAgentTab';
-import { APITab } from '@/components/settings/APITab';
-import { NotificationsTab } from '@/components/settings/NotificationsTab';
 import { useOrganizationModules } from '@/hooks/use-organization-modules';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { AnimatedTabNav, AnimatedTabItem } from '@/components/ui/animated-tab-nav';
 import { SubscriptionTab } from '@/components/settings/SubscriptionTab';
+import { IntegrationsTab } from '@/components/settings/IntegrationsTab';
 
 export default function Settings() {
   const { profile, isSuperAdmin, organization } = useAuth();
-  const { data: metaIntegrations = [], isLoading: metaLoading } = useMetaIntegrations();
   const { hasModule } = useOrganizationModules();
   const { t } = useLanguage();
   const isMobile = useIsMobile();
   const [searchParams, setSearchParams] = useSearchParams();
-  const initialTab = searchParams.get('tab') || 'account';
+  const requestedTab = searchParams.get('tab') || 'account';
+  const normalizedRequestedTab = requestedTab === 'webhook' ? 'webhooks' : requestedTab;
+  const legacyIntegrationTabs = ['webhooks', 'meta', 'whatsapp', 'ai-agent', 'api'];
+  const initialIntegration = legacyIntegrationTabs.includes(normalizedRequestedTab) ? normalizedRequestedTab : undefined;
+  const initialTab = initialIntegration ? 'integrations' : requestedTab;
   const [activeTab, setActiveTab] = useState(initialTab);
 
   // Sync tab when URL query param changes (e.g. external navigation)
   useEffect(() => {
-    const t = searchParams.get('tab');
-    if (t && t !== activeTab) {
-      setActiveTab(t);
+    const rawTab = searchParams.get('tab');
+    const t = rawTab === 'webhook' ? 'webhooks' : rawTab;
+    const normalizedTab = t && legacyIntegrationTabs.includes(t) ? 'integrations' : t;
+    if (normalizedTab && normalizedTab !== activeTab) {
+      setActiveTab(normalizedTab);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
@@ -57,12 +53,6 @@ export default function Settings() {
     setSearchParams(next, { replace: true });
   };
 
-  const activeMetaPages = metaIntegrations.filter((i) => i.is_connected);
-  const totalMetaLeadsReceived = metaIntegrations.reduce(
-    (sum, integration) => sum + (integration.leads_received || 0),
-    0
-  );
-  const isMetaConnected = metaIntegrations.length > 0;
   const hasWhatsAppModule = hasModule('whatsapp');
   const hasWebhooksModule = hasModule('webhooks');
   const hasAIAgentModule = hasModule('ai_agent');
@@ -76,36 +66,18 @@ export default function Settings() {
 
     // Only admins and super admins can see the Users tab
     if (profile?.role === 'admin' || isSuperAdmin) {
-      tabs.push({ value: 'team', label: 'Usuários', icon: Users,
-        renderIcon: () => <AnimatedIcon icon={AVATAR_JSON} size={18} trigger="hover" /> });
+      tabs.push({ value: 'team', label: 'Gest\u00e3o de Usu\u00e1rios', icon: UserCog });
       
       // Assinatura only for admins and not for organizations in trial
       if (organization?.subscription_status !== 'trial' && organization?.subscription_status !== 'trialing') {
-        tabs.push({ value: 'subscription', label: 'Assinatura', icon: CreditCard });
+        tabs.push({ value: 'subscription', label: 'Faturamento', icon: CreditCard });
       }
     }
 
-    if (hasWebhooksModule) {
-      tabs.push({ value: 'webhooks', label: 'Webhooks', icon: Webhook });
-    }
-
-    tabs.push({ value: 'meta', label: t.settings.meta, icon: Facebook });
-
-    if (hasWhatsAppModule) {
-      tabs.push({ value: 'whatsapp', label: 'WhatsApp', icon: WhatsAppIcon,
-        renderIcon: () => <WhatsAppIcon size={18} variant="logo" trigger="hover" /> });
-    }
-
-    if (hasWhatsAppModule && hasAIAgentModule) {
-      tabs.push({ value: 'ai-agent', label: 'Agente IA', icon: Bot });
-    }
-
-    if (hasAPIModule) {
-      tabs.push({ value: 'api', label: 'Configuração da API', icon: Key });
-    }
+    tabs.push({ value: 'integrations', label: 'Integrações', icon: Plug });
 
     return tabs;
-  }, [t, hasWebhooksModule, hasWhatsAppModule, hasAIAgentModule, hasAPIModule, profile?.role, isSuperAdmin]);
+  }, [t, profile?.role, isSuperAdmin, organization?.subscription_status]);
 
   const currentTab = settingsTabs.find((tab) => tab.value === activeTab);
   const CurrentIcon = currentTab?.icon;
@@ -148,86 +120,15 @@ export default function Settings() {
             <TeamTab />
           </TabsContent>
 
-          <TabsContent value="webhooks">
-            <WebhooksTab />
+          <TabsContent value="integrations">
+            <IntegrationsTab
+              defaultIntegration={initialIntegration}
+              hasWhatsAppModule={hasWhatsAppModule}
+              hasWebhooksModule={hasWebhooksModule}
+              hasAIAgentModule={hasAIAgentModule}
+              hasAPIModule={hasAPIModule}
+            />
           </TabsContent>
-
-          <TabsContent value="meta">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  {t.settings.integrations.meta.title}
-                </CardTitle>
-                <CardDescription>
-                  {t.settings.integrations.meta.description}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="px-4 md:px-6 pb-5 space-y-6">
-                {metaLoading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                  </div>
-                ) : (
-                  <>
-                    <div className={`p-4 rounded-lg border ${isMetaConnected ? 'border-success bg-success/5' : 'border-warning bg-warning/5'}`}>
-                      <div className="flex items-center gap-3">
-                        {isMetaConnected ? <Check className="h-5 w-5 text-success" /> : <AlertCircle className="h-5 w-5 text-warning" />}
-                        <div>
-                          <p className="font-medium">
-                            {isMetaConnected ? t.settings.integrations.meta.connected : t.settings.integrations.meta.notConnected}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            {isMetaConnected
-                              ? `${activeMetaPages.length} ${t.settings.integrations.meta.activePage} ${metaIntegrations.length} ${t.settings.integrations.meta.pagesConnected}`
-                              : t.settings.integrations.meta.description}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {isMetaConnected && (
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="p-4 rounded-lg border bg-muted/50">
-                          <p className="text-2xl font-bold">{metaIntegrations.length}</p>
-                          <p className="text-sm text-muted-foreground">{t.settings.integrations.meta.pagesConnected}</p>
-                        </div>
-                        <div className="p-4 rounded-lg border bg-muted/50">
-                          <p className="text-2xl font-bold">{totalMetaLeadsReceived}</p>
-                          <p className="text-sm text-muted-foreground">{t.settings.integrations.meta.leadsReceived}</p>
-                        </div>
-                      </div>
-                    )}
-
-                    <Button asChild className="w-full gap-2">
-                      <Link to="/settings/integrations/meta">
-                        <Settings2 className="h-4 w-4" />
-                        {t.settings.integrations.meta.manageMeta}
-                        <ExternalLink className="h-4 w-4 ml-auto" />
-                      </Link>
-                    </Button>
-                  </>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {hasWhatsAppModule && (
-            <TabsContent value="whatsapp">
-              <WhatsAppTab />
-            </TabsContent>
-          )}
-
-          {hasWhatsAppModule && hasAIAgentModule && (
-            <TabsContent value="ai-agent">
-              <AIAgentTab />
-            </TabsContent>
-          )}
-
-          {hasAPIModule && (
-            <TabsContent value="api">
-              <APITab />
-            </TabsContent>
-          )}
 
           <TabsContent value="subscription">
             <SubscriptionTab />
@@ -237,3 +138,5 @@ export default function Settings() {
     </AppLayout>
   );
 }
+
+

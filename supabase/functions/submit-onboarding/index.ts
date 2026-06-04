@@ -24,6 +24,7 @@ Deno.serve(async (req) => {
       company_name, cnpj, company_address, company_city, company_neighborhood,
       company_number, company_complement, company_phone, company_whatsapp, company_email,
       segment, responsible_name, responsible_email, responsible_cpf, responsible_phone,
+      creci,
       logo_url, favicon_url, primary_color, secondary_color,
       site_title, custom_domain, instagram, facebook, youtube, linkedin,
     } = body;
@@ -40,6 +41,7 @@ Deno.serve(async (req) => {
       .insert({
         company_name,
         cnpj: cnpj || null,
+        creci: creci || null,
         company_address: company_address || null,
         company_city: company_city || null,
         company_neighborhood: company_neighborhood || null,

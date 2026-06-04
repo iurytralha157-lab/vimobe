@@ -7,16 +7,23 @@ import { ptBR } from 'date-fns/locale';
 interface Props {
   data?: Array<{ date: string; value: number }>;
   loading?: boolean;
+  title?: string;
+  subtitle?: string;
 }
 
 const formatCurrency = (n: number) => `R$ ${n.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 
-export function RevenueChart({ data = [], loading }: Props) {
+export function RevenueChart({
+  data = [],
+  loading,
+  title = 'Receita confirmada',
+  subtitle = 'Pagamentos confirmados no período selecionado',
+}: Props) {
   return (
     <Card className="rounded-2xl">
       <CardHeader className="pb-2">
-        <CardTitle className="text-base font-semibold">Receita no período</CardTitle>
-        <p className="text-xs text-muted-foreground">Pagamentos confirmados por dia</p>
+        <CardTitle className="text-base font-semibold">{title}</CardTitle>
+        <p className="text-xs text-muted-foreground">{subtitle}</p>
       </CardHeader>
       <CardContent>
         {loading ? (

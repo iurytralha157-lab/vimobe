@@ -34,7 +34,6 @@ import {
   MapPin,
   UserCheck,
   Globe,
-  Settings,
   HelpCircle,
   Trophy,
   History as HistoryIcon,
@@ -110,8 +109,7 @@ const allNavItems: NavItem[] = [
 ];
 
 const bottomItems: NavItem[] = [
-  { icon: Globe, labelKey: 'mySite', path: '/settings/site', adminOnly: true, module: 'site' },
-  { icon: Settings, labelKey: 'settings', path: '/settings' },
+  { icon: Globe, labelKey: 'site', path: '/settings/site', adminOnly: true, module: 'site' },
 ];
 interface MobileSidebarProps {
   externalOpen?: boolean;

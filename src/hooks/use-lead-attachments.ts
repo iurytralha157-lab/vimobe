@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { enforceClientActionRateLimit, getClientRateLimitMessage } from '@/lib/client-action-rate-limit';
 import { toast } from 'sonner';
 
 export interface LeadAttachment {
@@ -45,6 +46,22 @@ export function useCreateLeadAttachment() {
       message_id?: string;
     }) => {
       const { data: { user } } = await supabase.auth.getUser();
+      enforceClientActionRateLimit(`lead:attachment:create:${user?.id || 'anonymous'}:${attachment.lead_id}`, [
+        { limit: 2, windowMs: 1000 },
+        { limit: 20, windowMs: 60_000 },
+      ]);
+
+      if (attachment.message_id) {
+        const { data: existing, error: existingError } = await (supabase as any)
+          .from('lead_attachments')
+          .select('id')
+          .eq('lead_id', attachment.lead_id)
+          .eq('message_id', attachment.message_id)
+          .maybeSingle();
+
+        if (existingError) throw existingError;
+        if (existing) return existing;
+      }
       
       const { data, error } = await (supabase as any)
         .from('lead_attachments')
@@ -56,15 +73,34 @@ export function useCreateLeadAttachment() {
         .single();
 
       if (error) throw error;
+
+      await (supabase as any).from('activities').insert({
+        lead_id: attachment.lead_id,
+        user_id: user?.id,
+        type: 'note',
+        content: `Documento anexado: ${attachment.file_name}`,
+        metadata: {
+          file_url: attachment.file_url,
+          file_type: attachment.file_type,
+          file_size: attachment.file_size,
+          message_id: attachment.message_id,
+        },
+      });
+
       return data;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['lead-attachments', variables.lead_id] });
+      queryClient.invalidateQueries({ queryKey: ['activities', variables.lead_id] });
+      queryClient.invalidateQueries({ queryKey: ['activities'] });
+      queryClient.invalidateQueries({ queryKey: ['recent-activities'] });
+      queryClient.invalidateQueries({ queryKey: ['lead-history-v2', variables.lead_id] });
       toast.success('Documento anexado com sucesso!');
     },
     onError: (error) => {
       console.error('Error creating attachment:', error);
-      toast.error('Erro ao anexar documento');
+      const rateLimitMessage = getClientRateLimitMessage(error);
+      toast.error(rateLimitMessage || 'Erro ao anexar documento');
     }
   });
 }

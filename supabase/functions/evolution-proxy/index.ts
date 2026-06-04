@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { enforceRateLimit } from "../_shared/rate-limit.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -9,6 +10,10 @@ interface EvolutionResponse {
   success: boolean;
   data?: any;
   error?: string;
+}
+
+function isSendAction(action: string | undefined): boolean {
+  return action === "sendMessage" || action === "sendFile";
 }
 
 Deno.serve(async (req) => {
@@ -35,6 +40,31 @@ Deno.serve(async (req) => {
     // Initialize Supabase client for actions that need it
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const authHeader = req.headers.get("Authorization");
+    let rateLimitIdentifier: string | undefined;
+    let role = "";
+
+    if (authHeader?.startsWith("Bearer ")) {
+      const { data: claims } = await supabase.auth.getClaims(authHeader.replace("Bearer ", ""));
+      rateLimitIdentifier = claims?.claims?.sub ? String(claims.claims.sub) : undefined;
+      role = claims?.claims?.role ? String(claims.claims.role) : "";
+    }
+
+    if (isSendAction(action) && role !== "service_role") {
+      const rateLimit = await enforceRateLimit(
+        supabase,
+        req,
+        "evolution-proxy:whatsapp-send",
+        [
+          { name: "per_second", limit: 2, windowSeconds: 1 },
+          { name: "per_minute", limit: 20, windowSeconds: 60 },
+        ],
+        corsHeaders,
+        rateLimitIdentifier ? { identifier: rateLimitIdentifier } : {},
+      );
+
+      if (rateLimit.response) return rateLimit.response;
+    }
 
     let result: EvolutionResponse;
 
@@ -144,9 +174,9 @@ async function createInstance(apiUrl: string, apiKey: string, supabaseUrl: strin
         integration: "WHATSAPP-BAILEYS",
         reject_call: false,
         groupsIgnore: false,
-        alwaysOnline: true,
+        alwaysOnline: false,
         readMessages: false,
-        readStatus: true,
+        readStatus: false,
         syncFullHistory: false,
         webhook: {
           url: webhookUrl,
@@ -581,7 +611,9 @@ async function deleteInstance(apiUrl: string, apiKey: string, instanceName: stri
     }
 
     let data = {};
-    try { data = await response.json(); } catch { }
+    try { data = await response.json(); } catch {
+      // noop
+    }
     console.log("Delete instance response:", data);
 
     if (!response.ok && response.status !== 404) {
@@ -759,7 +791,7 @@ async function updateInstanceSettings(apiUrl: string, apiKey: string, params: an
       body: JSON.stringify({
         rejectCall: false,
         readMessages: false,
-        readStatus: true,
+        readStatus: false,
         ...settings
       }),
     });

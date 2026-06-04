@@ -104,7 +104,7 @@ export function LabelsPopover({
                       assignMut.mutate({
                         sessionId,
                         remoteJid,
-                        labelId: label.remote_label_id,
+                        labelId: label.id,
                         conversationId,
                         add: !isOn,
                       })

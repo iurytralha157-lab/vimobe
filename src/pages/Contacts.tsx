@@ -540,6 +540,7 @@ export default function Contacts() {
                           <TableCell>
                             <div className="flex items-center gap-3">
                               <Avatar className="h-9 w-9">
+                                <AvatarImage src={contact.whatsapp_avatar_url || undefined} alt={contact.name} />
                                 <AvatarFallback className="bg-primary text-primary-foreground text-xs">
                                   {getInitials(contact.name)}
                                 </AvatarFallback>

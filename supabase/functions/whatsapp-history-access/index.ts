@@ -5,6 +5,42 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+function normalizePhone(value: string | null | undefined) {
+  if (!value) return "";
+  let cleaned = value.replace(/\D/g, "");
+  if (cleaned.startsWith("55") && cleaned.length >= 12) cleaned = cleaned.slice(2);
+  while (cleaned.startsWith("0") && cleaned.length > 10) cleaned = cleaned.slice(1);
+  return cleaned;
+}
+
+function phoneVariants(value: string | null | undefined) {
+  const cleaned = (value || "").replace(/\D/g, "");
+  const normalized = normalizePhone(value);
+  const withoutTrunk = cleaned.replace(/^55/, "").replace(/^0+/, "");
+  const baseVariants = [
+    cleaned,
+    normalized,
+    normalized ? `55${normalized}` : "",
+    withoutTrunk,
+    withoutTrunk ? `55${withoutTrunk}` : "",
+  ].filter(Boolean);
+
+  const brMobileVariants: string[] = [];
+  for (const phone of baseVariants) {
+    const local = normalizePhone(phone);
+    if (local.length === 11 && local[2] === "9") {
+      const withoutNinthDigit = `${local.slice(0, 2)}${local.slice(3)}`;
+      brMobileVariants.push(withoutNinthDigit, `55${withoutNinthDigit}`);
+    }
+    if (local.length === 10) {
+      const withNinthDigit = `${local.slice(0, 2)}9${local.slice(2)}`;
+      brMobileVariants.push(withNinthDigit, `55${withNinthDigit}`);
+    }
+  }
+
+  return [...new Set([...baseVariants, ...brMobileVariants])];
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -93,14 +129,59 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Get all conversations for this lead
-      const { data: conversations, error: convError } = await supabase
+      const { data: leadRow, error: leadError } = await supabase
+        .from("leads")
+        .select("id, phone, organization_id")
+        .eq("id", leadId)
+        .maybeSingle();
+
+      if (leadError) throw leadError;
+
+      // Get conversations currently or historically tied to this lead.
+      // We also match by phone so a new WhatsApp session/requisition keeps the old lead history visible.
+      const { data: linkedConversations, error: convError } = await supabase
         .from("whatsapp_conversations")
         .select("id, session_id")
-        .eq("lead_id", leadId)
-        .is("deleted_at", null);
+        .eq("lead_id", leadId);
 
       if (convError) throw convError;
+      let conversations = linkedConversations || [];
+
+      const variants = phoneVariants(leadRow?.phone);
+      if (leadRow?.organization_id && variants.length > 0) {
+        const jidVariants = [
+          ...variants.map((phone) => `${phone}@s.whatsapp.net`),
+          ...variants.map((phone) => `${phone}@c.us`),
+        ];
+
+        const { data: phoneConversations, error: phoneConvError } = await supabase
+          .from("whatsapp_conversations")
+          .select("id, session_id, contact_phone, remote_jid")
+          .eq("organization_id", leadRow.organization_id)
+          .eq("is_group", false)
+          .in("contact_phone", variants);
+
+        const { data: remoteConversations, error: remoteConvError } = await supabase
+          .from("whatsapp_conversations")
+          .select("id, session_id, contact_phone, remote_jid")
+          .eq("organization_id", leadRow.organization_id)
+          .eq("is_group", false)
+          .in("remote_jid", jidVariants);
+
+        if (phoneConvError) throw phoneConvError;
+        if (remoteConvError) throw remoteConvError;
+        conversations = [
+          ...conversations,
+          ...[...(phoneConversations || []), ...(remoteConversations || [])].filter((conversation: any) => {
+            const contactPhone = normalizePhone(conversation.contact_phone);
+            const remotePhone = normalizePhone(conversation.remote_jid);
+            return variants.some((phone) => normalizePhone(phone) === contactPhone || normalizePhone(phone) === remotePhone);
+          }),
+        ];
+      }
+
+      conversations = [...new Map(conversations.map((conversation: any) => [conversation.id, conversation])).values()];
+
       if (!conversations || conversations.length === 0) {
         return new Response(JSON.stringify({ messages: [] }), {
           status: 200,
@@ -110,20 +191,34 @@ Deno.serve(async (req) => {
 
       const conversationIds = conversations.map((c: any) => c.id);
 
-      // First get messages
-      const messagesResult = await supabase
-        .from("whatsapp_messages")
-        .select("id, content, from_me, message_type, media_url, media_mime_type, media_status, sent_at, status, sender_name, sender_jid, conversation_id, session_id")
-        .in("conversation_id", conversationIds)
-        .order("sent_at", { ascending: false })
-        .limit(1000);
+      const messageSelect =
+        "id, content, from_me, message_type, media_url, media_mime_type, media_status, media_error, media_size, media_storage_path, sent_at, delivered_at, read_at, status, sender_name, sender_jid, conversation_id, session_id, message_id, client_message_id, remote_jid, reaction_to_message_id, reaction_emoji, reaction_sender_jid, reaction_sender_name, metadata";
+      const pageSize = 1000;
+      const maxMessages = 10000;
+      const fetchedMessages: any[] = [];
 
-      if (messagesResult.error) throw messagesResult.error;
+      for (let offset = 0; offset < maxMessages; offset += pageSize) {
+        const pageResult = await supabase
+          .from("whatsapp_messages")
+          .select(messageSelect)
+          .in("conversation_id", conversationIds)
+          .order("sent_at", { ascending: false })
+          .range(offset, offset + pageSize - 1);
+
+        if (pageResult.error) throw pageResult.error;
+
+        const page = pageResult.data || [];
+        fetchedMessages.push(...page);
+
+        if (page.length < pageSize) break;
+      }
+
+      const messagesTruncated = fetchedMessages.length >= maxMessages;
 
       // Collect ALL session_ids from both conversations AND messages
       const allSessionIds = [...new Set([
         ...conversations.map((c: any) => c.session_id),
-        ...(messagesResult.data || []).map((m: any) => m.session_id).filter(Boolean),
+        ...fetchedMessages.map((m: any) => m.session_id).filter(Boolean),
       ])];
 
       // Get sessions
@@ -158,7 +253,7 @@ Deno.serve(async (req) => {
       }
 
       // Enrich messages
-      const enriched = (messagesResult.data || []).map((msg: any) => {
+      const enriched = fetchedMessages.map((msg: any) => {
         const session = sessionMap[msg.session_id];
         return {
           ...msg,
@@ -172,7 +267,12 @@ Deno.serve(async (req) => {
         new Date(a.sent_at).getTime() - new Date(b.sent_at).getTime()
       );
 
-      return new Response(JSON.stringify({ messages }), {
+      return new Response(JSON.stringify({
+        messages,
+        conversations_count: conversations.length,
+        messages_count: messages.length,
+        truncated: messagesTruncated,
+      }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

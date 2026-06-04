@@ -37,6 +37,7 @@ import { useQueryClient } from '@tanstack/react-query';
 
 const formSchema = z.object({
   calls: z.coerce.number().min(0).default(0),
+  messages: z.coerce.number().min(0).default(0),
   scheduled_visits: z.coerce.number().min(0).default(0),
   confirmed_visits: z.coerce.number().min(0).default(0),
   meetings: z.coerce.number().min(0).default(0),
@@ -57,6 +58,7 @@ export function ProspectingReportModal() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       calls: 0,
+      messages: 0,
       scheduled_visits: 0,
       confirmed_visits: 0,
       meetings: 0,
@@ -80,6 +82,7 @@ export function ProspectingReportModal() {
         user_id: user.id,
         organization_id: organization.id,
         calls: values.calls,
+        messages: values.messages,
         scheduled_visits: values.scheduled_visits,
         confirmed_visits: values.confirmed_visits,
         meetings: values.meetings,
@@ -156,6 +159,21 @@ export function ProspectingReportModal() {
                   <FormItem>
                     <FormLabel className="flex items-center gap-1 text-xs">
                       <Phone className="h-3 w-3" /> Ligações
+                    </FormLabel>
+                    <FormControl>
+                      <Input type="number" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="messages"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-1 text-xs">
+                      <MessageSquare className="h-3 w-3" /> Mensagens
                     </FormLabel>
                     <FormControl>
                       <Input type="number" {...field} />

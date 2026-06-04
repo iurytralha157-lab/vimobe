@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { useSuperAdmin } from '@/hooks/use-super-admin';
+import { useAdminPlans } from '@/hooks/use-admin-plans';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useNavigate } from 'react-router-dom';
@@ -64,6 +65,7 @@ export default function AdminOrganizations() {
   
   const { toggleStatus } = useAdminOrganizationActions();
   const { createOrganization, deleteOrganization } = useSuperAdmin();
+  const { plans } = useAdminPlans();
 
   // Modal states
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -75,7 +77,8 @@ export default function AdminOrganizations() {
     segment: 'imobiliario' as 'imobiliario' | 'telecom' | 'servicos' | 'engenharia',
     adminEmail: '',
     adminName: '',
-    adminPassword: ''
+    adminPassword: '',
+    planId: ''
   });
   const [showPassword, setShowPassword] = useState(false);
 
@@ -83,7 +86,7 @@ export default function AdminOrganizations() {
     if (!newOrg.adminPassword || newOrg.adminPassword.length < 6) return;
     await createOrganization.mutateAsync(newOrg);
     setCreateDialogOpen(false);
-    setNewOrg({ name: '', segment: 'imobiliario', adminEmail: '', adminName: '', adminPassword: '' });
+    setNewOrg({ name: '', segment: 'imobiliario', adminEmail: '', adminName: '', adminPassword: '', planId: '' });
     setShowPassword(false);
   };
 
@@ -106,24 +109,24 @@ export default function AdminOrganizations() {
   };
 
   return (
-    <AdminLayout title="Gestão de Clientes">
+    <AdminLayout title="Organizações">
       <div className="space-y-6">
         {/* Advanced Header / Filters */}
-        <div className="flex flex-col lg:flex-row gap-4 justify-between bg-card/30 p-4 rounded-2xl border border-border/40 backdrop-blur-sm">
+        <div className="flex flex-col lg:flex-row gap-4 justify-between bg-card p-4 rounded-lg border border-border/60">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Buscar por nome, email ou CNPJ..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 bg-background/50 border-border/50 rounded-xl" />
+              className="pl-9 bg-background/50 border-border/50 rounded-lg" />
           </div>
           
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-2">
               <Filter className="h-4 w-4 text-muted-foreground" />
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[140px] bg-background/50 border-border/50 rounded-xl">
+                <SelectTrigger className="w-[140px] bg-background/50 border-border/50 rounded-lg">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -137,7 +140,7 @@ export default function AdminOrganizations() {
             </div>
 
             <Select value={segmentFilter} onValueChange={setSegmentFilter}>
-              <SelectTrigger className="w-[160px] bg-background/50 border-border/50 rounded-xl">
+              <SelectTrigger className="w-[160px] bg-background/50 border-border/50 rounded-lg">
                 <SelectValue placeholder="Segmento" />
               </SelectTrigger>
               <SelectContent>
@@ -151,7 +154,7 @@ export default function AdminOrganizations() {
 
             <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
               <DialogTrigger asChild>
-                <Button className="rounded-xl bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20">
+                <Button className="rounded-lg bg-primary hover:bg-primary/90">
                   <Plus className="h-4 w-4 mr-2" />
                   Novo Cliente
                 </Button>
@@ -188,6 +191,25 @@ export default function AdminOrganizations() {
                           <SelectItem value="telecom">Telecom / Internet</SelectItem>
                           <SelectItem value="servicos">Serviços Gerais</SelectItem>
                           <SelectItem value="engenharia">Engenharia / Obras</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2 col-span-2">
+                      <Label htmlFor="plan">Plano</Label>
+                      <Select
+                        value={newOrg.planId || 'none'}
+                        onValueChange={(val) => setNewOrg({ ...newOrg, planId: val === 'none' ? '' : val })}
+                      >
+                        <SelectTrigger className="rounded-xl">
+                          <SelectValue placeholder="Selecione o plano" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Sem plano</SelectItem>
+                          {plans?.map((plan) => (
+                            <SelectItem key={plan.id} value={plan.id}>
+                              {plan.name} - {Number(plan.price).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
@@ -253,13 +275,13 @@ export default function AdminOrganizations() {
         </div>
 
         {/* Organizations Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
           {isLoading ? (
             Array.from({ length: 6 }).map((_, i) => (
-              <Skeleton key={i} className="h-[300px] w-full rounded-2xl" />
+              <Skeleton key={i} className="h-[280px] w-full rounded-lg" />
             ))
           ) : organizations?.length === 0 ? (
-            <div className="col-span-full flex flex-col items-center justify-center py-20 text-muted-foreground space-y-4 bg-card/20 rounded-3xl border border-dashed border-border">
+            <div className="col-span-full flex flex-col items-center justify-center py-20 text-muted-foreground space-y-4 bg-card/20 rounded-lg border border-dashed border-border">
               <Building2 className="h-12 w-12 opacity-20" />
               <p className="text-lg font-medium">Nenhuma organização encontrada com os filtros atuais.</p>
               <Button variant="link" onClick={() => { setSearch(''); setStatusFilter('all'); setSegmentFilter('all'); }}>

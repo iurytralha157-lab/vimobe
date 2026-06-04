@@ -1,6 +1,32 @@
 import type { WhatsAppSession } from "@/hooks/use-whatsapp-sessions";
-import { supabase } from "@/integrations/supabase/client";
 import { callEvolutionGo } from "@/hooks/use-evolution-go";
+import { supabase } from "@/integrations/supabase/client";
+
+type WhatsAppMediaType = "image" | "video" | "document" | "audio";
+
+interface SendOptions {
+  isGroup?: boolean;
+  mentions?: string[];
+}
+
+interface WhatsAppSendResult {
+  ok: boolean;
+  data?: any;
+  error?: string;
+}
+
+function normalizeGoResponse(result: any): WhatsAppSendResult {
+  return { ok: !!result?.ok, data: result?.data, error: result?.error };
+}
+
+function normalizeLegacyResponse(result: any): WhatsAppSendResult {
+  return { ok: !!result?.success, data: result?.data, error: result?.error };
+}
+
+function normalizeMimeType(mediatype: WhatsAppMediaType, mimetype: string) {
+  if (mediatype === "document" && !mimetype) return "application/octet-stream";
+  return mimetype || "application/octet-stream";
+}
 
 /**
  * Provider router: same operation, but routed to the correct backend
@@ -11,59 +37,80 @@ import { callEvolutionGo } from "@/hooks/use-evolution-go";
 export function getWhatsAppClient(session: Pick<WhatsAppSession, "provider" | "id" | "instance_name">) {
   const isGo = session.provider === "evolution_go";
 
-  async function sendText(number: string, text: string) {
-    if (isGo) {
-      return callEvolutionGo("send.text", { session_id: session.id, body: { number, text } });
+  async function sendText(number: string, text: string, options: SendOptions = {}) {
+    if (!isGo) {
+      const { data, error } = await supabase.functions.invoke("evolution-proxy", {
+        body: {
+          action: "sendMessage",
+          instanceName: session.instance_name,
+          number,
+          text,
+          isGroup: options.isGroup,
+          mentions: options.mentions || [],
+        },
+      });
+      if (error) return { ok: false, error: error.message };
+      return normalizeLegacyResponse(data);
     }
-    const { data, error } = await supabase.functions.invoke("evolution-proxy", {
-      body: { action: "sendText", instanceName: session.instance_name, number, text },
+    const result = await callEvolutionGo("send.text", {
+      session_id: session.id,
+      body: { number, text, mentions: options.mentions || [] },
     });
-    if (error) return { ok: false, error: error.message };
-    return { ok: !!data?.success, data: data?.data, error: data?.error };
+    return normalizeGoResponse(result);
   }
 
   async function sendMedia(
     number: string,
-    base64: string,
-    mediatype: "image" | "video" | "document" | "audio",
+    media: string,
+    mediatype: WhatsAppMediaType,
     mimetype: string,
     fileName?: string,
     caption?: string,
+    options: SendOptions = {},
   ) {
-    if (isGo) {
-      return callEvolutionGo("send.media", {
-        session_id: session.id,
-        body: { number, media: base64, mediatype, mimetype, fileName, caption },
+    if (!isGo) {
+      const { data, error } = await supabase.functions.invoke("evolution-proxy", {
+        body: {
+          action: "sendFile",
+          instanceName: session.instance_name,
+          number,
+          mediaUrl: media,
+          base64: media.startsWith("data:") || /^[A-Za-z0-9+/=]+$/.test(media) ? media : undefined,
+          path: media,
+          mediaType: mediatype,
+          mimetype,
+          filename: fileName,
+          caption,
+          isGroup: options.isGroup,
+          mentions: options.mentions || [],
+        },
       });
+      if (error) return { ok: false, error: error.message };
+      return normalizeLegacyResponse(data);
     }
-    const { data, error } = await supabase.functions.invoke("evolution-proxy", {
+    const normalizedMimeType = normalizeMimeType(mediatype, mimetype);
+    const result = await callEvolutionGo(mediatype === "audio" ? "send.audio" : "send.media", {
+      session_id: session.id,
       body: {
-        action: "sendMedia",
-        instanceName: session.instance_name,
         number,
-        media: base64,
+        type: mediatype,
+        url: media,
+        media,
         mediatype,
-        mimetype,
+        mediaType: mediatype,
+        mimetype: normalizedMimeType,
         fileName,
+        filename: fileName,
         caption,
+        mentions: options.mentions || [],
+        mentionedJid: options.mentions || [],
       },
     });
-    if (error) return { ok: false, error: error.message };
-    return { ok: !!data?.success, data: data?.data, error: data?.error };
+    return normalizeGoResponse(result);
   }
 
   async function sendAudio(number: string, base64: string, mimetype = "audio/ogg") {
-    if (isGo) {
-      return callEvolutionGo("send.audio", {
-        session_id: session.id,
-        body: { number, media: base64, mimetype },
-      });
-    }
-    const { data, error } = await supabase.functions.invoke("evolution-proxy", {
-      body: { action: "sendAudio", instanceName: session.instance_name, number, audio: base64, mimetype },
-    });
-    if (error) return { ok: false, error: error.message };
-    return { ok: !!data?.success, data: data?.data, error: data?.error };
+    return sendMedia(number, base64, "audio", mimetype);
   }
 
   return { sendText, sendMedia, sendAudio, isGo };

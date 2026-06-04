@@ -38,7 +38,9 @@ export async function performFullCacheClear(options: {
   }
 
   // 3. Clear localStorage
-  const authKeysToKeep = clearAuth ? [] : [SUPABASE_STORAGE_KEY, 'impersonating'];
+  const authKeysToKeep = clearAuth 
+    ? ['remember_me', 'remembered_email'] 
+    : [SUPABASE_STORAGE_KEY, 'impersonating', 'remember_me', 'remembered_email'];
   const keysToRemove: string[] = [];
   
   for (let i = 0; i < localStorage.length; i++) {

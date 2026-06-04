@@ -76,8 +76,8 @@ function parseDate(dateStr: string): string | null {
   const parts = dateStr.trim().split('/')
   if (parts.length !== 3) return null
   
-  let day = parseInt(parts[0], 10)
-  let month = parseInt(parts[1], 10)
+  const day = parseInt(parts[0], 10)
+  const month = parseInt(parts[1], 10)
   let year = parseInt(parts[2], 10)
   
   // Handle 2-digit year
