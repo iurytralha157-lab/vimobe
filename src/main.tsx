@@ -27,7 +27,7 @@ window.addEventListener('error', handleChunkError);
 window.addEventListener('unhandledrejection', handleChunkError);
 
 // Aggressive version management and cache busting
-const CACHE_BUST_VERSION = '2026-05-11-v1';
+const CACHE_BUST_VERSION = '2.1.2';
 const BUST_KEY = 'lovable_app_version';
 
 async function cleanupServiceWorkers(reload = false) {
